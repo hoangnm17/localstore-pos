@@ -1,8 +1,8 @@
-const userModel = require("../models/user.model")
+const userService = require("../services/user.service")
 
 module.exports.getAllUser = async (req, res) => {
     try {
-        const users = await userModel.getAllUser()
+        const users = await userService.getAllUser()
 
         return res.status(200).json({
             success: true,
