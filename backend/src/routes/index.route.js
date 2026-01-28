@@ -1,7 +1,9 @@
-const userRoutes = require("./user.route")
+const userRoutes = require("./user.route");
+const inventoryRoutes = require("./inventory.route");
 
 module.exports = (app) => {
-    const version = "/api"
+    const version = "/api";
 
-    app.use(version + "/users", userRoutes)
-}
+    app.use(version + "/users", userRoutes);
+    app.use(version + "/inventory", inventoryRoutes);
+};
