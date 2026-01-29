@@ -51,3 +51,19 @@ exports.countProductsByCategory = async (categoryId, search) => {
 
     return result.recordset[0].total;
 };
+
+exports.updateStock = async (productId, quantity) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("productId", sql.BigInt, productId)
+        .input("quantity", sql.Int, quantity)
+        .query(`
+            UPDATE InventoryStocks
+            SET quantityOnHand = @quantity
+            WHERE productId = @productId
+        `);
+
+    return result.rowsAffected[0];
+};
+

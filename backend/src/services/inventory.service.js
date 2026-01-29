@@ -48,3 +48,7 @@ exports.getProductStockByCategory = async (
         total
     };
 };
+
+exports.updateProductStock = async (productId, quantity) => {
+    return await productModel.updateStock(productId, quantity);
+};
