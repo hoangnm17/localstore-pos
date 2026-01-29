@@ -14,4 +14,7 @@ router.get("/categories", inventoryController.getCategoryStock);
  */
 router.get("/categories/:categoryId/products", inventoryController.getProductStockByCategory);
 
+// PUT update stock
+router.put("/products/stock", inventoryController.updateProductStock);
+
 module.exports = router;
