@@ -13,3 +13,28 @@ exports.getCategoryStock = async (req, res) => {
 
     res.json(data);
 };
+
+exports.getProductStockByCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const { search = "", page = 1, limit = 10 } = req.query;
+
+        const data = await inventoryService.getProductStockByCategory(
+            categoryId,
+            search,
+            Number(page),
+            Number(limit)
+        );
+
+        res.json({
+            categoryId,
+            page: Number(page),
+            limit: Number(limit),
+            total: data.total,
+            products: data.products
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
