@@ -6,7 +6,8 @@ function InventoryRoutes() {
     return (
         <Routes>
             <Route path="categories" element={<CategoryStock />} />
-            <Route path="categories/:categoryId/products" element={<ProductStock />} /></Routes>
+            <Route path="categories/:categoryId/products" element={<ProductStock />} />
+        </Routes>
     );
 }
 

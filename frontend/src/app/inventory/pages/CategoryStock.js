@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import categoryService from "../../../services/categoryService";
+import categoryService from "../../../services/categoryStockService";
 import CategoryCard from "../inventoryComponents/CategoryCard";
 
 function CategoryStock() {
@@ -17,11 +17,10 @@ function CategoryStock() {
     const loadCategories = async () => {
         try {
             const res = await categoryService.getCategoryStock(search, page, limit);
-
             setCategories(res.data.categories);
             setTotalPages(res.data.pagination.totalPages);
         } catch (err) {
-            console.error("Load categories error:", err);
+            console.error(err);
         }
     };
 
@@ -31,50 +30,60 @@ function CategoryStock() {
     };
 
     const handleViewProducts = (categoryId) => {
-        console.log("View category:", categoryId);
-        // navigate(`/inventory/categories/${categoryId}`)
+        console.log(categoryId);
     };
 
     return (
-        <div className="category-stock-container">
-            <h2>Category Stock</h2>
+        <div className="container mt-4">
+            <div className="card shadow-sm">
+                <div className="card-body">
 
-            <input
-                type="text"
-                placeholder="Tìm theo tên category..."
-                value={search}
-                onChange={handleSearch}
-                className="search-input"
-            />
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h4 className="mb-0 fw-bold">Category Stock</h4>
+                        <input
+                            type="text"
+                            className="form-control w-25"
+                            placeholder="Search category..."
+                            value={search}
+                            onChange={handleSearch}
+                        />
+                    </div>
 
-            <div className="category-grid">
-                {categories.map((c) => (
-                    <CategoryCard
-                        key={c.categoryId}
-                        category={c}
-                        onView={handleViewProducts}
-                    />
-                ))}
-            </div>
+                    <div className="row g-3">
+                        {categories.map((c) => (
+                            <div key={c.categoryId} className="col-12 col-md-6">
+                                <CategoryCard
+                                    category={c}
+                                    onView={handleViewProducts}
+                                />
+                            </div>
+                        ))}
+                    </div>
 
-            <div className="pagination">
-                <button
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                >
-                    Prev
-                </button>
 
-                <span>
-                    Page {page} / {totalPages}
-                </span>
+                    <div className="d-flex justify-content-between align-items-center mt-4">
+                        <button
+                            className="btn btn-outline-secondary"
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                        >
+                            ← Prev
+                        </button>
 
-                <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage(page + 1)}
-                >
-                    Next
-                </button>
+                        <span className="fw-semibold">
+                            Page {page} / {totalPages}
+                        </span>
+
+                        <button
+                            className="btn btn-outline-secondary"
+                            disabled={page === totalPages}
+                            onClick={() => setPage(page + 1)}
+                        >
+                            Next →
+                        </button>
+                    </div>
+
+                </div>
             </div>
         </div>
     );
