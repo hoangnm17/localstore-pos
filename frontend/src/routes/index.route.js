@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import salesRoute from "./sales.route";
-import InventoryRoutes from "./inventory.route";
+import InventoryRoutes from "./inventory.route.js";
 
 const AppRoutes = () => {
   return (
