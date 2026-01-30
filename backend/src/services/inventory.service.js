@@ -1,4 +1,5 @@
 const Category = require("../models/category.model");
+const productModel = require("../models/product.model");
 
 exports.getCategoryStock = async (search, page, limit) => {
     const offset = (page - 1) * limit;
@@ -20,4 +21,34 @@ exports.getCategoryStock = async (search, page, limit) => {
         },
         categories
     };
+};
+
+exports.getProductStockByCategory = async (
+    categoryId,
+    search,
+    page,
+    limit
+) => {
+    const offset = (page - 1) * limit;
+
+    const products = await productModel.getProductsByCategory(
+        categoryId,
+        search,
+        limit,
+        offset
+    );
+
+    const total = await productModel.countProductsByCategory(
+        categoryId,
+        search
+    );
+
+    return {
+        products,
+        total
+    };
+};
+
+exports.updateProductStock = async (productId, quantity) => {
+    return await productModel.updateStock(productId, quantity);
 };
