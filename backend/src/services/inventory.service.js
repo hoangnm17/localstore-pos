@@ -1,5 +1,5 @@
-const Category = require("../models/category.model");
-const productModel = require("../models/product.model");
+const Category = require("../models/categoryStock.model");
+const productModel = require("../models/productStock.model");
 
 exports.getCategoryStock = async (search, page, limit) => {
     const offset = (page - 1) * limit;
