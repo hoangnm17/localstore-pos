@@ -604,5 +604,13 @@ BEGIN
 END
 GO
 
+ALTER TABLE [Categories]
+ADD [imageUrl] NVARCHAR(500) NULL;
+GO
+
+ALTER TABLE [Products]
+ADD [imageUrl] NVARCHAR(500) NULL;
+GO
+
 -- END OF SCRIPT
 
