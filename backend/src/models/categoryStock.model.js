@@ -7,13 +7,14 @@ exports.getCategoryStock = async (search, limit, offset) => {
         SELECT 
             c.id AS categoryId,
             c.name AS categoryName,
-            COUNT(p.id) AS totalProducts,
+            c.imageUrl,
+            COUNT(DISTINCT p.id) AS totalProducts,
             COALESCE(SUM(s.quantityOnHand), 0) AS totalStock
         FROM Categories c
         LEFT JOIN Products p ON p.categoryId = c.id
         LEFT JOIN InventoryStocks s ON s.productId = p.id
         WHERE c.name LIKE @search
-        GROUP BY c.id, c.name
+        GROUP BY c.id, c.name, c.imageUrl
         ORDER BY c.name
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
     `;
