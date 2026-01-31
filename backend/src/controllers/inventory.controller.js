@@ -28,6 +28,7 @@ exports.getProductStockByCategory = async (req, res) => {
 
         res.json({
             categoryId,
+            categoryName: data.products[0]?.categoryName || "",
             page: Number(page),
             limit: Number(limit),
             total: data.total,
@@ -38,6 +39,7 @@ exports.getProductStockByCategory = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+
 
 exports.updateProductStock = async (req, res) => {
     try {

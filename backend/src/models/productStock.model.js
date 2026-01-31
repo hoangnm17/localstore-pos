@@ -15,6 +15,7 @@ exports.getProductsByCategory = async (
         .input("offset", sql.Int, offset)
         .query(`
             SELECT
+                c.name AS categoryName,
                 p.id AS productId,
                 p.name AS productName,
                 p.code AS productCode,
@@ -26,6 +27,7 @@ exports.getProductsByCategory = async (
                     ELSE 'NORMAL'
                 END AS stockStatus
             FROM Products p
+            JOIN Categories c ON c.id = p.categoryId
             LEFT JOIN InventoryStocks s ON s.productId = p.id
             WHERE p.categoryId = @categoryId
               AND (p.name LIKE @search OR p.code LIKE @search)
