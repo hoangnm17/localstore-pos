@@ -1,6 +1,6 @@
 function Footer() {
     return (
-        <footer className="bg-dark text-white pt-5 pb-4">
+        <footer className="bg-dark text-white pt-5 pb-4" style={{ marginTop: "20px" }}>
             <div className="container">
                 <div className="row gy-4">
 
