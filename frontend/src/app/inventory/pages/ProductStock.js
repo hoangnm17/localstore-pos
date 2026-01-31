@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import productService from "../../../services/productStockService";
+import productStockService from "../../../services/productStockService";
 
 function ProductStock() {
   const { categoryId } = useParams();
@@ -13,6 +13,13 @@ function ProductStock() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [newQuantity, setNewQuantity] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState("");
+
   const limit = 10;
   const totalPages = Math.ceil(total / limit);
 
@@ -23,17 +30,18 @@ function ProductStock() {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const res = await productService.getProductsByCategory(
+      const res = await productStockService.getProductsByCategory(
         categoryId,
         search,
         page,
         limit
       );
+
       setProducts(res.data?.products || []);
       setTotal(res.data?.total || 0);
       setCategoryName(res.data?.categoryName || "Không xác định");
     } catch (err) {
-      console.error("Lỗi tải dữ liệu tồn kho sản phẩm:", err);
+      console.error("Lỗi tải tồn kho:", err);
     } finally {
       setLoading(false);
     }
@@ -44,8 +52,32 @@ function ProductStock() {
   };
 
   const handleUpdateStock = (product) => {
-    console.log("Cập nhật tồn kho cho sản phẩm:", product.productId);
-    // TODO: navigate(`/products/${product.productId}/update-stock`) hoặc mở modal
+    setSelectedProduct(product);
+    setNewQuantity(product.quantityOnHand.toString());
+    setError("");
+    setShowModal(true);
+  };
+
+  const handleSaveStock = async () => {
+    const qty = Number(newQuantity);
+    if (isNaN(qty) || qty < 0) {
+      setError("Số lượng không hợp lệ (phải là số ≥ 0)");
+      return;
+    }
+
+    if (!selectedProduct) return;
+
+    setUpdating(true);
+    setError("");
+    try {
+      await productStockService.updateStock(selectedProduct.productId, qty);
+      setShowModal(false);
+      loadProducts(); // reload để cập nhật UI
+    } catch (err) {
+      setError(err.response?.data?.message || "Cập nhật thất bại, vui lòng thử lại");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   return (
@@ -58,14 +90,14 @@ function ProductStock() {
               <button
                 className="btn btn-sm btn-outline-secondary rounded-circle"
                 onClick={() => navigate(-1)}
-                title="Quay lại danh mục"
+                title="Quay lại"
               >
                 <i className="bi bi-arrow-left"></i>
               </button>
 
               <div>
                 <h4 className="fw-bold mb-1 text-dark">Quản lý tồn kho sản phẩm</h4>
-                <div className="d-flex align-items-center text-muted small">
+                <div className="text-muted small d-flex align-items-center">
                   <i className="bi bi-folder2-open me-2"></i>
                   Danh mục: <strong className="ms-1 text-primary">{categoryName}</strong>
                 </div>
@@ -145,13 +177,10 @@ function ProductStock() {
                     const status = getStatus(p.quantityOnHand, p.minThreshold);
 
                     return (
-                      <tr key={p.productId} className="hover-lift">
+                      <tr key={p.productId}>
                         <td className="text-center ps-4">
                           <img
-                            src={
-                              p.imageUrl ||
-                              "https://via.placeholder.com/60x60?text=No+Image"
-                            }
+                            src={p.imageUrl || "https://via.placeholder.com/60?text=No+Img"}
                             alt={p.productName}
                             className="rounded shadow-sm"
                             width="60"
@@ -160,18 +189,14 @@ function ProductStock() {
                           />
                         </td>
                         <td className="fw-medium">{p.productName}</td>
-                        <td className="text-center text-muted small">
-                          {p.productCode}
-                        </td>
+                        <td className="text-center text-muted small">{p.productCode}</td>
                         <td className="text-center fw-bold">
                           {p.quantityOnHand.toLocaleString()}
                         </td>
                         <td className="text-center">
                           <span
                             className={`badge rounded-pill px-3 py-2 fs-6 ${
-                              status === "THẤP"
-                                ? "bg-danger-subtle text-danger"
-                                : "bg-success-subtle text-success"
+                              status === "THẤP" ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success"
                             }`}
                           >
                             {status}
@@ -209,54 +234,100 @@ function ProductStock() {
                     <button
                       className="page-link"
                       onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
                     >
                       Trước
                     </button>
                   </li>
 
-                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                    // Hiển thị tối đa 7 trang để gọn (có thể cải tiến ellipsis nếu cần)
-                    let pageNum = i + 1;
-                    if (totalPages > 7) {
-                      if (page > 4) {
-                        if (i === 0) pageNum = page - 3;
-                        else if (i === 1) pageNum = page - 2;
-                        else if (i === 2) pageNum = page - 1;
-                        else if (i === 3) pageNum = page;
-                        else if (i === 4) pageNum = page + 1;
-                        else if (i === 5) pageNum = page + 2;
-                        else if (i === 6) pageNum = totalPages;
-                      }
-                    }
-                    return (
-                      <li
-                        key={pageNum}
-                        className={`page-item ${page === pageNum ? "active" : ""}`}
-                      >
-                        <button
-                          className="page-link"
-                          onClick={() => setPage(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <li key={p} className={`page-item ${page === p ? "active" : ""}`}>
+                      <button className="page-link" onClick={() => setPage(p)}>
+                        {p}
+                      </button>
+                    </li>
+                  ))}
 
-                  <li
-                    className={`page-item ${
-                      page === totalPages || totalPages === 0 ? "disabled" : ""
-                    }`}
-                  >
+                  <li className={`page-item ${page === totalPages ? "disabled" : ""}`}>
                     <button
                       className="page-link"
                       onClick={() => setPage(page + 1)}
+                      disabled={page === totalPages}
                     >
                       Tiếp
                     </button>
                   </li>
                 </ul>
               </nav>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CẬP NHẬT TỒN KHO */}
+        {showModal && (
+          <div
+            className="modal fade show d-block"
+            tabIndex="-1"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content rounded-4 shadow">
+                <div className="modal-header border-0 pb-0">
+                  <h5 className="modal-title fw-bold">Cập nhật tồn kho</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowModal(false)}
+                    disabled={updating}
+                  ></button>
+                </div>
+
+                <div className="modal-body">
+                  <p className="fw-medium mb-1">{selectedProduct?.productName}</p>
+                  <p className="text-muted small mb-3">Mã: {selectedProduct?.productCode}</p>
+
+                  <label htmlFor="newQty" className="form-label small fw-medium">
+                    Số lượng tồn kho mới
+                  </label>
+                  <input
+                    id="newQty"
+                    type="number"
+                    className="form-control"
+                    min="0"
+                    value={newQuantity}
+                    onChange={(e) => setNewQuantity(e.target.value)}
+                    disabled={updating}
+                  />
+
+                  {error && <div className="alert alert-danger small mt-3 py-2">{error}</div>}
+                </div>
+
+                <div className="modal-footer border-0 pt-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowModal(false)}
+                    disabled={updating}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={updating}
+                    onClick={handleSaveStock}
+                  >
+                    {updating ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Đang lưu...
+                      </>
+                    ) : (
+                      "Lưu thay đổi"
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
