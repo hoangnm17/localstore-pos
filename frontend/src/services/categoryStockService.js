@@ -11,4 +11,4 @@ function getCategoryStock(search = "", page = 1, limit = 10) {
 
 export default {
     getCategoryStock
-};
+};  
