@@ -1,8 +1,6 @@
 import OrderItem from "./OrderItem";
-import { useOrderItems } from "../../../../hooks/useOrderItems";
 
-const OrderItemList = () => {
-  const { orderItems, increase, decrease, remove } = useOrderItems();
+const OrderItemList = ({ orderItems, increase, decrease, remove }) => {
 
   return (
     <table className="table table-bordered align-middle w-50">
