@@ -100,7 +100,7 @@ function InventoryMenu() {
               </div>
               <h4 className="card-title fw-bold mb-3 text-dark">Báo cáo nhập hàng</h4>
               <p className="card-text text-muted mb-4 fs-5">
-                Thống kê nhập xuất, tồn kho theo thời gian
+                Thống kê nhập hàng theo thời gian
               </p>
             </div>
             <div className="card-footer bg-transparent border-0 pb-5 pt-0">

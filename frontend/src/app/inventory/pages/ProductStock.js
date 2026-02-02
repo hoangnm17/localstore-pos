@@ -11,6 +11,7 @@ function ProductStock() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [inputPage, setInputPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -26,6 +27,10 @@ function ProductStock() {
   useEffect(() => {
     loadProducts();
   }, [categoryId, page, search]);
+
+  useEffect(() => {
+    setInputPage(page);
+  }, [page]);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -72,7 +77,7 @@ function ProductStock() {
     try {
       await productStockService.updateStock(selectedProduct.productId, qty);
       setShowModal(false);
-      loadProducts(); // reload để cập nhật UI
+      loadProducts();
     } catch (err) {
       setError(err.response?.data?.message || "Cập nhật thất bại, vui lòng thử lại");
     } finally {
@@ -80,15 +85,35 @@ function ProductStock() {
     }
   };
 
+  const handlePageInputChange = (e) => {
+    setInputPage(e.target.value);
+  };
+
+  const jumpToPage = () => {
+    let p = parseInt(inputPage, 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    setPage(p);
+    setInputPage(p);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      jumpToPage();
+    }
+  };
+
   return (
-    <div className="container-fluid py-4">
-      <div className="card shadow border-0 rounded-4 overflow-hidden">
+    <div className="container-fluid py-4 py-md-5">
+      <div className="card shadow-lg border-0 rounded-4 overflow-hidden">
         {/* HEADER */}
-        <div className="card-header bg-white border-bottom py-3">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div className="card-header bg-white border-bottom py-4">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4">
             <div className="d-flex align-items-center gap-3">
               <button
-                className="btn btn-sm btn-outline-secondary rounded-circle"
+                className="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                style={{ width: "38px", height: "38px" }}
                 onClick={() => navigate(-1)}
                 title="Quay lại"
               >
@@ -97,22 +122,21 @@ function ProductStock() {
 
               <div>
                 <h4 className="fw-bold mb-1 text-dark">Quản lý tồn kho sản phẩm</h4>
-                <div className="text-muted small d-flex align-items-center">
+                <div className="text-muted d-flex align-items-center small">
                   <i className="bi bi-folder2-open me-2"></i>
                   Danh mục: <strong className="ms-1 text-primary">{categoryName}</strong>
                 </div>
               </div>
             </div>
 
-            {/* Search nhỏ gọn */}
-            <div className="input-group ms-md-auto" style={{ maxWidth: "300px" }}>
+            <div className="input-group" style={{ maxWidth: "320px" }}>
               <span className="input-group-text bg-white border-end-0 rounded-start-pill">
                 <i className="bi bi-search text-muted"></i>
               </span>
               <input
                 type="text"
-                className="form-control border-start-0 rounded-end-pill"
-                placeholder="Tìm tên hoặc mã..."
+                className="form-control border-start-0 rounded-end-pill py-2"
+                placeholder="Tìm tên, mã sản phẩm..."
                 value={search}
                 onChange={(e) => {
                   setPage(1);
@@ -123,52 +147,52 @@ function ProductStock() {
           </div>
         </div>
 
-        {/* BODY - Table */}
+        {/* BODY - Table (giữ nguyên như trước, đã thoáng) */}
         <div className="card-body p-0">
           <div className="table-responsive">
-            <table className="table table-hover table-striped align-middle mb-0">
-              <thead className="table-light text-center">
+            <table className="table table-hover align-middle mb-0">
+              <thead className="table-light">
                 <tr>
-                  <th className="ps-4">Ảnh</th>
-                  <th>Tên sản phẩm</th>
-                  <th>Mã</th>
-                  <th>Tồn kho</th>
-                  <th>Trạng thái</th>
-                  <th>Hành động</th>
+                  <th className="ps-4 py-3 text-center">Ảnh</th>
+                  <th className="py-3">Tên sản phẩm</th>
+                  <th className="py-3 text-center">Mã</th>
+                  <th className="py-3 text-center">Tồn kho</th>
+                  <th className="py-3 text-center">Trạng thái</th>
+                  <th className="py-3 text-center">Hành động</th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="border-top-0">
                 {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}>
-                      <td className="text-center ps-4">
+                      <td className="text-center ps-4 py-4">
                         <div
                           className="placeholder placeholder-glow bg-secondary-subtle rounded"
-                          style={{ height: "60px", width: "60px" }}
+                          style={{ height: "80px", width: "80px" }}
                         ></div>
                       </td>
-                      <td>
-                        <div className="placeholder placeholder-glow col-9 bg-secondary-subtle rounded"></div>
+                      <td className="py-4">
+                        <div className="placeholder placeholder-glow col-10 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      <td className="text-center">
-                        <div className="placeholder placeholder-glow col-5 bg-secondary-subtle rounded"></div>
+                      <td className="text-center py-4">
+                        <div className="placeholder placeholder-glow col-6 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      <td className="text-center">
-                        <div className="placeholder placeholder-glow col-4 bg-secondary-subtle rounded"></div>
+                      <td className="text-center py-4">
+                        <div className="placeholder placeholder-glow col-5 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      <td className="text-center">
-                        <div className="placeholder placeholder-glow col-6 bg-secondary-subtle rounded"></div>
+                      <td className="text-center py-4">
+                        <div className="placeholder placeholder-glow col-7 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      <td className="text-center">
-                        <div className="placeholder placeholder-glow col-6 bg-secondary-subtle rounded"></div>
+                      <td className="text-center py-4">
+                        <div className="placeholder placeholder-glow col-8 bg-secondary-subtle rounded py-3"></div>
                       </td>
                     </tr>
                   ))
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-5 text-muted fst-italic">
-                      <i className="bi bi-inbox fs-1 d-block mb-3 opacity-75"></i>
+                    <td colSpan="6" className="text-center py-5 py-md-6 text-muted fst-italic">
+                      <i className="bi bi-inbox fs-2 d-block mb-3 opacity-50"></i>
                       Không tìm thấy sản phẩm nào trong danh mục này
                     </td>
                   </tr>
@@ -177,34 +201,36 @@ function ProductStock() {
                     const status = getStatus(p.quantityOnHand, p.minThreshold);
 
                     return (
-                      <tr key={p.productId}>
-                        <td className="text-center ps-4">
+                      <tr key={p.productId} className="hover-bg-light">
+                        <td className="text-center ps-4 py-4">
                           <img
-                            src={p.imageUrl || "https://via.placeholder.com/60?text=No+Img"}
+                            src={p.imageUrl || "https://via.placeholder.com/80?text=No+Img"}
                             alt={p.productName}
                             className="rounded shadow-sm"
-                            width="60"
-                            height="60"
+                            width="80"
+                            height="80"
                             style={{ objectFit: "cover" }}
                           />
                         </td>
-                        <td className="fw-medium">{p.productName}</td>
-                        <td className="text-center text-muted small">{p.productCode}</td>
-                        <td className="text-center fw-bold">
+                        <td className="py-4 fw-medium">{p.productName}</td>
+                        <td className="text-center py-4 text-muted small">{p.productCode}</td>
+                        <td className="text-center py-4 fw-bold fs-5">
                           {p.quantityOnHand.toLocaleString()}
                         </td>
-                        <td className="text-center">
+                        <td className="text-center py-4">
                           <span
-                            className={`badge rounded-pill px-3 py-2 fs-6 ${
-                              status === "THẤP" ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success"
+                            className={`badge rounded-pill px-4 py-2 fs-6 fw-medium ${
+                              status === "THẤP"
+                                ? "bg-danger-subtle text-danger border border-danger-subtle"
+                                : "bg-success-subtle text-success border border-success-subtle"
                             }`}
                           >
                             {status}
                           </span>
                         </td>
-                        <td className="text-center">
+                        <td className="text-center py-4">
                           <button
-                            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 mx-auto px-3"
+                            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mx-auto px-4 py-2"
                             onClick={() => handleUpdateStock(p)}
                           >
                             <i className="bi bi-pencil-square"></i>
@@ -220,60 +246,63 @@ function ProductStock() {
           </div>
         </div>
 
-        {/* FOOTER - Pagination */}
+        {/* FOOTER - Pagination (đã làm giống CategoryStock) */}
         {!loading && total > 0 && (
           <div className="card-footer bg-white border-top py-3">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
               <div className="text-muted small">
-                Hiển thị {products.length} / {total} sản phẩm
+                Trang <strong>{page}</strong> / <strong>{totalPages}</strong> • Hiển thị <strong>{products.length}</strong> sản phẩm
               </div>
 
-              <nav aria-label="Page navigation">
-                <ul className="pagination pagination-sm mb-0">
-                  <li className={`page-item ${page === 1 ? "disabled" : ""}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => setPage(page - 1)}
-                      disabled={page === 1}
-                    >
-                      Trước
-                    </button>
-                  </li>
+              <nav aria-label="Pagination">
+                <div className="d-flex align-items-center gap-2">
+                  <button
+                    className="btn btn-outline-secondary btn-sm px-3"
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    <i className="bi bi-chevron-left"></i>
+                  </button>
 
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <li key={p} className={`page-item ${page === p ? "active" : ""}`}>
-                      <button className="page-link" onClick={() => setPage(p)}>
-                        {p}
-                      </button>
-                    </li>
-                  ))}
+                  <div className="d-flex align-items-center gap-2">
+                    <input
+                      type="number"
+                      className="form-control form-control-sm text-center"
+                      style={{ width: "70px" }}
+                      value={inputPage}
+                      onChange={handlePageInputChange}
+                      onKeyDown={handleKeyDown}
+                      onBlur={jumpToPage}
+                      min="1"
+                      max={totalPages}
+                    />
+                    <span className="text-muted small fw-medium">/ {totalPages}</span>
+                  </div>
 
-                  <li className={`page-item ${page === totalPages ? "disabled" : ""}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => setPage(page + 1)}
-                      disabled={page === totalPages}
-                    >
-                      Tiếp
-                    </button>
-                  </li>
-                </ul>
+                  <button
+                    className="btn btn-outline-secondary btn-sm px-3"
+                    disabled={page === totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    <i className="bi bi-chevron-right"></i>
+                  </button>
+                </div>
               </nav>
             </div>
           </div>
         )}
 
-        {/* MODAL CẬP NHẬT TỒN KHO */}
+        {/* MODAL (giữ nguyên) */}
         {showModal && (
           <div
             className="modal fade show d-block"
             tabIndex="-1"
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
           >
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content rounded-4 shadow">
-                <div className="modal-header border-0 pb-0">
-                  <h5 className="modal-title fw-bold">Cập nhật tồn kho</h5>
+            <div className="modal-dialog modal-dialog-centered modal-md">
+              <div className="modal-content rounded-4 shadow-xl border-0">
+                <div className="modal-header border-0 pb-2">
+                  <h5 className="modal-title fw-bold">Cập nhật tồn kho sản phẩm</h5>
                   <button
                     type="button"
                     className="btn-close"
@@ -282,30 +311,30 @@ function ProductStock() {
                   ></button>
                 </div>
 
-                <div className="modal-body">
-                  <p className="fw-medium mb-1">{selectedProduct?.productName}</p>
-                  <p className="text-muted small mb-3">Mã: {selectedProduct?.productCode}</p>
+                <div className="modal-body px-4 pb-4">
+                  <p className="fw-medium mb-1 fs-5">{selectedProduct?.productName}</p>
+                  <p className="text-muted small mb-4">Mã: {selectedProduct?.productCode}</p>
 
-                  <label htmlFor="newQty" className="form-label small fw-medium">
+                  <label htmlFor="newQty" className="form-label fw-medium small mb-2">
                     Số lượng tồn kho mới
                   </label>
                   <input
                     id="newQty"
                     type="number"
-                    className="form-control"
+                    className="form-control form-control-lg"
                     min="0"
                     value={newQuantity}
                     onChange={(e) => setNewQuantity(e.target.value)}
                     disabled={updating}
                   />
 
-                  {error && <div className="alert alert-danger small mt-3 py-2">{error}</div>}
+                  {error && <div className="alert alert-danger mt-3 py-2 small">{error}</div>}
                 </div>
 
-                <div className="modal-footer border-0 pt-2">
+                <div className="modal-footer border-0 pt-1 px-4 pb-4">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-outline-secondary px-4"
                     onClick={() => setShowModal(false)}
                     disabled={updating}
                   >
@@ -313,13 +342,13 @@ function ProductStock() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary px-5"
                     disabled={updating}
                     onClick={handleSaveStock}
                   >
                     {updating ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
                         Đang lưu...
                       </>
                     ) : (
