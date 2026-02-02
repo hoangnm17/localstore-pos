@@ -26,19 +26,3 @@ exports.getCategoryStock = async (search, limit, offset) => {
 
     return result.recordset;
 };
-
-exports.countCategories = async (search) => {
-    const pool = await connectDB();
-
-    const query = `
-        SELECT COUNT(*) AS total
-        FROM Categories
-        WHERE name LIKE @search
-    `;
-
-    const result = await pool.request()
-        .input("search", sql.NVarChar, `%${search}%`)
-        .query(query);
-
-    return result.recordset[0].total;
-};
