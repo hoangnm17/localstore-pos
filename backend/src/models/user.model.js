@@ -5,7 +5,7 @@ const { connectDB } = require("../config/database")
 module.exports.getAllUser = async () => {
     try {
         const pool = await connectDB()
-        const result = pool
+        const result =  await pool
             .request()
             .query("SELECT * FROM [Users]")
         return result.recordset
