@@ -22,10 +22,11 @@ const PRODUCTS = [
     variants: [
       { name: "Ít đá", quantity: 8 },
       { name: "Nhiều đá", quantity: 12 },
+      { name: "Ít khô", quantity: 11}
     ],
   },
-    {
-    id: 2,
+  {
+    id: 3,
     name: "Trà đào a",
     url: "https://via.placeholder.com/300",
     salePrice: 25000,
@@ -36,7 +37,7 @@ const PRODUCTS = [
   }
 ];
 
-export default function Product() {
+export default function Product({ addItem }) {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -47,7 +48,7 @@ export default function Product() {
   return (
     <div className="d-flex gap-3">
       {/* LEFT */}
-      <div style={{ width: 300 }}>
+      <div>
         <h5 className="mb-2">Sản phẩm</h5>
 
         <FilterBar value={search} onChange={setSearch} />
@@ -59,13 +60,19 @@ export default function Product() {
         />
       </div>
 
-      {/* RIGHT – chỉ hiện khi đã chọn sản phẩm */}
       {selectedProduct && (
         <ProductVariant
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onAdd={(variant) => {
-            console.log("Add:", variant);
+            addItem({
+              productId: selectedProduct.id,
+              productName: selectedProduct.name,
+              variant: variant.name,
+              unitPrice: selectedProduct.salePrice,
+              lineTotal: selectedProduct.lineTotal,
+            });
+
             setSelectedProduct(null);
           }}
         />

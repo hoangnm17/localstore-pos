@@ -1,41 +1,78 @@
 export default function ProductList({ products, selectedProduct, onSelect }) {
   return (
-    <div className="d-flex flex-wrap gap-3">
-      {products?.map((product) => (
-        <div
-          key={product.id}
-          onClick={() => onSelect(product)}
-          className={`position-relative rounded overflow-hidden border ${
-            selectedProduct?.id === product.id
-              ? "border-primary border-2"
-              : "border-secondary"
-          }`}
-          style={{ width: 160, height: 160, cursor: "pointer" }}
-        >
-          {/* Image */}
-          <img
-            src={product.url}
-            alt={product.name}
-            className="w-100 h-100 object-fit-cover"
-          />
+    <div className="d-flex flex-wrap gap-3 justify-content-start">
+      {products?.map((product) => {
+        const isSelected = selectedProduct?.id === product.id;
 
-          {/* Dark overlay */}
-          <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark opacity-50"></div>
+        return (
+          <div
+            key={product.id}
+            onClick={() => onSelect(product)}
+            className={`position-relative rounded-4 overflow-hidden border transition-all shadow-sm ${
+              isSelected ? "border-primary border-3 ring-active" : "border-light"
+            }`}
+            style={{ 
+              width: 150, 
+              height: 180, 
+              cursor: "pointer",
+              backgroundColor: "#fff"
+            }}
+          >
+            {/* Image - Giữ nguyên độ sáng */}
+            <img
+              src={product.url || 'https://via.placeholder.com/150'}
+              alt={product.name}
+              className="w-100 h-100 object-fit-cover"
+            />
 
-          {/* Top right badge */}
-          <div className="position-absolute top-0 end-0 p-1">
-            <div className="small bg-dark bg-opacity-75 text-white rounded px-2">
-              3 mặt hàng
+            {/* Gradient Overlay - Chỉ làm tối vùng dưới để đọc chữ */}
+            <div 
+              className="position-absolute bottom-0 start-0 w-100 h-60"
+              style={{
+                background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)",
+                height: "65%"
+              }}
+            ></div>
+
+            {/* Top right badge - Số lượng biến thể */}
+            <div className="position-absolute top-0 end-0 p-2">
+              <span className="badge rounded-pill bg-primary shadow-sm" style={{ fontSize: '0.7rem' }}>
+                {product.variants?.length || 0} mẫu
+              </span>
             </div>
-          </div>
 
-          {/* Bottom center text */}
-          <div className="position-absolute bottom-0 start-0 w-100 text-center text-white pb-2">
-            <div className="small">{product.salePrice} đ</div>
-            <div className="fw-bold">{product.name}</div>
+            {/* Bottom Info */}
+            <div className="position-absolute bottom-0 start-0 w-100 p-2 text-white">
+              <div className="fw-bold text-truncate mb-0" style={{ fontSize: '0.9rem' }}>
+                {product.name}
+              </div>
+              <div className="small text-warning fw-semibold">
+                {new Intl.NumberFormat('vi-VN').format(product.salePrice)}đ
+              </div>
+            </div>
+
+            {/* Selected Tick - Hiển thị dấu check khi được chọn */}
+            {isSelected && (
+              <div className="position-absolute top-0 start-0 m-2">
+                <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: 20, height: 20 }}>
+                  <i className="bi bi-check-lg" style={{ fontSize: '0.8rem' }}></i>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
+
+      <style jsx>{`
+        .transition-all { transition: all 0.2s ease; }
+        .shadow-sm-hover:hover { 
+          transform: translateY(-3px); 
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important; 
+        }
+        .ring-active {
+          box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+        }
+      `}</style>
     </div>
   );
 }
