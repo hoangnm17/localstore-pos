@@ -5,7 +5,10 @@ import CategoryCard from "../inventoryComponents/CategoryCard";
 
 function CategoryStock() {
   const [categories, setCategories] = useState([]);
+
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [inputPage, setInputPage] = useState(1);
@@ -13,6 +16,15 @@ function CategoryStock() {
 
   const limit = 9;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     loadCategories();
@@ -35,9 +47,9 @@ function CategoryStock() {
     }
   };
 
+  // 🔹 THAY ĐỔI 3: onChange chỉ cập nhật input, KHÔNG gọi API
   const handleSearch = (e) => {
-    setPage(1);
-    setSearch(e.target.value.trim());
+    setSearchInput(e.target.value);
   };
 
   const handlePageInputChange = (e) => {
@@ -66,18 +78,20 @@ function CategoryStock() {
   return (
     <div className="container-fluid py-4">
       <div className="card shadow border-0 rounded-4 overflow-hidden">
-        {/* Header */}
         <div className="card-header bg-white border-bottom py-3">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-              <h4 className="fw-bold mb-1 text-dark">Quản lý tồn kho theo danh mục</h4>
+              <h4 className="fw-bold mb-1 text-dark">
+                Quản lý tồn kho theo danh mục
+              </h4>
               <div className="text-muted small d-flex align-items-center">
                 <i className="bi bi-tags me-2"></i>
-                Tổng số danh mục: <strong className="ms-1">{totalPages * limit}</strong> (ước tính)
+                Tổng số danh mục:{" "}
+                <strong className="ms-1">{totalPages * limit}</strong> (ước tính)
               </div>
             </div>
 
-            {/* Search bar nhỏ gọn */}
+            {/* 🔹 THAY ĐỔI 4: input dùng searchInput */}
             <div className="input-group ms-md-auto" style={{ maxWidth: "300px" }}>
               <span className="input-group-text bg-white border-end-0 rounded-start-pill">
                 <i className="bi bi-search text-muted"></i>
@@ -86,14 +100,13 @@ function CategoryStock() {
                 type="text"
                 className="form-control border-start-0 rounded-end-pill"
                 placeholder="Tìm danh mục..."
-                value={search}
+                value={searchInput}
                 onChange={handleSearch}
               />
             </div>
           </div>
         </div>
 
-        {/* Body */}
         <div className="card-body p-4">
           {loading ? (
             <div className="row g-4">
@@ -134,52 +147,6 @@ function CategoryStock() {
             </div>
           )}
         </div>
-
-        {/* Footer - Pagination */}
-        {!loading && totalPages > 1 && (
-          <div className="card-footer bg-white border-top py-3">
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-              <div className="text-muted small">
-                Trang {page} / {totalPages} • Hiển thị {categories.length} danh mục
-              </div>
-
-              <nav aria-label="Pagination">
-                <div className="d-flex align-items-center gap-2">
-                  <button
-                    className="btn btn-outline-secondary btn-sm px-3"
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                  >
-                    <i className="bi bi-chevron-left"></i>
-                  </button>
-
-                  <div className="d-flex align-items-center gap-2">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-center"
-                      style={{ width: "70px" }}
-                      value={inputPage}
-                      onChange={handlePageInputChange}
-                      onKeyDown={handleKeyDown}
-                      onBlur={jumpToPage}
-                      min="1"
-                      max={totalPages}
-                    />
-                    <span className="text-muted small fw-medium">/ {totalPages}</span>
-                  </div>
-
-                  <button
-                    className="btn btn-outline-secondary btn-sm px-3"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(page + 1)}
-                  >
-                    <i className="bi bi-chevron-right"></i>
-                  </button>
-                </div>
-              </nav>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
