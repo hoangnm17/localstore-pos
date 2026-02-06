@@ -8,7 +8,11 @@ function ProductStock() {
 
   const [products, setProducts] = useState([]);
   const [categoryName, setCategoryName] = useState("");
-  const [search, setSearch] = useState("");
+
+  // ── Search với debounce ───────────────────────────────
+  const [searchInput, setSearchInput] = useState(""); // giá trị đang gõ
+  const [search, setSearch] = useState("");           // giá trị chính thức dùng để gọi API
+
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [inputPage, setInputPage] = useState(1);
@@ -23,6 +27,16 @@ function ProductStock() {
 
   const limit = 10;
   const totalPages = Math.ceil(total / limit);
+
+  // Debounce search 500ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     loadProducts();
@@ -63,27 +77,71 @@ function ProductStock() {
     setShowModal(true);
   };
 
-  const handleSaveStock = async () => {
-    const qty = Number(newQuantity);
-    if (isNaN(qty) || qty < 0) {
-      setError("Số lượng không hợp lệ (phải là số ≥ 0)");
-      return;
-    }
-
-    if (!selectedProduct) return;
-
-    setUpdating(true);
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setNewQuantity("");
     setError("");
-    try {
-      await productStockService.updateStock(selectedProduct.productId, qty);
-      setShowModal(false);
-      loadProducts();
-    } catch (err) {
-      setError(err.response?.data?.message || "Cập nhật thất bại, vui lòng thử lại");
-    } finally {
-      setUpdating(false);
-    }
+    setSelectedProduct(null);
   };
+
+  const handleSaveStock = async () => {
+  const trimmedValue = newQuantity.trim();
+  setError(""); // reset lỗi trước khi kiểm tra
+
+  // 1. Kiểm tra rỗng / chỉ khoảng trắng
+  if (!trimmedValue) {
+    setError("Vui lòng nhập số lượng tồn kho");
+    return;
+  }
+
+  // 2. Chuyển đổi thành số (dùng parseFloat để hỗ trợ thập phân)
+  const qty = parseFloat(trimmedValue);
+
+  // 3. Kiểm tra các trường hợp không hợp lệ cơ bản
+  if (isNaN(qty)) {
+    setError("Số lượng phải là một con số hợp lệ");
+    return;
+  }
+
+  if (qty < 0) {
+    setError("Số lượng tồn kho không được âm");
+    return;
+  }
+
+  // 4. Kiểm tra theo quyền thập phân của sản phẩm
+  const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
+
+  if (!allowDecimal && !Number.isInteger(qty)) {
+    setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
+    return;
+  }
+
+  // Nếu allowDecimal = true → chấp nhận cả số thập phân và số nguyên
+  // Không cần kiểm tra thêm Number.isInteger
+
+  // 5. Kiểm tra selectedProduct có tồn tại không
+  if (!selectedProduct) {
+    setError("Không tìm thấy sản phẩm để cập nhật");
+    return;
+  }
+
+  // 6. Thực hiện cập nhật
+  setUpdating(true);
+  setError("");
+
+  try {
+    await productStockService.updateStock(selectedProduct.productId, qty);
+    handleCloseModal();
+    loadProducts(); // reload danh sách để hiển thị số mới (có thể là thập phân)
+  } catch (err) {
+    const errorMessage =
+      err.response?.data?.message ||
+      "Cập nhật tồn kho thất bại. Vui lòng thử lại sau.";
+    setError(errorMessage);
+  } finally {
+    setUpdating(false);
+  }
+};
 
   const handlePageInputChange = (e) => {
     setInputPage(e.target.value);
@@ -137,17 +195,14 @@ function ProductStock() {
                 type="text"
                 className="form-control border-start-0 rounded-end-pill py-2"
                 placeholder="Tìm tên, mã sản phẩm..."
-                value={search}
-                onChange={(e) => {
-                  setPage(1);
-                  setSearch(e.target.value.trim());
-                }}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
           </div>
         </div>
 
-        {/* BODY - Table (giữ nguyên như trước, đã thoáng) */}
+        {/* BODY - Table */}
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="table table-hover align-middle mb-0">
@@ -219,11 +274,10 @@ function ProductStock() {
                         </td>
                         <td className="text-center py-4">
                           <span
-                            className={`badge rounded-pill px-4 py-2 fs-6 fw-medium ${
-                              status === "THẤP"
+                            className={`badge rounded-pill px-4 py-2 fs-6 fw-medium ${status === "THẤP"
                                 ? "bg-danger-subtle text-danger border border-danger-subtle"
                                 : "bg-success-subtle text-success border border-success-subtle"
-                            }`}
+                              }`}
                           >
                             {status}
                           </span>
@@ -246,7 +300,7 @@ function ProductStock() {
           </div>
         </div>
 
-        {/* FOOTER - Pagination (đã làm giống CategoryStock) */}
+        {/* FOOTER - Pagination */}
         {!loading && total > 0 && (
           <div className="card-footer bg-white border-top py-3">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
@@ -292,7 +346,7 @@ function ProductStock() {
           </div>
         )}
 
-        {/* MODAL (giữ nguyên) */}
+        {/* MODAL */}
         {showModal && (
           <div
             className="modal fade show d-block"
@@ -306,7 +360,7 @@ function ProductStock() {
                   <button
                     type="button"
                     className="btn-close"
-                    onClick={() => setShowModal(false)}
+                    onClick={handleCloseModal}
                     disabled={updating}
                   ></button>
                 </div>
@@ -335,7 +389,7 @@ function ProductStock() {
                   <button
                     type="button"
                     className="btn btn-outline-secondary px-4"
-                    onClick={() => setShowModal(false)}
+                    onClick={handleCloseModal}
                     disabled={updating}
                   >
                     Hủy

@@ -40,7 +40,6 @@ exports.getProductStockByCategory = async (req, res) => {
     }
 };
 
-
 exports.updateProductStock = async (req, res) => {
     try {
         const { productId, quantity } = req.body;
@@ -53,13 +52,7 @@ exports.updateProductStock = async (req, res) => {
 
         if (typeof quantity !== "number" || Number.isNaN(quantity)) {
             return res.status(400).json({
-                message: "Quantity must be a number"
-            });
-        }
-
-        if (!Number.isInteger(quantity)) {
-            return res.status(400).json({
-                message: "Quantity must be an integer"
+                message: "Quantity must be a valid number"
             });
         }
 
@@ -68,6 +61,24 @@ exports.updateProductStock = async (req, res) => {
                 message: "Quantity must be greater than or equal to 0"
             });
         }
+
+        // ── Thêm kiểm tra allowDecimalQuantity ───────────────────────────────
+        // Giả sử bạn có service/model để lấy thông tin sản phẩm
+        const product = await inventoryService.getProductBasicInfo(productId); // cần implement hàm này
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Nếu sản phẩm KHÔNG cho phép thập phân → phải là số nguyên
+        if (product.allowDecimalQuantity === 0 && !Number.isInteger(quantity)) {
+            return res.status(400).json({
+                message: "Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)"
+            });
+        }
+
+        // Nếu cho phép thập phân → chấp nhận cả số thập phân
+        // (không cần check Number.isInteger nữa)
 
         const rowsAffected = await inventoryService.updateProductStock(productId, quantity);
 
@@ -87,5 +98,3 @@ exports.updateProductStock = async (req, res) => {
         });
     }
 };
-
-
