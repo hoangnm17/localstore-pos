@@ -17,3 +17,21 @@ module.exports.getAllInvoice = async (req, res) => {
         })
     }
 }
+
+module.exports.createInvoice = async (req, res) => {
+    try {
+        const { items, customer, total } = req.body
+
+        console.log(req.body)
+        res.status(201).json({
+            message: "Tạo hóa đơn thành công",
+            data: {
+                items,
+                customer,
+                total,
+            },
+        })
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+}

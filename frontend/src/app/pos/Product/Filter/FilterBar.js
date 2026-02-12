@@ -1,3 +1,6 @@
+import React from "react";
+import { useState, useEffect } from "react";
+
 export default function FilterBar({
   keyword,
   onKeywordChange,
@@ -5,11 +8,29 @@ export default function FilterBar({
   selectedCategory,
   onSelectCategory,
 }) {
+  // State nội bộ để gõ phím mượt mà (Controlled input local)
+  const [displayKeyword, setDisplayKeyword] = useState(keyword);
+
+  // ✅ LOGIC DEBOUNCE
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onKeywordChange(displayKeyword);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [displayKeyword, onKeywordChange]);
+
+  // ✅ ĐỒNG BỘ NGƯỢC
+  // Nếu cha reset keyword (vd: bấm nút xóa bộ lọc), state nội bộ phải cập nhật theo
+  useEffect(() => {
+    setDisplayKeyword(keyword);
+  }, [keyword]);
+
   return (
     <div className="w-100 mb-4">
-      {/* Thanh tìm kiếm - Đã bỏ giới hạn width để full khối cha */}
+      {/* Thanh tìm kiếm */}
       <div className="position-relative mb-4">
-        <span 
+        <span
           className="position-absolute top-50 start-0 translate-middle-y ps-3 text-secondary"
           style={{ zIndex: 5, fontSize: '1.1rem' }}
         >
@@ -19,24 +40,25 @@ export default function FilterBar({
           type="text"
           className="form-control form-control-lg border-0 shadow-sm ps-5 bg-white rounded-4"
           placeholder="Tìm tên món, mã sản phẩm hoặc mô tả..."
-          value={keyword}
-          style={{ 
-            height: '55px', 
+          // ⬇️ SỬA Ở ĐÂY: Dùng state nội bộ thay vì prop từ cha
+          value={displayKeyword} 
+          style={{
+            height: '55px',
             fontSize: '1rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.05)' 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
           }}
-          onChange={(e) => onKeywordChange(e.target.value)}
+          // ⬇️ SỬA Ở ĐÂY: Chỉ cập nhật state nội bộ, useEffect sẽ lo việc báo lên cha sau 300ms
+          onChange={(e) => setDisplayKeyword(e.target.value)} 
         />
       </div>
 
       {/* Danh mục sản phẩm - Dạng chip hiện đại */}
       <div className="d-flex gap-2 flex-wrap align-items-center">
         <button
-          className={`btn rounded-pill px-4 py-2 fw-bold transition-all border-0 ${
-            !selectedCategory 
-              ? "btn-primary shadow" 
+          className={`btn rounded-pill px-4 py-2 fw-bold transition-all border-0 ${!selectedCategory
+              ? "btn-primary shadow"
               : "btn-light text-secondary bg-white shadow-sm"
-          }`}
+            }`}
           style={{ fontSize: '0.85rem', letterSpacing: '0.3px' }}
           onClick={() => onSelectCategory(null)}
         >
@@ -48,11 +70,10 @@ export default function FilterBar({
           return (
             <button
               key={cat.id}
-              className={`btn rounded-pill px-4 py-2 fw-bold transition-all border-0 ${
-                isActive 
-                  ? "btn-primary shadow" 
+              className={`btn rounded-pill px-4 py-2 fw-bold transition-all border-0 ${isActive
+                  ? "btn-primary shadow"
                   : "btn-light text-secondary bg-white shadow-sm"
-              }`}
+                }`}
               style={{ fontSize: '0.85rem', letterSpacing: '0.3px' }}
               onClick={() => onSelectCategory(cat)}
             >
@@ -62,7 +83,7 @@ export default function FilterBar({
         })}
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         .transition-all {
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }

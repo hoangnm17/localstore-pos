@@ -52,3 +52,8 @@ exports.getProductStockByCategory = async (
 exports.updateProductStock = async (productId, quantity) => {
     return await productModel.updateStock(productId, quantity);
 };
+
+// Thêm hàm mới để controller dùng
+exports.getProductBasicInfo = async (productId) => {
+    return await productModel.getProductBasicInfo(productId);
+};
