@@ -3,6 +3,27 @@ import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
 
 export default function Order({ orderItems, increase, decrease, remove }) {
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentContext, setPaymentContext] = useState(null);
+
+  const handleOpenPayment = (data) => {
+    setPaymentContext(data);
+    setShowPayment(true);
+  };
+
+  const handleConfirmPayment = (paymentInfo) => {
+    const payload = {
+      items: paymentContext.items,
+      customer: paymentContext.customer,
+      total: paymentContext.total,
+      payment: paymentInfo,
+    };
+
+    console.log("POST ORDER:", payload);
+    
+    invoiceCreate(payload)
+    setShowPayment(false);
+  };
 
   const isEmpty = orderItems.length === 0;
 
