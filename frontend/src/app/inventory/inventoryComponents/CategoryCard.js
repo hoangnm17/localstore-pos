@@ -61,7 +61,10 @@ function CategoryCard({ category, onView }) {
                 <div className="mt-auto">
                     <button
                         className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2"
-                        onClick={() => onView(categoryId)}
+                        onClick={() => {
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                            onView(categoryId);
+                        }}
                     >
                         <i className="bi bi-box-seam fs-5"></i>
                         Xem tồn kho chi tiết

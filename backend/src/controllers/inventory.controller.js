@@ -1,4 +1,5 @@
-const inventoryService = require("../services/inventory.service");
+const inventoryService = require("../services/InventoryServices/inventory.service");
+const problematicService = require("../services/InventoryServices/problematic.service");
 
 exports.getCategoryStock = async (req, res) => {
     const search = req.query.search || "";
@@ -62,23 +63,17 @@ exports.updateProductStock = async (req, res) => {
             });
         }
 
-        // ── Thêm kiểm tra allowDecimalQuantity ───────────────────────────────
-        // Giả sử bạn có service/model để lấy thông tin sản phẩm
         const product = await inventoryService.getProductBasicInfo(productId); // cần implement hàm này
 
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // Nếu sản phẩm KHÔNG cho phép thập phân → phải là số nguyên
         if (product.allowDecimalQuantity === 0 && !Number.isInteger(quantity)) {
             return res.status(400).json({
                 message: "Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)"
             });
         }
-
-        // Nếu cho phép thập phân → chấp nhận cả số thập phân
-        // (không cần check Number.isInteger nữa)
 
         const rowsAffected = await inventoryService.updateProductStock(productId, quantity);
 
@@ -96,5 +91,17 @@ exports.updateProductStock = async (req, res) => {
         res.status(500).json({
             message: "Internal server error"
         });
+    }
+};
+
+exports.createProblematicReport = async (req, res) => {
+    try {
+        await problematicService.createReport(req.body, req.user);
+        res.status(201).json({ message: "Report created successfully" });
+    } catch (err) {
+        if (err.message === "PERMISSION_DENIED") {
+            return res.status(403).json({ message: "Permission denied" });
+        }
+        res.status(500).json({ error: err.message });
     }
 };

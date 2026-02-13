@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
+const mockAuth = require("../middleware/mockAuth.js");
+
 
 /**
  * Category stock
@@ -16,5 +18,9 @@ router.get("/categories/:categoryId/products", inventoryController.getProductSto
 
 // PUT update stock
 router.put("/products/stock", inventoryController.updateProductStock);
+
+//POST send problematic report
+router.post("/reports/send", mockAuth, inventoryController.createProblematicReport);
+
 
 module.exports = router;
