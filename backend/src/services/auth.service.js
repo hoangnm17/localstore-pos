@@ -17,9 +17,7 @@ module.exports.login = async (email, password) => {
 
     const token = jwt.sign(
         { 
-            userId: user.id, 
-            roleId: user.roleId,
-            email: user.username 
+            userId: user.id,
         }, 
         process.env.JWT_SECRET,
         { 
