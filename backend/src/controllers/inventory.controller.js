@@ -105,3 +105,20 @@ exports.createProblematicReport = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.getProblematicReports = async (req, res) => {
+    try {
+        const { userId, role } = req.user;
+        const filters = req.query;
+
+        const reports = await problematicService.getReports({
+            userId,
+            role,
+            filters
+        });
+
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

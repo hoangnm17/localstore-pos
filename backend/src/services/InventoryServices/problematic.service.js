@@ -13,3 +13,14 @@ exports.createReport = async (data, user) => {
         reportedBy: user.staffId
     });
 };
+
+exports.getReports = async ({ userId, role, filters }) => {
+
+    const isManager = role === "manager";
+
+    return reportModel.getReports({
+        userId,
+        isManager,
+        filters
+    });
+};
