@@ -22,5 +22,8 @@ router.put("/products/stock", inventoryController.updateProductStock);
 //POST send problematic report
 router.post("/reports/send", mockAuth, inventoryController.createProblematicReport);
 
+//GET get problematic reports
+router.get("/reports/list", mockAuth, inventoryController.getProblematicReports);
+
 
 module.exports = router;
