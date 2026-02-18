@@ -1,6 +1,9 @@
+import { useState } from "react";
+import { invoiceCreate } from "../../../services/Invoices/invoice.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
+import PaymentModal from "./Payment/PaymentModal";
 
 export default function Order({ orderItems, increase, decrease, remove }) {
   const [showPayment, setShowPayment] = useState(false);
@@ -20,7 +23,6 @@ export default function Order({ orderItems, increase, decrease, remove }) {
     };
 
     console.log("POST ORDER:", payload);
-    
     invoiceCreate(payload)
     setShowPayment(false);
   };
@@ -62,8 +64,18 @@ export default function Order({ orderItems, increase, decrease, remove }) {
           boxShadow: "0 -2px 8px rgba(0,0,0,0.05)"
         }}
       >
-        <PaymentDetail items={orderItems} />
+        <PaymentDetail
+          items={orderItems}
+          onOpenPayment={handleOpenPayment} />
       </div>
+
+      {showPayment && (
+        <PaymentModal
+          total={paymentContext.total}
+          onClose={() => setShowPayment(false)}
+          onConfirm={handleConfirmPayment}
+        />
+      )}
 
     </div>
   );

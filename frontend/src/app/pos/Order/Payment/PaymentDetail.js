@@ -23,7 +23,7 @@ const PaymentDetail = ({ items, customer, onOpenPayment }) => {
         </h4>
       </div>
 
-      {/* Nút thanh toán */}
+      {/* Nút thanh toán đã sửa lỗi */}
       <button
         disabled={items.length === 0}
         onClick={() =>
@@ -48,14 +48,14 @@ const PaymentDetail = ({ items, customer, onOpenPayment }) => {
         {items.length === 0 ? "Giỏ hàng trống" : "THANH TOÁN NGAY"}
       </button>
 
-      {/* Hiệu ứng hover cho nút (nếu dùng CSS-in-JS hoặc style inline) */}
+      {/* Style phụ trợ */}
       <style>{`
         .fw-black { font-weight: 900; }
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 15px rgba(13, 110, 253, 0.2) !important;
         }
-        .rounded-t-4 { border-radius: 1.5rem 1.5rem 0 0 !important; }
+        .transition-all { transition: all 0.3s ease; }
       `}</style>
     </div>
   );

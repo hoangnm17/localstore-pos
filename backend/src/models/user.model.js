@@ -2,7 +2,7 @@ const sql = require("mssql")
 const bcrypt = require("bcrypt")
 const { connectDB } = require("../config/database")
 
-module.exports.getAllUser = async () => {
+const getAllUser = async () => {
     try {
         const pool = await connectDB()
         const result =  await pool
@@ -15,7 +15,7 @@ module.exports.getAllUser = async () => {
     }
 
 }
-module.exports.findByEmail = async (email) => {
+const findByEmail = async (email) => {
     try {
         const pool = await connectDB();
         const result = await pool.request()
@@ -27,3 +27,26 @@ module.exports.findByEmail = async (email) => {
         throw err;
     }
 }
+
+const findById = async (id) => {
+    try {
+        const pool = await connectDB()
+
+        const result = await pool
+            .request()
+            .input("id", sql.Int, id)
+            .query("SELECT * FROM [Users] WHERE id = @id")
+
+        return result.recordset[0]
+
+    } catch (err) {
+        console.error("findById error:", err)
+        throw err
+    }
+}
+
+module.exports = {
+    getAllUser,
+    findByEmail,
+    findById
+};
