@@ -183,8 +183,10 @@ CREATE TABLE [Products] (
     [status] VARCHAR(20) DEFAULT 'Selling',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     [updatedAt] DATETIME2 DEFAULT GETDATE(),
+    [supplierId] INT NULL,
     
     CONSTRAINT [FK_Product_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
+    CONSTRAINT [FK_Product_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
     CONSTRAINT [CK_Product_Status] CHECK ([status] IN ('Selling', 'StopSelling', 'Suspended'))
 );
 GO
@@ -288,7 +290,7 @@ CREATE TABLE [PurchaseOrders] (
         FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
 
     CONSTRAINT [CK_PO_Status]
-        CHECK ([status] IN ('Draft','Pending','Approved','Received','Cancelled'))
+        CHECK ([status] IN ('Pending','Approved','Rejected','WaitingForDelivery','Received'))
 );
 GO
 
