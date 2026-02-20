@@ -26,21 +26,16 @@ router.post("/reports/send", mockAuth, inventoryController.createProblematicRepo
 //GET get problematic reports
 router.get("/reports/list", mockAuth, inventoryController.getProblematicReports);
 
-// ===============================
 // CREATE PURCHASE ORDER
-// ===============================
 router.post("/purchase-orders/request", mockAuth, purchaseOrderController.createPurchaseOrder);
 
+// UPDATE PO STATUS
+router.patch("/purchase-orders/status/:id", mockAuth, purchaseOrderController.updateStatus);
 
-// // ===============================
 // // GET LIST PURCHASE ORDERS
-// // ===============================
 // router.get("/", mockAuth, purchaseOrderController.getPurchaseOrders);
 
-
-// // ===============================
 // // GET PURCHASE ORDER DETAIL
-// // ===============================
 // router.get("/:id", mockAuth, purchaseOrderController.getPurchaseOrderDetail);
 
 

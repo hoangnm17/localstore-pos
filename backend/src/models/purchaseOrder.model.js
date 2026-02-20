@@ -1,5 +1,8 @@
 const { sql, connectDB } = require("../config/database.js");
 
+/* ==============================
+   CREATE PURCHASE ORDER
+============================== */
 exports.createPurchaseOrderWithItems = async ({
     supplierId,
     note,
@@ -14,20 +17,19 @@ exports.createPurchaseOrderWithItems = async ({
 
         const request = new sql.Request(transaction);
 
-        // 1️⃣ Insert PO
         const poResult = await request
             .input("supplierId", sql.Int, supplierId)
             .input("note", sql.NVarChar, note)
-            .input("createdBy", sql.Int, createdBy)
+            .input("createdBy", sql.BigInt, createdBy)
             .query(`
-                INSERT INTO PurchaseOrders (supplierId, note, status, createdBy, createdAt)
+                INSERT INTO PurchaseOrders 
+                (supplierId, note, status, createdBy, createdAt)
                 OUTPUT INSERTED.*
                 VALUES (@supplierId, @note, 'Pending', @createdBy, GETDATE())
             `);
 
         const purchaseOrder = poResult.recordset[0];
 
-        // 2️⃣ Insert Items với tồn kho thật
         for (const item of items) {
 
             const stockRequest = new sql.Request(transaction);
@@ -62,6 +64,123 @@ exports.createPurchaseOrderWithItems = async ({
 
         await transaction.commit();
         return purchaseOrder;
+
+    } catch (err) {
+        await transaction.rollback();
+        throw err;
+    }
+};
+
+
+/* ==============================
+   GET BY ID
+============================== */
+exports.getById = async (poId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("poId", sql.Int, poId)
+        .query(`
+            SELECT * 
+            FROM PurchaseOrders 
+            WHERE id = @poId
+        `);
+
+    return result.recordset[0];
+};
+
+
+/* ==============================
+   UPDATE STATUS (NOT RECEIVED)
+============================== */
+exports.updateStatus = async (poId, newStatus, userId) => {
+    const pool = await connectDB();
+
+    if (newStatus === "Approved" || newStatus === "Rejected") {
+
+        await pool.request()
+            .input("poId", sql.Int, poId)
+            .input("newStatus", sql.VarChar(20), newStatus)
+            .input("processBy", sql.BigInt, userId)
+            .query(`
+                UPDATE PurchaseOrders
+                SET status = @newStatus,
+                    processBy = @processBy
+                WHERE id = @poId
+            `);
+
+        return true;
+    }
+
+    if (newStatus === "WaitingForDelivery" || newStatus === "CannotDeliver") {
+
+        await pool.request()
+            .input("poId", sql.Int, poId)
+            .input("newStatus", sql.VarChar(20), newStatus)
+            .query(`
+                UPDATE PurchaseOrders
+                SET status = @newStatus
+                WHERE id = @poId
+            `);
+
+        return true;
+    }
+
+    return true;
+};
+
+
+/* ==============================
+   RECEIVE PURCHASE ORDER
+============================== */
+exports.receivePurchaseOrder = async (poId, userId) => {
+
+    const pool = await connectDB();
+    const transaction = new sql.Transaction(pool);
+
+    try {
+        await transaction.begin();
+
+        const itemsRequest = new sql.Request(transaction);
+
+        const itemsResult = await itemsRequest
+            .input("poId", sql.Int, poId)
+            .query(`
+                SELECT productId, quantityOrdered
+                FROM PurchaseOrderItems
+                WHERE poId = @poId
+            `);
+
+        const items = itemsResult.recordset;
+
+        for (const item of items) {
+
+            const stockRequest = new sql.Request(transaction);
+
+            await stockRequest
+                .input("productId", sql.BigInt, item.productId)
+                .input("qty", sql.Decimal(15, 3), item.quantityOrdered)
+                .query(`
+                    UPDATE InventoryStocks
+                    SET quantityOnHand = quantityOnHand + @qty
+                    WHERE productId = @productId
+                `);
+        }
+
+        const statusRequest = new sql.Request(transaction);
+
+        await statusRequest
+            .input("poId", sql.Int, poId)
+            .input("receivedBy", sql.BigInt, userId)
+            .query(`
+                UPDATE PurchaseOrders
+                SET status = 'Received',
+                    receivedBy = @receivedBy
+                WHERE id = @poId
+            `);
+
+        await transaction.commit();
+        return true;
 
     } catch (err) {
         await transaction.rollback();
