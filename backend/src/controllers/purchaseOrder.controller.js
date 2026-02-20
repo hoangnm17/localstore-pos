@@ -22,6 +22,14 @@ exports.createPurchaseOrder = async (req, res) => {
             return res.status(400).json({ message: "Supplier is required" });
         }
 
+        if (err.message === "ITEMS_REQUIRED") {
+            return res.status(400).json({ message: "At least one item is required" });
+        }
+
+        if (err.message === "INVALID_ITEM_DATA") {
+            return res.status(400).json({ message: "Invalid item data" });
+        }
+
         res.status(500).json({ message: err.message });
     }
 };

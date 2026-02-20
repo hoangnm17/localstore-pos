@@ -12,9 +12,20 @@ exports.createPurchaseOrder = async (data, user) => {
         throw new Error("SUPPLIER_REQUIRED");
     }
 
-    return purchaseOrderModel.createPurchaseOrder({
+    if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+        throw new Error("ITEMS_REQUIRED");
+    }
+
+    for (const item of data.items) {
+        if (!item.productId || !item.quantityOrdered || item.quantityOrdered <= 0) {
+            throw new Error("INVALID_ITEM_DATA");
+        }
+    }
+
+    return purchaseOrderModel.createPurchaseOrderWithItems({
         supplierId: data.supplierId,
         note: data.note || null,
-        createdBy: user.staffId
+        createdBy: user.staffId,
+        items: data.items
     });
 };
