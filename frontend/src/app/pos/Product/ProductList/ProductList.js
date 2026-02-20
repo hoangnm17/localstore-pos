@@ -8,12 +8,11 @@ export default function ProductList({ products, selectedProduct, onSelect }) {
           <div
             key={product.id}
             onClick={() => onSelect(product)}
-            className={`position-relative rounded-4 overflow-hidden border transition-all shadow-sm ${
-              isSelected ? "border-primary border-3 ring-active" : "border-light"
-            }`}
-            style={{ 
-              width: 150, 
-              height: 180, 
+            className={`position-relative rounded-4 overflow-hidden border transition-all shadow-sm ${isSelected ? "border-primary border-3 ring-active" : "border-light"
+              }`}
+            style={{
+              width: 150,
+              height: 180,
               cursor: "pointer",
               backgroundColor: "#fff"
             }}
@@ -26,7 +25,7 @@ export default function ProductList({ products, selectedProduct, onSelect }) {
             />
 
             {/* Gradient Overlay - Chỉ làm tối vùng dưới để đọc chữ */}
-            <div 
+            <div
               className="position-absolute bottom-0 start-0 w-100 h-60"
               style={{
                 background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)",
@@ -47,7 +46,10 @@ export default function ProductList({ products, selectedProduct, onSelect }) {
                 {product.name}
               </div>
               <div className="small text-warning fw-semibold">
-                {new Intl.NumberFormat('vi-VN').format(product.salePrice)}đ
+                {new Intl.NumberFormat('vi-VN').format(
+                  // ✅ SỬA: lấy giá từ variant nếu có
+                  product.variants?.[0]?.price ?? product.salePrice ?? 0
+                )}đ
               </div>
             </div>
 

@@ -71,7 +71,25 @@ export default function Product({ addItem }) {
                 {/* ProductList chỉ nhận danh sách ĐÃ PHÂN TRANG */}
                 <ProductList
                   products={displayItems}
-                  onSelect={setSelectedProduct}
+                  onSelect={(product) => {
+
+                    // ✅ SỬA: nếu chỉ có 1 variant → thêm luôn
+                    if (product.variants?.length === 1) {
+                      const variant = product.variants[0];
+
+                      addItem({
+                        productId: product.id,
+                        productName: product.name,
+                        variantId: variant.id ?? variant.name,
+                        variantName: variant.name,
+                        unitPrice: variant.price ?? product.salePrice ?? 0,
+                      });
+
+                      return;
+                    }
+
+                    setSelectedProduct(product);
+                  }}
                 />
 
                 {/* Pagination điều khiển số trang của cha */}
@@ -104,14 +122,8 @@ export default function Product({ addItem }) {
         <ProductVariant
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onAdd={(variant) => {
-            addItem({
-              productId: selectedProduct.id,
-              productName: selectedProduct.name,
-              variant: variant.name,
-              unitPrice: selectedProduct.salePrice,
-            });
-            setSelectedProduct(null);
+          onAdd={(itemData) => {
+            addItem(itemData);
           }}
         />
       )}

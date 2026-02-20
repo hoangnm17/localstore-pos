@@ -12,7 +12,7 @@ const OrderItem = ({ item, increase, decrease, remove }) => {
 
       {/* UNIT PRICE */}
       <td className="text-end text-muted">
-        {item.unitPrice.toLocaleString()} đ
+        {Number(item.unitPrice || 0).toLocaleString()} đ
       </td>
 
       {/* QUANTITY */}
@@ -47,7 +47,7 @@ const OrderItem = ({ item, increase, decrease, remove }) => {
 
       {/* LINE TOTAL */}
       <td className="text-end fw-semibold">
-        {item.lineTotal.toLocaleString()} đ
+         {(item.unitPrice * item.quantity).toLocaleString()} đ
       </td>
 
       {/* REMOVE */}

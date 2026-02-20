@@ -1,29 +1,39 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { invoiceCreate } from "../../../services/Invoices/invoice.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
 import PaymentModal from "./Payment/PaymentModal";
 
-export default function Order({ orderItems, increase, decrease, remove }) {
+export default function Order({
+  orderItems = [],
+  customer = null,
+  increase,
+  decrease,
+  remove,
+}) {
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentContext, setPaymentContext] = useState(null);
 
-  const handleOpenPayment = (data) => {
-    setPaymentContext(data);
-    setShowPayment(true);
-  };
+  // ✅ Tính total trực tiếp từ items
+  const total = useMemo(() => {
+    return orderItems.reduce(
+      (sum, item) =>
+        // 🔥 SỬA: dùng unitPrice thay vì price để đồng nhất toàn hệ thống
+        sum + (item.unitPrice || 0) * item.quantity,
+      0
+    );
+  }, [orderItems]);
 
-  const handleConfirmPayment = (paymentInfo) => {
+  const handleConfirmPayment = async (paymentInfo) => {
     const payload = {
-      items: paymentContext.items,
-      customer: paymentContext.customer,
-      total: paymentContext.total,
+      items: orderItems,   // lấy trực tiếp từ props
+      customer,
+      total,
       payment: paymentInfo,
     };
 
-    console.log("POST ORDER:", payload);
-    invoiceCreate(payload)
+    await invoiceCreate(payload);
+
     setShowPayment(false);
   };
 
@@ -32,11 +42,8 @@ export default function Order({ orderItems, increase, decrease, remove }) {
   return (
     <div
       className="d-flex flex-column h-100 bg-white"
-      style={{
-        borderRight: "1px solid #e5e7eb"
-      }}
+      style={{ borderRight: "1px solid #e5e7eb" }}
     >
-
       {/* HEADER */}
       <div className="p-3 border-bottom">
         <CustomerSearch />
@@ -47,36 +54,34 @@ export default function Order({ orderItems, increase, decrease, remove }) {
         className="flex-grow-1 overflow-auto p-3"
         style={{ background: "#f9fafb" }}
       >
-
         <OrderItemList
           orderItems={orderItems}
           increase={increase}
           decrease={decrease}
           remove={remove}
         />
-
       </div>
 
-      {/* PAYMENT STICKY */}
+      {/* PAYMENT */}
       <div
         className="p-3 border-top bg-white"
-        style={{
-          boxShadow: "0 -2px 8px rgba(0,0,0,0.05)"
-        }}
+        style={{ boxShadow: "0 -2px 8px rgba(0,0,0,0.05)" }}
       >
         <PaymentDetail
           items={orderItems}
-          onOpenPayment={handleOpenPayment} />
+          total={total}
+          disabled={isEmpty}
+          onOpenPayment={() => setShowPayment(true)}
+        />
       </div>
 
       {showPayment && (
         <PaymentModal
-          total={paymentContext.total}
+          total={total}
           onClose={() => setShowPayment(false)}
           onConfirm={handleConfirmPayment}
         />
       )}
-
     </div>
   );
 }

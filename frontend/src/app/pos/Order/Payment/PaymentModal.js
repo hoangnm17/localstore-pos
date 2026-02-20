@@ -1,81 +1,145 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 
-export default function PaymentModal({ total, onClose, onConfirm }) {
+export default function PaymentModal({
+  total = 0,
+  onClose = () => {},
+  onConfirm = () => {},
+}) {
+
+  // ===== SAFE TOTAL =====
+  const safeTotal = useMemo(() => Number(total) || 0, [total]);
+
+  // ===== STATE =====
   const [method, setMethod] = useState("CASH");
   const [customerPay, setCustomerPay] = useState("");
-  
+
+  // ✅ SỬA 1: Reset toàn bộ state khi modal mở lại
+  useEffect(() => {
+    setMethod("CASH");
+    setCustomerPay("");
+  }, [safeTotal]); 
+  // dùng safeTotal làm trigger vì mỗi lần mở modal total sẽ thay đổi
+
+  // ===== QUICK MONEY =====
   const QUICK_MONEY = [10000, 20000, 50000, 100000, 200000, 500000];
-  
-  const customerPayNumber = method === "BANK" ? total : (Number(customerPay) || 0);
-  const change = customerPayNumber - total;
+
+  // ===== CALCULATE =====
+
+  // ✅ SỬA 2: Đảm bảo không bị số âm hoặc NaN
+  const customerPayNumber = useMemo(() => {
+    if (method === "BANK") return safeTotal;
+    const parsed = Number(customerPay);
+    return isNaN(parsed) || parsed < 0 ? 0 : parsed;
+  }, [method, customerPay, safeTotal]);
+
+  // ✅ SỬA 3: Không cần Math.max nếu đã xử lý trên
+  const change = useMemo(() => {
+    return customerPayNumber > safeTotal
+      ? customerPayNumber - safeTotal
+      : 0;
+  }, [customerPayNumber, safeTotal]);
+
+  // ===== HANDLERS =====
 
   const handleQuickAdd = (amount) => {
     const current = Number(customerPay) || 0;
-    setCustomerPay(current + amount);
+    setCustomerPay(String(current + amount));
   };
 
   const handleSubmit = () => {
+
+    // ✅ SỬA 4: Chặn submit nếu chưa đủ tiền mặt
+    if (method === "CASH" && customerPayNumber < safeTotal) return;
+
     onConfirm({
       method,
+      total: safeTotal,
       customerPay: customerPayNumber,
       change: method === "BANK" ? 0 : change,
     });
   };
 
+  // ===== FORMAT MONEY (chuẩn VND) =====
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+
+  // ===== UI =====
   return (
-    <div 
-      className="modal fade show d-block" 
-      style={{ backgroundColor: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(5px)" }}
+    <div
+      className="modal fade show d-block"
+      style={{
+        backgroundColor: "rgba(15, 23, 42, 0.7)",
+        backdropFilter: "blur(5px)",
+      }}
       onClick={onClose}
     >
-      <div 
-        className="modal-dialog modal-dialog-centered" 
+      <div
+        className="modal-dialog modal-dialog-centered"
         style={{ maxWidth: "480px" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
           
+          {/* HEADER */}
           <div className="modal-header border-0 pt-4 px-4 pb-0">
             <h5 className="modal-title fw-bold fs-4">Thanh toán</h5>
-            <button className="btn-close shadow-none" onClick={onClose}></button>
+            <button
+              className="btn-close shadow-none"
+              onClick={onClose}
+            ></button>
           </div>
 
+          {/* BODY */}
           <div className="modal-body p-4">
-            {/* TỔNG TIỀN */}
+            
+            {/* TOTAL */}
             <div className="text-center mb-4 p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
-              <div className="text-secondary small fw-bold text-uppercase mb-1">Tổng tiền cần thu</div>
-              <h2 className="text-primary fw-bold mb-0">{total.toLocaleString()}đ</h2>
+              <div className="text-secondary small fw-bold text-uppercase mb-1">
+                Tổng tiền cần thu
+              </div>
+              <h2 className="text-primary fw-bold mb-0">
+                {/* ✅ SỬA 5: format tiền chuẩn */}
+                {formatCurrency(safeTotal)}
+              </h2>
             </div>
 
-            {/* HÌNH THỨC THANH TOÁN */}
+            {/* METHOD */}
             <div className="mb-4">
-              <label className="form-label small fw-bold text-muted">HÌNH THỨC</label>
+              <label className="form-label small fw-bold text-muted">
+                HÌNH THỨC
+              </label>
               <div className="d-flex gap-2">
                 {[
                   { id: "CASH", label: "Tiền mặt", icon: "bi-cash-stack" },
-                  { id: "BANK", label: "Chuyển khoản", icon: "bi-qr-code-scan" }
+                  { id: "BANK", label: "Chuyển khoản", icon: "bi-qr-code-scan" },
                 ].map((m) => (
                   <button
                     key={m.id}
-                    className={`btn flex-grow-1 py-3 fw-bold rounded-3 border-2 d-flex flex-column align-items-center gap-1 transition-all ${
-                      method === m.id ? "btn-primary border-primary shadow" : "btn-light text-secondary border-light bg-light"
+                    type="button"
+                    className={`btn flex-grow-1 py-3 fw-bold rounded-3 border-2 d-flex flex-column align-items-center gap-1 ${
+                      method === m.id
+                        ? "btn-primary border-primary shadow"
+                        : "btn-light text-secondary border-light bg-light"
                     }`}
-                    onClick={() => {
-                        setMethod(m.id);
-                        if(m.id === "BANK") setCustomerPay(""); // Reset tiền mặt khi sang chuyển khoản
-                    }}
+                    onClick={() => setMethod(m.id)}
                   >
-                    <i className={`bi ${m.icon} fs-4`}></i>
+                    <i className={`bi ${m.icon} fs-4`} />
                     <span>{m.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* CHỈ HIỆN KHI LÀ TIỀN MẶT */}
+            {/* CASH */}
             {method === "CASH" ? (
-              <div className="animate-fade-in">
-                <label className="form-label small fw-bold text-muted">TIỀN KHÁCH ĐƯA</label>
+              <>
+                <label className="form-label small fw-bold text-muted">
+                  TIỀN KHÁCH ĐƯA
+                </label>
+
                 <div className="input-group mb-3">
                   <input
                     type="number"
@@ -83,61 +147,81 @@ export default function PaymentModal({ total, onClose, onConfirm }) {
                     placeholder="Nhập số tiền..."
                     value={customerPay}
                     onChange={(e) => setCustomerPay(e.target.value)}
-                    autoFocus
                   />
-                  <button className="btn btn-light border-0 px-3" onClick={() => setCustomerPay("")}>
-                    <i className="bi bi-x-circle-fill text-muted"></i>
+                  <button
+                    type="button"
+                    className="btn btn-light border-0 px-3"
+                    onClick={() => setCustomerPay("")}
+                  >
+                    <i className="bi bi-x-circle-fill text-muted" />
                   </button>
                 </div>
 
-                {/* NÚT CHỌN NHANH */}
+                {/* QUICK BUTTON */}
                 <div className="row g-2 mb-4">
                   {QUICK_MONEY.map((amount) => (
                     <div key={amount} className="col-4">
-                      <button 
-                        className="btn btn-outline-secondary w-100 py-2 small fw-bold border-1 border-opacity-25"
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary w-100 py-2 small fw-bold"
                         onClick={() => handleQuickAdd(amount)}
-                        style={{ fontSize: '0.8rem' }}
                       >
-                        +{amount/1000}k
+                        +{amount / 1000}k
                       </button>
                     </div>
                   ))}
+
                   <div className="col-4">
-                    <button 
+                    <button
+                      type="button"
                       className="btn btn-warning w-100 py-2 small fw-bold border-0"
-                      onClick={() => setCustomerPay(total)}
-                      style={{ fontSize: '0.8rem' }}
+                      onClick={() => setCustomerPay(String(safeTotal))}
                     >
                       Đủ tiền
                     </button>
                   </div>
                 </div>
 
-                {/* TIỀN THỪA */}
-                <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-dark bg-opacity-5 mt-2">
+                {/* CHANGE */}
+                <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-dark bg-opacity-5">
                   <span className="fw-bold text-muted">Tiền thừa:</span>
-                  <span className={`fs-4 fw-bold ${change >= 0 ? "text-success" : "text-danger"}`}>
-                    {change >= 0 ? change.toLocaleString() : 0}đ
+                  <span
+                    className={`fs-4 fw-bold ${
+                      change > 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {formatCurrency(change)}
                   </span>
                 </div>
-              </div>
+              </>
             ) : (
-              /* HIỆN KHI LÀ CHUYỂN KHOẢN */
-              <div className="text-center py-4 animate-fade-in">
-                <div className="p-4 border border-dashed rounded-4 bg-light">
-                  <i className="bi bi-check2-circle text-success display-4 mb-2"></i>
-                  <p className="text-muted mb-0">Hệ thống sẽ ghi nhận thanh toán<br/>đúng số tiền <strong>{total.toLocaleString()}đ</strong></p>
+              /* BANK */
+              <div className="text-center py-4">
+                <div className="p-4 border rounded-4 bg-light">
+                  <i className="bi bi-check2-circle text-success display-4 mb-2" />
+                  <p className="text-muted mb-0">
+                    Hệ thống sẽ ghi nhận thanh toán đúng số tiền{" "}
+                    <strong>{formatCurrency(safeTotal)}</strong>
+                  </p>
                 </div>
               </div>
             )}
           </div>
 
+          {/* FOOTER */}
           <div className="modal-footer border-0 p-4 pt-0 d-flex gap-3">
-            <button className="btn btn-light btn-lg flex-grow-1 fw-bold text-secondary rounded-3" onClick={onClose}>HUỶ</button>
             <button
-              className="btn btn-primary btn-lg flex-grow-1 fw-bold rounded-3 shadow"
-              disabled={method === "CASH" && customerPayNumber < total}
+              type="button"
+              className="btn btn-light btn-lg flex-grow-1 fw-bold text-secondary"
+              onClick={onClose}
+            >
+              HUỶ
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary btn-lg flex-grow-1 fw-bold shadow"
+              disabled={method === "CASH" && customerPayNumber < safeTotal}
               onClick={handleSubmit}
             >
               XÁC NHẬN
@@ -145,15 +229,6 @@ export default function PaymentModal({ total, onClose, onConfirm }) {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        .transition-all { transition: all 0.2s; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
