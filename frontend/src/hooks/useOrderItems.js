@@ -1,99 +1,64 @@
-  import { useState } from "react";
+export const useOrderItems = () => {
 
-  const mockOrderItems = [
-    {
-      id: 1,
-      productId: 101,
-      productName: "Cà phê sữa đá",
-      unitPrice: 25000,
-      quantity: 2,
-      lineTotal: 50000
-    },
-    {
-      id: 2,
-      productId: 102,
-      productName: "Trà đào",
-      unitPrice: 30000,
-      quantity: 1,
-      lineTotal: 30000
+  const addItem = (items, product) => {
+    const existed = items.find(
+      p =>
+        p.productId === product.productId &&
+        p.unitPrice === product.unitPrice
+    );
+
+    if (existed) {
+      return items.map(p =>
+        p.id === existed.id
+          ? { ...p, quantity: p.quantity + 1 }
+          : p
+      );
     }
-  ];
 
-  export const useOrderItems = () => {
-    const [orderItems, setOrderItems] = useState(mockOrderItems);
-
-    // ➕ THÊM SẢN PHẨM
-    const addItem = (product) => {
-      setOrderItems(prev => {
-        const existed = prev.find(
-          item => item.productId === product.productId
-        );
-
-        if (existed) {
-          return prev.map(item =>
-            item.productId === product.productId
-              ? {
-                  ...item,
-                  quantity: item.quantity + 1,
-                  lineTotal: (item.quantity + 1) * item.unitPrice
-                }
-              : item
-          );
-        }
-
-        return [
-          ...prev,
-          {
-            id: Date.now(), // mock id
-            productId: product.productId,
-            productName: product.productName,
-            unitPrice: product.unitPrice,
-            quantity: 1,
-            lineTotal: product.unitPrice
-          }
-        ];
-      });
-    };
-
-    const increase = (id) => {
-      setOrderItems(prev =>
-        prev.map(item =>
-          item.id === id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-                lineTotal: (item.quantity + 1) * item.unitPrice
-              }
-            : item
-        )
-      );
-    };
-
-    const decrease = (id) => {
-      setOrderItems(prev =>
-        prev.map(item =>
-          item.id === id && item.quantity > 1
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-                lineTotal: (item.quantity - 1) * item.unitPrice
-              }
-            : item
-        )
-      );
-    };
-
-    const remove = (id) => {
-      setOrderItems(prev =>
-        prev.filter(item => item.id !== id)
-      );
-    };
-
-    return {
-      orderItems,
-      addItem,
-      increase,
-      decrease,
-      remove
-    };
+    return [
+      ...items,
+      {
+        id: crypto.randomUUID(),
+        productId: product.productId,
+        productName: product.productName,
+        variantId: product.variantId,
+        variantName: product.variantName,
+        unitPrice: product.unitPrice,
+        quantity: 1
+      }
+    ];
   };
+
+  const increase = (items, id) =>
+    items.map(item =>
+      item.id === id
+        ? { ...item, quantity: item.quantity + 1 }
+        : item
+    );
+
+  const decrease = (items, id) =>
+    items
+      .map(item =>
+        item.id === id
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+      .filter(item => item.quantity > 0);
+
+  const remove = (items, id) =>
+    items.filter(item => item.id !== id);
+
+  const calculateTotal = (items) =>
+    items.reduce(
+      (sum, i) => sum + i.unitPrice * i.quantity,
+      0
+    );
+
+  return {
+    addItem,
+    increase,
+    decrease,
+    remove,
+    calculateTotal
+  };
+};
