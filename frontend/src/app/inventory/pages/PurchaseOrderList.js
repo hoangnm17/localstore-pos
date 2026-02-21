@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import purchaseOrderService from "../../../services/purchaseOrder.service";
+import purchaseOrderService from "../../../services/purchaseOrderService";
 import { useNavigate } from "react-router-dom";
 
 const PurchaseOrderList = () => {
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -13,9 +15,12 @@ const PurchaseOrderList = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
+  // Scroll lên đầu trang khi load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
-  // 🔥 Mapping trạng thái (chuẩn enterprise)
+  // Mapping trạng thái
   const statusConfig = {
     Pending: { label: "Chờ duyệt", color: "warning" },
     Approved: { label: "Đã duyệt", color: "success" },
@@ -36,13 +41,13 @@ const PurchaseOrderList = () => {
         status: filters.status || undefined,
       });
 
-      const responseData = res?.data;
+      const data = res?.data;
 
-      setOrders(Array.isArray(responseData?.data) ? responseData.data : []);
-      setTotalPages(responseData?.totalPages || 1);
-      setPage(responseData?.page || 1);
-    } catch (error) {
-      console.error("Error fetching purchase orders:", error);
+      setOrders(Array.isArray(data?.data) ? data.data : []);
+      setTotalPages(data?.totalPages || 1);
+      setPage(data?.page || 1);
+    } catch (err) {
+      console.error("Fetch PO error:", err);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -70,14 +75,19 @@ const PurchaseOrderList = () => {
     navigate(`/inventory/purchase-orders/${id}`);
   };
 
+  const handleCreatePO = () => {
+    navigate("/inventory/purchase-orders/create");
+  };
+
   return (
-    <div className="container-fluid py-4 px-3 px-md-4 bg-light min-vh-100">
+    <div className="container-fluid py-4 bg-light min-vh-100">
       <div className="card shadow-lg border-0 rounded-4 overflow-hidden">
-        {/* Header */}
-        <div className="card-header bg-primary text-white d-flex align-items-center justify-content-between py-3 px-4 px-md-5">
+
+        {/* ===== HEADER ===== */}
+        <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3 px-4">
           <div className="d-flex align-items-center">
             <button
-              className="btn btn-outline-light me-3 rounded-pill px-4 py-2"
+              className="btn btn-outline-light me-3 rounded-pill px-4"
               onClick={() => navigate("/inventory/menu")}
             >
               <i className="bi bi-arrow-left me-2"></i>
@@ -85,17 +95,28 @@ const PurchaseOrderList = () => {
             </button>
             <h4 className="mb-0 fw-bold">Danh sách Đơn đặt hàng</h4>
           </div>
+
+          <button
+            className="btn btn-warning rounded-pill px-4 fw-semibold shadow"
+            onClick={handleCreatePO}
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Tạo đơn nhập hàng
+          </button>
         </div>
 
-        {/* Body */}
-        <div className="card-body p-4 p-md-5">
-          {/* Filter Form */}
-          <div className="row g-3 mb-5">
+        {/* ===== BODY ===== */}
+        <div className="card-body p-4">
+
+          {/* ===== FILTER ===== */}
+          <div className="row g-3 mb-4">
             <div className="col-md-3">
-              <label className="form-label fw-semibold text-muted">Từ ngày</label>
+              <label className="form-label fw-semibold text-muted">
+                Từ ngày
+              </label>
               <input
                 type="date"
-                className="form-control shadow-sm"
+                className="form-control"
                 value={filters.from}
                 onChange={(e) =>
                   setFilters({ ...filters, from: e.target.value })
@@ -104,10 +125,12 @@ const PurchaseOrderList = () => {
             </div>
 
             <div className="col-md-3">
-              <label className="form-label fw-semibold text-muted">Đến ngày</label>
+              <label className="form-label fw-semibold text-muted">
+                Đến ngày
+              </label>
               <input
                 type="date"
-                className="form-control shadow-sm"
+                className="form-control"
                 value={filters.to}
                 onChange={(e) =>
                   setFilters({ ...filters, to: e.target.value })
@@ -120,25 +143,24 @@ const PurchaseOrderList = () => {
                 Trạng thái
               </label>
               <select
-                className="form-select shadow-sm"
+                className="form-select"
                 value={filters.status}
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value })
                 }
               >
                 <option value="">Tất cả trạng thái</option>
-                <option value="Pending">Chờ duyệt</option>
-                <option value="Approved">Đã duyệt</option>
-                <option value="WaitingForDelivery">Chờ giao hàng</option>
-                <option value="Received">Đã nhận hàng</option>
-                <option value="CannotDeliver">Không thể giao</option>
-                <option value="Rejected">Từ chối</option>
+                {Object.keys(statusConfig).map((key) => (
+                  <option key={key} value={key}>
+                    {statusConfig[key].label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="col-md-3 d-flex align-items-end">
               <button
-                className="btn btn-primary w-100 rounded-pill shadow"
+                className="btn btn-primary w-100 rounded-pill"
                 onClick={handleFilter}
                 disabled={loading}
               >
@@ -148,21 +170,18 @@ const PurchaseOrderList = () => {
             </div>
           </div>
 
-          {/* Table */}
+          {/* ===== TABLE ===== */}
           {loading ? (
-            <div className="text-center py-5 my-5">
-              <div
-                className="spinner-border text-primary"
-                style={{ width: "3rem", height: "3rem" }}
-              />
-              <p className="mt-4 text-muted fs-5">
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" />
+              <p className="mt-3 text-muted">
                 Đang tải danh sách đơn đặt hàng...
               </p>
             </div>
           ) : (
             <>
               <div className="table-responsive rounded-3 border shadow-sm">
-                <table className="table table-hover table-striped align-middle mb-0">
+                <table className="table table-hover align-middle mb-0">
                   <thead className="table-dark">
                     <tr>
                       <th className="ps-4">Mã đơn</th>
@@ -178,9 +197,9 @@ const PurchaseOrderList = () => {
                       <tr>
                         <td
                           colSpan="6"
-                          className="text-center py-5 text-muted fst-italic fs-5"
+                          className="text-center py-4 text-muted fst-italic"
                         >
-                          Không tìm thấy đơn đặt hàng nào phù hợp
+                          Không tìm thấy đơn đặt hàng
                         </td>
                       </tr>
                     ) : (
@@ -192,9 +211,8 @@ const PurchaseOrderList = () => {
                             <td className="ps-4 fw-medium">#{po.id}</td>
                             <td>
                               <span
-                                className={`badge fs-6 px-3 py-2 rounded-pill bg-${
-                                  status?.color || "secondary"
-                                }`}
+                                className={`badge rounded-pill bg-${status?.color || "secondary"
+                                  }`}
                               >
                                 {status?.label || po.status}
                               </span>
@@ -204,18 +222,13 @@ const PurchaseOrderList = () => {
                             <td>
                               {po.createdAt
                                 ? new Date(po.createdAt).toLocaleDateString(
-                                    "vi-VN",
-                                    {
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                    }
-                                  )
+                                  "vi-VN"
+                                )
                                 : "—"}
                             </td>
                             <td className="text-center">
                               <button
-                                className="btn btn-sm btn-outline-primary rounded-pill px-4 py-2"
+                                className="btn btn-sm btn-outline-primary rounded-pill px-3"
                                 onClick={() => handleViewDetail(po.id)}
                               >
                                 <i className="bi bi-eye me-1"></i>
@@ -230,33 +243,34 @@ const PurchaseOrderList = () => {
                 </table>
               </div>
 
-              {/* Pagination */}
+              {/* ===== PAGINATION ===== */}
               {orders.length > 0 && totalPages > 1 && (
-                <nav className="mt-5">
-                  <ul className="pagination pagination-lg justify-content-center mb-0">
+                <nav className="mt-4">
+                  <ul className="pagination justify-content-center">
                     <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
                       <button
-                        className="page-link rounded-start-pill px-4"
+                        className="page-link"
                         onClick={handlePrev}
                       >
-                        <i className="bi bi-chevron-left me-1"></i> Trước
+                        Trước
                       </button>
                     </li>
+
                     <li className="page-item disabled">
-                      <span className="page-link px-4 fw-bold">
+                      <span className="page-link">
                         Trang {page} / {totalPages}
                       </span>
                     </li>
+
                     <li
-                      className={`page-item ${
-                        page >= totalPages ? "disabled" : ""
-                      }`}
+                      className={`page-item ${page >= totalPages ? "disabled" : ""
+                        }`}
                     >
                       <button
-                        className="page-link rounded-end-pill px-4"
+                        className="page-link"
                         onClick={handleNext}
                       >
-                        Sau <i className="bi bi-chevron-right ms-1"></i>
+                        Sau
                       </button>
                     </li>
                   </ul>

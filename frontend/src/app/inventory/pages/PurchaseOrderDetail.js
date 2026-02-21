@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import purchaseOrderService from "../../../services/purchaseOrder.service";
+import purchaseOrderService from "../../../services/purchaseOrderService";
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams();
@@ -11,22 +11,22 @@ const PurchaseOrderDetail = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-  // scroll lên đầu trang khi vào page
-  window.scrollTo(0, 0);
+    // scroll lên đầu trang khi vào page
+    window.scrollTo(0, 0);
 
-  const fetchDetail = async () => {
-    try {
-      const res = await purchaseOrderService.getPurchaseOrderDetail(id);
-      setPo(res.data.data);
-    } catch (err) {
-      setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchDetail = async () => {
+      try {
+        const res = await purchaseOrderService.getPurchaseOrderDetail(id);
+        setPo(res.data.data);
+      } catch (err) {
+        setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchDetail();
-}, [id]);
+    fetchDetail();
+  }, [id]);
 
   if (loading) {
     return (
@@ -120,10 +120,10 @@ const PurchaseOrderDetail = () => {
                 <dd className="col-sm-8">
                   {po.createdAt
                     ? new Date(po.createdAt).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
                     : "—"}
                 </dd>
               </dl>
