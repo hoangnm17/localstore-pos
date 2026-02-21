@@ -33,7 +33,7 @@ router.post("/purchase-orders/request", mockAuth, purchaseOrderController.create
 router.patch("/purchase-orders/status/:id", mockAuth, purchaseOrderController.updateStatus);
 
 // // GET LIST PURCHASE ORDERS
-// router.get("/", mockAuth, purchaseOrderController.getPurchaseOrders);
+router.get("/purchase-orders/list",purchaseOrderController.getList);
 
 // // GET PURCHASE ORDER DETAIL
 router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);

@@ -271,3 +271,80 @@ exports.getDetailById = async (poId) => {
         items: itemsResult.recordset
     };
 };
+
+/* ==============================
+   GET LIST WITH PAGINATION + FILTER
+============================== */
+exports.getList = async ({
+    page = 1,
+    pageSize = 15,
+    from,
+    to,
+    status
+}) => {
+
+    const pool = await connectDB();
+    const offset = (page - 1) * pageSize;
+
+    let whereClause = "WHERE 1=1";
+    const request = pool.request();
+
+    if (from) {
+        whereClause += " AND po.createdAt >= @from";
+        request.input("from", sql.DateTime, new Date(from));
+    }
+
+    if (to) {
+        whereClause += " AND po.createdAt <= @to";
+        request.input("to", sql.DateTime, new Date(to));
+    }
+
+    if (status) {
+        whereClause += " AND po.status = @status";
+        request.input("status", sql.VarChar(20), status);
+    }
+
+    // 1️⃣ Lấy tổng số bản ghi
+    const countResult = await request.query(`
+        SELECT COUNT(*) as total
+        FROM PurchaseOrders po
+        ${whereClause}
+    `);
+
+    const total = countResult.recordset[0].total;
+
+    // 2️⃣ Lấy danh sách phân trang
+    const listRequest = pool.request();
+
+    if (from) listRequest.input("from", sql.DateTime, new Date(from));
+    if (to) listRequest.input("to", sql.DateTime, new Date(to));
+    if (status) listRequest.input("status", sql.VarChar(20), status);
+
+    listRequest
+        .input("offset", sql.Int, offset)
+        .input("pageSize", sql.Int, pageSize);
+
+    const listResult = await listRequest.query(`
+        SELECT 
+            po.id,
+            po.status,
+            po.createdAt,
+            s.name AS supplierName,
+            creator.fullName AS createdByName
+        FROM PurchaseOrders po
+        LEFT JOIN Suppliers s ON po.supplierId = s.id
+        LEFT JOIN Staff creator ON po.createdBy = creator.id
+        ${whereClause}
+        ORDER BY po.createdAt DESC
+        OFFSET @offset ROWS
+        FETCH NEXT @pageSize ROWS ONLY
+    `);
+
+    return {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        data: listResult.recordset
+    };
+};

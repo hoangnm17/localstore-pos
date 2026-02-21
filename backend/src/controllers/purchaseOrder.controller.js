@@ -93,3 +93,18 @@ exports.getDetail = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+exports.getList = async (req, res) => {
+    try {
+
+        const result = await purchaseOrderService.getList(req.query);
+
+        res.json({
+            message: "Purchase order list",
+            ...result
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
