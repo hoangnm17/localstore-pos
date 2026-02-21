@@ -15,6 +15,16 @@ const PurchaseOrderList = () => {
 
   const navigate = useNavigate();
 
+  // 🔥 Mapping trạng thái (chuẩn enterprise)
+  const statusConfig = {
+    Pending: { label: "Chờ duyệt", color: "warning" },
+    Approved: { label: "Đã duyệt", color: "success" },
+    WaitingForDelivery: { label: "Chờ giao hàng", color: "primary" },
+    Received: { label: "Đã nhận hàng", color: "info" },
+    CannotDeliver: { label: "Không thể giao", color: "dark" },
+    Rejected: { label: "Từ chối", color: "danger" },
+  };
+
   const fetchData = async (customPage = page) => {
     try {
       setLoading(true);
@@ -87,7 +97,9 @@ const PurchaseOrderList = () => {
                 type="date"
                 className="form-control shadow-sm"
                 value={filters.from}
-                onChange={(e) => setFilters({ ...filters, from: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, from: e.target.value })
+                }
               />
             </div>
 
@@ -97,21 +109,30 @@ const PurchaseOrderList = () => {
                 type="date"
                 className="form-control shadow-sm"
                 value={filters.to}
-                onChange={(e) => setFilters({ ...filters, to: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, to: e.target.value })
+                }
               />
             </div>
 
             <div className="col-md-3">
-              <label className="form-label fw-semibold text-muted">Trạng thái</label>
+              <label className="form-label fw-semibold text-muted">
+                Trạng thái
+              </label>
               <select
                 className="form-select shadow-sm"
                 value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, status: e.target.value })
+                }
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="Pending">Chờ duyệt</option>
                 <option value="Approved">Đã duyệt</option>
+                <option value="WaitingForDelivery">Chờ giao hàng</option>
                 <option value="Received">Đã nhận hàng</option>
+                <option value="CannotDeliver">Không thể giao</option>
+                <option value="Rejected">Từ chối</option>
               </select>
             </div>
 
@@ -127,13 +148,16 @@ const PurchaseOrderList = () => {
             </div>
           </div>
 
-          {/* Table Section */}
+          {/* Table */}
           {loading ? (
             <div className="text-center py-5 my-5">
-              <div className="spinner-border text-primary" style={{ width: "3rem", height: "3rem" }} role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <p className="mt-4 text-muted fs-5">Đang tải danh sách đơn đặt hàng...</p>
+              <div
+                className="spinner-border text-primary"
+                style={{ width: "3rem", height: "3rem" }}
+              />
+              <p className="mt-4 text-muted fs-5">
+                Đang tải danh sách đơn đặt hàng...
+              </p>
             </div>
           ) : (
             <>
@@ -141,76 +165,80 @@ const PurchaseOrderList = () => {
                 <table className="table table-hover table-striped align-middle mb-0">
                   <thead className="table-dark">
                     <tr>
-                      <th scope="col" className="ps-4">Mã đơn</th>
-                      <th scope="col">Trạng thái</th>
-                      <th scope="col">Nhà cung cấp</th>
-                      <th scope="col">Người tạo</th>
-                      <th scope="col">Ngày tạo</th>
-                      <th scope="col" className="text-center">Hành động</th>
+                      <th className="ps-4">Mã đơn</th>
+                      <th>Trạng thái</th>
+                      <th>Nhà cung cấp</th>
+                      <th>Người tạo</th>
+                      <th>Ngày tạo</th>
+                      <th className="text-center">Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {orders.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-5 text-muted fst-italic fs-5">
+                        <td
+                          colSpan="6"
+                          className="text-center py-5 text-muted fst-italic fs-5"
+                        >
                           Không tìm thấy đơn đặt hàng nào phù hợp
                         </td>
                       </tr>
                     ) : (
-                      orders.map((po) => (
-                        <tr key={po.id} className="align-middle">
-                          <td className="ps-4 fw-medium">#{po.id}</td>
-                          <td>
-                            <span
-                              className={`badge fs-6 px-3 py-2 rounded-pill bg-${
-                                po.status === "Approved"
-                                  ? "success"
-                                  : po.status === "Received"
-                                  ? "info"
-                                  : "warning"
-                              }`}
-                            >
-                              {po.status === "Pending"
-                                ? "Chờ duyệt"
-                                : po.status === "Approved"
-                                ? "Đã duyệt"
-                                : "Đã nhận hàng"}
-                            </span>
-                          </td>
-                          <td>{po.supplierName || "—"}</td>
-                          <td>{po.createdByName || "—"}</td>
-                          <td>
-                            {po.createdAt
-                              ? new Date(po.createdAt).toLocaleDateString("vi-VN", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                })
-                              : "—"}
-                          </td>
-                          <td className="text-center">
-                            <button
-                              className="btn btn-sm btn-outline-primary rounded-pill px-4 py-2"
-                              onClick={() => handleViewDetail(po.id)}
-                              title="Xem chi tiết đơn hàng"
-                            >
-                              <i className="bi bi-eye me-1"></i>
-                              Chi tiết
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      orders.map((po) => {
+                        const status = statusConfig[po.status];
+
+                        return (
+                          <tr key={po.id}>
+                            <td className="ps-4 fw-medium">#{po.id}</td>
+                            <td>
+                              <span
+                                className={`badge fs-6 px-3 py-2 rounded-pill bg-${
+                                  status?.color || "secondary"
+                                }`}
+                              >
+                                {status?.label || po.status}
+                              </span>
+                            </td>
+                            <td>{po.supplierName || "—"}</td>
+                            <td>{po.createdByName || "—"}</td>
+                            <td>
+                              {po.createdAt
+                                ? new Date(po.createdAt).toLocaleDateString(
+                                    "vi-VN",
+                                    {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    }
+                                  )
+                                : "—"}
+                            </td>
+                            <td className="text-center">
+                              <button
+                                className="btn btn-sm btn-outline-primary rounded-pill px-4 py-2"
+                                onClick={() => handleViewDetail(po.id)}
+                              >
+                                <i className="bi bi-eye me-1"></i>
+                                Chi tiết
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
-              {!loading && orders.length > 0 && totalPages > 1 && (
-                <nav className="mt-5" aria-label="Pagination">
+              {orders.length > 0 && totalPages > 1 && (
+                <nav className="mt-5">
                   <ul className="pagination pagination-lg justify-content-center mb-0">
                     <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                      <button className="page-link rounded-start-pill px-4" onClick={handlePrev}>
+                      <button
+                        className="page-link rounded-start-pill px-4"
+                        onClick={handlePrev}
+                      >
                         <i className="bi bi-chevron-left me-1"></i> Trước
                       </button>
                     </li>
@@ -219,8 +247,15 @@ const PurchaseOrderList = () => {
                         Trang {page} / {totalPages}
                       </span>
                     </li>
-                    <li className={`page-item ${page >= totalPages ? "disabled" : ""}`}>
-                      <button className="page-link rounded-end-pill px-4" onClick={handleNext}>
+                    <li
+                      className={`page-item ${
+                        page >= totalPages ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link rounded-end-pill px-4"
+                        onClick={handleNext}
+                      >
                         Sau <i className="bi bi-chevron-right ms-1"></i>
                       </button>
                     </li>
