@@ -195,20 +195,20 @@ exports.getDetailById = async (poId) => {
 
     const pool = await connectDB();
 
-    // 1️⃣ Lấy thông tin PO + Supplier + Staff
-    const poResult = await pool.request()
+    const result = await pool.request()
         .input("poId", sql.Int, poId)
         .query(`
             SELECT 
                 po.id,
-                po.supplierId,
                 po.note,
                 po.status,
                 po.createdAt,
+
                 po.createdBy,
                 po.processBy,
                 po.receivedBy,
 
+                s.id AS supplierId,
                 s.name AS supplierName,
 
                 creator.fullName AS createdByName,
@@ -223,13 +223,11 @@ exports.getDetailById = async (poId) => {
             WHERE po.id = @poId
         `);
 
-    if (poResult.recordset.length === 0) {
-        return null;
-    }
+    if (result.recordset.length === 0) return null;
 
-    const purchaseOrder = poResult.recordset[0];
+    const row = result.recordset[0];
 
-    // 2️⃣ Lấy danh sách items
+    // Lấy items
     const itemsResult = await pool.request()
         .input("poId", sql.Int, poId)
         .query(`
@@ -244,7 +242,32 @@ exports.getDetailById = async (poId) => {
             WHERE poi.poId = @poId
         `);
 
-    purchaseOrder.items = itemsResult.recordset;
+    return {
+        id: row.id,
+        status: row.status,
+        note: row.note,
+        createdAt: row.createdAt,
 
-    return purchaseOrder;
+        supplier: {
+            id: row.supplierId,
+            name: row.supplierName
+        },
+
+        createdBy: {
+            id: row.createdBy,
+            name: row.createdByName
+        },
+
+        processedBy: row.processBy ? {
+            id: row.processBy,
+            name: row.processedByName
+        } : null,
+
+        receivedBy: row.receivedBy ? {
+            id: row.receivedBy,
+            name: row.receivedByName
+        } : null,
+
+        items: itemsResult.recordset
+    };
 };
