@@ -185,8 +185,10 @@ CREATE TABLE [Products] (
     [status] VARCHAR(20) DEFAULT 'Selling',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     [updatedAt] DATETIME2 DEFAULT GETDATE(),
+    [supplierId] INT NULL,
     
     CONSTRAINT [FK_Product_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
+    CONSTRAINT [FK_Product_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
     CONSTRAINT [CK_Product_Status] CHECK ([status] IN ('Selling', 'StopSelling', 'Suspended'))
 );
 GO
@@ -277,22 +279,26 @@ GO
 CREATE TABLE [PurchaseOrders] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [createdBy] BIGINT NOT NULL,
-    [approvedBy] BIGINT NULL,
+    [processBy] BIGINT NULL,
     [supplierId] INT NOT NULL,
     [status] VARCHAR(20) NOT NULL DEFAULT 'Draft',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
+    [receivedBy] BIGINT NULL,
+
+    CONSTRAINT [FK_PO_ReceivedBy]
+        FOREIGN KEY ([receivedBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [FK_PO_CreatedBy]
         FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id]),
 
-    CONSTRAINT [FK_PO_ApprovedBy]
-        FOREIGN KEY ([approvedBy]) REFERENCES [Staff]([id]),
+    CONSTRAINT [FK_PO_ProcessBy]
+        FOREIGN KEY ([processBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [FK_PO_Supplier]
         FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
 
     CONSTRAINT [CK_PO_Status]
-        CHECK ([status] IN ('Draft','Pending','Approved','Received','Cancelled'))
+        CHECK ([status] IN ('Pending','Approved','Rejected','WaitingForDelivery','Received', 'CannotDeliver'))
 );
 GO
 

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
 const mockAuth = require("../middleware/mockAuth.js");
+const purchaseOrderController = require("../controllers/purchaseOrder.controller");
 
 
 /**
@@ -24,6 +25,18 @@ router.post("/reports/send", mockAuth, inventoryController.createProblematicRepo
 
 //GET get problematic reports
 router.get("/reports/list", mockAuth, inventoryController.getProblematicReports);
+
+// CREATE PURCHASE ORDER
+router.post("/purchase-orders/request", mockAuth, purchaseOrderController.createPurchaseOrder);
+
+// UPDATE PO STATUS
+router.patch("/purchase-orders/status/:id", mockAuth, purchaseOrderController.updateStatus);
+
+// // GET LIST PURCHASE ORDERS
+// router.get("/", mockAuth, purchaseOrderController.getPurchaseOrders);
+
+// // GET PURCHASE ORDER DETAIL
+router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);
 
 
 module.exports = router;
