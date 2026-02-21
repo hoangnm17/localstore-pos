@@ -49,6 +49,32 @@ exports.getProductStockByCategory = async (
     };
 };
 
+exports.getProductsBySupplier = async (
+    supplierId,
+    search,
+    page,
+    limit
+) => {
+    const offset = (page - 1) * limit;
+
+    const products = await productModel.getProductsBySupplier(
+        supplierId,
+        search,
+        limit,
+        offset
+    );
+
+    const total = await productModel.countProductsBySupplier(
+        supplierId,
+        search
+    );
+
+    return {
+        products,
+        total
+    };
+};
+
 exports.updateProductStock = async (productId, quantity) => {
     return await productModel.updateStock(productId, quantity);
 };

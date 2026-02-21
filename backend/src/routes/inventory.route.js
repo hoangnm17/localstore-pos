@@ -20,6 +20,9 @@ router.get("/categories/:categoryId/products", inventoryController.getProductSto
 // PUT update stock
 router.put("/products/stock", inventoryController.updateProductStock);
 
+// GET products by supplier
+router.get("/suppliers/:supplierId/products", inventoryController.getProductsBySupplier);
+
 //POST send problematic report
 router.post("/reports/send", mockAuth, inventoryController.createProblematicReport);
 
