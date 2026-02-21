@@ -12,6 +12,15 @@ const productStockService = {
         );
     },
 
+    getProductsBySupplier(supplierId, search, page, limit) {
+        return axios.get(
+            `${API_URL}/suppliers/${supplierId}/products`,
+            {
+                params: { search, page, limit }
+            }
+        );
+    },
+
     updateStock(productId, quantity) {
         return axios.put(
             `${API_URL}/products/stock`,
