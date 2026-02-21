@@ -68,7 +68,7 @@ function InventoryMenu() {
           <div className="col">
             <div
               className="card h-100 border-0 shadow-lg rounded-4 overflow-hidden text-center transition hover-shadow-xl cursor-pointer"
-              onClick={() => navigate("/inventory/errors")}
+              onClick={() => navigate("/inventory/problematic")}
               role="button"
               tabIndex={0}
             >
@@ -164,7 +164,7 @@ function InventoryMenu() {
                       className="btn btn-success btn-lg rounded-pill shadow d-flex align-items-center justify-content-center py-3"
                       onClick={() => {
                         setShowModal(false);
-                        navigate("/inventory/requests/import");
+                        navigate("/inventory/purchase-orders");
                       }}
                     >
                       <i className="bi bi-box-arrow-in-right fs-4 me-3"></i>

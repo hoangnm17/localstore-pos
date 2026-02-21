@@ -4,6 +4,7 @@ import ProductStock from "../app/inventory/pages/ProductStock";
 import MainLayout from "../layouts/MainLayout";
 import InventoryMenu from "../app/inventory/pages/InventoryMenu";
 import ProblematicReport from "../app/inventory/pages/ProblematicReport";
+import PurchaseOrderList from "../app/inventory/pages/PurchaseOrderList";
 
 const InventoryRoutes = (
     <Route path="/inventory" element={<MainLayout />}>
@@ -13,6 +14,8 @@ const InventoryRoutes = (
             element={<ProductStock />}
         />
         <Route path="problematic" element={<ProblematicReport />} />
+        <Route path="purchase-orders" element={<PurchaseOrderList />} />
+
         <Route path="menu" element={<InventoryMenu />} />
     </Route>
 );
