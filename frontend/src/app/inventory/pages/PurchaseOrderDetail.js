@@ -11,19 +11,22 @@ const PurchaseOrderDetail = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        const res = await purchaseOrderService.getPurchaseOrderDetail(id);
-        setPo(res.data.data);
-      } catch (err) {
-        setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // scroll lên đầu trang khi vào page
+  window.scrollTo(0, 0);
 
-    fetchDetail();
-  }, [id]);
+  const fetchDetail = async () => {
+    try {
+      const res = await purchaseOrderService.getPurchaseOrderDetail(id);
+      setPo(res.data.data);
+    } catch (err) {
+      setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDetail();
+}, [id]);
 
   if (loading) {
     return (
