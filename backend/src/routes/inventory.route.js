@@ -3,7 +3,7 @@ const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
 const mockAuth = require("../middleware/mockAuth.js");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
-
+const supplierController = require("../controllers/supplier.controller");
 
 /**
  * Category stock
@@ -37,6 +37,9 @@ router.get("/purchase-orders/list",purchaseOrderController.getList);
 
 // // GET PURCHASE ORDER DETAIL
 router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);
+
+// GET SUPPLIER LIST
+router.get("/suppliers/list", supplierController.getSupplierList);
 
 
 module.exports = router;
