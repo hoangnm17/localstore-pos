@@ -103,3 +103,14 @@ exports.updateStatus = async (poId, newStatus, user) => {
         user.staffId
     );
 };
+
+exports.getDetail = async (poId) => {
+
+    const po = await purchaseOrderModel.getDetailById(poId);
+
+    if (!po) {
+        throw new Error("PO_NOT_FOUND");
+    }
+
+    return po;
+};

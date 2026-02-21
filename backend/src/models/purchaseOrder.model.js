@@ -187,3 +187,64 @@ exports.receivePurchaseOrder = async (poId, userId) => {
         throw err;
     }
 };
+
+/* ==============================
+   GET DETAIL BY ID
+============================== */
+exports.getDetailById = async (poId) => {
+
+    const pool = await connectDB();
+
+    // 1️⃣ Lấy thông tin PO + Supplier + Staff
+    const poResult = await pool.request()
+        .input("poId", sql.Int, poId)
+        .query(`
+            SELECT 
+                po.id,
+                po.supplierId,
+                po.note,
+                po.status,
+                po.createdAt,
+                po.createdBy,
+                po.processBy,
+                po.receivedBy,
+
+                s.name AS supplierName,
+
+                creator.fullName AS createdByName,
+                processor.fullName AS processedByName,
+                receiver.fullName AS receivedByName
+
+            FROM PurchaseOrders po
+            LEFT JOIN Suppliers s ON po.supplierId = s.id
+            LEFT JOIN Staff creator ON po.createdBy = creator.id
+            LEFT JOIN Staff processor ON po.processBy = processor.id
+            LEFT JOIN Staff receiver ON po.receivedBy = receiver.id
+            WHERE po.id = @poId
+        `);
+
+    if (poResult.recordset.length === 0) {
+        return null;
+    }
+
+    const purchaseOrder = poResult.recordset[0];
+
+    // 2️⃣ Lấy danh sách items
+    const itemsResult = await pool.request()
+        .input("poId", sql.Int, poId)
+        .query(`
+            SELECT 
+                poi.id,
+                poi.productId,
+                p.name AS productName,
+                poi.quantityBeforeOrdered,
+                poi.quantityOrdered
+            FROM PurchaseOrderItems poi
+            LEFT JOIN Products p ON poi.productId = p.id
+            WHERE poi.poId = @poId
+        `);
+
+    purchaseOrder.items = itemsResult.recordset;
+
+    return purchaseOrder;
+};

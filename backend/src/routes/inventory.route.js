@@ -36,7 +36,7 @@ router.patch("/purchase-orders/status/:id", mockAuth, purchaseOrderController.up
 // router.get("/", mockAuth, purchaseOrderController.getPurchaseOrders);
 
 // // GET PURCHASE ORDER DETAIL
-// router.get("/:id", mockAuth, purchaseOrderController.getPurchaseOrderDetail);
+router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);
 
 
 module.exports = router;
