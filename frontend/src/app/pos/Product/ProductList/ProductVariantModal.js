@@ -1,9 +1,13 @@
+import { formatCurrency } from "../../../../utils/formatters";
+
 export default function ProductVariant({ product, onClose, onAdd }) {
   if (!product) return null;
 
-  const handleSelectVariant = (variant) => {
+  const variants = product.variants || [];
 
-    // ✅ SỬA: tránh crash nếu mock không có quantity
+  const handleSelectVariant = (variant) => {
+    if (!variant) return;
+
     const isOutOfStock =
       variant.quantity !== undefined && variant.quantity === 0;
 
@@ -12,17 +16,12 @@ export default function ProductVariant({ product, onClose, onAdd }) {
     onAdd({
       productId: product.id,
       productName: product.name,
-
-      // ✅ SỬA: fallback nếu mock không có id
-      variantId: variant.id ?? variant.name,
-
+      variantId: variant.id,
       variantName: variant.name,
-
-      // ✅ SỬA: nếu variant không có price thì dùng salePrice
-      unitPrice: variant.price ?? product.salePrice ?? 0,
+      unitPrice: Number(variant.price),
     });
 
-    onClose(); // ✅ SỬA: tự đóng modal sau khi chọn
+    onClose();
   };
 
   return (
@@ -41,6 +40,7 @@ export default function ProductVariant({ product, onClose, onAdd }) {
       >
         <div className="modal-content border-0 shadow-lg rounded-4">
 
+          {/* HEADER */}
           <div className="modal-header border-0 pt-4 px-4 pb-0">
             <div>
               <h5 className="fw-bold mb-0">{product.name}</h5>
@@ -51,53 +51,48 @@ export default function ProductVariant({ product, onClose, onAdd }) {
             <button className="btn-close shadow-none" onClick={onClose} />
           </div>
 
+          {/* BODY */}
           <div className="modal-body p-4">
             <div className="row g-3">
-              {product.variants.map((variant, index) => {
-
-                // ✅ SỬA: tránh crash nếu quantity undefined
+              {variants.map((variant) => {
                 const isOutOfStock =
                   variant.quantity !== undefined &&
                   variant.quantity === 0;
 
                 return (
-                  <div key={index} className="col-6">
+                  <div key={variant.id} className="col-6">
                     <button
-                      className={`btn w-100 h-100 p-3 border-2 text-start position-relative
-                        ${isOutOfStock
+                      className={`btn w-100 h-100 p-3 border-2 text-start position-relative ${
+                        isOutOfStock
                           ? "btn-light opacity-50"
                           : "btn-outline-primary rounded-3"
-                        }`}
+                      }`}
                       disabled={isOutOfStock}
                       onClick={() => handleSelectVariant(variant)}
                       style={{ minHeight: "90px" }}
                     >
-                      <span
-                        className={`position-absolute top-0 end-0 mt-2 me-2 badge rounded-pill 
-                        ${isOutOfStock
-                            ? "bg-danger"
-                            : "bg-success bg-opacity-10 text-success"
+                      {/* STOCK BADGE */}
+                      {variant.quantity !== undefined && (
+                        <span
+                          className={`position-absolute top-0 end-0 mt-2 me-2 badge rounded-pill ${
+                            isOutOfStock
+                              ? "bg-danger"
+                              : "bg-success bg-opacity-10 text-success"
                           }`}
-                      >
-                        {isOutOfStock
-                          ? "Hết"
-                          : variant.quantity !== undefined
-                            ? `Còn ${variant.quantity}`
-                            : ""}
-                      </span>
+                        >
+                          {isOutOfStock
+                            ? "Hết"
+                            : `Còn ${variant.quantity}`}
+                        </span>
+                      )}
 
                       <div className="fw-bold mb-1">
                         {variant.name}
                       </div>
 
+                      {/* PRICE */}
                       <div className="small text-primary">
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(
-                          // ✅ SỬA: fallback giá
-                          variant.price ?? product.salePrice ?? 0
-                        )}
+                        {formatCurrency(variant.price)}
                       </div>
                     </button>
                   </div>
@@ -106,6 +101,7 @@ export default function ProductVariant({ product, onClose, onAdd }) {
             </div>
           </div>
 
+          {/* FOOTER */}
           <div className="modal-footer border-0 pb-4 px-4">
             <button
               className="btn btn-light w-100 rounded-3 fw-bold text-secondary py-2"
@@ -114,6 +110,7 @@ export default function ProductVariant({ product, onClose, onAdd }) {
               HỦY BỎ
             </button>
           </div>
+
         </div>
       </div>
     </div>

@@ -11,8 +11,7 @@ export default function SalesHome() {
     setActiveInvoiceId,
     createInvoiceTab,
     updateInvoiceItems,
-    pay,
-    closeTab
+    closeTab,
   } = useInvoiceTabs();
 
   const {
@@ -20,18 +19,15 @@ export default function SalesHome() {
     increase,
     decrease,
     remove,
-    calculateTotal
+    calculateTotal,
+    calculateTotalQuantity,
   } = useOrderItems();
 
-  /* =====================================================
-     HANDLE ITEM ACTIONS (SAFE + CLEAN)
-  ===================================================== */
 
   const handleAddItem = (product) => {
     if (!activeInvoice) return;
 
     const newItems = addItem(activeInvoice.items, product);
-
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
@@ -39,7 +35,6 @@ export default function SalesHome() {
     if (!activeInvoice) return;
 
     const newItems = increase(activeInvoice.items, id);
-
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
@@ -47,7 +42,6 @@ export default function SalesHome() {
     if (!activeInvoice) return;
 
     const newItems = decrease(activeInvoice.items, id);
-
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
@@ -55,22 +49,28 @@ export default function SalesHome() {
     if (!activeInvoice) return;
 
     const newItems = remove(activeInvoice.items, id);
-
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
   const total = calculateTotal(activeInvoice?.items || []);
+  const totalQuantity = calculateTotalQuantity(
+    activeInvoice?.items || []
+  );
 
-  /* =====================================================
-     UI
-  ===================================================== */
+
+  if (!activeInvoice) {
+    return (
+      <div className="vh-100 d-flex justify-content-center align-items-center">
+        Loading invoice...
+      </div>
+    );
+  }
 
   return (
     <div className="vh-100 d-flex bg-light flex-column">
 
-      {/* ================= TAB BAR ================= */}
+      {/* TAB BAR */}
       <div className="d-flex align-items-center border-bottom bg-white px-2">
-
         {invoices.map((inv, index) => {
           const isActive = inv.id === activeInvoiceId;
           const tabTotal = calculateTotal(inv.items);
@@ -88,7 +88,8 @@ export default function SalesHome() {
             >
               <span>
                 Hoá đơn {index + 1}
-                {tabTotal > 0 && ` (${tabTotal.toLocaleString()})`}
+                {tabTotal > 0 &&
+                  ` (${tabTotal.toLocaleString()})`}
                 {inv.isSaving && " ⏳"}
               </span>
 
@@ -115,7 +116,7 @@ export default function SalesHome() {
         </button>
       </div>
 
-      {/* ================= MAIN ================= */}
+      {/* MAIN */}
       <div className="d-flex flex-grow-1">
 
         {/* ORDER */}
@@ -124,13 +125,14 @@ export default function SalesHome() {
           style={{ flex: 4 }}
         >
           <Order
-            orderItems={activeInvoice?.items || []}
+            orderId={activeInvoice.id}
+            orderItems={activeInvoice.items}
             total={total}
+            totalQuantity={totalQuantity}
             increase={handleIncrease}
             decrease={handleDecrease}
             remove={handleRemove}
-            onPay={pay}
-            isSaving={activeInvoice?.isSaving}
+            isSaving={activeInvoice.isSaving}
           />
         </div>
 

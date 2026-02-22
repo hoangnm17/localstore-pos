@@ -1,19 +1,19 @@
 import { useState, useMemo, useEffect } from "react";
+import { formatCurrency } from "../../../../utils/formatters";
 
 export default function PaymentModal({
+  orderId,
   total = 0,
   onClose = () => {},
   onConfirm = () => {},
 }) {
 
-  // ===== SAFE TOTAL =====
   const safeTotal = useMemo(() => Number(total) || 0, [total]);
 
-  // ===== STATE =====
   const [method, setMethod] = useState("CASH");
   const [customerPay, setCustomerPay] = useState("");
 
-  // ✅ SỬA 1: Reset toàn bộ state khi modal mở lại
+  //Reset toàn bộ state khi modal mở lại
   useEffect(() => {
     setMethod("CASH");
     setCustomerPay("");
@@ -25,21 +25,20 @@ export default function PaymentModal({
 
   // ===== CALCULATE =====
 
-  // ✅ SỬA 2: Đảm bảo không bị số âm hoặc NaN
+  // Đảm bảo không bị số âm hoặc NaN
   const customerPayNumber = useMemo(() => {
     if (method === "BANK") return safeTotal;
     const parsed = Number(customerPay);
     return isNaN(parsed) || parsed < 0 ? 0 : parsed;
   }, [method, customerPay, safeTotal]);
 
-  // ✅ SỬA 3: Không cần Math.max nếu đã xử lý trên
+  // Không cần Math.max nếu đã xử lý trên
   const change = useMemo(() => {
     return customerPayNumber > safeTotal
       ? customerPayNumber - safeTotal
       : 0;
   }, [customerPayNumber, safeTotal]);
 
-  // ===== HANDLERS =====
 
   const handleQuickAdd = (amount) => {
     const current = Number(customerPay) || 0;
@@ -48,25 +47,16 @@ export default function PaymentModal({
 
   const handleSubmit = () => {
 
-    // ✅ SỬA 4: Chặn submit nếu chưa đủ tiền mặt
+    //Chặn submit nếu chưa đủ tiền mặt
     if (method === "CASH" && customerPayNumber < safeTotal) return;
 
     onConfirm({
+      orderId,
       method,
-      total: safeTotal,
       customerPay: customerPayNumber,
-      change: method === "BANK" ? 0 : change,
     });
   };
 
-  // ===== FORMAT MONEY (chuẩn VND) =====
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(value);
-
-  // ===== UI =====
   return (
     <div
       className="modal fade show d-block"

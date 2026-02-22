@@ -1,38 +1,31 @@
-import { useState, useMemo } from "react";
-import { invoiceCreate } from "../../../services/Invoices/invoice.service";
+import { useState } from "react";
+import { createPayment } from "../../../services/Payment/payment.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
 import PaymentModal from "./Payment/PaymentModal";
 
 export default function Order({
+  orderId,
   orderItems = [],
   customer = null,
+  total,
+  totalQuantity,
   increase,
   decrease,
   remove,
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
-  // ✅ Tính total trực tiếp từ items
-  const total = useMemo(() => {
-    return orderItems.reduce(
-      (sum, item) =>
-        // 🔥 SỬA: dùng unitPrice thay vì price để đồng nhất toàn hệ thống
-        sum + (item.unitPrice || 0) * item.quantity,
-      0
-    );
-  }, [orderItems]);
-
-  const handleConfirmPayment = async (paymentInfo) => {
+  const handleConfirmPayment = async ({method, customerPay}) => {
     const payload = {
-      items: orderItems,   // lấy trực tiếp từ props
-      customer,
-      total,
-      payment: paymentInfo,
+      orderId: orderId,
+      method: method,
+      customerPay: customerPay,
     };
-
-    await invoiceCreate(payload);
+    console.log(payload);
+    
+    await createPayment(payload);
 
     setShowPayment(false);
   };
@@ -70,6 +63,7 @@ export default function Order({
         <PaymentDetail
           items={orderItems}
           total={total}
+          totalQuantity={totalQuantity}
           disabled={isEmpty}
           onOpenPayment={() => setShowPayment(true)}
         />
@@ -77,6 +71,7 @@ export default function Order({
 
       {showPayment && (
         <PaymentModal
+          orderId={orderId}
           total={total}
           onClose={() => setShowPayment(false)}
           onConfirm={handleConfirmPayment}
