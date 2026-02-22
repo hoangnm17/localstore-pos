@@ -37,13 +37,17 @@ export const useOrderItems = () => {
     );
 
   const decrease = (items, id) =>
-    items
-      .map(item =>
-        item.id === id
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-      .filter(item => item.quantity > 0);
+    items.map(item =>
+      item.id === id
+        ? {
+          ...item,
+          quantity:
+            item.quantity > 1
+              ? item.quantity - 1
+              : 1
+        }
+        : item
+    );
 
   const remove = (items, id) =>
     items.filter(item => item.id !== id);
@@ -54,11 +58,19 @@ export const useOrderItems = () => {
       0
     );
 
+  const calculateTotalQuantity = (items = []) => {
+    return items.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+  };
+
   return {
     addItem,
     increase,
     decrease,
     remove,
-    calculateTotal
+    calculateTotal,
+    calculateTotalQuantity
   };
 };
