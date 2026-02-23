@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom"; 
 import { loginAPI } from "../../services/Auth/auth.service";
-import bgImage from "../../assets/images/store.jpg"; 
 
-export default function LoginPage() {
+ function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +34,7 @@ export default function LoginPage() {
     <div 
       className="d-flex align-items-center justify-content-center min-vh-100"
       style={{
-        backgroundImage: `url(${bgImage})`,
+        backgroundImage: `url("/store.jpg")`,
         backgroundSize: "cover",       
         backgroundPosition: "center",  
         backgroundRepeat: "no-repeat",
@@ -116,3 +115,4 @@ export default function LoginPage() {
     </div>
   );
 }
+export default LoginPage;
