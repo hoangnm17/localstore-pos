@@ -94,6 +94,31 @@ exports.updateProductStock = async (req, res) => {
     }
 };
 
+exports.getProductsBySupplier = async (req, res) => {
+    try {
+        const { supplierId } = req.params;
+        const { search = "", page = 1, limit = 10 } = req.query;
+
+        const data = await inventoryService.getProductsBySupplier(
+            Number(supplierId),
+            search,
+            Number(page),
+            Number(limit)
+        );
+
+        res.json({
+            supplierId: Number(supplierId),
+            page: Number(page),
+            limit: Number(limit),
+            total: data.total,
+            products: data.products
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 exports.createProblematicReport = async (req, res) => {
     try {
         await problematicService.createReport(req.body, req.user);

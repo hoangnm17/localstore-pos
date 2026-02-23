@@ -3,7 +3,7 @@ const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
 const mockAuth = require("../middleware/mockAuth.js");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
-
+const supplierController = require("../controllers/supplier.controller");
 
 /**
  * Category stock
@@ -20,6 +20,9 @@ router.get("/categories/:categoryId/products", inventoryController.getProductSto
 // PUT update stock
 router.put("/products/stock", inventoryController.updateProductStock);
 
+// GET products by supplier
+router.get("/suppliers/:supplierId/products", inventoryController.getProductsBySupplier);
+
 //POST send problematic report
 router.post("/reports/send", mockAuth, inventoryController.createProblematicReport);
 
@@ -33,10 +36,13 @@ router.post("/purchase-orders/request", mockAuth, purchaseOrderController.create
 router.patch("/purchase-orders/status/:id", mockAuth, purchaseOrderController.updateStatus);
 
 // // GET LIST PURCHASE ORDERS
-// router.get("/", mockAuth, purchaseOrderController.getPurchaseOrders);
+router.get("/purchase-orders/list",purchaseOrderController.getList);
 
 // // GET PURCHASE ORDER DETAIL
 router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);
+
+// GET SUPPLIER LIST
+router.get("/suppliers/list", supplierController.getSupplierList);
 
 
 module.exports = router;

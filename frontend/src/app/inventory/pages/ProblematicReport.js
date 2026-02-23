@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import problematicService from "../../../services/categoryStockService";
 
 function ProblematicPage() {
+  const navigate = useNavigate();
+
   const [reports, setReports] = useState([]);
   const [title, setTitle] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
@@ -15,12 +18,18 @@ function ProblematicPage() {
     createdTo: "",
   });
 
-  // Mock data - chỉ dùng 2 trạng thái: Chưa xử lý / Đã xử lý
+  // Scroll lên đầu trang khi load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Mock data
   const mockReports = [
     {
       id: 1,
       title: "Hàng bị bóp méo",
-      issueDescription: "Thùng hàng bị vỡ trong quá trình vận chuyển từ nhà cung cấp A",
+      issueDescription:
+        "Thùng hàng bị vỡ trong quá trình vận chuyển từ nhà cung cấp A",
       reportedBy: 101,
       reportedByName: "Nguyễn Văn A",
       status: "Chưa xử lý",
@@ -29,7 +38,8 @@ function ProblematicPage() {
     {
       id: 2,
       title: "Sai số lượng nhập kho",
-      issueDescription: "Hệ thống ghi nhận sai 5 sản phẩm (mã SP-45678)",
+      issueDescription:
+        "Hệ thống ghi nhận sai 5 sản phẩm (mã SP-45678)",
       reportedBy: 102,
       reportedByName: "Trần Thị B",
       status: "Đã xử lý",
@@ -38,7 +48,8 @@ function ProblematicPage() {
     {
       id: 3,
       title: "Sản phẩm lỗi kỹ thuật",
-      issueDescription: "Máy không hoạt động sau khi khởi động, có tiếng kêu lạ",
+      issueDescription:
+        "Máy không hoạt động sau khi khởi động, có tiếng kêu lạ",
       reportedBy: 103,
       reportedByName: "Lê Văn C",
       status: "Đã xử lý",
@@ -50,9 +61,7 @@ function ProblematicPage() {
     try {
       const res = await problematicService.getReports(filters);
       setReports(res.data);
-    } catch (err) {
-      console.log("Đang sử dụng dữ liệu mẫu...");
-
+    } catch {
       let filtered = [...mockReports];
 
       if (filters.status) {
@@ -68,7 +77,9 @@ function ProblematicPage() {
       if (filters.createdTo) {
         const toDate = new Date(filters.createdTo);
         toDate.setHours(23, 59, 59, 999);
-        filtered = filtered.filter((r) => new Date(r.createdAt) <= toDate);
+        filtered = filtered.filter(
+          (r) => new Date(r.createdAt) <= toDate
+        );
       }
 
       setReports(filtered);
@@ -88,7 +99,7 @@ function ProblematicPage() {
         issueDescription,
       });
       fetchReports();
-    } catch (err) {
+    } catch {
       const newMock = {
         id: reports.length + 1,
         title,
@@ -115,17 +126,12 @@ function ProblematicPage() {
   const handleMarkAsProcessed = () => {
     if (!selectedReport || selectedReport.status !== "Chưa xử lý") return;
 
-    // Cập nhật mock data
     const updatedReports = reports.map((r) =>
       r.id === selectedReport.id ? { ...r, status: "Đã xử lý" } : r
     );
+
     setReports(updatedReports);
-
-    // Cập nhật modal ngay lập tức
     setSelectedReport({ ...selectedReport, status: "Đã xử lý" });
-
-    // Thực tế: gọi API update
-    // await problematicService.updateReportStatus(selectedReport.id, "Đã xử lý");
   };
 
   const getStatusBadge = (status) => {
@@ -141,8 +147,19 @@ function ProblematicPage() {
 
   return (
     <div className="container py-4">
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0 fw-semibold">Hàng hóa có vấn đề</h2>
+        <div className="d-flex align-items-center gap-3">
+          <button
+            className="btn btn-outline-secondary"
+            onClick={() => navigate("/inventory/menu")}
+          >
+            <i className="bi bi-arrow-left me-1"></i> Quay lại
+          </button>
+
+          <h2 className="mb-0 fw-semibold">Hàng hóa có vấn đề</h2>
+        </div>
+
         <button
           className="btn btn-primary"
           onClick={() => setShowCreateModal(true)}
@@ -151,7 +168,7 @@ function ProblematicPage() {
         </button>
       </div>
 
-      {/* Bộ lọc - chỉ còn 2 trạng thái */}
+      {/* Filter */}
       <div className="card shadow-sm border-0 mb-4">
         <div className="card-body">
           <div className="row g-3">
@@ -197,18 +214,18 @@ function ProblematicPage() {
         </div>
       </div>
 
-      {/* Bảng danh sách */}
+      {/* Table */}
       <div className="card shadow-sm border-0">
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="table table-hover table-striped align-middle mb-0">
               <thead className="table-light">
                 <tr>
-                  <th scope="col" className="ps-4">Mã</th>
-                  <th scope="col">Tiêu đề</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Ngày tạo</th>
-                  <th scope="col" className="text-center">Hành động</th>
+                  <th className="ps-4">Mã</th>
+                  <th>Tiêu đề</th>
+                  <th>Trạng thái</th>
+                  <th>Ngày tạo</th>
+                  <th className="text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,11 +242,7 @@ function ProblematicPage() {
                       <td>{r.title}</td>
                       <td>{getStatusBadge(r.status)}</td>
                       <td>
-                        {new Date(r.createdAt).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                        {new Date(r.createdAt).toLocaleDateString("vi-VN")}
                       </td>
                       <td className="text-center">
                         <button
@@ -248,154 +261,6 @@ function ProblematicPage() {
         </div>
       </div>
 
-      {/* Modal Tạo báo cáo mới */}
-      {showCreateModal && (
-        <div className="modal fade show" style={{ display: "block" }} tabIndex="-1">
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-primary text-white">
-                <h5 className="modal-title">Tạo báo cáo mới</h5>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={() => setShowCreateModal(false)}
-                ></button>
-              </div>
-
-              <form onSubmit={handleCreate}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label htmlFor="title" className="form-label fw-medium">
-                      Tiêu đề <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="title"
-                      placeholder="Nhập tiêu đề báo cáo"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label htmlFor="description" className="form-label fw-medium">
-                      Mô tả vấn đề <span className="text-danger">*</span>
-                    </label>
-                    <textarea
-                      className="form-control"
-                      id="description"
-                      rows="4"
-                      placeholder="Mô tả chi tiết vấn đề gặp phải..."
-                      value={issueDescription}
-                      onChange={(e) => setIssueDescription(e.target.value)}
-                      required
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div className="modal-footer border-0">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => setShowCreateModal(false)}
-                  >
-                    Hủy
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Gửi báo cáo
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Chi tiết báo cáo */}
-      {showDetailModal && selectedReport && (
-        <div className="modal fade show" style={{ display: "block" }} tabIndex="-1">
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-info text-white">
-                <h5 className="modal-title">Chi tiết báo cáo #{selectedReport.id}</h5>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={() => setShowDetailModal(false)}
-                ></button>
-              </div>
-
-              <div className="modal-body">
-                <div className="row g-3">
-                  <div className="col-12">
-                    <h6 className="fw-bold">Tiêu đề:</h6>
-                    <p className="mb-1">{selectedReport.title}</p>
-                  </div>
-
-                  <div className="col-12">
-                    <h6 className="fw-bold">Mô tả vấn đề:</h6>
-                    <p className="mb-1 pre-wrap">
-                      {selectedReport.issueDescription || "Không có mô tả chi tiết"}
-                    </p>
-                  </div>
-
-                  <div className="col-md-6">
-                    <h6 className="fw-bold">Trạng thái:</h6>
-                    <p className="mb-1">{getStatusBadge(selectedReport.status)}</p>
-                  </div>
-
-                  <div className="col-md-6">
-                    <h6 className="fw-bold">Ngày tạo:</h6>
-                    <p className="mb-1">
-                      {new Date(selectedReport.createdAt).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="col-12">
-                    <h6 className="fw-bold">Người báo cáo:</h6>
-                    <p className="mb-1">
-                      {selectedReport.reportedByName || "Chưa xác định"}{" "}
-                      <small className="text-muted ms-2">
-                        (Mã nhân viên: {selectedReport.reportedBy})
-                      </small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer border-0">
-                {selectedReport.status === "Chưa xử lý" && (
-                  <button
-                    type="button"
-                    className="btn btn-success"
-                    onClick={handleMarkAsProcessed}
-                  >
-                    <i className="bi bi-check-circle me-1"></i> Đánh dấu đã xử lý
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowDetailModal(false)}
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Backdrop */}
       {(showCreateModal || showDetailModal) && (
         <div className="modal-backdrop fade show"></div>
       )}

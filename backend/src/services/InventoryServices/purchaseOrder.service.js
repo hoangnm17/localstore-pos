@@ -114,3 +114,17 @@ exports.getDetail = async (poId) => {
 
     return po;
 };
+
+exports.getList = async (query) => {
+
+    const page = parseInt(query.page) || 1;
+    const pageSize = 15;
+
+    return await purchaseOrderModel.getList({
+        page,
+        pageSize,
+        from: query.from,
+        to: query.to,
+        status: query.status
+    });
+};
