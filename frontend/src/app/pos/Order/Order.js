@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createPayment } from "../../../services/Payment/payment.service";
+import { createPayment } from "services/Payment/payment.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
@@ -14,23 +14,35 @@ export default function Order({
   increase,
   decrease,
   remove,
+  onSelectCustomer,
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
-  const handleConfirmPayment = async ({method, customerPay}) => {
+  const handleConfirmPayment = async ({ method, customerPay }) => {
     const payload = {
       orderId: orderId,
       method: method,
       customerPay: customerPay,
     };
-    console.log(payload);
-    
+
     await createPayment(payload);
 
     setShowPayment(false);
   };
 
   const isEmpty = orderItems.length === 0;
+
+  const handleSelectCustomer = async (selectedCustomer) => {
+    try {
+      if (!selectedCustomer) return;
+
+      onSelectCustomer(selectedCustomer);
+      // await attachCustomerToInvoice(orderId, selectedCustomer.id);
+
+    } catch (error) {
+      console.error("Attach customer error:", error);
+    }
+  };
 
   return (
     <div
@@ -39,7 +51,11 @@ export default function Order({
     >
       {/* HEADER */}
       <div className="p-3 border-bottom">
-        <CustomerSearch />
+        <CustomerSearch
+          invoiceId={orderId}
+          customer={customer}
+          onSelectCustomer={handleSelectCustomer}
+        />
       </div>
 
       {/* ORDER BODY */}
