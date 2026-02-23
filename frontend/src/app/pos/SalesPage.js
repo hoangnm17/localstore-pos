@@ -1,7 +1,7 @@
 import Order from "./Order/Order";
 import Product from "./Product/Product";
-import { useInvoiceTabs } from "../../hooks/useInvoice";
-import { useOrderItems } from "../../hooks/useOrderItems";
+import { useInvoiceTabs } from "hooks/pos/useInvoice";
+import { useOrderItems } from "hooks/pos/useOrderItems";
 
 export default function SalesHome() {
   const {
@@ -11,6 +11,7 @@ export default function SalesHome() {
     setActiveInvoiceId,
     createInvoiceTab,
     updateInvoiceItems,
+    updateInvoiceCustomer,
     closeTab,
   } = useInvoiceTabs();
 
@@ -51,6 +52,10 @@ export default function SalesHome() {
     const newItems = remove(activeInvoice.items, id);
     updateInvoiceItems(activeInvoice.id, newItems);
   };
+
+  const handleSelectCustomer = (customer) => {
+    updateInvoiceCustomer(activeInvoice.id, customer);
+  }
 
   const total = calculateTotal(activeInvoice?.items || []);
   const totalQuantity = calculateTotalQuantity(
@@ -127,11 +132,13 @@ export default function SalesHome() {
           <Order
             orderId={activeInvoice.id}
             orderItems={activeInvoice.items}
+            customer={activeInvoice.customer}
             total={total}
             totalQuantity={totalQuantity}
             increase={handleIncrease}
             decrease={handleDecrease}
             remove={handleRemove}
+            onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
           />
         </div>
