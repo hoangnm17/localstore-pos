@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import {
   invoiceCreate,
   invoiceUpdate
-} from "../services/Invoices/invoice.service";
+} from "../../services/Invoices/invoice.service";
 
 export const useInvoiceTabs = () => {
 
@@ -53,11 +53,11 @@ export const useInvoiceTabs = () => {
       prev.map(inv =>
         inv.id === invoiceId
           ? {
-              ...inv,
-              items: newItems,
-              isDirty: true,
-              isSaving: inv.status === "LOCAL" // chỉ show saving nếu LOCAL
-            }
+            ...inv,
+            items: newItems,
+            isDirty: true,
+            isSaving: inv.status === "LOCAL" // chỉ show saving nếu LOCAL
+          }
           : inv
       )
     );
@@ -81,12 +81,12 @@ export const useInvoiceTabs = () => {
           prev.map(inv =>
             inv.id === invoiceId
               ? {
-                  ...inv,
-                  id: newDbId,
-                  status: "DRAFT",
-                  isDirty: false,
-                  isSaving: false
-                }
+                ...inv,
+                id: newDbId,
+                status: "DRAFT",
+                isDirty: false,
+                isSaving: false
+              }
               : inv
           )
         );
@@ -108,6 +108,16 @@ export const useInvoiceTabs = () => {
     }
 
     // Nếu là DRAFT → autosave sẽ xử lý
+  };
+
+  const updateInvoiceCustomer = (invoiceId, customer) => {
+    setInvoices(prev =>
+      prev.map(inv =>
+        inv.id === invoiceId
+          ? { ...inv, customer }
+          : inv
+      )
+    );
   };
 
   /* =====================================================
@@ -235,6 +245,7 @@ export const useInvoiceTabs = () => {
     createInvoiceTab,
     updateInvoiceItems,
     pay,
+    updateInvoiceCustomer,
     closeTab
   };
 };

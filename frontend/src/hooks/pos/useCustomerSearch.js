@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react"
-import { customersSearch } from "../services/Customer/customer.service"
+import { customersSearch } from "../../services/Customer/customer.service"
 
 export function useCustomerSearch(phone) {
   const [result, setResult] = useState(null)
@@ -20,11 +20,10 @@ export function useCustomerSearch(phone) {
 
     const timer = setTimeout(async () => {
       try {
-        const data = await customersSearch(phone)
-
-        // ❗ Chỉ set nếu đây là request mới nhất
+        const res = await customersSearch(phone)
+        
         if (requestId === activeRequest.current) {
-          setResult(data?.[0] || null)
+          setResult(res?.data?.data || null)
         }
       } catch (error) {
         console.error("Search customer error:", error)
