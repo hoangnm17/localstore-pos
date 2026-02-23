@@ -1,35 +1,25 @@
-import axios from "axios";
+import api from "./axiosInstance";
 
-const API_URL = "http://localhost:5000/api";
-
-// categoryService.js
+// categoryService
 function getCategoryStock(search = "", page = 1, limit = 10) {
-    return axios.get(`${API_URL}/inventory/categories`, {
-        params: { search, page, limit }
-    });
-};
+  return api.get("/inventory/categories", {
+    params: { search, page, limit }
+  });
+}
 
+// ProblematicReport
+function getReports(filters = {}) {
+  return api.get("/inventory/reports/list", {
+    params: filters
+  });
+}
 
-// ProblematicReport.js
-const getReports = (filters = {}) => {
-    return axios.get(`${API_URL}/inventory/reports/list`, {
-        params: filters,
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
-    });
-};
-
-const createReport = (data) => {
-    return axios.post(`${API_URL}/inventory/reports/send`, data, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
-    });
-};
+function createReport(data) {
+  return api.post("/inventory/reports/send", data);
+}
 
 export default {
-    getCategoryStock,
-    getReports,
-    createReport
-};  
+  getCategoryStock,
+  getReports,
+  createReport
+};
