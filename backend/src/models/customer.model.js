@@ -77,7 +77,7 @@ exports.getCustomerById = async (id) => {
 exports.createCustomer = async (data) => {
     const pool = await connectDB();
     const { name, phone, status = 'Active', loyaltyPoints = 0, totalSpending = 0 } = data;
-    
+
     const result = await pool.request()
         .input('name', sql.NVarChar, name)
         .input('phone', sql.VarChar, phone)
@@ -89,41 +89,71 @@ exports.createCustomer = async (data) => {
             OUTPUT INSERTED.*
             VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending)
         `);
-    
+
     return result.recordset[0];
 };
 
 exports.updateCustomer = async (id, data) => {
     const pool = await connectDB();
     const { name, phone, status, loyaltyPoints, totalSpending } = data;
-    
-    // Dynamic update query builder could be better, but keeping it simple
-    const result = await pool.request()
-        .input('id', sql.BigInt, id)
-        .input('name', sql.NVarChar, name)
-        .input('phone', sql.VarChar, phone)
-        .input('status', sql.VarChar, status)
-        .input('loyaltyPoints', sql.Int, loyaltyPoints)
-        .input('totalSpending', sql.Decimal(15, 2), totalSpending)
-        .query(`
-            UPDATE Customers 
-            SET name = @name, 
-                phone = @phone, 
-                status = @status, 
-                loyaltyPoints = @loyaltyPoints, 
-                totalSpending = @totalSpending
-            OUTPUT INSERTED.*
-            WHERE id = @id
-        `);
-        
+
+    // Dynamic partial update — chỉ SET những field nào được truyền vào
+    const setClauses = [];
+    const request = pool.request().input('id', sql.BigInt, id);
+
+    if (name !== undefined) {
+        setClauses.push('name = @name');
+        request.input('name', sql.NVarChar, name);
+    }
+    if (phone !== undefined) {
+        setClauses.push('phone = @phone');
+        request.input('phone', sql.VarChar, phone);
+    }
+    if (status !== undefined) {
+        setClauses.push('status = @status');
+        request.input('status', sql.VarChar, status);
+    }
+    if (loyaltyPoints !== undefined) {
+        setClauses.push('loyaltyPoints = @loyaltyPoints');
+        request.input('loyaltyPoints', sql.Int, loyaltyPoints);
+    }
+    if (totalSpending !== undefined) {
+        setClauses.push('totalSpending = @totalSpending');
+        request.input('totalSpending', sql.Decimal(15, 2), totalSpending);
+    }
+
+    if (setClauses.length === 0) return null;
+
+    const result = await request.query(`
+        UPDATE Customers
+        SET ${setClauses.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE id = @id
+    `);
+
     return result.recordset[0];
 };
 
+// Soft delete — set status = 'Inactive' thay vì xóa cứng
+// Tránh lỗi FK với Invoices, CustomerPointLogs, CustomerVoucherUsage
 exports.deleteCustomer = async (id) => {
-     // Usually soft delete or check dependencies, but here simple delete for now based on typical requirements unless specified
     const pool = await connectDB();
-    await pool.request()
+    const result = await pool.request()
         .input('id', sql.BigInt, id)
-        .query(`DELETE FROM Customers WHERE id = @id`);
-    return true;
+        .query(`
+            UPDATE Customers
+            SET status = 'Inactive'
+            OUTPUT INSERTED.*
+            WHERE id = @id
+        `);
+    return result.recordset[0];
+};
+
+// Tra cứu theo số điện thoại — dùng khi bán hàng cần tìm nhanh khách hàng tại quầy
+exports.getCustomerByPhone = async (phone) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('phone', sql.VarChar, phone)
+        .query(`SELECT * FROM Customers WHERE phone = @phone`);
+    return result.recordset[0] || null;
 };

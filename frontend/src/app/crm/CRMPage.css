@@ -1,0 +1,221 @@
+/* CRMPage.css - Premium Dark/Glassmorphism Theme */
+
+:root {
+  --crm-bg: #0f172a;
+  --crm-surface: #1e293b;
+  --crm-primary: #6366f1;
+  --crm-primary-hover: #4f46e5;
+  --crm-secondary: #ec4899;
+  --crm-text: #f8fafc;
+  --crm-text-muted: #94a3b8;
+  --crm-border: rgba(255, 255, 255, 0.1);
+  --crm-glass: rgba(30, 41, 59, 0.7);
+}
+
+.crm-container {
+  background-color: var(--crm-bg);
+  min-height: 100vh;
+  color: var(--crm-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.crm-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.crm-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+/* Tabs */
+.crm-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--crm-border);
+  padding-bottom: 1rem;
+}
+
+.crm-tab {
+  background: transparent;
+  border: none;
+  color: var(--crm-text-muted);
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.crm-tab:hover {
+  color: var(--crm-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.crm-tab.active {
+  color: #fff;
+  background: var(--crm-primary);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+}
+
+/* Glass Panel */
+.glass-panel {
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+/* Table Styles */
+.crm-table-container {
+  overflow-x: auto;
+}
+
+.crm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.crm-table th {
+  text-align: left;
+  padding: 1rem;
+  color: var(--crm-text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--crm-border);
+}
+
+.crm-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--crm-border);
+  color: var(--crm-text);
+  vertical-align: middle;
+}
+
+.crm-table tr:last-child td {
+  border-bottom: none;
+}
+
+.crm-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Badges */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-inactive {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+/* Action Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, var(--crm-primary) 0%, var(--crm-primary-hover) 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.search-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--crm-border);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  width: 300px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  border-color: var(--crm-primary);
+}
+
+/* Card Grid for Promotions */
+.promo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.promo-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+
+.promo-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--crm-primary);
+}
+
+.promo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--crm-primary), var(--crm-secondary));
+}
+
+.promo-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.promo-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--crm-primary);
+  margin-bottom: 1rem;
+}
+
+.promo-meta {
+  font-size: 0.875rem;
+  color: var(--crm-text-muted);
+  display: flex;
+  justify-content: space-between;
+}
