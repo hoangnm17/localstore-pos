@@ -22,14 +22,8 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => {
-    return {
-      success: true,
-      data: response.data,
-    };
-  },
+  (response) => response,
   (error) => {
-    // Không có response → server chết hoặc mất mạng
     if (!error.response) {
       return Promise.resolve({
         success: false,
@@ -39,7 +33,6 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    // Unauthorized
     if (status === 401) {
       return Promise.resolve({
         success: false,
@@ -48,7 +41,6 @@ api.interceptors.response.use(
       });
     }
 
-    // Forbidden
     if (status === 403) {
       return Promise.resolve({
         success: false,
@@ -57,7 +49,6 @@ api.interceptors.response.use(
       });
     }
 
-    //  Server error
     if (status >= 500) {
       return Promise.resolve({
         success: false,
@@ -66,7 +57,6 @@ api.interceptors.response.use(
       });
     }
 
-    //  Các lỗi 400 khác
     return Promise.resolve({
       success: false,
       message: data?.message || "Có lỗi xảy ra",
