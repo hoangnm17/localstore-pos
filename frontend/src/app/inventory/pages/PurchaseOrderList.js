@@ -15,12 +15,10 @@ const PurchaseOrderList = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Scroll lên đầu trang khi load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Mapping trạng thái
   const statusConfig = {
     Pending: { label: "Chờ duyệt", color: "warning" },
     Approved: { label: "Đã duyệt", color: "success" },
@@ -41,11 +39,10 @@ const PurchaseOrderList = () => {
         status: filters.status || undefined,
       });
 
-      const data = res?.data;
-
-      setOrders(Array.isArray(data?.data) ? data.data : []);
-      setTotalPages(data?.totalPages || 1);
-      setPage(data?.page || 1);
+      // interceptor đã return response.data
+      setOrders(Array.isArray(res?.data) ? res.data : []);
+      setTotalPages(res?.totalPages || 1);
+      setPage(res?.page || customPage);
     } catch (err) {
       console.error("Fetch PO error:", err);
       setOrders([]);
@@ -55,20 +52,19 @@ const PurchaseOrderList = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(page);
   }, [page]);
 
   const handleFilter = () => {
     setPage(1);
-    fetchData(1);
   };
 
   const handlePrev = () => {
-    if (page > 1) fetchData(page - 1);
+    if (page > 1) setPage((prev) => prev - 1);
   };
 
   const handleNext = () => {
-    if (page < totalPages) fetchData(page + 1);
+    if (page < totalPages) setPage((prev) => prev + 1);
   };
 
   const handleViewDetail = (id) => {
@@ -82,8 +78,6 @@ const PurchaseOrderList = () => {
   return (
     <div className="container-fluid py-4 bg-light min-vh-100">
       <div className="card shadow-lg border-0 rounded-4 overflow-hidden">
-
-        {/* ===== HEADER ===== */}
         <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3 px-4">
           <div className="d-flex align-items-center">
             <button
@@ -105,10 +99,8 @@ const PurchaseOrderList = () => {
           </button>
         </div>
 
-        {/* ===== BODY ===== */}
         <div className="card-body p-4">
-
-          {/* ===== FILTER ===== */}
+          {/* FILTER */}
           <div className="row g-3 mb-4">
             <div className="col-md-3">
               <label className="form-label fw-semibold text-muted">
@@ -170,7 +162,7 @@ const PurchaseOrderList = () => {
             </div>
           </div>
 
-          {/* ===== TABLE ===== */}
+          {/* TABLE */}
           {loading ? (
             <div className="text-center py-5">
               <div className="spinner-border text-primary" />
@@ -211,8 +203,9 @@ const PurchaseOrderList = () => {
                             <td className="ps-4 fw-medium">#{po.id}</td>
                             <td>
                               <span
-                                className={`badge rounded-pill bg-${status?.color || "secondary"
-                                  }`}
+                                className={`badge rounded-pill bg-${
+                                  status?.color || "secondary"
+                                }`}
                               >
                                 {status?.label || po.status}
                               </span>
@@ -222,8 +215,8 @@ const PurchaseOrderList = () => {
                             <td>
                               {po.createdAt
                                 ? new Date(po.createdAt).toLocaleDateString(
-                                  "vi-VN"
-                                )
+                                    "vi-VN"
+                                  )
                                 : "—"}
                             </td>
                             <td className="text-center">
@@ -243,15 +236,11 @@ const PurchaseOrderList = () => {
                 </table>
               </div>
 
-              {/* ===== PAGINATION ===== */}
               {orders.length > 0 && totalPages > 1 && (
                 <nav className="mt-4">
                   <ul className="pagination justify-content-center">
                     <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                      <button
-                        className="page-link"
-                        onClick={handlePrev}
-                      >
+                      <button className="page-link" onClick={handlePrev}>
                         Trước
                       </button>
                     </li>
@@ -263,13 +252,11 @@ const PurchaseOrderList = () => {
                     </li>
 
                     <li
-                      className={`page-item ${page >= totalPages ? "disabled" : ""
-                        }`}
+                      className={`page-item ${
+                        page >= totalPages ? "disabled" : ""
+                      }`}
                     >
-                      <button
-                        className="page-link"
-                        onClick={handleNext}
-                      >
+                      <button className="page-link" onClick={handleNext}>
                         Sau
                       </button>
                     </li>
