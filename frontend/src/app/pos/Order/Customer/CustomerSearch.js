@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import CustomerCreateModal from "./CustomerCreateModal";
-import { useCustomerSearch } from "../../../../hooks/useCustomerSearch";
+import CustomerCreateModal from "app/pos/Order/Customer/CustomerCreateModal";
+import { useCustomerSearch } from "hooks/pos/useCustomerSearch";
 
 export default function CustomerSearch({
   invoiceId,
-  customer,               // 👈 customer từ invoice
-  onSelectCustomer        // 👈 callback cập nhật invoice
+  customer,
+  onSelectCustomer
 }) {
   const [phone, setPhone] = useState(customer?.phone || "");
   const [showCreate, setShowCreate] = useState(false);
@@ -24,6 +24,12 @@ export default function CustomerSearch({
     }
   };
 
+  useEffect(() => {
+    if (phone.length === 10 && result) {
+      onSelectCustomer(result);
+    }
+  }, [phone, result]);
+
   const handleClear = () => {
     setPhone("");
     onSelectCustomer(null); // 👈 clear customer trong invoice
@@ -31,7 +37,7 @@ export default function CustomerSearch({
 
   const handleSelect = () => {
     if (result) {
-      onSelectCustomer(result); // 👈 cập nhật vào invoice
+      onSelectCustomer(result);
     }
   };
 
@@ -90,7 +96,7 @@ export default function CustomerSearch({
                     {result.name}
                   </div>
                   <div className="text-muted small">
-                    {result.phone} • {result.points} điểm
+                    {result.phone} • {result.loyaltyPoints} điểm
                   </div>
                 </div>
               </div>
@@ -107,6 +113,8 @@ export default function CustomerSearch({
                 </button>
               </div>
             )}
+
+            
           </div>
         )}
       </div>

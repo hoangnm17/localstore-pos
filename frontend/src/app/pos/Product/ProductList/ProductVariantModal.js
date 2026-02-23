@@ -1,5 +1,5 @@
-import { formatCurrency } from "../../../../utils/formatters";
-import BaseModal from "../../../../components/common/BaseModal";
+import { formatCurrency } from "utils/formatters";
+import BaseModal from "components/common/BaseModal";
 
 export default function ProductVariant({ product, onClose, onAdd }) {
   if (!product) return null;

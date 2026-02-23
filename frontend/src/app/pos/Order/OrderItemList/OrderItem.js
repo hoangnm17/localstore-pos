@@ -1,4 +1,4 @@
-import { formatCurrency } from "../../../../utils/formatters";
+import { formatCurrency } from "utils/formatters";
 
 const OrderItem = ({ item, increase, decrease, remove }) => {
 

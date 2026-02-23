@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { customerCreate } from "../../../../services/Customer/customer.service";
-import BaseModal from "../../../../components/common/BaseModal";
-import AlertMessage from "../../../../components/common/AlertMessage";
-import { isValidPhone, isNotEmpty } from "../../../../utils/validators";
+import { customerCreate } from "services/Customer/customer.service";
+import BaseModal from "components/common/BaseModal";
+import AlertMessage from "components/common/AlertMessage";
+import { isValidPhone, isNotEmpty } from "utils/validators";
 
 export default function CustomerCreateModal({
   phone,
