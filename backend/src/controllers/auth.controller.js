@@ -8,7 +8,7 @@ module.exports.login = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Đăng nhập thành công! Chào mừng quản lý quay lại.",
+            message: "Đăng nhập thành công! Chào mừng bạn quay lại.",
             data: result 
         });
 
