@@ -4,30 +4,48 @@ const jwt = require('jsonwebtoken');
 
 module.exports.login = async (email, password) => {
     const user = await userModel.findByEmail(email);
-    
+
     if (!user) {
         throw new Error("Tài khoản này không tồn tại!");
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    
+
     if (!isMatch) {
         throw new Error("Mật khẩu nhập sai. Vui lòng thử lại!");
     }
 
+    const features = user.featureList ? user.featureList.split(',') : [];
+
     const token = jwt.sign(
-        { 
-            userId: user.id, 
-            roleId: user.roleId,
-            email: user.username 
-        }, 
+        {
+            userId: user.id,
+            roleName: user.roleName,
+            features: features
+        },
         process.env.JWT_SECRET,
-        { 
-            expiresIn: process.env.JWT_EXPIRES_IN 
-        } 
+        { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    const { passwordHash, ...userInfo } = user;
+    const { passwordHash, featureList, ...userInfo } = user;
+
+
+    // const token = jwt.sign(
+    //     { 
+    //         userId: user.id, 
+    //         roleId: user.roleId,
+    //         role: user.roleName,
+    //         email: user.username 
+    //     }, 
+    //     process.env.JWT_SECRET,
+    //     { 
+    //         expiresIn: process.env.JWT_EXPIRES_IN 
+    //     } 
+    // );
+
+    // const { passwordHash, ...userInfo } = user;
+
+    userInfo.features = features;
 
     return { token, user: userInfo };
 };
