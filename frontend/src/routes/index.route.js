@@ -4,6 +4,8 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import ProtectedRoute from "./protected.route";
 import staffRoute from "./staff.route";
+import crmRoute from "./crm.route";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -24,6 +26,9 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredFeature="VIEW_INVENTORY" />}>
         {InventoryRoutes}
       </Route>
+
+      {crmRoute}
+
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>

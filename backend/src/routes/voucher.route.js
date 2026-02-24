@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const voucherController = require('../controllers/voucher.controller');
+const ctrl = require('../controllers/voucher.controller');
 
-router.get('/', voucherController.getVouchers);
-router.get('/code/:code', voucherController.getVoucherByCode);
-router.get('/:id', voucherController.getVoucherById);
-router.post('/', voucherController.createVoucher);
-router.put('/:id', voucherController.updateVoucher);
-router.delete('/:id', voucherController.deleteVoucher);
+// ─── SPECIAL (đặt trước /:id) ─────────────────────────────────────────────────
+router.post('/validate', ctrl.validateVoucher);   // UC8: cashier validate trước khi áp
+router.get('/report', ctrl.getVoucherReport);  // UC10: manager xem báo cáo
+router.get('/code/:code', ctrl.getVoucherByCode);  // tra cứu theo mã code
+
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
+router.get('/', ctrl.getVouchers);
+router.get('/:id', ctrl.getVoucherById);
+router.post('/', ctrl.createVoucher);
+router.put('/:id', ctrl.updateVoucher);
+router.delete('/:id', ctrl.deleteVoucher);
 
 module.exports = router;

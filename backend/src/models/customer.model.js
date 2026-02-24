@@ -149,7 +149,10 @@ exports.deleteCustomer = async (id) => {
     return result.recordset[0];
 };
 
-// Tra cứu theo số điện thoại — dùng khi bán hàng cần tìm nhanh khách hàng tại quầy
+/**
+ * Tìm chính xác theo số điện thoại — dùng khi bán hàng cần tra cứu nhanh tại quầy.
+ * Trả về 1 record hoặc null.
+ */
 exports.getCustomerByPhone = async (phone) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -158,23 +161,64 @@ exports.getCustomerByPhone = async (phone) => {
     return result.recordset[0] || null;
 };
 
-exports.getCustomerByPhone = async (phone) => {
+/**
+ * Tìm kiếm khách theo số điện thoại (LIKE) — trả về danh sách tối đa 10 kết quả.
+ * Dùng cho ô tìm kiếm trên UI.
+ */
+exports.searchCustomersByPhone = async (phone) => {
     const pool = await connectDB();
-
     const result = await pool.request()
         .input('phone', sql.VarChar, `%${phone}%`)
         .query(`
             SELECT TOP 10
-                id,
-                phone,
-                name,
-                loyaltyPoints,
-                totalSpending,
-                status
+                id, phone, name, loyaltyPoints, totalSpending, status
             FROM Customers
             WHERE phone LIKE @phone
             ORDER BY createdAt DESC
         `);
+    return result.recordset;
+};
 
-    return result.recordset[0] || null;
+/**
+ * Lịch sử mua hàng của khách — UC3: View Purchase History
+ * JOIN InvoiceItems để lấy số lượng dòng hàng mỗi hóa đơn.
+ */
+exports.getPurchaseHistory = async (customerId, { limit = 10, offset = 0 } = {}) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('customerId', sql.BigInt, customerId)
+        .input('limit', sql.Int, parseInt(limit))
+        .input('offset', sql.Int, parseInt(offset))
+        .query(`
+            SELECT
+                i.id,
+                i.invoiceCode,
+                i.totalAmount,
+                i.promotionDiscount,
+                i.voucherDiscount,
+                i.pointDiscount,
+                i.usedPoints,
+                i.finalAmount,
+                i.status,
+                i.createdAt,
+                COUNT(ii.id) AS itemCount
+            FROM Invoices i
+            LEFT JOIN InvoiceItems ii ON i.id = ii.invoiceId
+            WHERE i.customerId = @customerId
+            GROUP BY
+                i.id, i.invoiceCode, i.totalAmount, i.promotionDiscount,
+                i.voucherDiscount, i.pointDiscount, i.usedPoints,
+                i.finalAmount, i.status, i.createdAt
+            ORDER BY i.createdAt DESC
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        `);
+    return result.recordset;
+};
+
+exports.countPurchaseHistory = async (customerId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('customerId', sql.BigInt, customerId)
+        .query(`SELECT COUNT(*) AS total FROM Invoices WHERE customerId = @customerId`);
+    return result.recordset[0].total;
 };

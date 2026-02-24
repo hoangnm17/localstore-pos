@@ -38,6 +38,7 @@
   font-weight: 700;
   background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
 }
@@ -622,4 +623,15 @@
 .crm-modal::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
   border-radius: 99px;
+}
+
+/* ─── Wide Modal (CustomerDetail, PromotionItems) ───────────── */
+.crm-modal--wide {
+  max-width: 820px;
+}
+
+/* ─── btn-icon default hover ─────────────────────────────────── */
+.btn-icon:hover:not(.edit):not(.del) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }

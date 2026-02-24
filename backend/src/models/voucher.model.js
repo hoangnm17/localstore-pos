@@ -116,3 +116,98 @@ exports.deleteVoucher = async (id) => {
         `);
     return result.recordset[0];
 };
+
+/**
+ * Validate voucher trước khi áp dụng — UC8: Validate & Apply Voucher
+ * Kiểm tra: tồn tại, status Active, trong hạn, chưa hết lượt dùng, đủ giá trị đơn tối thiểu
+ * @param {string} code - mã voucher
+ * @param {number} orderAmount - giá trị đơn hàng hiện tại
+ * @returns {{ valid: boolean, voucher: object|null, discountAmount: number, message: string }}
+ */
+exports.validateVoucher = async (code, orderAmount = 0) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('code', sql.VarChar, code)
+        .query(`SELECT * FROM Vouchers WHERE code = @code`);
+
+    const voucher = result.recordset[0];
+
+    if (!voucher) {
+        return { valid: false, voucher: null, discountAmount: 0, message: 'Mã voucher không tồn tại' };
+    }
+    if (voucher.status !== 'Active') {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã bị vô hiệu hóa hoặc hết hạn' };
+    }
+
+    const now = new Date();
+    if (voucher.startDate && new Date(voucher.startDate) > now) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher chưa đến thời gian sử dụng' };
+    }
+    if (voucher.expiryDate && new Date(voucher.expiryDate) < now) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã hết hạn sử dụng' };
+    }
+    if (voucher.currentUsage >= voucher.maxUsage) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã hết lượt sử dụng' };
+    }
+    if (parseFloat(orderAmount) < parseFloat(voucher.minOrderValue)) {
+        return {
+            valid: false,
+            voucher,
+            discountAmount: 0,
+            message: `Đơn hàng tối thiểu ${voucher.minOrderValue.toLocaleString()} đ để dùng voucher này`
+        };
+    }
+
+    // Tính tiền được giảm
+    let discountAmount = 0;
+    if (voucher.type === 'Percent') {
+        discountAmount = parseFloat(orderAmount) * parseFloat(voucher.value) / 100;
+    } else {
+        // Fixed
+        discountAmount = Math.min(parseFloat(voucher.value), parseFloat(orderAmount));
+    }
+
+    return { valid: true, voucher, discountAmount: parseFloat(discountAmount.toFixed(2)), message: 'Voucher hợp lệ' };
+};
+
+/**
+ * Báo cáo hiệu quả voucher — UC10: View Voucher Usage Reports
+ * JOIN từ bảng Invoices (voucherId) lấy tổng số lần dùng và tổng chiết khấu đã cấp
+ */
+exports.getVoucherReport = async ({ limit = 20, offset = 0 } = {}) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('limit', sql.Int, parseInt(limit))
+        .input('offset', sql.Int, parseInt(offset))
+        .query(`
+            SELECT
+                v.id,
+                v.code,
+                v.type,
+                v.value,
+                v.minOrderValue,
+                v.maxUsage,
+                v.currentUsage,
+                v.status,
+                v.startDate,
+                v.expiryDate,
+                COUNT(i.id)                        AS timesUsed,
+                COALESCE(SUM(i.voucherDiscount), 0) AS totalDiscountGiven,
+                COALESCE(SUM(i.finalAmount), 0)     AS totalRevenueFromVoucher
+            FROM Vouchers v
+            LEFT JOIN Invoices i ON v.id = i.voucherId AND i.status = 'PAID'
+            GROUP BY
+                v.id, v.code, v.type, v.value, v.minOrderValue,
+                v.maxUsage, v.currentUsage, v.status, v.startDate, v.expiryDate
+            ORDER BY timesUsed DESC
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        `);
+    return result.recordset;
+};
+
+exports.countVoucherReport = async () => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .query(`SELECT COUNT(*) AS total FROM Vouchers`);
+    return result.recordset[0].total;
+};

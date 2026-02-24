@@ -5,7 +5,6 @@ exports.getPromotionList = async (filters) => {
         promotionModel.getPromotions(filters),
         promotionModel.countPromotions(filters)
     ]);
-
     return {
         data,
         total,
@@ -19,30 +18,23 @@ exports.getPromotionById = async (id) => {
 
 exports.createPromotion = async (data) => {
     const promotion = await promotionModel.createPromotion(data);
-
-    // Thêm danh sách sản phẩm/danh mục áp dụng nếu có
     if (data.items && data.items.length > 0) {
         for (const item of data.items) {
             await promotionModel.addPromotionItem(promotion.id, item);
         }
     }
-
-    // Trả về promotion kèm items vừa tạo
     return await promotionModel.getPromotionById(promotion.id);
 };
 
 exports.updatePromotion = async (id, data) => {
     const updated = await promotionModel.updatePromotion(id, data);
     if (!updated) return null;
-
-    // Nếu client gửi lên danh sách items mới → replace toàn bộ
     if (data.items !== undefined) {
         await promotionModel.clearPromotionItems(id);
         for (const item of data.items) {
             await promotionModel.addPromotionItem(id, item);
         }
     }
-
     return await promotionModel.getPromotionById(id);
 };
 
@@ -52,4 +44,41 @@ exports.deletePromotion = async (id) => {
 
 exports.removePromotionItem = async (itemId) => {
     return await promotionModel.removePromotionItem(itemId);
+};
+
+/** Thêm item vào promotion có sẵn — UC6: Assign Products to Promotion */
+exports.addPromotionItem = async (promotionId, item) => {
+    const promotion = await promotionModel.getPromotionById(promotionId);
+    if (!promotion) throw new Error('Không tìm thấy promotion');
+    await promotionModel.addPromotionItem(promotionId, item);
+    return await promotionModel.getPromotionById(promotionId);
+};
+
+/**
+ * Danh sách promotion đang hiệu lực — UC8: cashier áp dụng khi bán hàng
+ */
+exports.getActivePromotions = async () => {
+    return await promotionModel.getActivePromotions();
+};
+
+/**
+ * Báo cáo hiệu quả khuyến mãi — UC9: View Promotion Reports
+ */
+exports.getPromotionReport = async ({ page = 1, limit = 20 } = {}) => {
+    const pageNum = Math.max(parseInt(page), 1);
+    const pageSize = Math.max(parseInt(limit), 1);
+    const offset = (pageNum - 1) * pageSize;
+
+    const [data, total] = await Promise.all([
+        promotionModel.getPromotionReport({ limit: pageSize, offset }),
+        promotionModel.countPromotionReport()
+    ]);
+
+    return {
+        data,
+        total,
+        page: pageNum,
+        limit: pageSize,
+        totalPages: Math.ceil(total / pageSize)
+    };
 };

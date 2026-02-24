@@ -237,3 +237,75 @@ exports.clearPromotionItems = async (promotionId) => {
         .input('promotionId', sql.BigInt, promotionId)
         .query(`DELETE FROM PromotionProducts WHERE promotionId = @promotionId`);
 };
+
+/**
+ * Lấy danh sách promotion đang hoạt động — UC8: áp dụng khuyến mãi khi bán hàng.
+ * Chỉ trả về promotion có status = Active và trong khoảng thời gian hiệu lực.
+ */
+exports.getActivePromotions = async () => {
+    const pool = await connectDB();
+    const now = new Date();
+    const result = await pool.request()
+        .input('now', sql.DateTime2, now)
+        .query(`
+            SELECT
+                p.*,
+                (
+                    SELECT pp.id, pp.productId, pp.categoryId,
+                           prod.name AS productName, cat.name AS categoryName
+                    FROM PromotionProducts pp
+                    LEFT JOIN Products   prod ON pp.productId   = prod.id
+                    LEFT JOIN Categories cat  ON pp.categoryId  = cat.id
+                    WHERE pp.promotionId = p.id
+                    FOR JSON PATH
+                ) AS itemsJson
+            FROM Promotions p
+            WHERE p.status = 'Active'
+              AND (p.startDate IS NULL OR p.startDate <= @now)
+              AND (p.endDate   IS NULL OR p.endDate   >= @now)
+            ORDER BY p.startDate DESC
+        `);
+
+    // Parse itemsJson string thành array
+    return result.recordset.map(row => ({
+        ...row,
+        items: row.itemsJson ? JSON.parse(row.itemsJson) : []
+    }));
+};
+
+/**
+ * Báo cáo hiệu quả khuyến mãi — UC9: View Promotion Reports
+ * JOIN với Invoices để tính số lần dùng, tổng giảm giá, doanh thu sau khuyến mãi
+ */
+exports.getPromotionReport = async ({ limit = 20, offset = 0 } = {}) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('limit', sql.Int, parseInt(limit))
+        .input('offset', sql.Int, parseInt(offset))
+        .query(`
+            SELECT
+                p.id,
+                p.name,
+                p.type,
+                p.value,
+                p.startDate,
+                p.endDate,
+                p.status,
+                COUNT(i.id)                           AS timesUsed,
+                COALESCE(SUM(i.promotionDiscount), 0)  AS totalDiscountGiven,
+                COALESCE(SUM(i.finalAmount), 0)        AS totalRevenueAfterDiscount
+            FROM Promotions p
+            LEFT JOIN Invoices i ON p.id = i.promotionId AND i.status = 'PAID'
+            GROUP BY p.id, p.name, p.type, p.value, p.startDate, p.endDate, p.status
+            ORDER BY timesUsed DESC
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        `);
+    return result.recordset;
+};
+
+exports.countPromotionReport = async () => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .query(`SELECT COUNT(*) AS total FROM Promotions`);
+    return result.recordset[0].total;
+};
