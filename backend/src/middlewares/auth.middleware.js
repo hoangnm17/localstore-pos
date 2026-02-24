@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const userModel = require('../models/user.model')
-const roleModel = require('../models/role.model')
+const userModel = require('../models/user.model');
+const roleModel = require('../models/role.model');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -16,7 +16,6 @@ const verifyToken = async (req, res, next) => {
         }
 
         const token = authHeader.split(" ")[1];
-
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const user = await userModel.findById(decoded.userId);
@@ -29,6 +28,7 @@ const verifyToken = async (req, res, next) => {
         }
 
         const permissions = await roleModel.getPermissionsByRoleId(user.roleId);
+
 
         req.user = {
             id: user.id,
@@ -45,6 +45,5 @@ const verifyToken = async (req, res, next) => {
         });
     }
 };
-
 
 module.exports = { verifyToken };

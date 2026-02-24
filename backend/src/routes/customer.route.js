@@ -1,14 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const customerController = require('../controllers/customer.controller');
-const { protect } = require("../middlewares/helperPermission.middleware");
-const PERMISSIONS = require("../constants/permissions");
+const ctrl = require('../controllers/customer.controller');
 
-router.get('/', customerController.getCustomers);
-router.get('/by-phone', customerController.getCustomerByPhone)
-router.get('/:id', customerController.getCustomerById);
-router.post('/', customerController.createCustomer);
-router.put('/:id', customerController.updateCustomer);
-router.delete('/:id', customerController.deleteCustomer);
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+// Đặt trước /:id để tránh conflict routing
+router.get('/by-phone', ctrl.getCustomerByPhone);      // exact match — tại quầy
+router.get('/search-phone', ctrl.searchCustomersByPhone);  // LIKE — tìm kiếm UI
+
+// ─── CRUD ────────────────────────────────────────────────────────────────────
+router.get('/', ctrl.getCustomers);
+router.get('/:id', ctrl.getCustomerById);
+router.post('/', ctrl.createCustomer);
+router.put('/:id', ctrl.updateCustomer);
+router.delete('/:id', ctrl.deleteCustomer);
+
+// ─── UC3: Purchase History ────────────────────────────────────────────────────
+router.get('/:id/purchase-history', ctrl.getPurchaseHistory);
+
+// ─── UC4: Loyalty Points ─────────────────────────────────────────────────────
+router.get('/:id/point-logs', ctrl.getPointLogs);
+router.patch('/:id/points', ctrl.adjustPoints);
 
 module.exports = router;

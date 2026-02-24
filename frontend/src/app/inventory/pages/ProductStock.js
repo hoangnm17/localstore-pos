@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import productStockService from "../../../services/productStockService";
 
@@ -9,16 +9,14 @@ function ProductStock() {
   const [products, setProducts] = useState([]);
   const [categoryName, setCategoryName] = useState("");
 
-  // ── Search với debounce ───────────────────────────────
-  const [searchInput, setSearchInput] = useState(""); // giá trị đang gõ
-  const [search, setSearch] = useState("");           // giá trị chính thức dùng để gọi API
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [inputPage, setInputPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Modal states
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [newQuantity, setNewQuantity] = useState("");
@@ -28,7 +26,7 @@ function ProductStock() {
   const limit = 10;
   const totalPages = Math.ceil(total / limit);
 
-  // Debounce search 500ms
+  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -38,15 +36,7 @@ function ProductStock() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  useEffect(() => {
-    loadProducts();
-  }, [categoryId, page, search]);
-
-  useEffect(() => {
-    setInputPage(page);
-  }, [page]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
       const res = await productStockService.getProductsByCategory(
@@ -56,15 +46,27 @@ function ProductStock() {
         limit
       );
 
-      setProducts(res.data?.products || []);
-      setTotal(res.data?.total || 0);
-      setCategoryName(res.data?.categoryName || "Không xác định");
+      // ⚠ interceptor đã return response.data
+      setProducts(res?.products || []);
+      setTotal(res?.total || 0);
+      setCategoryName(res?.categoryName || "Không xác định");
+
     } catch (err) {
       console.error("Lỗi tải tồn kho:", err);
+      setProducts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryId, search, page]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    setInputPage(page);
+  }, [page]);
 
   const getStatus = (qty, min) => {
     return qty <= min ? "THẤP" : "BÌNH THƯỜNG";
@@ -85,63 +87,58 @@ function ProductStock() {
   };
 
   const handleSaveStock = async () => {
-  const trimmedValue = newQuantity.trim();
-  setError(""); // reset lỗi trước khi kiểm tra
+    const trimmedValue = newQuantity.trim();
+    setError("");
 
-  // 1. Kiểm tra rỗng / chỉ khoảng trắng
-  if (!trimmedValue) {
-    setError("Vui lòng nhập số lượng tồn kho");
-    return;
-  }
+    if (!trimmedValue) {
+      setError("Vui lòng nhập số lượng tồn kho");
+      return;
+    }
 
-  // 2. Chuyển đổi thành số (dùng parseFloat để hỗ trợ thập phân)
-  const qty = parseFloat(trimmedValue);
+    const qty = parseFloat(trimmedValue);
 
-  // 3. Kiểm tra các trường hợp không hợp lệ cơ bản
-  if (isNaN(qty)) {
-    setError("Số lượng phải là một con số hợp lệ");
-    return;
-  }
+    if (isNaN(qty)) {
+      setError("Số lượng phải là một con số hợp lệ");
+      return;
+    }
 
-  if (qty < 0) {
-    setError("Số lượng tồn kho không được âm");
-    return;
-  }
+    if (qty < 0) {
+      setError("Số lượng tồn kho không được âm");
+      return;
+    }
 
-  // 4. Kiểm tra theo quyền thập phân của sản phẩm
-  const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
+    const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
 
-  if (!allowDecimal && !Number.isInteger(qty)) {
-    setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
-    return;
-  }
+    if (!allowDecimal && !Number.isInteger(qty)) {
+      setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
+      return;
+    }
 
-  // Nếu allowDecimal = true → chấp nhận cả số thập phân và số nguyên
-  // Không cần kiểm tra thêm Number.isInteger
+    if (!selectedProduct) {
+      setError("Không tìm thấy sản phẩm để cập nhật");
+      return;
+    }
 
-  // 5. Kiểm tra selectedProduct có tồn tại không
-  if (!selectedProduct) {
-    setError("Không tìm thấy sản phẩm để cập nhật");
-    return;
-  }
+    setUpdating(true);
 
-  // 6. Thực hiện cập nhật
-  setUpdating(true);
-  setError("");
+    try {
+      await productStockService.updateStock(
+        selectedProduct.productId,
+        qty
+      );
 
-  try {
-    await productStockService.updateStock(selectedProduct.productId, qty);
-    handleCloseModal();
-    loadProducts(); // reload danh sách để hiển thị số mới (có thể là thập phân)
-  } catch (err) {
-    const errorMessage =
-      err.response?.data?.message ||
-      "Cập nhật tồn kho thất bại. Vui lòng thử lại sau.";
-    setError(errorMessage);
-  } finally {
-    setUpdating(false);
-  }
-};
+      handleCloseModal();
+      loadProducts();
+
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message ||
+        "Cập nhật tồn kho thất bại. Vui lòng thử lại sau.";
+      setError(errorMessage);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handlePageInputChange = (e) => {
     setInputPage(e.target.value);

@@ -85,3 +85,51 @@ exports.getProductBasicInfo = async (productId) => {
 
     return result.recordset[0] || null;
 };
+
+exports.getProductsBySupplier = async (supplierId, search, limit, offset) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("search", sql.NVarChar, `%${search}%`)
+        .input("limit", sql.Int, limit)
+        .input("offset", sql.Int, offset)
+        .query(`
+            SELECT 
+                s.id AS supplierId,
+                s.name AS supplierName,
+                p.id AS productId,
+                p.code,
+                p.name,
+                p.baseUnit,
+                p.allowDecimalQuantity,
+                p.costPrice,
+                p.salePrice,
+                p.status
+            FROM Products p
+            JOIN Suppliers s ON s.id = p.supplierId
+            WHERE p.supplierId = @supplierId
+              AND p.name LIKE @search
+            ORDER BY p.name
+            OFFSET @offset ROWS
+            FETCH NEXT @limit ROWS ONLY
+        `);
+
+    return result.recordset;
+};
+
+exports.countProductsBySupplier = async (supplierId, search) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("search", sql.NVarChar, `%${search}%`)
+        .query(`
+            SELECT COUNT(*) AS total
+            FROM Products
+            WHERE supplierId = @supplierId
+              AND name LIKE @search
+        `);
+
+    return result.recordset[0].total;
+};

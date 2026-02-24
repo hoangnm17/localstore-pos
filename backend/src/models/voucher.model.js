@@ -10,21 +10,42 @@ exports.getVouchers = async (filters) => {
     } = filters;
 
     let query = `SELECT * FROM Vouchers WHERE 1=1`;
-
     if (status) query += ` AND status = @status`;
     if (search) query += ` AND code LIKE @search`;
-
     query += ` ORDER BY createdAt DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
 
     const request = pool.request()
         .input('limit', sql.Int, limit)
         .input('offset', sql.Int, offset);
-
     if (status) request.input('status', sql.VarChar, status);
     if (search) request.input('search', sql.VarChar, `%${search}%`);
 
     const result = await request.query(query);
     return result.recordset;
+};
+
+exports.countVouchers = async (filters) => {
+    const pool = await connectDB();
+    const { search = '', status = null } = filters;
+
+    let query = `SELECT COUNT(*) AS total FROM Vouchers WHERE 1=1`;
+    if (status) query += ` AND status = @status`;
+    if (search) query += ` AND code LIKE @search`;
+
+    const request = pool.request();
+    if (status) request.input('status', sql.VarChar, status);
+    if (search) request.input('search', sql.VarChar, `%${search}%`);
+
+    const result = await request.query(query);
+    return result.recordset[0].total;
+};
+
+exports.getVoucherById = async (id) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`SELECT * FROM Vouchers WHERE id = @id`);
+    return result.recordset[0] || null;
 };
 
 exports.getVoucherByCode = async (code) => {
@@ -37,7 +58,7 @@ exports.getVoucherByCode = async (code) => {
 
 exports.createVoucher = async (data) => {
     const pool = await connectDB();
-    const { code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status = 'Active' } = data;
+    const { code, value, type, minOrderValue = 0, maxUsage = 100, startDate, expiryDate, status = 'Active' } = data;
 
     const result = await pool.request()
         .input('code', sql.VarChar, code)
@@ -45,8 +66,8 @@ exports.createVoucher = async (data) => {
         .input('type', sql.VarChar, type)
         .input('minOrderValue', sql.Decimal(15, 2), minOrderValue)
         .input('maxUsage', sql.Int, maxUsage)
-        .input('startDate', sql.DateTime2, startDate)
-        .input('expiryDate', sql.DateTime2, expiryDate)
+        .input('startDate', sql.DateTime2, startDate || null)
+        .input('expiryDate', sql.DateTime2, expiryDate || null)
         .input('status', sql.VarChar, status)
         .query(`
             INSERT INTO Vouchers (code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status)
@@ -54,4 +75,139 @@ exports.createVoucher = async (data) => {
             VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status)
         `);
     return result.recordset[0];
+};
+
+exports.updateVoucher = async (id, data) => {
+    const pool = await connectDB();
+    const { value, type, minOrderValue, maxUsage, startDate, expiryDate, status } = data;
+
+    const setClauses = [];
+    const request = pool.request().input('id', sql.Int, id);
+
+    if (value !== undefined) { setClauses.push('value = @value'); request.input('value', sql.Decimal(15, 2), value); }
+    if (type !== undefined) { setClauses.push('type = @type'); request.input('type', sql.VarChar, type); }
+    if (minOrderValue !== undefined) { setClauses.push('minOrderValue = @minOrderValue'); request.input('minOrderValue', sql.Decimal(15, 2), minOrderValue); }
+    if (maxUsage !== undefined) { setClauses.push('maxUsage = @maxUsage'); request.input('maxUsage', sql.Int, maxUsage); }
+    if (startDate !== undefined) { setClauses.push('startDate = @startDate'); request.input('startDate', sql.DateTime2, startDate || null); }
+    if (expiryDate !== undefined) { setClauses.push('expiryDate = @expiryDate'); request.input('expiryDate', sql.DateTime2, expiryDate || null); }
+    if (status !== undefined) { setClauses.push('status = @status'); request.input('status', sql.VarChar, status); }
+
+    if (setClauses.length === 0) return null;
+
+    const result = await request.query(`
+        UPDATE Vouchers
+        SET ${setClauses.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE id = @id
+    `);
+    return result.recordset[0];
+};
+
+// Soft delete — đặt status = 'Disabled'
+exports.deleteVoucher = async (id) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`
+            UPDATE Vouchers
+            SET status = 'Disabled'
+            OUTPUT INSERTED.*
+            WHERE id = @id
+        `);
+    return result.recordset[0];
+};
+
+/**
+ * Validate voucher trước khi áp dụng — UC8: Validate & Apply Voucher
+ * Kiểm tra: tồn tại, status Active, trong hạn, chưa hết lượt dùng, đủ giá trị đơn tối thiểu
+ * @param {string} code - mã voucher
+ * @param {number} orderAmount - giá trị đơn hàng hiện tại
+ * @returns {{ valid: boolean, voucher: object|null, discountAmount: number, message: string }}
+ */
+exports.validateVoucher = async (code, orderAmount = 0) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('code', sql.VarChar, code)
+        .query(`SELECT * FROM Vouchers WHERE code = @code`);
+
+    const voucher = result.recordset[0];
+
+    if (!voucher) {
+        return { valid: false, voucher: null, discountAmount: 0, message: 'Mã voucher không tồn tại' };
+    }
+    if (voucher.status !== 'Active') {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã bị vô hiệu hóa hoặc hết hạn' };
+    }
+
+    const now = new Date();
+    if (voucher.startDate && new Date(voucher.startDate) > now) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher chưa đến thời gian sử dụng' };
+    }
+    if (voucher.expiryDate && new Date(voucher.expiryDate) < now) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã hết hạn sử dụng' };
+    }
+    if (voucher.currentUsage >= voucher.maxUsage) {
+        return { valid: false, voucher, discountAmount: 0, message: 'Voucher đã hết lượt sử dụng' };
+    }
+    if (parseFloat(orderAmount) < parseFloat(voucher.minOrderValue)) {
+        return {
+            valid: false,
+            voucher,
+            discountAmount: 0,
+            message: `Đơn hàng tối thiểu ${voucher.minOrderValue.toLocaleString()} đ để dùng voucher này`
+        };
+    }
+
+    // Tính tiền được giảm
+    let discountAmount = 0;
+    if (voucher.type === 'Percent') {
+        discountAmount = parseFloat(orderAmount) * parseFloat(voucher.value) / 100;
+    } else {
+        // Fixed
+        discountAmount = Math.min(parseFloat(voucher.value), parseFloat(orderAmount));
+    }
+
+    return { valid: true, voucher, discountAmount: parseFloat(discountAmount.toFixed(2)), message: 'Voucher hợp lệ' };
+};
+
+/**
+ * Báo cáo hiệu quả voucher — UC10: View Voucher Usage Reports
+ * JOIN từ bảng Invoices (voucherId) lấy tổng số lần dùng và tổng chiết khấu đã cấp
+ */
+exports.getVoucherReport = async ({ limit = 20, offset = 0 } = {}) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('limit', sql.Int, parseInt(limit))
+        .input('offset', sql.Int, parseInt(offset))
+        .query(`
+            SELECT
+                v.id,
+                v.code,
+                v.type,
+                v.value,
+                v.minOrderValue,
+                v.maxUsage,
+                v.currentUsage,
+                v.status,
+                v.startDate,
+                v.expiryDate,
+                COUNT(i.id)                        AS timesUsed,
+                COALESCE(SUM(i.voucherDiscount), 0) AS totalDiscountGiven,
+                COALESCE(SUM(i.finalAmount), 0)     AS totalRevenueFromVoucher
+            FROM Vouchers v
+            LEFT JOIN Invoices i ON v.id = i.voucherId AND i.status = 'PAID'
+            GROUP BY
+                v.id, v.code, v.type, v.value, v.minOrderValue,
+                v.maxUsage, v.currentUsage, v.status, v.startDate, v.expiryDate
+            ORDER BY timesUsed DESC
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        `);
+    return result.recordset;
+};
+
+exports.countVoucherReport = async () => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .query(`SELECT COUNT(*) AS total FROM Vouchers`);
+    return result.recordset[0].total;
 };
