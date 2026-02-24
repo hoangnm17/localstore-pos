@@ -33,6 +33,16 @@ exports.getCategoryTree = async (req, res) => {
     }
 };
 
+exports.getCategoryById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await categoryService.getCategoryById(id);
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(404).json({ success: false, message: err.message });
+    }
+};
+
 exports.createCategory = async (req, res) => {
     try {
         const { name, parentId, imageUrl } = req.body;

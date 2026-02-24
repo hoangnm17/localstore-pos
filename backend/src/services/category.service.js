@@ -1,3 +1,4 @@
+const { connectDB, sql } = require('../config/database');
 const categoryModel = require('../models/category.model');
 
 exports.getCategoryList = async (search, page, limit) => {
@@ -36,6 +37,19 @@ exports.getCategoryTree = async (search, page, limit) => {
             totalPages: Math.ceil(total / limit)
         }
     };
+};
+
+exports.getCategoryById = async (id) => {
+    const pool = await connectDB();
+    const rs = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`
+            SELECT id, name, parentId, ISNULL(imageUrl,'') imageUrl
+            FROM Categories
+            WHERE id = @id AND status = 1
+        `);
+    if (!rs.recordset[0]) throw new Error('CATEGORY_NOT_FOUND');
+    return rs.recordset[0];
 };
 
 exports.createCategory = async (name, parentId, imageUrl) => {

@@ -5,6 +5,7 @@ const authRoutes = require("./auth.route");
 const customerRoutes = require("./customer.route");
 const promotionRoutes = require("./promotion.route");
 const voucherRoutes = require("./voucher.route");
+const categoryRoutes = require("./category.route");
 
 module.exports = (app) => {
     const version = "/api";
@@ -16,4 +17,5 @@ module.exports = (app) => {
     app.use(version + "/customers", customerRoutes);
     app.use(version + "/promotions", promotionRoutes);
     app.use(version + "/vouchers", voucherRoutes);
+    app.use(version + "/categories", categoryRoutes);
 };
