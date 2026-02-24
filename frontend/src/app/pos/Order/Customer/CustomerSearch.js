@@ -12,7 +12,6 @@ export default function CustomerSearch({
 
   const { result, loading } = useCustomerSearch(phone);
 
-  // Khi đổi tab → sync phone theo invoice
   useEffect(() => {
     setPhone(customer?.phone || "");
   }, [invoiceId, customer]);
@@ -32,7 +31,7 @@ export default function CustomerSearch({
 
   const handleClear = () => {
     setPhone("");
-    onSelectCustomer(null); // 👈 clear customer trong invoice
+    onSelectCustomer(null);
   };
 
   const handleSelect = () => {
@@ -124,7 +123,7 @@ export default function CustomerSearch({
           phone={phone}
           onClose={() => setShowCreate(false)}
           onCreated={(newCustomer) => {
-            onSelectCustomer(newCustomer); // 👈 cập nhật invoice
+            onSelectCustomer(newCustomer);
             setShowCreate(false);
           }}
         />
