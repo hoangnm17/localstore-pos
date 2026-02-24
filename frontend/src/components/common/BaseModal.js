@@ -7,12 +7,11 @@ export default function BaseModal({
   maxWidth = "500px",
   zIndex = 2000,
   closeOnOverlay = true,
+  disableClose = false,
 }) {
-
   useEffect(() => {
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     return () => {
       document.body.style.overflow = original;
     };
@@ -20,14 +19,15 @@ export default function BaseModal({
 
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !disableClose) {
         onClose?.();
       }
     };
 
     window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+    return () =>
+      window.removeEventListener("keydown", handleEsc);
+  }, [onClose, disableClose]);
 
   return createPortal(
     <div
@@ -40,16 +40,18 @@ export default function BaseModal({
         justifyContent: "center",
         backgroundColor: "rgba(15, 23, 42, 0.6)",
         backdropFilter: "blur(4px)",
-        animation: "fadeIn 0.15s ease-out",
       }}
-      onClick={closeOnOverlay ? onClose : undefined}
+      onClick={
+        closeOnOverlay && !disableClose
+          ? onClose
+          : undefined
+      }
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth,
-          animation: "scaleIn 0.15s ease-out",
         }}
       >
         {children}
