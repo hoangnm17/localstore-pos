@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import categoryService from "../../../services/categoryStockService";
 import CategoryCard from "../inventoryComponents/CategoryCard";
@@ -30,17 +30,8 @@ function CategoryStock() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // load data
-  useEffect(() => {
-    loadCategories();
-  }, [page, search]);
-
-  // sync inputPage
-  useEffect(() => {
-    setInputPage(page);
-  }, [page]);
-
-  const loadCategories = async () => {
+  // load data (useCallback để tránh recreate function)
+  const loadCategories = useCallback(async () => {
     setLoading(true);
     try {
       const res = await categoryService.getCategoryStock(
@@ -48,14 +39,31 @@ function CategoryStock() {
         page,
         limit
       );
-      setCategories(res.data?.categories || []);
-      setTotalPages(res.data?.pagination?.totalPages || 1);
+
+      // interceptor đã return response.data
+      setCategories(res?.categories || []);
+      setTotalPages(res?.pagination?.totalPages || 1);
+
     } catch (err) {
       console.error("Lỗi tải danh mục tồn kho:", err);
+      setCategories([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, page]);
+
+  // gọi load khi page hoặc search thay đổi
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    loadCategories();
+  }, [loadCategories]);
+
+  // sync inputPage khi page thay đổi
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setInputPage(page);
+  }, [page]);
 
   const handleSearch = (e) => {
     setSearchInput(e.target.value);
@@ -90,7 +98,6 @@ function CategoryStock() {
         {/* HEADER */}
         <div className="card-header bg-white border-bottom py-4">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4">
-            {/* Left */}
             <div className="d-flex align-items-center gap-3">
               <button
                 className="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center"

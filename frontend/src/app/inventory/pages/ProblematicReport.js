@@ -18,12 +18,10 @@ function ProblematicPage() {
     createdTo: "",
   });
 
-  // Scroll lên đầu trang khi load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Mock data
   const mockReports = [
     {
       id: 1,
@@ -147,7 +145,6 @@ function ProblematicPage() {
 
   return (
     <div className="container py-4">
-      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-3">
           <button
@@ -168,53 +165,6 @@ function ProblematicPage() {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="card shadow-sm border-0 mb-4">
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-4 col-sm-12">
-              <label className="form-label fw-medium">Trạng thái</label>
-              <select
-                className="form-select"
-                value={filters.status}
-                onChange={(e) =>
-                  setFilters({ ...filters, status: e.target.value })
-                }
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="Chưa xử lý">Chưa xử lý</option>
-                <option value="Đã xử lý">Đã xử lý</option>
-              </select>
-            </div>
-
-            <div className="col-md-4 col-sm-6">
-              <label className="form-label fw-medium">Từ ngày</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filters.createdFrom}
-                onChange={(e) =>
-                  setFilters({ ...filters, createdFrom: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="col-md-4 col-sm-6">
-              <label className="form-label fw-medium">Đến ngày</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filters.createdTo}
-                onChange={(e) =>
-                  setFilters({ ...filters, createdTo: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
       <div className="card shadow-sm border-0">
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -264,6 +214,107 @@ function ProblematicPage() {
       {(showCreateModal || showDetailModal) && (
         <div className="modal-backdrop fade show"></div>
       )}
+
+      {/* Modal Chi Tiết */}
+      {showDetailModal && selectedReport && (
+        <div className="modal fade show" tabIndex="-1" style={{ display: "block" }}>
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+              {/* Header */}
+              <div className="modal-header bg-light border-0 pb-0 pt-4 px-4">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style={{ width: "48px", height: "48px" }}>
+                    <i className="bi bi-file-earmark-text fs-4"></i>
+                  </div>
+                  <div>
+                    <h5 className="modal-title mb-0 fw-bold text-dark">Chi tiết báo cáo vấn đề</h5>
+                    <small className="text-muted">Mã báo cáo: #{selectedReport.id}</small>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowDetailModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+
+              {/* Body */}
+              <div className="modal-body px-4 pb-4 pt-3">
+                <dl className="row g-3 mb-0">
+                  <dt className="col-sm-4 col-lg-3 fw-semibold text-muted">Tiêu đề</dt>
+                  <dd className="col-sm-8 col-lg-9 mb-0 fw-medium">{selectedReport.title}</dd>
+
+                  <dt className="col-sm-4 col-lg-3 fw-semibold text-muted">Trạng thái</dt>
+                  <dd className="col-sm-8 col-lg-9 mb-0">
+                    {getStatusBadge(selectedReport.status)}
+                  </dd>
+
+                  <dt className="col-sm-4 col-lg-3 fw-semibold text-muted">Người báo cáo</dt>
+                  <dd className="col-sm-8 col-lg-9 mb-0">
+                    <i className="bi bi-person-fill text-primary me-2"></i>
+                    {selectedReport.reportedByName}
+                  </dd>
+
+                  <dt className="col-sm-4 col-lg-3 fw-semibold text-muted">Ngày tạo</dt>
+                  <dd className="col-sm-8 col-lg-9 mb-0">
+                    <i className="bi bi-calendar-event text-primary me-2"></i>
+                    {new Date(selectedReport.createdAt).toLocaleString("vi-VN", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </dd>
+
+                  <dt className="col-sm-4 col-lg-3 fw-semibold text-muted pt-3">Mô tả vấn đề</dt>
+                  <dd className="col-sm-8 col-lg-9 mb-0 pt-3">
+                    <div className="p-3 bg-light rounded-3 border">
+                      {selectedReport.issueDescription}
+                    </div>
+                  </dd>
+                </dl>
+
+                {/* Có thể thêm phần xử lý / ghi chú ở đây sau này */}
+                {selectedReport.note && (
+                  <>
+                    <hr className="my-4" />
+                    <p className="fw-semibold text-muted mb-2">Ghi chú xử lý:</p>
+                    <p className="mb-0">{selectedReport.note}</p>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="modal-footer bg-light border-0 px-4 py-3">
+                <div className="d-flex gap-2 w-100 justify-content-end flex-wrap">
+                  {selectedReport.status === "Chưa xử lý" && (
+                    <button
+                      type="button"
+                      className="btn btn-success px-4"
+                      onClick={handleMarkAsProcessed}
+                      disabled={selectedReport.status !== "Chưa xử lý"}
+                    >
+                      <i className="bi bi-check2-circle me-2"></i>
+                      Đánh dấu đã xử lý
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary px-4"
+                    onClick={() => setShowDetailModal(false)}
+                  >
+                    <i className="bi bi-x-lg me-2"></i>
+                    Đóng
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

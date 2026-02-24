@@ -11,13 +11,14 @@ const PurchaseOrderDetail = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // scroll lên đầu trang khi vào page
     window.scrollTo(0, 0);
 
     const fetchDetail = async () => {
       try {
         const res = await purchaseOrderService.getPurchaseOrderDetail(id);
-        setPo(res.data.data);
+
+        // interceptor đã return response.data
+        setPo(res?.data || null);
       } catch (err) {
         setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
       } finally {
@@ -170,7 +171,7 @@ const PurchaseOrderDetail = () => {
               <thead className="table-dark">
                 <tr>
                   <th scope="col" className="ps-4">Sản phẩm</th>
-                  <th scope="col" className="text-center">Tồn trước</th>
+                  <th scope="col" className="text-center">Số lượng tồn trước khi đặt</th>
                   <th scope="col" className="text-center">Số lượng đặt</th>
                 </tr>
               </thead>
