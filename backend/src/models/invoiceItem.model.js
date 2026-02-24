@@ -29,7 +29,6 @@ const createItem = async ({
     //     console.error("createItem error:", err);
     //     throw err;
     //   }
-    console.log("ok");
 
 };
 
