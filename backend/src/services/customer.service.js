@@ -26,3 +26,15 @@ exports.updateCustomer = async (id, data) => {
 exports.deleteCustomer = async (id) => {
     return await customerModel.deleteCustomer(id);
 };
+
+exports.getCustomerByPhone = async (phone) => {
+    if (!phone) {
+        throw new Error("Phone is required");
+    }
+
+    const cleanPhone = phone.trim();
+
+    const customer = await customerModel.getCustomerByPhone(cleanPhone);
+
+    return customer;
+};

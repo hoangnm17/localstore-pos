@@ -1,4 +1,9 @@
+import { formatCurrency } from "utils/formatters";
+
 const OrderItem = ({ item, increase, decrease, remove }) => {
+
+  const lineTotal = (item.unitPrice || 0) * item.quantity;
+
   return (
     <tr className="border-top">
 
@@ -12,7 +17,7 @@ const OrderItem = ({ item, increase, decrease, remove }) => {
 
       {/* UNIT PRICE */}
       <td className="text-end text-muted">
-        {item.unitPrice.toLocaleString()} đ
+        {formatCurrency(item.unitPrice)}
       </td>
 
       {/* QUANTITY */}
@@ -47,7 +52,7 @@ const OrderItem = ({ item, increase, decrease, remove }) => {
 
       {/* LINE TOTAL */}
       <td className="text-end fw-semibold">
-        {item.lineTotal.toLocaleString()} đ
+        {formatCurrency(lineTotal)}
       </td>
 
       {/* REMOVE */}

@@ -21,12 +21,47 @@ api.interceptors.request.use(
   }
 );
 
-// interceptor (optional nhưng rất nên có)
 api.interceptors.response.use(
-  response => response.data,
-  error => {
-    console.error("API error:", error);
-    return Promise.reject(error);
+  (response) => response,
+  (error) => {
+    if (!error.response) {
+      return Promise.resolve({
+        success: false,
+        message: "Không thể kết nối tới server",
+      });
+    }
+
+    const { status, data } = error.response;
+
+    if (status === 401) {
+      return Promise.resolve({
+        success: false,
+        message: "Phiên đăng nhập đã hết hạn",
+        status: 401,
+      });
+    }
+
+    if (status === 403) {
+      return Promise.resolve({
+        success: false,
+        message: "Bạn không có quyền truy cập",
+        status: 403,
+      });
+    }
+
+    if (status >= 500) {
+      return Promise.resolve({
+        success: false,
+        message: "Lỗi hệ thống, vui lòng thử lại sau",
+        status,
+      });
+    }
+
+    return Promise.resolve({
+      success: false,
+      message: data?.message || "Có lỗi xảy ra",
+      status,
+    });
   }
 );
 

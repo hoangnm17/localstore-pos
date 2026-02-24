@@ -1,7 +1,7 @@
 import api from "../axiosInstance";
 
 export const customersSearch = (phone) => {
-  return api.get("/customers", {
+  return api.get("/customers/by-phone", {
     params: {
       phone: phone
     }

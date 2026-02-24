@@ -72,3 +72,29 @@ exports.deleteCustomer = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+exports.getCustomerByPhone = async (req, res) => {
+    try {
+        const { phone } = req.query;
+
+        const customer = await customerService.getCustomerByPhone(phone);
+        
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: "Customer not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: customer,
+        });
+
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};

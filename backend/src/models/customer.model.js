@@ -157,3 +157,24 @@ exports.getCustomerByPhone = async (phone) => {
         .query(`SELECT * FROM Customers WHERE phone = @phone`);
     return result.recordset[0] || null;
 };
+
+exports.getCustomerByPhone = async (phone) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('phone', sql.VarChar, `%${phone}%`)
+        .query(`
+            SELECT TOP 10
+                id,
+                phone,
+                name,
+                loyaltyPoints,
+                totalSpending,
+                status
+            FROM Customers
+            WHERE phone LIKE @phone
+            ORDER BY createdAt DESC
+        `);
+
+    return result.recordset[0] || null;
+};
