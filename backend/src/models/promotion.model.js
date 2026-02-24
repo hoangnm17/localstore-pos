@@ -1,0 +1,239 @@
+const { connectDB, sql } = require("../config/database.js");
+
+// Các giá trị hợp lệ theo CHECK CONSTRAINT trong database
+const VALID_TYPES = ['Percent', 'Amount', 'BuyXGetY'];
+const VALID_STATUSES = ['Active', 'Expired', 'Disabled'];
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+
+/**
+ * Validate type và status theo đúng CHECK CONSTRAINT của DB.
+ * Ném lỗi rõ ràng thay vì để SQL Server trả về lỗi khó đọc.
+ */
+const validateFields = ({ type, status }) => {
+    if (type !== undefined && !VALID_TYPES.includes(type)) {
+        throw new Error(`type không hợp lệ. Chỉ chấp nhận: ${VALID_TYPES.join(', ')}`);
+    }
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+        throw new Error(`status không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
+    }
+};
+
+// ─── PROMOTIONS ─────────────────────────────────────────────────────────────
+
+exports.getPromotions = async (filters) => {
+    const pool = await connectDB();
+    const {
+        search = '',
+        status = null,
+        type = null,
+        limit = 10,
+        offset = 0
+    } = filters;
+
+    let query = `
+        SELECT *
+        FROM Promotions
+        WHERE 1=1
+    `;
+
+    if (status) query += ` AND status = @status`;
+    if (type) query += ` AND type = @type`;
+    if (search) query += ` AND name LIKE @search`;
+
+    query += ` ORDER BY createdAt DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+
+    const request = pool.request()
+        .input('limit', sql.Int, limit)
+        .input('offset', sql.Int, offset);
+
+    if (status) request.input('status', sql.VarChar, status);
+    if (type) request.input('type', sql.VarChar, type);
+    if (search) request.input('search', sql.NVarChar, `%${search}%`);
+
+    const result = await request.query(query);
+    return result.recordset;
+};
+
+/**
+ * Đếm tổng số promotion phù hợp filter — dùng cho phân trang.
+ */
+exports.countPromotions = async (filters) => {
+    const pool = await connectDB();
+    const { search = '', status = null, type = null } = filters;
+
+    let query = `SELECT COUNT(*) AS total FROM Promotions WHERE 1=1`;
+
+    if (status) query += ` AND status = @status`;
+    if (type) query += ` AND type = @type`;
+    if (search) query += ` AND name LIKE @search`;
+
+    const request = pool.request();
+    if (status) request.input('status', sql.VarChar, status);
+    if (type) request.input('type', sql.VarChar, type);
+    if (search) request.input('search', sql.NVarChar, `%${search}%`);
+
+    const result = await request.query(query);
+    return result.recordset[0].total;
+};
+
+exports.getPromotionById = async (id) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`SELECT * FROM Promotions WHERE id = @id`);
+
+    if (result.recordset.length === 0) return null;
+
+    const promotion = result.recordset[0];
+
+    // Lấy kèm danh sách sản phẩm/danh mục áp dụng
+    const productsResult = await pool.request()
+        .input('promotionId', sql.BigInt, id)
+        .query(`
+            SELECT pp.*, p.name AS productName, c.name AS categoryName
+            FROM PromotionProducts pp
+            LEFT JOIN Products p ON pp.productId = p.id
+            LEFT JOIN Categories c ON pp.categoryId = c.id
+            WHERE pp.promotionId = @promotionId
+        `);
+
+    promotion.items = productsResult.recordset;
+    return promotion;
+};
+
+exports.createPromotion = async (data) => {
+    const pool = await connectDB();
+    const { name, type, value, startDate, endDate, status = 'Active' } = data;
+
+    // Validate trước khi INSERT — tránh lỗi constraint từ SQL Server
+    validateFields({ type, status });
+
+    const result = await pool.request()
+        .input('name', sql.NVarChar, name)
+        .input('type', sql.VarChar, type)
+        .input('value', sql.Decimal(15, 2), value)
+        .input('startDate', sql.DateTime2, startDate)
+        .input('endDate', sql.DateTime2, endDate)
+        .input('status', sql.VarChar, status)
+        .query(`
+            INSERT INTO Promotions (name, type, value, startDate, endDate, status)
+            OUTPUT INSERTED.*
+            VALUES (@name, @type, @value, @startDate, @endDate, @status)
+        `);
+
+    return result.recordset[0];
+};
+
+/**
+ * Cập nhật thông tin promotion — chỉ SET những field được truyền vào (partial update).
+ * Không cho phép đổi type sau khi đã tạo để tránh sai lệch business logic.
+ */
+exports.updatePromotion = async (id, data) => {
+    const pool = await connectDB();
+    const { name, value, startDate, endDate, status } = data;
+
+    // Validate status nếu được truyền vào
+    validateFields({ status });
+
+    const setClauses = [];
+    const request = pool.request().input('id', sql.BigInt, id);
+
+    if (name !== undefined) {
+        setClauses.push('name = @name');
+        request.input('name', sql.NVarChar, name);
+    }
+    if (value !== undefined) {
+        setClauses.push('value = @value');
+        request.input('value', sql.Decimal(15, 2), value);
+    }
+    if (startDate !== undefined) {
+        setClauses.push('startDate = @startDate');
+        request.input('startDate', sql.DateTime2, startDate);
+    }
+    if (endDate !== undefined) {
+        setClauses.push('endDate = @endDate');
+        request.input('endDate', sql.DateTime2, endDate);
+    }
+    if (status !== undefined) {
+        setClauses.push('status = @status');
+        request.input('status', sql.VarChar, status);
+    }
+
+    if (setClauses.length === 0) return null;
+
+    const result = await request.query(`
+        UPDATE Promotions
+        SET ${setClauses.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE id = @id
+    `);
+
+    return result.recordset[0] || null;
+};
+
+/**
+ * Soft-delete: chuyển status = 'Disabled' thay vì xóa cứng.
+ * Tránh lỗi FK với bảng Invoices đang tham chiếu promotionId.
+ */
+exports.deletePromotion = async (id) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`
+            UPDATE Promotions
+            SET status = 'Disabled'
+            OUTPUT INSERTED.*
+            WHERE id = @id
+        `);
+    return result.recordset[0] || null;
+};
+
+// ─── PROMOTION ITEMS (PromotionProducts) ────────────────────────────────────
+
+/**
+ * Thêm sản phẩm hoặc danh mục vào promotion.
+ * Ít nhất một trong hai (productId hoặc categoryId) phải có giá trị.
+ */
+exports.addPromotionItem = async (promotionId, item) => {
+    const pool = await connectDB();
+    const { productId, categoryId } = item;
+
+    if (!productId && !categoryId) {
+        throw new Error('Phải cung cấp ít nhất productId hoặc categoryId');
+    }
+
+    await pool.request()
+        .input('promotionId', sql.BigInt, promotionId)
+        .input('productId', sql.BigInt, productId || null)
+        .input('categoryId', sql.Int, categoryId || null)
+        .query(`
+            INSERT INTO PromotionProducts (promotionId, productId, categoryId)
+            VALUES (@promotionId, @productId, @categoryId)
+        `);
+};
+
+/**
+ * Xóa một item khỏi PromotionProducts theo itemId (id của dòng trong bảng).
+ */
+exports.removePromotionItem = async (itemId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('itemId', sql.Int, itemId)
+        .query(`
+            DELETE FROM PromotionProducts
+            OUTPUT DELETED.*
+            WHERE id = @itemId
+        `);
+    return result.recordset[0] || null;
+};
+
+/**
+ * Xóa toàn bộ items của một promotion — dùng khi cần replace toàn bộ danh sách sản phẩm.
+ */
+exports.clearPromotionItems = async (promotionId) => {
+    const pool = await connectDB();
+    await pool.request()
+        .input('promotionId', sql.BigInt, promotionId)
+        .query(`DELETE FROM PromotionProducts WHERE promotionId = @promotionId`);
+};

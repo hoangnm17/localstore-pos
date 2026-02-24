@@ -1,4 +1,5 @@
-const inventoryService = require("../services/inventory.service");
+const inventoryService = require("../services/InventoryServices/inventory.service");
+const problematicService = require("../services/InventoryServices/problematic.service");
 
 exports.getCategoryStock = async (req, res) => {
     const search = req.query.search || "";
@@ -28,6 +29,7 @@ exports.getProductStockByCategory = async (req, res) => {
 
         res.json({
             categoryId,
+            categoryName: data.products[0]?.categoryName || "",
             page: Number(page),
             limit: Number(limit),
             total: data.total,
@@ -51,19 +53,25 @@ exports.updateProductStock = async (req, res) => {
 
         if (typeof quantity !== "number" || Number.isNaN(quantity)) {
             return res.status(400).json({
-                message: "Quantity must be a number"
-            });
-        }
-
-        if (!Number.isInteger(quantity)) {
-            return res.status(400).json({
-                message: "Quantity must be an integer"
+                message: "Quantity must be a valid number"
             });
         }
 
         if (quantity < 0) {
             return res.status(400).json({
                 message: "Quantity must be greater than or equal to 0"
+            });
+        }
+
+        const product = await inventoryService.getProductBasicInfo(productId); // cần implement hàm này
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (product.allowDecimalQuantity === 0 && !Number.isInteger(quantity)) {
+            return res.status(400).json({
+                message: "Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)"
             });
         }
 
@@ -86,4 +94,56 @@ exports.updateProductStock = async (req, res) => {
     }
 };
 
+exports.getProductsBySupplier = async (req, res) => {
+    try {
+        const { supplierId } = req.params;
+        const { search = "", page = 1, limit = 10 } = req.query;
 
+        const data = await inventoryService.getProductsBySupplier(
+            Number(supplierId),
+            search,
+            Number(page),
+            Number(limit)
+        );
+
+        res.json({
+            supplierId: Number(supplierId),
+            page: Number(page),
+            limit: Number(limit),
+            total: data.total,
+            products: data.products
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+exports.createProblematicReport = async (req, res) => {
+    try {
+        await problematicService.createReport(req.body, req.user);
+        res.status(201).json({ message: "Report created successfully" });
+    } catch (err) {
+        if (err.message === "PERMISSION_DENIED") {
+            return res.status(403).json({ message: "Permission denied" });
+        }
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getProblematicReports = async (req, res) => {
+    try {
+        const { userId, role } = req.user;
+        const filters = req.query;
+
+        const reports = await problematicService.getReports({
+            userId,
+            role,
+            filters
+        });
+
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
