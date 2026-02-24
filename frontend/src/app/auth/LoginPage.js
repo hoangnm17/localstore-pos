@@ -14,32 +14,27 @@ function LoginPage() {
       setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
-    // try {
-    //   setLoading(true);
-    //   setError("");
-    //   const res = await loginAPI(form);
-    //   if (res.success) {
-    //     localStorage.setItem("token", res.data.token);
-    //     localStorage.setItem("user", JSON.stringify(res.data.user));
-    //     navigate("/sales");
-    //   }
-    // } catch (err) {
-    //   setError(err.response?.data?.message || "Đăng nhập thất bại");
-    // } finally {
-    //   setLoading(false);
-    // }
+
     try {
       setLoading(true);
-      const res = await loginAPI(form);
-      if (res.success) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+      setError("");
+      
+      const response = await loginAPI(form);
+      
+      const serverData = response.data; 
 
-        const role = res.data.user.roleName;
+      if (serverData.success) {
+        const { token, user } = serverData.data;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        const role = user.roleName;
+        console.log("Đăng nhập thành công với Role:", role);
 
         switch (role) {
           case 'Manager':
-            navigate("/sales");
+            navigate("/staff"); 
             break;
           case 'Cashier':
             navigate("/sales");
@@ -48,11 +43,14 @@ function LoginPage() {
             navigate("/inventory");
             break;
           default:
-            navigate("/login"); // Trang mặc định
+            navigate("/sales"); 
         }
+      } else {
+        setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+      console.error("Lỗi Login:", err);
+      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
     } finally {
       setLoading(false);
     }
