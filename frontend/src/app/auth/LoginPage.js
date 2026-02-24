@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; 
+import { useNavigate, Link } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
 
- function LoginPage() {
+function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,14 +14,42 @@ import { loginAPI } from "../../services/Auth/auth.service";
       setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
+    // try {
+    //   setLoading(true);
+    //   setError("");
+    //   const res = await loginAPI(form);
+    //   if (res.success) {
+    //     localStorage.setItem("token", res.data.token);
+    //     localStorage.setItem("user", JSON.stringify(res.data.user));
+    //     navigate("/sales");
+    //   }
+    // } catch (err) {
+    //   setError(err.response?.data?.message || "Đăng nhập thất bại");
+    // } finally {
+    //   setLoading(false);
+    // }
     try {
       setLoading(true);
-      setError("");
       const res = await loginAPI(form);
       if (res.success) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
-        navigate("/sales");
+
+        const role = res.data.user.roleName;
+
+        switch (role) {
+          case 'Manager':
+            navigate("/sales");
+            break;
+          case 'Cashier':
+            navigate("/sales");
+            break;
+          case 'Warehouse':
+            navigate("/inventory");
+            break;
+          default:
+            navigate("/login"); // Trang mặc định
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || "Đăng nhập thất bại");
@@ -31,28 +59,28 @@ import { loginAPI } from "../../services/Auth/auth.service";
   };
 
   return (
-    <div 
+    <div
       className="d-flex align-items-center justify-content-center min-vh-100"
       style={{
         backgroundImage: `url("/store.jpg")`,
-        backgroundSize: "cover",       
-        backgroundPosition: "center",  
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         position: "relative"
       }}
     >
       <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.1)" }}></div>
 
-      <div 
-        className="card border-0 p-4 text-center" 
-        style={{ 
-          maxWidth: "450px", 
-          width: "90%", 
+      <div
+        className="card border-0 p-4 text-center"
+        style={{
+          maxWidth: "450px",
+          width: "90%",
           borderRadius: "20px",
-          backgroundColor: "rgba(255, 255, 255, 0.75)", 
-          backdropFilter: "blur(0px)", 
+          backgroundColor: "rgba(255, 255, 255, 0.75)",
+          backdropFilter: "blur(0px)",
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
-          zIndex: 1 
+          zIndex: 1
         }}
       >
         <div className="card-body px-4">
@@ -87,8 +115,8 @@ import { loginAPI } from "../../services/Auth/auth.service";
             </div>
 
             <div className="d-flex justify-content-end mb-4">
-              <Link 
-                to="/forgot-password" 
+              <Link
+                to="/forgot-password"
                 className="text-decoration-none fw-bold text-dark"
                 style={{ fontSize: "0.9rem", textShadow: "0px 0px 1px rgba(255,255,255,0.8)" }}
               >
@@ -100,9 +128,9 @@ import { loginAPI } from "../../services/Auth/auth.service";
               type="submit"
               className="btn btn-primary w-100 py-3 fw-bold shadow-sm"
               disabled={loading}
-              style={{ 
-                borderRadius: "12px", 
-                backgroundColor: "#5eaaff", 
+              style={{
+                borderRadius: "12px",
+                backgroundColor: "#5eaaff",
                 border: "none",
                 fontSize: "1.1rem"
               }}
