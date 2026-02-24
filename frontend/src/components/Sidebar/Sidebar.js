@@ -21,13 +21,15 @@ const Sidebar = () => {
         },
         { 
             title: 'Kho Hàng', icon: 'bi-box-seam-fill', id: 'inventory',
-            children: [{ title: 'Tồn kho', path: '/inventory' }, { title: 'Nhập kho', path: '/inventory/import' }] 
+            children: [{ title: 'Tồn kho', path: '/inventory' },
+                 { title: 'Nhập kho', path: '/inventory/import' }] 
         },
         { title: 'Sản Phẩm', icon: 'bi-archive-fill', path: '/products' },
         { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/promo' },
         { 
             title: 'Nhân Sự', icon: 'bi-people-fill', id: 'staff',
-            children: [{ title: 'Danh sách nhân viên', path: '/staff' }] 
+            children: [{ title: 'Danh sách nhân viên', path: '/staff' },
+                { title: 'Tạo mới nhân viên', path: '/staff/create' }]
         },
         { title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports' },
     ];

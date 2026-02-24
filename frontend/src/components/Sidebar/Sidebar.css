@@ -83,11 +83,11 @@
 .menu-title {
     flex: 1;
     font-size: 1rem;
-    text-transform: uppercase; /* Chữ in như em thích */
+    text-transform: uppercase; 
     letter-spacing: 0.5px;
 }
 
-/* Sub-menu */
+
 .arrow-icon {
     font-size: 0.7rem;
     transition: transform 0.3s;
