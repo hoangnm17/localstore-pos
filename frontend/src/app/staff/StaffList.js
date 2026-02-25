@@ -127,7 +127,7 @@ useEffect(() => {
                                                     <i className="bi bi-pencil-square text-primary cursor-pointer"
                                                         onClick={() => navigate(`/staff/update`,{ state: { id: s.id }} )}></i>
                                                     <i className="bi bi-eye text-success cursor-pointer"
-                                                        onClick={() => navigate(`/staff/detail`)}></i>
+                                                        onClick={() => navigate(`/staff/detail`,{ state: { id: s.id }})}></i>
                                                     <div className="form-check form-switch">
                                                         <input className="form-check-input" type="checkbox"
                                                             checked={s.isActive === 'active'}

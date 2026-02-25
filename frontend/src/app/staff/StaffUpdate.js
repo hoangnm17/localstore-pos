@@ -21,7 +21,7 @@ const StaffUpdate = () => {
         roleId: '',
         salaryType: 'hourly',
         baseSalary: 0,
-        isActive: 'active',
+        isActive: '',
         employmentStatus: 'working',
         createdAt: '',
         newPassword: ''
