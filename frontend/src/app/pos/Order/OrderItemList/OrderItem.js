@@ -1,74 +1,78 @@
-import { formatCurrency } from "utils/formatters";
+  import { formatCurrency } from "utils/formatters";
 
-const OrderItem = ({ item, increase, decrease, remove }) => {
+  const OrderItem = ({ item, increase, decrease, remove }) => {
 
-  const lineTotal = (item.unitPrice || 0) * item.quantity;
+    const displayName = item.variantName
+      ? `${item.productName} - ${item.variantName}`
+      : item.productName;
+      
+    const lineTotal = (item.unitPrice || 0) * item.quantity;
 
-  return (
-    <tr className="border-top">
+    return (
+      <tr className="border-top">
 
-      {/* PRODUCT NAME */}
-      <td className="text-start">
-        <div className="fw-semibold">{item.productName}</div>
-        {item.variant && (
-          <small className="text-muted">{item.variant}</small>
-        )}
-      </td>
+        {/* PRODUCT NAME */}
+        <td className="text-start">
+          <div className="fw-semibold">{displayName}</div>
+          {item.variant && (
+            <small className="text-muted">{item.variant}</small>
+          )}
+        </td>
 
-      {/* UNIT PRICE */}
-      <td className="text-end text-muted">
-        {formatCurrency(item.unitPrice)}
-      </td>
+        {/* UNIT PRICE */}
+        <td className="text-end text-muted">
+          {formatCurrency(item.unitPrice)}
+        </td>
 
-      {/* QUANTITY */}
-      <td className="text-center">
+        {/* QUANTITY */}
+        <td className="text-center">
 
-        <div className="d-inline-flex align-items-center border rounded">
+          <div className="d-inline-flex align-items-center border rounded">
+
+            <button
+              className="btn btn-light btn-sm border-0"
+              onClick={() => decrease(item.id)}
+            >
+              <i className="bi bi-dash"></i>
+            </button>
+
+            <span
+              className="px-2 fw-semibold"
+              style={{ minWidth: 30 }}
+            >
+              {item.quantity}
+            </span>
+
+            <button
+              className="btn btn-light btn-sm border-0"
+              onClick={() => increase(item.id)}
+            >
+              <i className="bi bi-plus"></i>
+            </button>
+
+          </div>
+
+        </td>
+
+        {/* LINE TOTAL */}
+        <td className="text-end fw-semibold">
+          {formatCurrency(lineTotal)}
+        </td>
+
+        {/* REMOVE */}
+        <td className="text-center">
 
           <button
-            className="btn btn-light btn-sm border-0"
-            onClick={() => decrease(item.id)}
+            className="btn btn-light btn-sm border text-danger"
+            onClick={() => remove(item.id)}
           >
-            <i className="bi bi-dash"></i>
+            <i className="bi bi-trash"></i>
           </button>
 
-          <span
-            className="px-2 fw-semibold"
-            style={{ minWidth: 30 }}
-          >
-            {item.quantity}
-          </span>
+        </td>
 
-          <button
-            className="btn btn-light btn-sm border-0"
-            onClick={() => increase(item.id)}
-          >
-            <i className="bi bi-plus"></i>
-          </button>
+      </tr>
+    );
+  };
 
-        </div>
-
-      </td>
-
-      {/* LINE TOTAL */}
-      <td className="text-end fw-semibold">
-        {formatCurrency(lineTotal)}
-      </td>
-
-      {/* REMOVE */}
-      <td className="text-center">
-
-        <button
-          className="btn btn-light btn-sm border text-danger"
-          onClick={() => remove(item.id)}
-        >
-          <i className="bi bi-trash"></i>
-        </button>
-
-      </td>
-
-    </tr>
-  );
-};
-
-export default OrderItem;
+  export default OrderItem;
