@@ -78,7 +78,7 @@ function AlertModal({ message, onClose }) {
         <div className="crm-modal-overlay" onClick={onClose}>
             <div className="crm-confirm" style={{ borderTop: '4px solid #f87171' }} onClick={e => e.stopPropagation()}>
                 <div className="crm-confirm-icon" style={{ color: '#f87171' }}>🚫</div>
-                <h3 style={{ color: '#fff', marginBottom: 8, fontSize: '1.2rem' }}>Thông báo</h3>
+                <h3 style={{ color: '#1e293b', marginBottom: 8, fontSize: '1.2rem' }}>Thông báo</h3>
                 <p className="crm-confirm-msg">{message}</p>
                 <div className="crm-modal-footer" style={{ justifyContent: 'center', marginTop: 20 }}>
                     <button className="btn-primary" onClick={onClose} style={{ padding: '8px 30px' }}>Đóng</button>
