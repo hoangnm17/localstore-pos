@@ -21,24 +21,21 @@ const createPayment = async (req, res) => {
   try {
     const { items } = req.body;
 
-    // ✅ Validate
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         message: "Items is required",
       });
     }
 
-    // ✅ Tính lại total từ backend (không tin FE)
     const calculatedTotal = items.reduce(
       (sum, item) => sum + Number(item.lineTotal || 0),
       0
     );
 
-    // ✅ Hardcode tạm
     const data = {
       ...req.body,
-      staffId: 1,
-      counterId: 1,
+      staffId: req.body.staffId,
+      counterId: req.body.counterId,
       customerId: req.body.customerId || null,
       total: calculatedTotal,
     };

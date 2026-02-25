@@ -1,45 +1,61 @@
 import { useState } from "react";
-import { invoiceCreate } from "../../../services/Invoices/invoice.service";
+import { createPayment } from "services/Payment/payment.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
 import PaymentModal from "./Payment/PaymentModal";
 
-export default function Order({ orderItems, increase, decrease, remove }) {
+export default function Order({
+  orderId,
+  orderItems = [],
+  customer = null,
+  total,
+  totalQuantity,
+  increase,
+  decrease,
+  remove,
+  onSelectCustomer,
+}) {
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentContext, setPaymentContext] = useState(null);
 
-  const handleOpenPayment = (data) => {
-    setPaymentContext(data);
-    setShowPayment(true);
-  };
-
-  const handleConfirmPayment = (paymentInfo) => {
+  const handleConfirmPayment = async ({ method, customerPay }) => {
     const payload = {
-      items: paymentContext.items,
-      customer: paymentContext.customer,
-      total: paymentContext.total,
-      payment: paymentInfo,
+      orderId: orderId,
+      method: method,
+      customerPay: customerPay,
     };
 
-    console.log("POST ORDER:", payload);
-    invoiceCreate(payload)
+    await createPayment(payload);
+
     setShowPayment(false);
   };
 
   const isEmpty = orderItems.length === 0;
 
+  const handleSelectCustomer = async (selectedCustomer) => {
+    try {
+      if (!selectedCustomer) return;
+
+      onSelectCustomer(selectedCustomer);
+      // await attachCustomerToInvoice(orderId, selectedCustomer.id);
+
+    } catch (error) {
+      console.error("Attach customer error:", error);
+    }
+  };
+
   return (
     <div
       className="d-flex flex-column h-100 bg-white"
-      style={{
-        borderRight: "1px solid #e5e7eb"
-      }}
+      style={{ borderRight: "1px solid #e5e7eb" }}
     >
-
       {/* HEADER */}
       <div className="p-3 border-bottom">
-        <CustomerSearch />
+        <CustomerSearch
+          invoiceId={orderId}
+          customer={customer}
+          onSelectCustomer={handleSelectCustomer}
+        />
       </div>
 
       {/* ORDER BODY */}
@@ -47,36 +63,36 @@ export default function Order({ orderItems, increase, decrease, remove }) {
         className="flex-grow-1 overflow-auto p-3"
         style={{ background: "#f9fafb" }}
       >
-
         <OrderItemList
           orderItems={orderItems}
           increase={increase}
           decrease={decrease}
           remove={remove}
         />
-
       </div>
 
-      {/* PAYMENT STICKY */}
+      {/* PAYMENT */}
       <div
         className="p-3 border-top bg-white"
-        style={{
-          boxShadow: "0 -2px 8px rgba(0,0,0,0.05)"
-        }}
+        style={{ boxShadow: "0 -2px 8px rgba(0,0,0,0.05)" }}
       >
         <PaymentDetail
           items={orderItems}
-          onOpenPayment={handleOpenPayment} />
+          total={total}
+          totalQuantity={totalQuantity}
+          disabled={isEmpty}
+          onOpenPayment={() => setShowPayment(true)}
+        />
       </div>
 
       {showPayment && (
         <PaymentModal
-          total={paymentContext.total}
+          orderId={orderId}
+          total={total}
           onClose={() => setShowPayment(false)}
           onConfirm={handleConfirmPayment}
         />
       )}
-
     </div>
   );
 }

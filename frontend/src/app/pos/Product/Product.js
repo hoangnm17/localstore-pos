@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import ProductVariant from "./ProductList/ProductVariantModal";
-import Pagination from "../../../components/Pagination/Pagination";
+import Pagination from "components/Pagination/Pagination";
 
 // Cấu hình tập trung, dễ dàng thay đổi mà không cần tìm trong code
 const PAGE_CONFIG = {
@@ -71,7 +71,25 @@ export default function Product({ addItem }) {
                 {/* ProductList chỉ nhận danh sách ĐÃ PHÂN TRANG */}
                 <ProductList
                   products={displayItems}
-                  onSelect={setSelectedProduct}
+                  onSelect={(product) => {
+
+                    // ✅ SỬA: nếu chỉ có 1 variant → thêm luôn
+                    if (product.variants?.length === 1) {
+                      const variant = product.variants[0];
+
+                      addItem({
+                        productId: product.id,
+                        productName: product.name,
+                        variantId: variant.id ?? variant.name,
+                        variantName: variant.name,
+                        unitPrice: variant.price ?? product.salePrice ?? 0,
+                      });
+
+                      return;
+                    }
+
+                    setSelectedProduct(product);
+                  }}
                 />
 
                 {/* Pagination điều khiển số trang của cha */}
@@ -104,14 +122,8 @@ export default function Product({ addItem }) {
         <ProductVariant
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onAdd={(variant) => {
-            addItem({
-              productId: selectedProduct.id,
-              productName: selectedProduct.name,
-              variant: variant.name,
-              unitPrice: selectedProduct.salePrice,
-            });
-            setSelectedProduct(null);
+          onAdd={(itemData) => {
+            addItem(itemData);
           }}
         />
       )}
@@ -127,14 +139,80 @@ export default function Product({ addItem }) {
 }
 
 const MOCK_PRODUCTS = [
-  { id: 1, name: "Cà phê sữa đá", code: "CF001", url: "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=500", salePrice: 20000, variants: [{ name: "Size S" }, { name: "Size M" }] },
-  { id: 2, name: "Trà đào miếng", code: "TD001", url: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=500", salePrice: 25000, variants: [{ name: "Ít đá" }, { name: "Nhiều đá" }] },
-  { id: 3, name: "Trà đào cam sả", code: "TD002", url: "https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?q=80&w=500", salePrice: 30000, variants: [{ name: "Bình thường" }] },
-  { id: 4, name: "Trà đào chanh sả", code: "TD003", url: "https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?q=80&w=500", salePrice: 30000, variants: [{ name: "Bình thường" }] },
-  { id: 5, name: "Nước cam ép", code: "NC001", url: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500", salePrice: 30000, variants: [{ name: "Bình thường" }] },
-  { id: 6, name: "Sữa tươi trân châu", code: "ST001", url: "https://images.unsplash.com/photo-1551046710-22c2ea30245d?q=80&w=500", salePrice: 35000, variants: [{ name: "Size M" }] },
-  { id: 7, name: "Nước cam ép", code: "NC001", url: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500", salePrice: 30000, variants: [{ name: "Bình thường" }] },
-  { id: 8, name: "Sữa tươi trân châu", code: "ST001", url: "https://images.unsplash.com/photo-1551046710-22c2ea30245d?q=80&w=500", salePrice: 35000, variants: [{ name: "Size M" }] },
-  { id: 9, name: "Nước cam ép", code: "NC001", url: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500", salePrice: 30000, variants: [{ name: "Bình thường" }] },
-  { id: 10, name: "Sữa tươi trân châu", code: "ST001", url: "https://images.unsplash.com/photo-1551046710-22c2ea30245d?q=80&w=500", salePrice: 35000, variants: [{ name: "Size M" }] },
-];
+  {
+    "id": 1,
+    "code": "CF001",
+    "name": "Cà phê sữa đá",
+    "imageUrl": "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=500",
+    "status": "Selling",
+    "variants": [
+      {
+        "id": 101,
+        "name": "Size S",
+        "unitType": "PIECE",
+        "conversionFactor": 1,
+        "price": 20000,
+        "barcode": "CF001-S"
+      },
+      {
+        "id": 102,
+        "name": "Size M",
+        "unitType": "PIECE",
+        "conversionFactor": 1,
+        "price": 25000,
+        "barcode": "CF001-M"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "code": "TD001",
+    "name": "Trà đào miếng",
+    "imageUrl": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=500",
+    "status": "Selling",
+    "variants": [
+      {
+        "id": 201,
+        "name": "Mặc định",
+        "unitType": "PIECE",
+        "conversionFactor": 1,
+        "price": 25000,
+        "barcode": "TD001-DEFAULT"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "code": "NC001",
+    "name": "Nước cam ép",
+    "imageUrl": "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500",
+    "status": "Selling",
+    "variants": [
+      {
+        "id": 301,
+        "name": "Ly",
+        "unitType": "PIECE",
+        "conversionFactor": 1,
+        "price": 30000,
+        "barcode": "NC001-LY"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "code": "ST001",
+    "name": "Sữa tươi trân châu",
+    "imageUrl": "https://images.unsplash.com/photo-1551046710-22c2ea30245d?q=80&w=500",
+    "status": "Selling",
+    "variants": [
+      {
+        "id": 401,
+        "name": "Size M",
+        "unitType": "PIECE",
+        "conversionFactor": 1,
+        "price": 35000,
+        "barcode": "ST001-M"
+      }
+    ]
+  }
+]

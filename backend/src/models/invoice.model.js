@@ -1,5 +1,4 @@
-const sql = require("mssql")
-const { connectDB } = require("../config/database")
+const { connectDB, sql } = require("../config/database")
 
 const MAX_PAGE_SIZE = 50;
 
@@ -8,7 +7,7 @@ const getInvoiceList = async ({
     pageSize,
 }) => {
     try {
-        const pool = await connectDB;
+        const pool = await connectDB();
 
         const currentPage = page && page > 0 ? page : 1;
 
@@ -63,4 +62,57 @@ const getInvoiceList = async ({
         console.error("getInvoiceList error:", err);
         throw err;
     }
+};
+
+const createInvoice = async (data) => {
+//   try {
+//     const pool = await connectDB();
+
+//     const result = await pool.request()
+//       .input("invoiceCode", sql.VarChar, data.invoiceCode)
+//       .input("staffId", sql.BigInt, data.staffId)
+//       .input("counterId", sql.BigInt, data.counterId)
+//       .input("customerId", sql.BigInt, data.customerId)
+//       .input("totalAmount", sql.Decimal(15,2), data.total)  
+//       .input("finalAmount", sql.Decimal(15,2), data.total)   
+//       .query(`
+//         INSERT INTO Invoices
+//         (invoiceCode, staffId, counterId, customerId, totalAmount, finalAmount)
+//         OUTPUT INSERTED.id
+//         VALUES
+//         (@invoiceCode, @staffId, @counterId, @customerId, @totalAmount, @finalAmount)
+//       `);
+
+//     return result.recordset[0].id;
+
+//   } catch (err) {
+//     console.error("createInvoice error:", err);
+//     throw err;
+//   }
+};
+
+
+const updateInvoiceStatus = async (invoiceId, status) => {
+    try {
+        const pool = await connectDB();
+
+        await pool
+            .request()
+            .input("invoiceId", sql.BigInt, invoiceId)
+            .input("status", sql.VarChar, status)
+            .query(`
+        UPDATE Invoices
+        SET status = @status
+        WHERE id = @invoiceId
+      `);
+    } catch (err) {
+        console.error("updateInvoiceStatus error:", err);
+        throw err;
+    }
+};
+
+module.exports = {
+    getInvoiceList,
+    createInvoice,
+    updateInvoiceStatus,
 };

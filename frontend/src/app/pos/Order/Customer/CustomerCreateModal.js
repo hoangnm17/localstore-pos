@@ -1,140 +1,179 @@
-import { useState } from "react";
-import { customerCreate } from "../../../../services/Customer/customer.service";
+import { useState, useEffect, useRef } from "react";
+import { customerCreate } from "services/Customer/customer.service";
+import BaseModal from "components/common/BaseModal";
+import AlertMessage from "components/common/AlertMessage";
+import { isValidPhone, isNotEmpty } from "utils/validators";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
-export default function CustomerCreateModal({ phone, onClose, onCreated }) {
+export default function CustomerCreateModal({
+  phone,
+  onClose,
+  onCreated,
+}) {
   const [form, setForm] = useState({
     name: "",
-    phone: phone,
+    phone: phone || "",
   });
 
+  const { showNotification } = useNotification();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const nameRef = useRef(null);
+  const phoneRef = useRef(null);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      phone: phone || "",
+    }));
+  }, [phone]);
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) {
+    if (saving) return;
+    if (!isNotEmpty(form.name)) {
       setError("Vui lòng nhập tên khách hàng");
+      nameRef.current?.focus();
+      return;
+    }
+
+    if (!isValidPhone(form.phone)) {
+      setError("Số điện thoại không hợp lệ");
+      phoneRef.current?.focus();
       return;
     }
 
     try {
       setSaving(true);
       setError("");
-      const res = await customerCreate(form);
+
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+      }
+
+      const res = await customerCreate(payload);
       onCreated(res.data);
+      showNotification("Tạo khách hàng thành công", "success");
       onClose();
     } catch (err) {
-      console.error(err);
-      setError("Tạo khách hàng thất bại. Vui lòng thử lại!");
+      setError(err?.message || "Có lỗi xảy ra.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div
-      className="modal fade show"
-      style={{ 
-        display: "block", 
-        backgroundColor: "rgba(15, 23, 42, 0.6)", // Overlay đậm chất Modern
-        backdropFilter: "blur(4px)" // Làm mờ hậu cảnh
-      }}
-      onClick={onClose}
-    >
+    <BaseModal onClose={onClose} disableClose={saving}>
       <div
-        className="modal-dialog modal-dialog-centered"
-        style={{ maxWidth: "400px" }} // Giới hạn chiều rộng cho tinh tế
-        onClick={(e) => e.stopPropagation()}
+        className="modal-content border-0 shadow-lg bg-white"
+        style={{
+          borderRadius: "16px",
+          maxWidth: "400px",
+          margin: "0 auto",
+        }}
       >
-        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: "16px" }}>
-          
-          {/* HEADER: Font chữ đậm hơn và padding thoáng */}
-          <div className="modal-header border-0 pt-4 px-4 pb-2">
-            <h5 className="modal-title fw-bold text-dark">Thêm khách hàng mới</h5>
-            <button
-              className="btn-close shadow-none"
-              onClick={onClose}
-              disabled={saving}
-              style={{ fontSize: "0.8rem" }}
+        {/* HEADER */}
+        <div className="modal-header border-0 pt-4 px-4 pb-2">
+          <h5 className="modal-title fw-bold text-dark">
+            Thêm khách hàng mới
+          </h5>
+          <button
+            className="btn-close shadow-none"
+            onClick={onClose}
+            disabled={saving}
+          />
+        </div>
+
+        {/* BODY */}
+        <div className="modal-body px-4">
+          {/* NAME */}
+          <div className="mb-3">
+            <label className="form-label small fw-semibold text-muted mb-1">
+              TÊN KHÁCH HÀNG
+            </label>
+            <input
+              ref={nameRef}
+              className="form-control"
+              style={{
+                borderRadius: "10px",
+                padding: "10px 15px",
+                backgroundColor: "#f8fafc",
+              }}
+              placeholder="Nhập tên khách hàng..."
+              value={form.name}
+              autoFocus
+              onChange={(e) => {
+                setError("");
+                setForm({ ...form, name: e.target.value })
+              }
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  phoneRef.current?.focus();
+                }
+              }}
             />
           </div>
 
-          {/* BODY: Tinh chỉnh Input và Label */}
-          <div className="modal-body px-4">
-            <div className="mb-3">
-              <label className="form-label small fw-semibold text-muted mb-1">
-                TÊN KHÁCH HÀNG
-              </label>
-              <input
-                className={`form-control ${error ? 'is-invalid' : ''}`}
-                style={{ 
-                  borderRadius: "10px", 
-                  padding: "10px 15px",
-                  backgroundColor: "#f8fafc"
-                }}
-                placeholder="Nhập tên khách hàng..."
-                value={form.name}
-                autoFocus
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-
-            <div className="mb-2">
-              <label className="form-label small fw-semibold text-muted mb-1">
-                SỐ ĐIỆN THOẠI
-              </label>
-              <input
-                className="form-control border-dashed"
-                style={{ 
-                  borderRadius: "10px", 
-                  padding: "10px 15px",
-                  backgroundColor: "#f1f5f9",
-                  color: "#64748b",
-                  borderStyle: "dashed" 
-                }}
-                value={form.phone}
-                disabled
-              />
-            </div>
-
-            {error && (
-              <div className="alert alert-danger py-2 px-3 rounded-3 mt-3 mb-0 border-0" style={{ fontSize: "0.85rem" }}>
-                <i className="bi bi-exclamation-circle me-2"></i>{error}
-              </div>
-            )}
-          </div>
-
-          {/* FOOTER: Nút bấm to, rõ ràng */}
-          <div className="modal-footer border-0 pb-4 px-4 pt-3">
-            <button
-              className="btn btn-light fw-medium flex-grow-1"
-              style={{ borderRadius: "10px", padding: "10px", color: "#64748b" }}
-              onClick={onClose}
-              disabled={saving}
-            >
-              Hủy
-            </button>
-
-            <button
-              className="btn btn-primary fw-medium flex-grow-1 shadow-sm"
-              style={{ 
-                borderRadius: "10px", 
-                padding: "10px",
-                backgroundColor: "#4f46e5",
-                borderColor: "#4f46e5"
+          {/* PHONE */}
+          <div className="mb-2">
+            <label className="form-label small fw-semibold text-muted mb-1">
+              SỐ ĐIỆN THOẠI
+            </label>
+            <input
+              ref={phoneRef}
+              className="form-control"
+              style={{
+                borderRadius: "10px",
+                padding: "10px 15px",
+                backgroundColor: "#f8fafc",
               }}
-              onClick={handleSubmit}
-              disabled={saving}
-            >
-              {saving ? (
-                <span className="spinner-border spinner-border-sm"></span>
-              ) : (
-                "Lưu thông tin"
-              )}
-            </button>
+              placeholder="Nhập số điện thoại..."
+              value={form.phone}
+              inputMode="numeric"
+              onChange={(e) => {
+                setError("");
+                setForm({
+                  ...form,
+                  phone: e.target.value.replace(/\D/g, ""),
+                });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+            />
           </div>
 
+          <AlertMessage message={error} />
+        </div>
+
+        {/* FOOTER */}
+        <div className="modal-footer border-0 pb-4 px-4 pt-3 d-flex gap-2">
+          <button
+            className="btn btn-light flex-grow-1"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Hủy
+          </button>
+
+          <button
+            className="btn btn-primary flex-grow-1"
+            onClick={handleSubmit}
+            disabled={saving}
+          >
+            {saving ? (
+              <span className="spinner-border spinner-border-sm"></span>
+            ) : (
+              "Lưu thông tin"
+            )}
+          </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }

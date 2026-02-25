@@ -1,4 +1,4 @@
-import OrderItem from "./OrderItem";
+import OrderItem from "app/pos/Order/OrderItemList/OrderItem";
 
 const OrderItemList = ({ orderItems, increase, decrease, remove }) => {
   return (

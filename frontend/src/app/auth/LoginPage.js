@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; 
+import { useNavigate, Link } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
-import bgImage from "../../assets/images/store.jpg"; 
 
-export default function LoginPage() {
+function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,45 +14,71 @@ export default function LoginPage() {
       setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
+
     try {
       setLoading(true);
       setError("");
-      const res = await loginAPI(form);
-      if (res.success) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        navigate("/sales");
+      
+      const response = await loginAPI(form);
+      
+      const serverData = response.data; 
+
+      if (serverData.success) {
+        const { token, user } = serverData.data;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        const role = user.roleName;
+        console.log("Đăng nhập thành công với Role:", role);
+
+        switch (role) {
+          case 'Manager':
+            navigate("/staff"); 
+            break;
+          case 'Cashier':
+            navigate("/sales");
+            break;
+          case 'Warehouse':
+            navigate("/inventory");
+            break;
+          default:
+            navigate("/sales"); 
+        }
+      } else {
+        setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+      console.error("Lỗi Login:", err);
+      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div 
+    <div
       className="d-flex align-items-center justify-content-center min-vh-100"
       style={{
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",       
-        backgroundPosition: "center",  
+        backgroundImage: `url("/store.jpg")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         position: "relative"
       }}
     >
       <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.1)" }}></div>
 
-      <div 
-        className="card border-0 p-4 text-center" 
-        style={{ 
-          maxWidth: "450px", 
-          width: "90%", 
+      <div
+        className="card border-0 p-4 text-center"
+        style={{
+          maxWidth: "450px",
+          width: "90%",
           borderRadius: "20px",
-          backgroundColor: "rgba(255, 255, 255, 0.75)", 
-          backdropFilter: "blur(0px)", 
+          backgroundColor: "rgba(255, 255, 255, 0.75)",
+          backdropFilter: "blur(0px)",
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
-          zIndex: 1 
+          zIndex: 1
         }}
       >
         <div className="card-body px-4">
@@ -88,8 +113,8 @@ export default function LoginPage() {
             </div>
 
             <div className="d-flex justify-content-end mb-4">
-              <Link 
-                to="/forgot-password" 
+              <Link
+                to="/forgot-password"
                 className="text-decoration-none fw-bold text-dark"
                 style={{ fontSize: "0.9rem", textShadow: "0px 0px 1px rgba(255,255,255,0.8)" }}
               >
@@ -101,9 +126,9 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary w-100 py-3 fw-bold shadow-sm"
               disabled={loading}
-              style={{ 
-                borderRadius: "12px", 
-                backgroundColor: "#5eaaff", 
+              style={{
+                borderRadius: "12px",
+                backgroundColor: "#5eaaff",
                 border: "none",
                 fontSize: "1.1rem"
               }}
@@ -116,3 +141,4 @@ export default function LoginPage() {
     </div>
   );
 }
+export default LoginPage;
