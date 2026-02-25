@@ -6,6 +6,8 @@ const customerRoutes = require("./customer.route");
 const promotionRoutes = require("./promotion.route");
 const voucherRoutes = require("./voucher.route");
 const categoryRoutes = require("./category.route");
+const productRoutes = require("./product.route");
+const productUnitRoutes = require("./productUnit.route");
 
 module.exports = (app) => {
     const version = "/api";
@@ -18,4 +20,6 @@ module.exports = (app) => {
     app.use(version + "/promotions", promotionRoutes);
     app.use(version + "/vouchers", voucherRoutes);
     app.use(version + "/categories", categoryRoutes);
+    app.use(version + "/products", productRoutes);
+    app.use(version + "/product-units", productUnitRoutes);
 };

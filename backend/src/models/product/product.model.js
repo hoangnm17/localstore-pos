@@ -106,7 +106,8 @@ exports.getProductDetail = async (id) => {
                 salePrice,
                 costPrice,
                 status,
-                categoryId
+                categoryId,
+                allowDecimal
             FROM Products
             WHERE id = @id
         `);
@@ -151,7 +152,7 @@ exports.getProductByBarcode = async (barcode) => {
                 pu.unitType,
                 pu.conversionFactor,
                 pu.price,
-                pu.allowDecimal
+                p.allowDecimal
             FROM ProductUnits pu
             JOIN Products p ON p.id = pu.productId
             WHERE pu.barcode = @barcode
