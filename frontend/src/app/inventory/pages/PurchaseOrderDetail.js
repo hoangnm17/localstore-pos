@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/purchaseOrderService";
+import PurchaseOrderActions from "../inventoryComponents/PurchaseOrderAction";
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams();
@@ -10,24 +11,21 @@ const PurchaseOrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
+  const fetchDetail = async () => {
+  try {
+    const res = await purchaseOrderService.getPurchaseOrderDetail(id);
+    setPo(res?.data?.data || null);
+  } catch (err) {
+    setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-    const fetchDetail = async () => {
-      try {
-        const res = await purchaseOrderService.getPurchaseOrderDetail(id);
-
-        // interceptor đã return response.data
-        setPo(res?.data?.data || null);
-      } catch (err) {
-        setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDetail();
-  }, [id]);
+useEffect(() => {
+  window.scrollTo(0, 0);
+  fetchDetail();
+}, [id]);
 
   if (loading) {
     return (
@@ -199,9 +197,22 @@ const PurchaseOrderDetail = () => {
         </div>
 
         {/* Footer (tùy chọn) */}
-        <div className="card-footer bg-light text-muted text-center py-3">
-          Đơn đặt hàng #{po.id} • Ngày tạo: {po.createdAt ? new Date(po.createdAt).toLocaleDateString("vi-VN") : "—"}
-        </div>
+        <div className="card-footer bg-light py-4">
+
+  {/* Thông tin cũ giữ nguyên */}
+  <div className="text-center text-muted mb-3">
+    Đơn đặt hàng #{po.id} • Ngày tạo:{" "}
+    {po.createdAt
+      ? new Date(po.createdAt).toLocaleDateString("vi-VN")
+      : "—"}
+  </div>
+
+  {/* Thêm khu vực xử lý đơn */}
+  <div className="d-flex justify-content-center">
+    <PurchaseOrderActions po={po} onReload={fetchDetail} />
+  </div>
+
+</div>
       </div>
     </div>
   );
