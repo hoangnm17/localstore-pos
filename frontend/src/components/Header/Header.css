@@ -1,0 +1,57 @@
+/* Header.css */
+.main-header {
+    background: #1e293b;
+    /* Dark slate */
+    color: white;
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6366f1;
+    /* Indigo */
+}
+
+.main-nav {
+    display: flex;
+    gap: 2rem;
+    height: 100%;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    color: #94a3b8;
+    text-decoration: none;
+    font-weight: 500;
+    height: 100%;
+    padding: 0 0.5rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.nav-link:hover {
+    color: #f8fafc;
+}
+
+.nav-link.active {
+    color: #6366f1;
+    border-bottom-color: #6366f1;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}

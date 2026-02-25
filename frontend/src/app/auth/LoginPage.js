@@ -50,11 +50,17 @@ function LoginPage() {
           default:
             navigate("/login"); // Trang mặc định
         }
+<<<<<<< HEAD
       } else {
         setError(res.message || "Đăng nhập thất bại");
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Đăng nhập thất bại");
+=======
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Đăng nhập thất bại");
+>>>>>>> dev
     } finally {
       setLoading(false);
     }

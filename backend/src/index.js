@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const routesApi = require("./routes/index.route")
 
+const { connectDB } = require("./config/database");
 dotenv.config();
 
 const app = express();
@@ -14,6 +15,8 @@ app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+connectDB();
 
 // API Routes
 routesApi(app);

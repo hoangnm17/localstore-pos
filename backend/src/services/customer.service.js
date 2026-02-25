@@ -1,17 +1,5 @@
 const customerModel = require('../models/customer.model');
 
-const VN_PHONE_REGEX = /^(0[3|5|7|8|9])+([0-9]{8})$/;
-
-const validatePhone = (phone) => {
-    if (!phone) throw new Error('Số điện thoại không được để trống');
-
-    const cleanedPhone = phone.toString().trim();
-    if (!VN_PHONE_REGEX.test(cleanedPhone)) {
-        throw new Error('Số điện thoại không đúng định dạng');
-    }
-    return cleanedPhone;
-};
-
 exports.getCustomerList = async (filters) => {
     const [data, total] = await Promise.all([
         customerModel.getCustomers(filters),
@@ -29,12 +17,10 @@ exports.getCustomerById = async (id) => {
 };
 
 exports.createCustomer = async (data) => {
-    if (data.phone) data.phone = validatePhone(data.phone);
     return await customerModel.createCustomer(data);
 };
 
 exports.updateCustomer = async (id, data) => {
-    if (data.phone) data.phone = validatePhone(data.phone);
     return await customerModel.updateCustomer(id, data);
 };
 
@@ -42,21 +28,21 @@ exports.deleteCustomer = async (id) => {
     return await customerModel.deleteCustomer(id);
 };
 
+/** Tìm chính xác 1 khách theo số điện thoại — dùng tại quầy thu ngân */
 exports.getCustomerByPhone = async (phone) => {
-    return await customerModel.getCustomerByPhone(validatePhone(phone));
+    if (!phone) throw new Error('Số điện thoại không được để trống');
+    return await customerModel.getCustomerByPhone(phone.trim());
 };
 
+/** Tìm kiếm khách theo số điện thoại (LIKE) — trả về tối đa 10 kết quả */
 exports.searchCustomersByPhone = async (phone) => {
-    if (!phone) throw new Error('Vui lòng nhập số điện thoại để tìm kiếm');
-
-    const cleanedPhone = phone.toString().trim();
-    if (!/^\d+$/.test(cleanedPhone)) {
-        throw new Error('Số điện thoại tìm kiếm chỉ được chứa các chữ số');
-    }
-
-    return await customerModel.searchCustomersByPhone(cleanedPhone);
+    if (!phone) throw new Error('Số điện thoại không được để trống');
+    return await customerModel.searchCustomersByPhone(phone.trim());
 };
 
+/**
+ * Lịch sử mua hàng của khách — UC3: View Purchase History
+ */
 exports.getPurchaseHistory = async (customerId, { page = 1, limit = 10 } = {}) => {
     const pageNum = Math.max(parseInt(page), 1);
     const pageSize = Math.max(parseInt(limit), 1);

@@ -161,6 +161,7 @@ GO
 -- 11. Categories
 CREATE TABLE [Categories] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [imageUrl] NVARCHAR(500) NULL,
     [name] NVARCHAR(100) NOT NULL,
     [parentId] INT NULL,
     [status] BIT DEFAULT 1, 
@@ -173,6 +174,7 @@ CREATE TABLE [Products] (
     [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
     [code] VARCHAR(50) NOT NULL UNIQUE,
     [barcode] VARCHAR(50) UNIQUE,
+    [imageUrl] NVARCHAR(500) NULL,
     [name] NVARCHAR(200) NOT NULL,
     [categoryId] INT,
     [baseUnit] NVARCHAR(20) NOT NULL,
@@ -183,8 +185,10 @@ CREATE TABLE [Products] (
     [status] VARCHAR(20) DEFAULT 'Selling',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     [updatedAt] DATETIME2 DEFAULT GETDATE(),
+    [supplierId] INT NULL,
     
     CONSTRAINT [FK_Product_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
+    CONSTRAINT [FK_Product_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
     CONSTRAINT [CK_Product_Status] CHECK ([status] IN ('Selling', 'StopSelling', 'Suspended'))
 );
 GO
@@ -194,11 +198,13 @@ CREATE TABLE [ProductUnits] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [productId] BIGINT NOT NULL,
     [unitName] NVARCHAR(20) NOT NULL,
-    [conversionFactor] INT NOT NULL,
+    [unitType] VARCHAR(20) NOT NULL DEFAULT 'PIECE',
+    [conversionFactor] DECIMAL(10,3) NOT NULL,
     [price] DECIMAL(15, 2) NOT NULL,
     [barcode] VARCHAR(50) UNIQUE,
     
-    CONSTRAINT [FK_Unit_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Unit_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
+    CONSTRAINT [CK_ProductUnit_Type] CHECK (unitType IN ('PIECE', 'WEIGHT'))
 );
 GO
 
@@ -273,22 +279,26 @@ GO
 CREATE TABLE [PurchaseOrders] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [createdBy] BIGINT NOT NULL,
-    [approvedBy] BIGINT NULL,
+    [processBy] BIGINT NULL,
     [supplierId] INT NOT NULL,
     [status] VARCHAR(20) NOT NULL DEFAULT 'Draft',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
+    [receivedBy] BIGINT NULL,
+
+    CONSTRAINT [FK_PO_ReceivedBy]
+        FOREIGN KEY ([receivedBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [FK_PO_CreatedBy]
         FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id]),
 
-    CONSTRAINT [FK_PO_ApprovedBy]
-        FOREIGN KEY ([approvedBy]) REFERENCES [Staff]([id]),
+    CONSTRAINT [FK_PO_ProcessBy]
+        FOREIGN KEY ([processBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [FK_PO_Supplier]
         FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
 
     CONSTRAINT [CK_PO_Status]
-        CHECK ([status] IN ('Draft','Pending','Approved','Received','Cancelled'))
+        CHECK ([status] IN ('Pending','Approved','Rejected','WaitingForDelivery','Received', 'CannotDeliver'))
 );
 GO
 
@@ -602,6 +612,14 @@ BEGIN
     FROM [Customers] t
     INNER JOIN inserted i ON t.id = i.id
 END
+GO
+
+ALTER TABLE [Categories]
+ADD [imageUrl] NVARCHAR(500) NULL;
+GO
+
+ALTER TABLE [Products]
+ADD [imageUrl] NVARCHAR(500) NULL;
 GO
 
 -- END OF SCRIPT

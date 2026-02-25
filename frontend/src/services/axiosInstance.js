@@ -22,7 +22,7 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => response,
   (error) => {
     if (!error.response) {
       return Promise.resolve({
@@ -36,7 +36,7 @@ api.interceptors.response.use(
     if (status === 401) {
       return Promise.resolve({
         success: false,
-        message: data?.message || "Phiên đăng nhập đã hết hạn",
+        message: "Phiên đăng nhập đã hết hạn",
         status: 401,
       });
     }

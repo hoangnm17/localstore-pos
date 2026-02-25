@@ -78,8 +78,7 @@ exports.createCustomer = async (data) => {
     const pool = await connectDB();
     const { name, phone, status = 'Active', loyaltyPoints = 0, totalSpending = 0 } = data;
 
-    // 1. Thực hiện INSERT (Bỏ OUTPUT INSERTED.*)
-    const insertResult = await pool.request()
+    const result = await pool.request()
         .input('name', sql.NVarChar, name)
         .input('phone', sql.VarChar, phone)
         .input('status', sql.VarChar, status)
@@ -87,18 +86,11 @@ exports.createCustomer = async (data) => {
         .input('totalSpending', sql.Decimal(15, 2), totalSpending)
         .query(`
             INSERT INTO Customers (name, phone, status, loyaltyPoints, totalSpending)
-            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending);
-            SELECT SCOPE_IDENTITY() AS id; -- Lấy ID vừa tạo
+            OUTPUT INSERTED.*
+            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending)
         `);
 
-    const newId = insertResult.recordset[0].id;
-
-    // 2. Truy vấn lại dữ liệu hoàn chỉnh để trả về
-    const finalResult = await pool.request()
-        .input('id', sql.BigInt, newId)
-        .query("SELECT * FROM Customers WHERE id = @id");
-
-    return finalResult.recordset[0];
+    return result.recordset[0];
 };
 
 exports.updateCustomer = async (id, data) => {
@@ -130,41 +122,30 @@ exports.updateCustomer = async (id, data) => {
         request.input('totalSpending', sql.Decimal(15, 2), totalSpending);
     }
 
-    // ... các dòng code trước vẫn giữ nguyên ...
+    if (setClauses.length === 0) return null;
 
-    // 1. Thực hiện UPDATE (Bỏ OUTPUT INSERTED.*)
-    await request.query(`
+    const result = await request.query(`
         UPDATE Customers
         SET ${setClauses.join(', ')}
+        OUTPUT INSERTED.*
         WHERE id = @id
     `);
 
-    // 2. SELECT lại kết quả mới
-    const finalResult = await pool.request()
-        .input('id', sql.BigInt, id)
-        .query("SELECT * FROM Customers WHERE id = @id");
-
-    return finalResult.recordset[0];
+    return result.recordset[0];
 };
+
 // Soft delete — set status = 'Inactive' thay vì xóa cứng
 // Tránh lỗi FK với Invoices, CustomerPointLogs, CustomerVoucherUsage
 exports.deleteCustomer = async (id) => {
     const pool = await connectDB();
-
-    // 1. Thực hiện UPDATE trạng thái
-    await pool.request()
+    const result = await pool.request()
         .input('id', sql.BigInt, id)
         .query(`
             UPDATE Customers
             SET status = 'Inactive'
+            OUTPUT INSERTED.*
             WHERE id = @id
         `);
-
-    // 2. SELECT lại record để trả về cho Frontend
-    const result = await pool.request()
-        .input('id', sql.BigInt, id)
-        .query(`SELECT * FROM Customers WHERE id = @id`);
-
     return result.recordset[0];
 };
 
