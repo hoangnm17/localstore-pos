@@ -1,4 +1,4 @@
-const productService = require('../services/product.service');
+const productService = require('../services/product/product.service');
 
 exports.getProducts = async (req, res) => {
     try {
@@ -33,5 +33,53 @@ exports.getProducts = async (req, res) => {
             success: false,
             message: err.message
         });
+    }
+};
+
+exports.getProductById = async (req, res) => {
+    try {
+        const product = await productService.getProductDetail(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.json({ success: true, data: product });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.createProduct = async (req, res) => {
+    try {
+        const id = await productService.createProduct(req.body);
+        res.status(201).json({ success: true, id });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+exports.updateProduct = async (req, res) => {
+    try {
+        await productService.updateProduct(req.params.id, req.body);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+exports.deleteProduct = async (req, res) => {
+    try {
+        await productService.stopSellingProduct(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(404).json({ success: false, message: err.message });
+    }
+};
+
+exports.startSellingProduct = async (req, res) => {
+    try {
+        await productService.startSellingProduct(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(404).json({ success: false, message: err.message });
     }
 };
