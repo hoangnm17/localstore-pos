@@ -37,33 +37,42 @@ function ProductStock() {
   }, [searchInput]);
 
   const loadProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await productStockService.getProductsByCategory(
-        categoryId,
-        search,
-        page,
-        limit
-      );
+  setLoading(true);
+  try {
+    const res = await productStockService.getProductsByCategory(
+      categoryId,
+      search,
+      page,
+      limit
+    );
 
-      setProducts(res?.data?.products || []);
-      setTotal(res?.data?.total || 0);
-      setCategoryName(res?.data?.categoryName || "Không xác định");
+    const response = res?.data;
 
-    } catch (err) {
-      console.error("Lỗi tải tồn kho:", err);
+    if (response?.success) {
+      setProducts(response.data?.products || []);
+      setTotal(response.data?.total || 0);
+      setCategoryName(response.data?.categoryName || "Không xác định");
+    } else {
       setProducts([]);
       setTotal(0);
-    } finally {
-      setLoading(false);
+      setCategoryName("Không xác định");
     }
-  }, [categoryId, search, page]);
+
+  } catch (err) {
+    console.error("Lỗi tải tồn kho:", err);
+    setProducts([]);
+    setTotal(0);
+  } finally {
+    setLoading(false);
+  }
+}, [categoryId, search, page]);
 
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     setInputPage(page);
   }, [page]);
 
@@ -86,58 +95,62 @@ function ProductStock() {
   };
 
   const handleSaveStock = async () => {
-    const trimmedValue = newQuantity.trim();
-    setError("");
+  const trimmedValue = newQuantity.trim();
+  setError("");
 
-    if (!trimmedValue) {
-      setError("Vui lòng nhập số lượng tồn kho");
+  if (!trimmedValue) {
+    setError("Vui lòng nhập số lượng tồn kho");
+    return;
+  }
+
+  const qty = parseFloat(trimmedValue);
+
+  if (isNaN(qty)) {
+    setError("Số lượng phải là một con số hợp lệ");
+    return;
+  }
+
+  if (qty < 0) {
+    setError("Số lượng tồn kho không được âm");
+    return;
+  }
+
+  const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
+
+  if (!allowDecimal && !Number.isInteger(qty)) {
+    setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
+    return;
+  }
+
+  if (!selectedProduct) {
+    setError("Không tìm thấy sản phẩm để cập nhật");
+    return;
+  }
+
+  setUpdating(true);
+
+  try {
+    const res = await productStockService.updateStock(
+      selectedProduct.productId,
+      qty
+    );
+
+    const response = res?.data;
+
+    if (!response?.success) {
+      setError(response?.message || "Cập nhật tồn kho thất bại");
       return;
     }
 
-    const qty = parseFloat(trimmedValue);
+    handleCloseModal();
+    loadProducts();
 
-    if (isNaN(qty)) {
-      setError("Số lượng phải là một con số hợp lệ");
-      return;
-    }
-
-    if (qty < 0) {
-      setError("Số lượng tồn kho không được âm");
-      return;
-    }
-
-    const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
-
-    if (!allowDecimal && !Number.isInteger(qty)) {
-      setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
-      return;
-    }
-
-    if (!selectedProduct) {
-      setError("Không tìm thấy sản phẩm để cập nhật");
-      return;
-    }
-
-    setUpdating(true);
-
-    try {
-      await productStockService.updateStock(
-        selectedProduct.productId,
-        qty
-      );
-
-      handleCloseModal();
-      loadProducts();
-
-    } catch (err) {
-      const errorMessage =
-        err.response?.data?.message ||
-        "Cập nhật tồn kho thất bại. Vui lòng thử lại sau.";
-      setError(errorMessage);
-    } finally {
-      setUpdating(false);
-    }
-  };
+  } catch (err) {
+    setError("Cập nhật tồn kho thất bại. Vui lòng thử lại sau.");
+  } finally {
+    setUpdating(false);
+  }
+};
 
   const handlePageInputChange = (e) => {
     setInputPage(e.target.value);

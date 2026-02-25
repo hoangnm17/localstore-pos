@@ -31,8 +31,13 @@ const PurchaseOrderCreate = () => {
   const fetchSuppliers = async (search = "") => {
     try {
       const res = await supplierService.getSupplierList(search);
-      // supplierService dùng axios thường
-      setSuppliers(res?.data?.data || res?.data || []);
+      const response = res?.data;
+
+      if (response?.success) {
+        setSuppliers(response.data || []);
+      } else {
+        setSuppliers([]);
+      }
     } catch (error) {
       console.error("Load suppliers error:", error);
       setSuppliers([]);
@@ -41,23 +46,34 @@ const PurchaseOrderCreate = () => {
 
   /* ================= FETCH PRODUCTS ================= */
 
-  const fetchProducts = (supId, search = "") => {
+  const fetchProducts = async (supId, search = "") => {
     if (!supId) return;
 
     setLoadingProducts(true);
     setProducts([]);
 
-    productService
-      .getProductsBySupplier(supId, search, 1, 100)
-      .then((res) => {
-        // productService dùng axiosInstance (đã interceptor)
-        setProducts(res?.products || []);
-      })
-      .catch((error) => {
-        console.error("Load products error:", error);
+    try {
+      const res = await productService.getProductsBySupplier(
+        supId,
+        search,
+        1,
+        100
+      );
+
+      const response = res?.data;
+
+      if (response?.success) {
+        setProducts(response.data?.products || []);
+      } else {
         setProducts([]);
-      })
-      .finally(() => setLoadingProducts(false));
+      }
+
+    } catch (error) {
+      console.error("Load products error:", error);
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   const debouncedFetchProducts = (supId, search = "") => {
@@ -164,9 +180,18 @@ const PurchaseOrderCreate = () => {
 
     try {
       setLoading(true);
-      await purchaseOrderService.createPurchaseOrder(payload);
+
+      const res = await purchaseOrderService.createPurchaseOrder(payload);
+      const response = res?.data;
+
+      if (!response?.success) {
+        alert(response?.message || "Tạo đơn thất bại!");
+        return;
+      }
+
       alert("Tạo đơn nhập hàng thành công!");
       navigate("/inventory/purchase-orders");
+
     } catch (error) {
       console.error("Create PO error:", error);
       alert("Tạo đơn thất bại!");

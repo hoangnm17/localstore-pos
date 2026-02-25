@@ -33,30 +33,44 @@ const PurchaseOrderList = () => {
   /* ================= FETCH DATA ================= */
 
   const fetchData = useCallback(
-    async (customPage = page) => {
-      try {
-        setLoading(true);
+  async (customPage = page) => {
+    try {
+      setLoading(true);
 
-        const res = await purchaseOrderService.getPurchaseOrders({
-          page: customPage,
-          from: filters.from || undefined,
-          to: filters.to || undefined,
-          status: filters.status || undefined,
-        });
+      const res = await purchaseOrderService.getPurchaseOrders({
+        page: customPage,
+        from: filters.from || undefined,
+        to: filters.to || undefined,
+        status: filters.status || undefined,
+      });
 
-        // Vì interceptor đã return response.data
-        setOrders(Array.isArray(res?.data?.data) ? res.data.data : []);
-        setTotalPages(res?.data?.totalPages || 1);
-        setPage(res?.data?.page || customPage);
-      } catch (err) {
-        console.error("Fetch PO error:", err);
+      const response = res?.data;
+
+      if (!response?.success) {
         setOrders([]);
-      } finally {
-        setLoading(false);
+        return;
       }
-    },
-    [filters, page]
-  );
+
+      const paginationData = response.data;
+
+      setOrders(
+        Array.isArray(paginationData?.data)
+          ? paginationData.data
+          : []
+      );
+
+      setTotalPages(paginationData?.totalPages || 1);
+      setPage(paginationData?.page || customPage);
+
+    } catch (err) {
+      console.error("Fetch PO error:", err);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  },
+  [filters, page]
+);
 
   /* ================= EFFECT ================= */
 

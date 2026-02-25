@@ -2,17 +2,28 @@ const inventoryService = require("../services/InventoryServices/inventory.servic
 const problematicService = require("../services/InventoryServices/problematic.service");
 
 exports.getCategoryStock = async (req, res) => {
-    const search = req.query.search || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    try {
+        const search = req.query.search || "";
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
-    const data = await inventoryService.getCategoryStock(
-        search,
-        page,
-        limit
-    );
+        const data = await inventoryService.getCategoryStock(
+            search,
+            page,
+            limit
+        );
 
-    res.json(data);
+        return res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
 };
 
 exports.getProductStockByCategory = async (req, res) => {
@@ -27,17 +38,23 @@ exports.getProductStockByCategory = async (req, res) => {
             Number(limit)
         );
 
-        res.json({
-            categoryId,
-            categoryName: data.products[0]?.categoryName || "",
-            page: Number(page),
-            limit: Number(limit),
-            total: data.total,
-            products: data.products
+        return res.status(200).json({
+            success: true,
+            data: {
+                categoryId,
+                categoryName: data.products[0]?.categoryName || "",
+                page: Number(page),
+                limit: Number(limit),
+                total: data.total,
+                products: data.products
+            }
         });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
 
@@ -47,31 +64,38 @@ exports.updateProductStock = async (req, res) => {
 
         if (productId === undefined || quantity === undefined) {
             return res.status(400).json({
+                success: false,
                 message: "productId and quantity are required"
             });
         }
 
         if (typeof quantity !== "number" || Number.isNaN(quantity)) {
             return res.status(400).json({
+                success: false,
                 message: "Quantity must be a valid number"
             });
         }
 
         if (quantity < 0) {
             return res.status(400).json({
+                success: false,
                 message: "Quantity must be greater than or equal to 0"
             });
         }
 
-        const product = await inventoryService.getProductBasicInfo(productId); // cần implement hàm này
+        const product = await inventoryService.getProductBasicInfo(productId);
 
         if (!product) {
-            return res.status(404).json({ message: "Product not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
         }
 
         if (product.allowDecimalQuantity === 0 && !Number.isInteger(quantity)) {
             return res.status(400).json({
-                message: "Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)"
+                success: false,
+                message: "San pham chi chap nhan so luong nguyen"
             });
         }
 
@@ -79,17 +103,22 @@ exports.updateProductStock = async (req, res) => {
 
         if (rowsAffected === 0) {
             return res.status(404).json({
+                success: false,
                 message: "Product not found or no stock record"
             });
         }
 
-        res.json({
-            message: "Stock updated successfully"
+        return res.status(200).json({
+            success: true,
+            data: {
+                message: "Stock updated successfully"
+            }
         });
+
     } catch (err) {
-        console.error("Update stock error:", err);
-        res.status(500).json({
-            message: "Internal server error"
+        return res.status(500).json({
+            success: false,
+            message: err.message
         });
     }
 };
@@ -106,28 +135,48 @@ exports.getProductsBySupplier = async (req, res) => {
             Number(limit)
         );
 
-        res.json({
-            supplierId: Number(supplierId),
-            page: Number(page),
-            limit: Number(limit),
-            total: data.total,
-            products: data.products
+        return res.status(200).json({
+            success: true,
+            data: {
+                supplierId: Number(supplierId),
+                page: Number(page),
+                limit: Number(limit),
+                total: data.total,
+                products: data.products
+            }
         });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
 
 exports.createProblematicReport = async (req, res) => {
     try {
         await problematicService.createReport(req.body, req.user);
-        res.status(201).json({ message: "Report created successfully" });
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                message: "Report created successfully"
+            }
+        });
+
     } catch (err) {
         if (err.message === "PERMISSION_DENIED") {
-            return res.status(403).json({ message: "Permission denied" });
+            return res.status(403).json({
+                success: false,
+                message: "Permission denied"
+            });
         }
-        res.status(500).json({ error: err.message });
+
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
 
@@ -142,8 +191,15 @@ exports.getProblematicReports = async (req, res) => {
             filters
         });
 
-        res.json(reports);
+        return res.status(200).json({
+            success: true,
+            data: reports
+        });
+
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 };
