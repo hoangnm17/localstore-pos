@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
 
@@ -7,32 +7,8 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.email || !form.password) {
-      setError("Vui lòng nhập đầy đủ thông tin");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-      
-      const response = await loginAPI(form);
-      
-      const serverData = response.data; 
-
-      if (serverData.success) {
-        const { token, user } = serverData.data;
-
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        const role = user.roleName;
-        console.log("Đăng nhập thành công với Role:", role);
-
-        switch (role) {
+  const redirectByRole = (role) => {
+            switch (role) {
           case 'Manager':
             navigate("/staff"); 
             break;
@@ -45,6 +21,37 @@ function LoginPage() {
           default:
             navigate("/sales"); 
         }
+  }
+useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      localStorage.clear(); 
+    }
+  }, []);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.email || !form.password) {
+      setError("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      localStorage.clear();
+      const response = await loginAPI(form);
+      
+      const serverData = response.data; 
+
+      if (serverData.success) {
+        const { token, user } = serverData.data;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        const role = user.roleName;
+        console.log("Đăng nhập thành công với Role:", role);
+        redirectByRole(user.roleName);
       } else {
         setError(serverData.message || "Đăng nhập thất bại");
       }
