@@ -126,21 +126,17 @@ exports.updateProductStock = async (req, res) => {
 exports.getProductsBySupplier = async (req, res) => {
     try {
         const { supplierId } = req.params;
-        const { search = "", page = 1, limit = 10 } = req.query;
+        const { search = "" } = req.query;
 
         const data = await inventoryService.getProductsBySupplier(
             Number(supplierId),
-            search,
-            Number(page),
-            Number(limit)
+            search
         );
 
         return res.status(200).json({
             success: true,
             data: {
                 supplierId: Number(supplierId),
-                page: Number(page),
-                limit: Number(limit),
                 total: data.total,
                 products: data.products
             }

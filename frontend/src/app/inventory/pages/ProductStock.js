@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 
 function ProductStock() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const canUpdateStock = user?.features?.includes("UPDATE_STOCK");
+
   const { categoryId } = useParams();
   const navigate = useNavigate();
 
@@ -37,35 +40,35 @@ function ProductStock() {
   }, [searchInput]);
 
   const loadProducts = useCallback(async () => {
-  setLoading(true);
-  try {
-    const res = await productStockService.getProductsByCategory(
-      categoryId,
-      search,
-      page,
-      limit
-    );
+    setLoading(true);
+    try {
+      const res = await productStockService.getProductsByCategory(
+        categoryId,
+        search,
+        page,
+        limit
+      );
 
-    const response = res?.data;
+      const response = res?.data;
 
-    if (response?.success) {
-      setProducts(response.data?.products || []);
-      setTotal(response.data?.total || 0);
-      setCategoryName(response.data?.categoryName || "Không xác định");
-    } else {
+      if (response?.success) {
+        setProducts(response.data?.products || []);
+        setTotal(response.data?.total || 0);
+        setCategoryName(response.data?.categoryName || "Không xác định");
+      } else {
+        setProducts([]);
+        setTotal(0);
+        setCategoryName("Không xác định");
+      }
+
+    } catch (err) {
+      console.error("Lỗi tải tồn kho:", err);
       setProducts([]);
       setTotal(0);
-      setCategoryName("Không xác định");
+    } finally {
+      setLoading(false);
     }
-
-  } catch (err) {
-    console.error("Lỗi tải tồn kho:", err);
-    setProducts([]);
-    setTotal(0);
-  } finally {
-    setLoading(false);
-  }
-}, [categoryId, search, page]);
+  }, [categoryId, search, page]);
 
   useEffect(() => {
     loadProducts();
@@ -95,62 +98,62 @@ function ProductStock() {
   };
 
   const handleSaveStock = async () => {
-  const trimmedValue = newQuantity.trim();
-  setError("");
+    const trimmedValue = newQuantity.trim();
+    setError("");
 
-  if (!trimmedValue) {
-    setError("Vui lòng nhập số lượng tồn kho");
-    return;
-  }
-
-  const qty = parseFloat(trimmedValue);
-
-  if (isNaN(qty)) {
-    setError("Số lượng phải là một con số hợp lệ");
-    return;
-  }
-
-  if (qty < 0) {
-    setError("Số lượng tồn kho không được âm");
-    return;
-  }
-
-  const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
-
-  if (!allowDecimal && !Number.isInteger(qty)) {
-    setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
-    return;
-  }
-
-  if (!selectedProduct) {
-    setError("Không tìm thấy sản phẩm để cập nhật");
-    return;
-  }
-
-  setUpdating(true);
-
-  try {
-    const res = await productStockService.updateStock(
-      selectedProduct.productId,
-      qty
-    );
-
-    const response = res?.data;
-
-    if (!response?.success) {
-      setError(response?.message || "Cập nhật tồn kho thất bại");
+    if (!trimmedValue) {
+      setError("Vui lòng nhập số lượng tồn kho");
       return;
     }
 
-    handleCloseModal();
-    loadProducts();
+    const qty = parseFloat(trimmedValue);
 
-  } catch (err) {
-    setError("Cập nhật tồn kho thất bại. Vui lòng thử lại sau.");
-  } finally {
-    setUpdating(false);
-  }
-};
+    if (isNaN(qty)) {
+      setError("Số lượng phải là một con số hợp lệ");
+      return;
+    }
+
+    if (qty < 0) {
+      setError("Số lượng tồn kho không được âm");
+      return;
+    }
+
+    const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
+
+    if (!allowDecimal && !Number.isInteger(qty)) {
+      setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
+      return;
+    }
+
+    if (!selectedProduct) {
+      setError("Không tìm thấy sản phẩm để cập nhật");
+      return;
+    }
+
+    setUpdating(true);
+
+    try {
+      const res = await productStockService.updateStock(
+        selectedProduct.productId,
+        qty
+      );
+
+      const response = res?.data;
+
+      if (!response?.success) {
+        setError(response?.message || "Cập nhật tồn kho thất bại");
+        return;
+      }
+
+      handleCloseModal();
+      loadProducts();
+
+    } catch (err) {
+      setError("Cập nhật tồn kho thất bại. Vui lòng thử lại sau.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handlePageInputChange = (e) => {
     setInputPage(e.target.value);
@@ -222,7 +225,7 @@ function ProductStock() {
                   <th className="py-3 text-center">Mã</th>
                   <th className="py-3 text-center">Tồn kho</th>
                   <th className="py-3 text-center">Trạng thái</th>
-                  <th className="py-3 text-center">Hành động</th>
+                  {canUpdateStock && <th className="py-3 text-center">Hành động</th>}
                 </tr>
               </thead>
 
@@ -248,9 +251,11 @@ function ProductStock() {
                       <td className="text-center py-4">
                         <div className="placeholder placeholder-glow col-7 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      <td className="text-center py-4">
-                        <div className="placeholder placeholder-glow col-8 bg-secondary-subtle rounded py-3"></div>
-                      </td>
+                      {canUpdateStock && (
+                        <td className="text-center py-4">
+                          <div className="placeholder placeholder-glow col-8 bg-secondary-subtle rounded py-3"></div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 ) : products.length === 0 ? (
@@ -292,13 +297,15 @@ function ProductStock() {
                           </span>
                         </td>
                         <td className="text-center py-4">
-                          <button
-                            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mx-auto px-4 py-2"
-                            onClick={() => handleUpdateStock(p)}
-                          >
-                            <i className="bi bi-pencil-square"></i>
-                            Cập nhật
-                          </button>
+                          {canUpdateStock && (
+                            <button
+                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mx-auto px-4 py-2"
+                              onClick={() => handleUpdateStock(p)}
+                            >
+                              <i className="bi bi-pencil-square"></i>
+                              Cập nhật
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
