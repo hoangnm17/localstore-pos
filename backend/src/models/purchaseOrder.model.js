@@ -200,8 +200,8 @@ exports.getDetailById = async (poId) => {
         .query(`
             SELECT 
                 po.id,
-                po.note,
                 po.status,
+                po.totalAmount,
                 po.createdAt,
 
                 po.createdBy,
@@ -227,51 +227,60 @@ exports.getDetailById = async (poId) => {
 
     const row = result.recordset[0];
 
-    // Lấy items
     const itemsResult = await pool.request()
         .input("poId", sql.Int, poId)
         .query(`
             SELECT 
                 poi.id,
                 poi.productId,
+                p.code,
                 p.name AS productName,
+                poi.baseUnit,
+                poi.costPrice,
                 poi.quantityBeforeOrdered,
-                poi.quantityOrdered
+                poi.quantityOrdered,
+                poi.lineTotal,
+                inv.quantityOnHand AS currentStock
             FROM PurchaseOrderItems poi
             LEFT JOIN Products p ON poi.productId = p.id
+            LEFT JOIN InventoryStocks inv ON p.id = inv.productId
             WHERE poi.poId = @poId
         `);
+
+    const items = itemsResult.recordset || [];
+
+    const totalQuantity = items.reduce((sum, i) => sum + Number(i.quantityOrdered), 0);
 
     return {
         id: row.id,
         status: row.status,
-        note: row.note,
         createdAt: row.createdAt,
+        totalAmount: row.totalAmount,
+        totalQuantity,
 
         supplier: {
             id: row.supplierId,
             name: row.supplierName
         },
 
-        createdBy: {
-            id: row.createdBy,
-            name: row.createdByName
+        workflow: {
+            createdBy: {
+                id: row.createdBy,
+                name: row.createdByName
+            },
+            processedBy: row.processBy ? {
+                id: row.processBy,
+                name: row.processedByName
+            } : null,
+            receivedBy: row.receivedBy ? {
+                id: row.receivedBy,
+                name: row.receivedByName
+            } : null
         },
 
-        processedBy: row.processBy ? {
-            id: row.processBy,
-            name: row.processedByName
-        } : null,
-
-        receivedBy: row.receivedBy ? {
-            id: row.receivedBy,
-            name: row.receivedByName
-        } : null,
-
-        items: itemsResult.recordset
+        items
     };
 };
-
 /* ==============================
    GET LIST WITH PAGINATION + FILTER
 ============================== */
@@ -360,14 +369,12 @@ exports.getMonthlyReport = async ({
 
     const pool = await connectDB();
 
-    /* ========= WHERE CLAUSE ========= */
     let whereClause = `
         WHERE po.status = 'Received'
         AND MONTH(po.createdAt) = @month
         AND YEAR(po.createdAt) = @year
     `;
 
-    /* ========= 1️⃣ SUMMARY ========= */
     const summaryRequest = pool.request()
         .input("month", sql.Int, month)
         .input("year", sql.Int, year);
@@ -377,77 +384,90 @@ exports.getMonthlyReport = async ({
         summaryRequest.input("supplierId", sql.Int, supplierId);
     }
 
+    /* ================= SUMMARY ================= */
     const summaryResult = await summaryRequest.query(`
         SELECT 
             COUNT(DISTINCT po.id) AS totalPO,
             ISNULL(SUM(poi.quantityOrdered),0) AS totalQuantity,
             COUNT(DISTINCT po.supplierId) AS totalSuppliers,
-            COUNT(DISTINCT poi.productId) AS totalProducts
+            COUNT(DISTINCT poi.productId) AS totalProducts,
+            ISNULL(SUM(poi.lineTotal),0) AS totalAmount,
+            ISNULL(AVG(po.totalAmount),0) AS avgPOValue
         FROM PurchaseOrders po
         JOIN PurchaseOrderItems poi ON po.id = poi.poId
         ${whereClause}
     `);
 
-    /* ========= 2️⃣ SUPPLIER STATS ========= */
-    const supplierRequest = pool.request()
+    /* ================= SUPPLIER STATS ================= */
+    const supplierResult = await pool.request()
         .input("month", sql.Int, month)
-        .input("year", sql.Int, year);
+        .input("year", sql.Int, year)
+        .input("supplierId", sql.Int, supplierId || null)
+        .query(`
+            SELECT 
+                s.id,
+                s.name,
+                COUNT(DISTINCT po.id) AS totalPO,
+                SUM(poi.quantityOrdered) AS totalQuantity,
+                SUM(poi.lineTotal) AS totalAmount
+            FROM PurchaseOrders po
+            JOIN Suppliers s ON po.supplierId = s.id
+            JOIN PurchaseOrderItems poi ON po.id = poi.poId
+            WHERE po.status = 'Received'
+            AND MONTH(po.createdAt) = @month
+            AND YEAR(po.createdAt) = @year
+            ${supplierId ? "AND po.supplierId = @supplierId" : ""}
+            GROUP BY s.id, s.name
+            ORDER BY totalAmount DESC
+        `);
 
-    let supplierFilter = "";
-
-    if (supplierId) {
-        supplierFilter = "AND po.supplierId = @supplierId";
-        supplierRequest.input("supplierId", sql.Int, supplierId);
-    }
-
-    const supplierResult = await supplierRequest.query(`
-        SELECT 
-            s.id,
-            s.name,
-            COUNT(DISTINCT po.id) AS totalPO,
-            SUM(poi.quantityOrdered) AS totalQuantity,
-            COUNT(DISTINCT poi.productId) AS totalDistinctProducts
-        FROM PurchaseOrders po
-        JOIN Suppliers s ON po.supplierId = s.id
-        JOIN PurchaseOrderItems poi ON po.id = poi.poId
-        WHERE po.status = 'Received'
-        AND MONTH(po.createdAt) = @month
-        AND YEAR(po.createdAt) = @year
-        ${supplierFilter}
-        GROUP BY s.id, s.name
-        ORDER BY totalQuantity DESC
-    `);
-
-    /* ========= 3️⃣ DAILY STATS ========= */
-    const dailyRequest = pool.request()
+    /* ================= DAILY STATS ================= */
+    const dailyResult = await pool.request()
         .input("month", sql.Int, month)
-        .input("year", sql.Int, year);
+        .input("year", sql.Int, year)
+        .input("supplierId", sql.Int, supplierId || null)
+        .query(`
+            SELECT 
+                DAY(po.createdAt) AS day,
+                SUM(poi.quantityOrdered) AS totalQuantity,
+                SUM(poi.lineTotal) AS totalAmount
+            FROM PurchaseOrders po
+            JOIN PurchaseOrderItems poi ON po.id = poi.poId
+            WHERE po.status = 'Received'
+            AND MONTH(po.createdAt) = @month
+            AND YEAR(po.createdAt) = @year
+            ${supplierId ? "AND po.supplierId = @supplierId" : ""}
+            GROUP BY DAY(po.createdAt)
+            ORDER BY day
+        `);
 
-    let dailyFilter = "";
-
-    if (supplierId) {
-        dailyFilter = "AND po.supplierId = @supplierId";
-        dailyRequest.input("supplierId", sql.Int, supplierId);
-    }
-
-    const dailyResult = await dailyRequest.query(`
-        SELECT 
-            DAY(po.createdAt) AS day,
-            SUM(poi.quantityOrdered) AS totalQuantity,
-            COUNT(DISTINCT poi.productId) AS totalDistinctProducts
-        FROM PurchaseOrders po
-        JOIN PurchaseOrderItems poi ON po.id = poi.poId
-        WHERE po.status = 'Received'
-        AND MONTH(po.createdAt) = @month
-        AND YEAR(po.createdAt) = @year
-        ${dailyFilter}
-        GROUP BY DAY(po.createdAt)
-        ORDER BY day
-    `);
+    /* ================= TOP PRODUCTS ================= */
+    const topProductsResult = await pool.request()
+        .input("month", sql.Int, month)
+        .input("year", sql.Int, year)
+        .input("supplierId", sql.Int, supplierId || null)
+        .query(`
+            SELECT TOP 5
+                p.id,
+                p.name,
+                SUM(poi.quantityOrdered) AS totalQuantity,
+                SUM(poi.lineTotal) AS totalAmount
+            FROM PurchaseOrders po
+            JOIN PurchaseOrderItems poi ON po.id = poi.poId
+            JOIN Products p ON poi.productId = p.id
+            WHERE po.status = 'Received'
+            AND MONTH(po.createdAt) = @month
+            AND YEAR(po.createdAt) = @year
+            ${supplierId ? "AND po.supplierId = @supplierId" : ""}
+            GROUP BY p.id, p.name
+            ORDER BY totalAmount DESC
+        `);
 
     return {
+        filter: { month, year, supplierId },
         summary: summaryResult.recordset[0] || {},
         supplierStats: supplierResult.recordset || [],
-        dailyStats: dailyResult.recordset || []
+        dailyStats: dailyResult.recordset || [],
+        topProducts: topProductsResult.recordset || []
     };
 };
