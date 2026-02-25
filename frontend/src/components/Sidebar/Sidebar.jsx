@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import "./Sidebar.css";
+import "./Sidebar1.css";
 
 const menuItems = [
     { label: "Tổng Quan", path: "/dashboard", icon: "bi-speedometer2" },
