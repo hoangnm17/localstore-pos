@@ -42,7 +42,7 @@ function PurchaseOrderReport() {
         month: customMonth,
         year: customYear,
       });
-      setReport(res.data);
+      setReport(res?.data?.data || null);
     } catch (err) {
       console.error("Lỗi lấy báo cáo:", err.response?.data || err);
     } finally {
@@ -116,7 +116,7 @@ function PurchaseOrderReport() {
           </button>
           <h2 className="fw-bold text-primary mb-0">
             <i className="bi bi-bar-chart-line-fill me-3"></i>
-            Báo cáo Đơn Mua Hàng Theo Tháng
+            Báo cáo Đơn Nhập Hàng Theo Tháng
           </h2>
         </div>
         <small className="text-muted">

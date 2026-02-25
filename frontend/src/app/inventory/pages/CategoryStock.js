@@ -41,8 +41,8 @@ function CategoryStock() {
       );
 
       // interceptor đã return response.data
-      setCategories(res?.categories || []);
-      setTotalPages(res?.pagination?.totalPages || 1);
+      setCategories(res?.data?.categories || []);
+      setTotalPages(res?.data?.pagination?.totalPages || 1);
 
     } catch (err) {
       console.error("Lỗi tải danh mục tồn kho:", err);

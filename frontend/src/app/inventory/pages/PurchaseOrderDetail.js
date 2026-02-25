@@ -18,7 +18,7 @@ const PurchaseOrderDetail = () => {
         const res = await purchaseOrderService.getPurchaseOrderDetail(id);
 
         // interceptor đã return response.data
-        setPo(res?.data || null);
+        setPo(res?.data?.data || null);
       } catch (err) {
         setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
       } finally {
