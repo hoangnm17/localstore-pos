@@ -71,8 +71,9 @@ exports.createVoucher = async (data) => {
         .input('status', sql.VarChar, status)
         .query(`
             INSERT INTO Vouchers (code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status)
-            OUTPUT INSERTED.*
-            VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status)
+            VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status);
+
+            SELECT * FROM Vouchers WHERE id = SCOPE_IDENTITY();
         `);
     return result.recordset[0];
 };
@@ -97,8 +98,9 @@ exports.updateVoucher = async (id, data) => {
     const result = await request.query(`
         UPDATE Vouchers
         SET ${setClauses.join(', ')}
-        OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        SELECT * FROM Vouchers WHERE id = @id;
     `);
     return result.recordset[0];
 };
@@ -111,8 +113,9 @@ exports.deleteVoucher = async (id) => {
         .query(`
             UPDATE Vouchers
             SET status = 'Disabled'
-            OUTPUT INSERTED.*
-            WHERE id = @id
+            WHERE id = @id;
+
+            SELECT * FROM Vouchers WHERE id = @id;
         `);
     return result.recordset[0];
 };

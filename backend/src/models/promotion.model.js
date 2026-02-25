@@ -118,8 +118,9 @@ exports.createPromotion = async (data) => {
         .input('status', sql.VarChar, status)
         .query(`
             INSERT INTO Promotions (name, type, value, startDate, endDate, status)
-            OUTPUT INSERTED.*
-            VALUES (@name, @type, @value, @startDate, @endDate, @status)
+            VALUES (@name, @type, @value, @startDate, @endDate, @status);
+
+            SELECT * FROM Promotions WHERE id = SCOPE_IDENTITY();
         `);
 
     return result.recordset[0];
@@ -165,8 +166,9 @@ exports.updatePromotion = async (id, data) => {
     const result = await request.query(`
         UPDATE Promotions
         SET ${setClauses.join(', ')}
-        OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        SELECT * FROM Promotions WHERE id = @id;
     `);
 
     return result.recordset[0] || null;
@@ -183,8 +185,9 @@ exports.deletePromotion = async (id) => {
         .query(`
             UPDATE Promotions
             SET status = 'Disabled'
-            OUTPUT INSERTED.*
-            WHERE id = @id
+            WHERE id = @id;
+
+            SELECT * FROM Promotions WHERE id = @id;
         `);
     return result.recordset[0] || null;
 };
@@ -221,9 +224,8 @@ exports.removePromotionItem = async (itemId) => {
     const result = await pool.request()
         .input('itemId', sql.Int, itemId)
         .query(`
-            DELETE FROM PromotionProducts
-            OUTPUT DELETED.*
-            WHERE id = @itemId
+            SELECT * FROM PromotionProducts WHERE id = @itemId;
+            DELETE FROM PromotionProducts WHERE id = @itemId;
         `);
     return result.recordset[0] || null;
 };

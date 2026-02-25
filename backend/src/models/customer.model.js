@@ -86,8 +86,9 @@ exports.createCustomer = async (data) => {
         .input('totalSpending', sql.Decimal(15, 2), totalSpending)
         .query(`
             INSERT INTO Customers (name, phone, status, loyaltyPoints, totalSpending)
-            OUTPUT INSERTED.*
-            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending)
+            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending);
+            
+            SELECT * FROM Customers WHERE id = SCOPE_IDENTITY();
         `);
 
     return result.recordset[0];
@@ -127,8 +128,9 @@ exports.updateCustomer = async (id, data) => {
     const result = await request.query(`
         UPDATE Customers
         SET ${setClauses.join(', ')}
-        OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        SELECT * FROM Customers WHERE id = @id;
     `);
 
     return result.recordset[0];
@@ -143,8 +145,9 @@ exports.deleteCustomer = async (id) => {
         .query(`
             UPDATE Customers
             SET status = 'Inactive'
-            OUTPUT INSERTED.*
-            WHERE id = @id
+            WHERE id = @id;
+
+            SELECT * FROM Customers WHERE id = @id;
         `);
     return result.recordset[0];
 };
