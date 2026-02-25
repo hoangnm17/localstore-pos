@@ -1,17 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import Select from "react-select";
 import purchaseOrderService from "../../../services/purchaseOrderService";
 import supplierService from "../../../services/supplierService";
 import productService from "../../../services/productStockService";
 
 const PurchaseOrderCreate = () => {
   const navigate = useNavigate();
+  const debounceRef = useRef(null);
 
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
 
-  const [supplierSearch, setSupplierSearch] = useState("");
   const [supplierId, setSupplierId] = useState("");
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [note, setNote] = useState("");
   const [items, setItems] = useState([]);
 
@@ -20,6 +22,8 @@ const PurchaseOrderCreate = () => {
 
   const [errors, setErrors] = useState({});
 
+  /* ================= FETCH SUPPLIERS ================= */
+
   useEffect(() => {
     fetchSuppliers("");
   }, []);
@@ -27,92 +31,114 @@ const PurchaseOrderCreate = () => {
   const fetchSuppliers = async (search = "") => {
     try {
       const res = await supplierService.getSupplierList(search);
-      setSuppliers(res?.data?.data || []);
+      // supplierService dùng axios thường
+      setSuppliers(res?.data?.data || res?.data || []);
     } catch (error) {
       console.error("Load suppliers error:", error);
       setSuppliers([]);
     }
   };
 
-  // Debounce để tránh gọi API quá nhiều khi gõ nhanh
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
+  /* ================= FETCH PRODUCTS ================= */
+
+  const fetchProducts = (supId, search = "") => {
+    if (!supId) return;
+
+    setLoadingProducts(true);
+    setProducts([]);
+
+    productService
+      .getProductsBySupplier(supId, search, 1, 100)
+      .then((res) => {
+        // productService dùng axiosInstance (đã interceptor)
+        setProducts(res?.products || []);
+      })
+      .catch((error) => {
+        console.error("Load products error:", error);
+        setProducts([]);
+      })
+      .finally(() => setLoadingProducts(false));
   };
 
-  const debouncedFetchProducts = useCallback(
-    debounce((supId, search) => {
-      if (!supId) return;
-      setLoadingProducts(true);
-      setProducts([]);
-      productService
-        .getProductsBySupplier(supId, search, 1, 100)
-        .then((res) => {
-          setProducts(res?.data?.products || []);
-        })
-        .catch((error) => {
-          console.error("Load products error:", error);
-          setProducts([]);
-        })
-        .finally(() => setLoadingProducts(false));
-    }, 400),
-    []
+  const debouncedFetchProducts = (supId, search = "") => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchProducts(supId, search);
+    }, 400);
+  };
+
+  /* ================= OPTIONS ================= */
+
+  const supplierOptions = useMemo(
+    () =>
+      suppliers.map((sup) => ({
+        value: Number(sup.id),
+        label: `${sup.name}${sup.code ? ` (${sup.code})` : ""}`,
+      })),
+    [suppliers]
   );
 
-  const handleSupplierSearchChange = (e) => {
-    const value = e.target.value;
-    setSupplierSearch(value);
-    fetchSuppliers(value);
-  };
+  const productOptions = useMemo(
+    () =>
+      products.map((prod) => ({
+        value: Number(prod.productId),
+        label: `${prod.name}${prod.code ? ` (${prod.code})` : ""}`,
+      })),
+    [products]
+  );
 
-  const handleSupplierChange = (e) => {
-    const value = e.target.value;
-    setSupplierId(value);
+  /* ================= HANDLERS ================= */
+
+  const handleSupplierSelect = (option) => {
+    setSelectedSupplier(option);
+    setSupplierId(option ? option.value : "");
     setItems([]);
     setProducts([]);
-    setErrors({});
+    setErrors((prev) => ({ ...prev, supplierId: undefined }));
 
-    if (value) {
-      debouncedFetchProducts(value, ""); // load sản phẩm khi chọn NCC
+    if (option?.value) {
+      debouncedFetchProducts(option.value);
     }
-  };
-
-  const handleProductSearchChange = (e) => {
-    const searchValue = e.target.value;
-    debouncedFetchProducts(supplierId, searchValue);
   };
 
   const handleAddItem = () => {
-    setItems([...items, { productId: "", quantityOrdered: 1 }]);
+    setItems((prev) => [
+      ...prev,
+      { productId: "", quantityOrdered: 1, selectedProduct: null },
+    ]);
   };
 
   const handleRemoveItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index, field, value) => {
+  const handleQuantityChange = (index) => (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    const num = value === "" ? "" : Math.max(1, Number(value));
+
     const updated = [...items];
-    if (field === "quantityOrdered") {
-      // Chỉ cho phép số nguyên dương
-      const numValue = value.replace(/[^0-9]/g, "");
-      updated[index][field] = numValue === "" ? "" : Math.max(1, Number(numValue));
-    } else {
-      updated[index][field] = value;
-    }
+    updated[index].quantityOrdered = num;
     setItems(updated);
+
+    setErrors((prev) => ({
+      ...prev,
+      [`item_${index}_qty`]: undefined,
+    }));
   };
+
+  /* ================= VALIDATE ================= */
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!supplierId) newErrors.supplierId = "Vui lòng chọn nhà cung cấp";
-    if (items.length === 0) newErrors.items = "Vui lòng thêm ít nhất 1 sản phẩm";
+    if (items.length === 0)
+      newErrors.items = "Vui lòng thêm ít nhất 1 sản phẩm";
 
     items.forEach((item, idx) => {
-      if (!item.productId) newErrors[`item_${idx}_product`] = "Chưa chọn sản phẩm";
+      if (!item.productId)
+        newErrors[`item_${idx}_product`] = "Chưa chọn sản phẩm";
+
       if (!item.quantityOrdered || item.quantityOrdered < 1)
         newErrors[`item_${idx}_qty`] = "Số lượng phải ≥ 1";
     });
@@ -120,6 +146,8 @@ const PurchaseOrderCreate = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -141,217 +169,130 @@ const PurchaseOrderCreate = () => {
       navigate("/inventory/purchase-orders");
     } catch (error) {
       console.error("Create PO error:", error);
-      alert(error?.response?.data?.message || "Tạo đơn thất bại!");
+      alert("Tạo đơn thất bại!");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= STYLES ================= */
+
+  const selectStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderColor: state.isFocused ? "#86b7fe" : "#ced4da",
+      boxShadow: state.isFocused
+        ? "0 0 0 0.25rem rgba(13,110,253,.25)"
+        : "none",
+      borderRadius: "0.375rem",
+      minHeight: "38px",
+    }),
+  };
+
+  /* ================= UI ================= */
+
   return (
-    <div className="container-fluid py-4">
-      <div className="card shadow-lg border-0 rounded-4">
-        <div className="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center py-3">
-          <h4 className="mb-0 fw-semibold">Tạo Đơn Nhập Hàng Mới</h4>
+    <div className="container py-4">
+      <div className="card shadow border-0">
+        <div className="card-header d-flex justify-content-between">
+          <h5 className="mb-0">Tạo Đơn Nhập Hàng</h5>
           <button
-            className="btn btn-light btn-sm px-3"
+            className="btn btn-light btn-sm"
             onClick={() => navigate("/inventory/purchase-orders")}
           >
-            <i className="bi bi-arrow-left me-1"></i> Quay lại
+            Quay lại
           </button>
         </div>
 
-        <div className="card-body p-4 p-md-5">
-          <form onSubmit={handleSubmit} noValidate>
-            {/* Supplier Search & Select */}
-            <div className="row g-4 mb-5">
-              <div className="col-lg-6">
-                <div className="form-floating mb-3">
+        <div className="card-body">
+          <form onSubmit={handleSubmit}>
+            <div className="row mb-4">
+              <div className="col-md-6">
+                <label className="form-label">Nhà cung cấp *</label>
+                <Select
+                  options={supplierOptions}
+                  value={selectedSupplier}
+                  onChange={handleSupplierSelect}
+                  isClearable
+                  styles={selectStyles}
+                />
+                {errors.supplierId && (
+                  <div className="text-danger mt-1">
+                    {errors.supplierId}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Ghi chú</label>
+                <textarea
+                  className="form-control"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handleAddItem}
+                disabled={!supplierId || loadingProducts}
+              >
+                Thêm sản phẩm
+              </button>
+            </div>
+
+            {loadingProducts && <p>Đang tải sản phẩm...</p>}
+
+            {items.map((item, index) => (
+              <div key={index} className="row mb-3">
+                <div className="col-md-6">
+                  <Select
+                    options={productOptions}
+                    value={item.selectedProduct}
+                    onChange={(option) => {
+                      const updated = [...items];
+                      updated[index] = {
+                        ...updated[index],
+                        productId: option ? option.value : "",
+                        selectedProduct: option,
+                      };
+                      setItems(updated);
+                    }}
+                    styles={selectStyles}
+                  />
+                </div>
+
+                <div className="col-md-4">
                   <input
                     type="text"
                     className="form-control"
-                    id="supplierSearch"
-                    placeholder="Tìm nhà cung cấp..."
-                    value={supplierSearch}
-                    onChange={handleSupplierSearchChange}
+                    value={item.quantityOrdered}
+                    onChange={handleQuantityChange(index)}
                   />
-                  <label htmlFor="supplierSearch">Tìm nhà cung cấp</label>
                 </div>
 
-                <div className="form-floating">
-                  <select
-                    className={`form-select ${errors.supplierId ? "is-invalid" : ""}`}
-                    id="supplier"
-                    value={supplierId}
-                    onChange={handleSupplierChange}
-                    required
-                  >
-                    <option value="">-- Chọn nhà cung cấp --</option>
-                    {suppliers.map((sup) => (
-                      <option key={sup.id} value={sup.id}>
-                        {sup.name} {sup.code ? `(${sup.code})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <label htmlFor="supplier">Nhà cung cấp *</label>
-                  {errors.supplierId && (
-                    <div className="invalid-feedback">{errors.supplierId}</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="col-lg-6">
-                <div className="form-floating">
-                  <textarea
-                    className="form-control"
-                    id="note"
-                    placeholder="Ghi chú..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    style={{ height: "138px" }}
-                  />
-                  <label htmlFor="note">Ghi chú</label>
-                </div>
-              </div>
-            </div>
-
-            {/* Items Section */}
-            <div className="mb-5">
-              <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
-                <h5 className="mb-0 fw-semibold text-dark">Danh sách sản phẩm nhập</h5>
-                <div className="d-flex gap-2 flex-wrap">
-                  <div style={{ minWidth: "220px" }}>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Tìm sản phẩm..."
-                      onChange={handleProductSearchChange}
-                      disabled={!supplierId || loadingProducts}
-                    />
-                  </div>
+                <div className="col-md-2">
                   <button
                     type="button"
-                    className="btn btn-success px-4"
-                    onClick={handleAddItem}
-                    disabled={!supplierId || loadingProducts || loading}
+                    className="btn btn-danger"
+                    onClick={() => handleRemoveItem(index)}
                   >
-                    <i className="bi bi-plus-lg me-2"></i>Thêm sản phẩm
+                    Xóa
                   </button>
                 </div>
               </div>
-
-              {loadingProducts ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Đang tải...</span>
-                  </div>
-                  <p className="mt-2 text-muted">Đang tải danh sách sản phẩm...</p>
-                </div>
-              ) : items.length === 0 ? (
-                <div className="alert alert-info mb-0 text-center py-4">
-                  Chưa có sản phẩm nào. Nhấn "Thêm sản phẩm" để bắt đầu.
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle">
-                    <thead className="table-light">
-                      <tr>
-                        <th style={{ width: "55%" }}>Sản phẩm *</th>
-                        <th style={{ width: "25%" }}>Số lượng *</th>
-                        <th style={{ width: "20%" }} className="text-end">
-                          Thao tác
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, index) => (
-                        <tr key={index}>
-                          <td>
-                            <select
-                              className={`form-select ${
-                                errors[`item_${index}_product`] ? "is-invalid" : ""
-                              }`}
-                              value={item.productId}
-                              onChange={(e) =>
-                                handleItemChange(index, "productId", e.target.value)
-                              }
-                              required
-                            >
-                              <option value="">-- Chọn sản phẩm --</option>
-                              {products.map((prod) => (
-                                <option key={prod.productId} value={prod.productId}>
-                                  {prod.name}
-                                  {prod.sku ? ` (${prod.sku})` : ""}
-                                </option>
-                              ))}
-                            </select>
-                            {errors[`item_${index}_product`] && (
-                              <div className="invalid-feedback">
-                                {errors[`item_${index}_product`]}
-                              </div>
-                            )}
-                          </td>
-
-                          <td>
-                            <input
-                              type="text" // dùng text để kiểm soát chặt hơn
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              className={`form-control ${
-                                errors[`item_${index}_qty`] ? "is-invalid" : ""
-                              }`}
-                              value={item.quantityOrdered}
-                              onChange={(e) =>
-                                handleItemChange(index, "quantityOrdered", e.target.value)
-                              }
-                              placeholder="1"
-                              required
-                            />
-                            {errors[`item_${index}_qty`] && (
-                              <div className="invalid-feedback">
-                                {errors[`item_${index}_qty`]}
-                              </div>
-                            )}
-                          </td>
-
-                          <td className="text-end">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleRemoveItem(index)}
-                            >
-                              <i className="bi bi-trash"></i> Xóa
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {errors.items && (
-                <div className="alert alert-danger mt-3">{errors.items}</div>
-              )}
-            </div>
+            ))}
 
             <div className="text-end">
               <button
                 type="submit"
-                className="btn btn-primary btn-lg px-5"
-                disabled={loading || loadingProducts}
+                className="btn btn-primary"
+                disabled={loading}
               >
-                {loading ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    Đang tạo...
-                  </>
-                ) : (
-                  "Tạo đơn nhập hàng"
-                )}
+                {loading ? "Đang tạo..." : "Tạo đơn"}
               </button>
             </div>
           </form>

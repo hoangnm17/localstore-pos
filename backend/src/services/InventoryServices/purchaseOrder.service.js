@@ -128,3 +128,23 @@ exports.getList = async (query) => {
         status: query.status
     });
 };
+
+/* ==============================
+   PO MONTHLY REPORT
+============================== */
+exports.getMonthlyReport = async ({
+    month,
+    year,
+    supplierId
+}) => {
+
+    if (month < 1 || month > 12) {
+        throw new Error("INVALID_MONTH");
+    }
+
+    return await purchaseOrderModel.getMonthlyReport({
+        month,
+        year,
+        supplierId
+    });
+};
