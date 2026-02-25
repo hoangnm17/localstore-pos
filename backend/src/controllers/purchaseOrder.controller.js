@@ -108,3 +108,31 @@ exports.getList = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+/* ==============================
+   PO MONTHLY REPORT
+============================== */
+exports.getMonthlyReport = async (req, res) => {
+    try {
+        let { month, year, supplierId } = req.query;
+
+        const now = new Date();
+
+        if (!month) month = now.getMonth() + 1; // js month 0–11
+        if (!year) year = now.getFullYear();
+
+        const result = await purchaseOrderService.getMonthlyReport({
+            month: parseInt(month),
+            year: parseInt(year),
+            supplierId: supplierId ? parseInt(supplierId) : null
+        });
+
+        res.json({
+            message: "PO monthly report",
+            data: result
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

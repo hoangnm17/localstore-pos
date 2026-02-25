@@ -37,9 +37,20 @@ function updatePurchaseOrderStatus(id, newStatus) {
   );
 }
 
+/**
+ * GET MONTHLY PURCHASE ORDER REPORT
+ * GET /inventory/purchase-orders/report
+ */
+function getMonthlyPOReport(params = {}) {
+  return api.get("/inventory/purchase-orders/report", {
+    params
+  });
+}
+
 export default {
   getPurchaseOrders,
   getPurchaseOrderDetail,
   createPurchaseOrder,
-  updatePurchaseOrderStatus
+  updatePurchaseOrderStatus,
+  getMonthlyPOReport
 };

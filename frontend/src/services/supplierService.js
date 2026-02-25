@@ -1,19 +1,11 @@
-import axios from "axios";
+import api from "./axiosInstance";
 
-const API_URL = "http://localhost:5000/api";
-
-/**
- * GET SUPPLIER LIST
- * GET /api/inventory/suppliers?search=abc
- */
 function getSupplierList(search = "") {
-    return axios.get(`${API_URL}/inventory/suppliers/list`, {
-        params: {
-            search
-        }
-    });
+  return api.get("/inventory/suppliers/list", {
+    params: { search }
+  });
 }
 
 export default {
-    getSupplierList
+  getSupplierList
 };

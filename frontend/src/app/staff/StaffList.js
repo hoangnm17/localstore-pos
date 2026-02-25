@@ -14,15 +14,23 @@ const StaffList = () => {
     
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const res = await api.get('/staff');
-                if (res.success) setStaffs(res.data);
-            } catch (err) { console.error(err); }
-        };
-        fetchData();
-    }, []);
+useEffect(() => {
+    const fetchData = async () => {
+        try {
+            const response = await api.get('/staff');
+                        if (response.data && response.data.success) {
+                setStaffs(response.data.data);
+            } else {
+                setStaffs([]);
+            }
+            
+        } catch (err) {
+            console.error("Lỗi fetch:", err); 
+            setStaffs([]);
+        }
+    };
+    fetchData();
+}, []);
 
     useEffect(() => {
         setCurrentPage(1);

@@ -1,4 +1,4 @@
-const { connectDB, sql } = require('../config/database');
+const { connectDB, sql } = require('../../config/database');
 
 exports.getList = async ({ search = '' }) => {
     const pool = await connectDB();
@@ -32,7 +32,6 @@ exports.getByBarcode = async (barcode) => {
                 pu.unitName,
                 pu.price,
                 pu.conversionFactor,
-                pu.allowDecimal,
                 p.id AS productId,
                 p.name
             FROM ProductUnits pu

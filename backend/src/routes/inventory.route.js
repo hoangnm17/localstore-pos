@@ -44,5 +44,7 @@ router.get("/purchase-orders/detail/:id",purchaseOrderController.getDetail);
 // GET SUPPLIER LIST
 router.get("/suppliers/list", supplierController.getSupplierList);
 
+router.get("/purchase-orders/report", purchaseOrderController.getMonthlyReport);
+
 
 module.exports = router;
