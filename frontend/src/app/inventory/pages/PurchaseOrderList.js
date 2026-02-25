@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import purchaseOrderService from "../../../services/purchaseOrderService";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import { useNavigate } from "react-router-dom";
 
 const PurchaseOrderList = () => {
@@ -46,8 +46,8 @@ const PurchaseOrderList = () => {
 
         // Vì interceptor đã return response.data
         setOrders(Array.isArray(res?.data?.data) ? res.data.data : []);
-setTotalPages(res?.data?.totalPages || 1);
-setPage(res?.data?.page || customPage);
+        setTotalPages(res?.data?.totalPages || 1);
+        setPage(res?.data?.page || customPage);
       } catch (err) {
         console.error("Fetch PO error:", err);
         setOrders([]);
@@ -221,9 +221,8 @@ setPage(res?.data?.page || customPage);
                             <td className="ps-4 fw-medium">#{po.id}</td>
                             <td>
                               <span
-                                className={`badge rounded-pill bg-${
-                                  status?.color || "secondary"
-                                }`}
+                                className={`badge rounded-pill bg-${status?.color || "secondary"
+                                  }`}
                               >
                                 {status?.label || po.status}
                               </span>
@@ -233,8 +232,8 @@ setPage(res?.data?.page || customPage);
                             <td>
                               {po.createdAt
                                 ? new Date(po.createdAt).toLocaleDateString(
-                                    "vi-VN"
-                                  )
+                                  "vi-VN"
+                                )
                                 : "—"}
                             </td>
                             <td className="text-center">
@@ -270,9 +269,8 @@ setPage(res?.data?.page || customPage);
                     </li>
 
                     <li
-                      className={`page-item ${
-                        page >= totalPages ? "disabled" : ""
-                      }`}
+                      className={`page-item ${page >= totalPages ? "disabled" : ""
+                        }`}
                     >
                       <button className="page-link" onClick={handleNext}>
                         Sau

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import purchaseOrderService from "../../../services/purchaseOrderService";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import PurchaseOrderActions from "../inventoryComponents/PurchaseOrderAction";
 
 const PurchaseOrderDetail = () => {
@@ -65,12 +65,12 @@ const PurchaseOrderDetail = () => {
   const formatDate = (dateStr) =>
     dateStr
       ? new Date(dateStr).toLocaleString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
       : "—";
 
   // Helper hiển thị tổng số lượng theo đơn vị khác nhau
@@ -86,28 +86,28 @@ const PurchaseOrderDetail = () => {
       .join(" + ");
   };
 
- const getStatusBadge = (status) => {
-  const statusMap = {
-    Received: { color: "info", text: "Đã nhận hàng" },
-    Approved: { color: "success", text: "Đã duyệt" },
-    Pending: { color: "warning", text: "Chờ duyệt" },
-    Cancelled: { color: "danger", text: "Đã hủy" },
-    WaitingForDelivery: { color: "primary", text: "Chờ giao hàng" }, // vàng - chờ giao
-    Rejected: { color: "danger", text: "Đã từ chối" },               // đỏ - từ chối
-    CannotDeliver: { color: "dark", text: "Không thể giao" },        // xám đen - không giao được
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      Received: { color: "info", text: "Đã nhận hàng" },
+      Approved: { color: "success", text: "Đã duyệt" },
+      Pending: { color: "warning", text: "Chờ duyệt" },
+      Cancelled: { color: "danger", text: "Đã hủy" },
+      WaitingForDelivery: { color: "primary", text: "Chờ giao hàng" }, // vàng - chờ giao
+      Rejected: { color: "danger", text: "Đã từ chối" },               // đỏ - từ chối
+      CannotDeliver: { color: "dark", text: "Không thể giao" },        // xám đen - không giao được
+    };
+
+    const info = statusMap[status] || { color: "secondary", text: status || "Không xác định" };
+
+    return (
+      <span
+        className={`badge bg-${info.color} fs-5 px-4 py-2 rounded-pill shadow fw-semibold`}
+        style={{ minWidth: "140px", textAlign: "center" }}
+      >
+        {info.text}
+      </span>
+    );
   };
-
-  const info = statusMap[status] || { color: "secondary", text: status || "Không xác định" };
-
-  return (
-    <span
-      className={`badge bg-${info.color} fs-5 px-4 py-2 rounded-pill shadow fw-semibold`}
-      style={{ minWidth: "140px", textAlign: "center" }}
-    >
-      {info.text}
-    </span>
-  );
-};
 
   return (
     <div className="container-fluid py-4 px-3 px-md-5 bg-light min-vh-100">

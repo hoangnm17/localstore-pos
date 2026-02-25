@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import categoryService from "../../../services/categoryStockService";
+import categoryService from "../../../services/Inventory/categoryStockService";
 import CategoryCard from "../inventoryComponents/CategoryCard";
 
 function CategoryStock() {

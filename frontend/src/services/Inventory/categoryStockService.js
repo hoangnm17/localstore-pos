@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import api from "../axiosInstance";
 
 // categoryService
 function getCategoryStock(search = "", page = 1, limit = 10) {
