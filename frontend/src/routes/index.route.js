@@ -19,19 +19,11 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredFeatures={["MANAGE_STAFF"]} />}>
         {staffRoute}
       </Route>
-<<<<<<< HEAD
       <Route element={<ProtectedRoute requiredFeatures={["VIEW_SALES"]} />}>
         {salesRoute}
       </Route>
 
       <Route element={<ProtectedRoute requiredFeatures={["VIEW_INVENTORY"]} />}>
-=======
-      <Route element={<ProtectedRoute requiredFeature="VIEW_SALES" />}>
-        {salesRoute}
-      </Route>
-
-      <Route element={<ProtectedRoute requiredFeature="VIEW_INVENTORY" />}>
->>>>>>> dev
         {InventoryRoutes}
       </Route>
 
