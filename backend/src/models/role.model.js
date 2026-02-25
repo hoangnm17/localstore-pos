@@ -5,9 +5,9 @@ const getPermissionsByRoleId = async (roleId) => {
         const pool = await connectDB();
         const permissions = await pool.request()
         .input('roleId', sql.Int, roleId)
-            .query(`SELECT f.featureKey
+            .query(`SELECT DISTINCT f.featureKey
                 FROM RoleFeatures rf
-                JOIN Features f ON rf.roleId = f.id
+                JOIN Features f ON rf.featureId = f.id
                 WHERE rf.roleId = @roleId`)
         return permissions.recordset
     } catch (err) {

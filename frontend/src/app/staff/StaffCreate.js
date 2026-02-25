@@ -14,7 +14,6 @@ const StaffCreate = () => {
         fullName: '',
         email: '',
         phoneNumber: '',
-        address: '',
         roleId: '',
         salaryType: 'hourly',
         baseSalary: 0,
@@ -51,7 +50,7 @@ const StaffCreate = () => {
         setLoading(true);
         try {
             const res = await api.post('/staff', formData);
-            if (res.success) {
+            if (res.data?.success) {
                 setSuccessMsg("Tạo nhân viên thành công!");
                 setErrorMsg("");
 

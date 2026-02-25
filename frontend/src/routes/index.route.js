@@ -16,7 +16,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={['Manager', 'Warehouse']} />}>
         {InventoryRoutes}
       </Route> */}
-      <Route element={<ProtectedRoute requiredFeatures={["VIEW_STAFF"]} />}>
+    <Route element={<ProtectedRoute requiredFeatures={["VIEW_STAFF"]}/>}>
         {staffRoute}
       </Route>
       <Route element={<ProtectedRoute requiredFeature="VIEW_SALES" />}>
