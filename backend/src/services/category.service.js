@@ -72,6 +72,11 @@ exports.deleteCategory = async (id) => {
     return categoryModel.deleteCategory(id);
 };
 
+exports.getAllCategories = async () => {
+    const categories = await categoryModel.getAllCategories();
+    return categories;
+};
+
 //build tree + tổng SL sản phẩm
 function buildTree(rows) {
     const map = {};
@@ -103,3 +108,4 @@ function buildTree(rows) {
     roots.forEach(num);
     return roots;
 }
+
