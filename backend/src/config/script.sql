@@ -264,11 +264,12 @@ GO
 
 -- 18. InventoryStocks
 CREATE TABLE InventoryStocks (
-    [productId] BIGINT NOT NULL,
-    [quantityOnHand] DECIMAL(15,3) NOT NULL DEFAULT 0,
-    [minThreshold] DECIMAL(15,3) NOT NULL DEFAULT 0,
+    productId BIGINT NOT NULL,
+    quantityOnHand DECIMAL(15,3) NOT NULL DEFAULT 0,
+    minThreshold DECIMAL(15,3) NOT NULL DEFAULT 0,
 
     CONSTRAINT PK_InventoryStocks PRIMARY KEY (productId),
+
     CONSTRAINT FK_InventoryStocks_Product
         FOREIGN KEY (productId) REFERENCES Products(id)
 );
@@ -276,46 +277,65 @@ GO
 
 
 -- 19. PurchaseOrders
-CREATE TABLE [PurchaseOrders] (
-    [id] INT IDENTITY(1,1) PRIMARY KEY,
-    [createdBy] BIGINT NOT NULL,
-    [processBy] BIGINT NULL,
-    [supplierId] INT NOT NULL,
-    [status] VARCHAR(20) NOT NULL DEFAULT 'Draft',
-    [createdAt] DATETIME2 DEFAULT GETDATE(),
-    [receivedBy] BIGINT NULL,
+CREATE TABLE PurchaseOrders (
+    id INT IDENTITY(1,1) PRIMARY KEY,
 
-    CONSTRAINT [FK_PO_ReceivedBy]
-        FOREIGN KEY ([receivedBy]) REFERENCES [Staff]([id]),
+    createdBy BIGINT NOT NULL,
+    processBy BIGINT NULL,
+    receivedBy BIGINT NULL,
 
-    CONSTRAINT [FK_PO_CreatedBy]
-        FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id]),
+    supplierId INT NOT NULL,
 
-    CONSTRAINT [FK_PO_ProcessBy]
-        FOREIGN KEY ([processBy]) REFERENCES [Staff]([id]),
+    status VARCHAR(20) NOT NULL DEFAULT 'Pending',
 
-    CONSTRAINT [FK_PO_Supplier]
-        FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
+    totalAmount DECIMAL(18,2) DEFAULT 0,
 
-    CONSTRAINT [CK_PO_Status]
-        CHECK ([status] IN ('Pending','Approved','Rejected','WaitingForDelivery','Received', 'CannotDeliver'))
+    createdAt DATETIME2 DEFAULT GETDATE(),
+
+    CONSTRAINT FK_PO_CreatedBy
+        FOREIGN KEY (createdBy) REFERENCES Staff(id),
+
+    CONSTRAINT FK_PO_ProcessBy
+        FOREIGN KEY (processBy) REFERENCES Staff(id),
+
+    CONSTRAINT FK_PO_ReceivedBy
+        FOREIGN KEY (receivedBy) REFERENCES Staff(id),
+
+    CONSTRAINT FK_PO_Supplier
+        FOREIGN KEY (supplierId) REFERENCES Suppliers(id),
+
+    CONSTRAINT CK_PO_Status
+        CHECK (status IN 
+            ('Pending','Approved','Rejected',
+             'WaitingForDelivery','Received','CannotDeliver')
+        )
 );
 GO
 
 
 -- 20. PurchaseOrderItems
-CREATE TABLE [PurchaseOrderItems] (
-    [id] INT IDENTITY(1,1) PRIMARY KEY,
-    [poId] INT NOT NULL,
-    [productId] BIGINT NOT NULL,
-    [quantityBeforeOrdered] INT NOT NULL,
-    [quantityOrdered] INT NOT NULL,
+CREATE TABLE PurchaseOrderItems (
+    id INT IDENTITY(1,1) PRIMARY KEY,
 
-    CONSTRAINT [FK_POI_PO]
-        FOREIGN KEY ([poId]) REFERENCES [PurchaseOrders]([id]) ON DELETE CASCADE,
+    poId INT NOT NULL,
+    productId BIGINT NOT NULL,
 
-    CONSTRAINT [FK_POI_Product]
-        FOREIGN KEY ([productId]) REFERENCES [Products]([id])
+    quantityBeforeOrdered DECIMAL(15,3) NOT NULL,
+    quantityOrdered DECIMAL(15,3) NOT NULL,
+
+    baseUnit NVARCHAR(20) NOT NULL,
+    costPrice DECIMAL(15,2) NOT NULL,
+
+    lineTotal AS (quantityOrdered * costPrice) PERSISTED,
+
+    CONSTRAINT FK_POI_PO
+        FOREIGN KEY (poId) 
+        REFERENCES PurchaseOrders(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT FK_POI_Product
+        FOREIGN KEY (productId)
+        REFERENCES Products(id)
 );
 GO
 
