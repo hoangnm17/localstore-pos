@@ -78,7 +78,7 @@ const [showModal, setShowModal] = useState(false);
             <>
       <div className="sidebar-footer" onClick={() => setShowModal(true)}>
         <i className="bi bi-box-arrow-right fs-4"></i>
-        <span>ĐĂNG XUẤT</span>
+        {!isCollapsed && <span>ĐĂNG XUẤT</span>}
       </div>
 
       {showModal && (
