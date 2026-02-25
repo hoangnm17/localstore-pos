@@ -45,9 +45,9 @@ const PurchaseOrderList = () => {
         });
 
         // Vì interceptor đã return response.data
-        setOrders(Array.isArray(res?.data) ? res.data : []);
-        setTotalPages(res?.totalPages || 1);
-        setPage(res?.page || customPage);
+        setOrders(Array.isArray(res?.data?.data) ? res.data.data : []);
+setTotalPages(res?.data?.totalPages || 1);
+setPage(res?.data?.page || customPage);
       } catch (err) {
         console.error("Fetch PO error:", err);
         setOrders([]);

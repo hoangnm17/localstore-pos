@@ -46,10 +46,9 @@ function ProductStock() {
         limit
       );
 
-      // ⚠ interceptor đã return response.data
-      setProducts(res?.products || []);
-      setTotal(res?.total || 0);
-      setCategoryName(res?.categoryName || "Không xác định");
+      setProducts(res?.data?.products || []);
+      setTotal(res?.data?.total || 0);
+      setCategoryName(res?.data?.categoryName || "Không xác định");
 
     } catch (err) {
       console.error("Lỗi tải tồn kho:", err);
@@ -272,8 +271,8 @@ function ProductStock() {
                         <td className="text-center py-4">
                           <span
                             className={`badge rounded-pill px-4 py-2 fs-6 fw-medium ${status === "THẤP"
-                                ? "bg-danger-subtle text-danger border border-danger-subtle"
-                                : "bg-success-subtle text-success border border-success-subtle"
+                              ? "bg-danger-subtle text-danger border border-danger-subtle"
+                              : "bg-success-subtle text-success border border-success-subtle"
                               }`}
                           >
                             {status}
