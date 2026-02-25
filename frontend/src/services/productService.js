@@ -8,6 +8,8 @@ export const getProducts = async ({ page = 1, limit = 20, search = '', categoryI
     return api.get('/products', { params });
 };
 
+
+
 export const getProduct = async (id) => {
     return api.get(`/products/${id}`);
 };
@@ -23,4 +25,5 @@ export const updateProduct = async (id, payload) => {
 export const deleteProduct = async (id) => {
     return api.delete(`/products/${id}`);
 };
+
 

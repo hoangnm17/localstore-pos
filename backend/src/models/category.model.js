@@ -9,12 +9,12 @@ exports.getRootCategories = async (search, limit, offset) => {
         .input('offset', sql.Int, offset)
         .query(`
             SELECT
-                c.id, c.name, ISNULL(c.imageUrl,'') imageUrl, c.parentId,
+                c.id, c.name, ISNULL(c.imageUrl,'') imageUrl, c.parentId, c.status,
                 COUNT(DISTINCT p.id) productCount
             FROM Categories c
             LEFT JOIN Products p ON p.categoryId = c.id AND p.status = 'Selling'
             WHERE c.status = 1 AND c.parentId IS NULL AND c.name LIKE @search
-            GROUP BY c.id, c.name, c.imageUrl, c.parentId
+            GROUP BY c.id, c.name, c.imageUrl, c.parentId, c.status
             ORDER BY c.name
             OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
         `);

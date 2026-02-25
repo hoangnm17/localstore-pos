@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import * as api from '../../../services/category.service';
+import categoryService from '../../../services/categoryService';
 
 export default function CategoryForm({ form, change, submit, onDone, editId }) {
     const [categories, setCategories] = useState([]);
     const [preview, setPreview] = useState(form.imageUrl || null);
 
     useEffect(() => {
-        api.fetchCategoryTree({ page: 1, limit: 100 }).then(res => {
+        categoryService.fetchCategoryTree('', 1, 100).then(res => {
             // Flatten tree để hiển thị trong dropdown
             const flat = [];
             function flatten(items, level = 0) {

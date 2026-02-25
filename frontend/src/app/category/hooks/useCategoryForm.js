@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import * as api from '../../../services/category.service';
+import categoryService from '../../../services/categoryService';
 
 export default function useCategoryForm(editId) {
     const [form, setForm] = useState({
@@ -14,7 +14,7 @@ export default function useCategoryForm(editId) {
             return;
         }
 
-        api.getCategoryById(editId).then(res => {
+        categoryService.getCategoryById(editId).then(res => {
             setForm(res.data.data);
         });
     }, [editId]);
@@ -30,9 +30,9 @@ export default function useCategoryForm(editId) {
         }
 
         if (editId) {
-            await api.updateCategory(editId, form);
+            await categoryService.updateCategory(editId, form);
         } else {
-            await api.createCategory(form);
+            await categoryService.createCategory(form);
         }
     }
 
