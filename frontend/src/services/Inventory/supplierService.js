@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import api from "../axiosInstance";
 
 function getSupplierList(search = "") {
   return api.get("/inventory/suppliers/list", {

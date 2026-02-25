@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Select from "react-select";
-import purchaseOrderService from "../../../services/purchaseOrderService";
-import supplierService from "../../../services/supplierService";
-import productService from "../../../services/productStockService";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
+import supplierService from "../../../services/Inventory/supplierService";
+import productService from "../../../services/Inventory/productStockService";
 
 const PurchaseOrderCreate = () => {
   const navigate = useNavigate();

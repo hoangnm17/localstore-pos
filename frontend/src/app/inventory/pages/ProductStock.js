@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import productStockService from "../../../services/productStockService";
+import productStockService from "../../../services/Inventory/productStockService";
 
 function ProductStock() {
   const { categoryId } = useParams();

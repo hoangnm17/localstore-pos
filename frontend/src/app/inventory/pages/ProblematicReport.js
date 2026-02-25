@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import problematicService from "../../../services/categoryStockService";
+import problematicService from "../../../services/Inventory/categoryStockService";
 
 function ProblematicPage() {
   const navigate = useNavigate();
@@ -58,7 +58,7 @@ function ProblematicPage() {
   const fetchReports = async () => {
     try {
       const res = await problematicService.getReports(filters);
-      setReports(res.data);
+      setReports(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch {
       let filtered = [...mockReports];
 
