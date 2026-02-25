@@ -6,14 +6,11 @@ const authRoutes = require("./auth.route");
 const customerRoutes = require("./customer.route");
 const promotionRoutes = require("./promotion.route");
 const voucherRoutes = require("./voucher.route");
-<<<<<<< HEAD
 const paymentRoutes = require("./payment.route");
 const staffRoutes = require("./staff.route");
-=======
 const categoryRoutes = require("./category.route");
 const productRoutes = require("./product.route");
 const productUnitRoutes = require("./productUnit.route");
->>>>>>> feature/Minhthu
 
 module.exports = (app) => {
     const version = "/api";

@@ -2,19 +2,15 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import salesRoute from "./sales.route";
 import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
-<<<<<<< HEAD
 import ProtectedRoute from "./protected.route";
 import staffRoute from "./staff.route";
 import crmRoute from "./crm.route";
-=======
 import CategoryRoutes from "./category.route.js";
->>>>>>> feature/Minhthu
 
 const AppRoutes = () => {
   return (
     <Routes>
       {authRoute}
-<<<<<<< HEAD
       {/* <Route element={<ProtectedRoute allowedRoles={['Manager', 'Cashier']} />}>
         {salesRoute}
       </Route>
@@ -34,11 +30,9 @@ const AppRoutes = () => {
 
       {crmRoute}
 
-=======
       {salesRoute}
       {InventoryRoutes}
       {CategoryRoutes}
->>>>>>> feature/Minhthu
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/inventory/*" element={<InventoryRoutes />} />
