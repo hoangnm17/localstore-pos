@@ -30,8 +30,6 @@ const PurchaseOrderList = () => {
     Rejected: { label: "Từ chối", color: "danger" },
   };
 
-  /* ================= FETCH DATA ================= */
-
   const fetchData = useCallback(
   async (customPage = page) => {
     try {
@@ -72,22 +70,14 @@ const PurchaseOrderList = () => {
   [filters, page]
 );
 
-  /* ================= EFFECT ================= */
-
   useEffect(() => {
-    fetchData(page);
-  }, [page, filters, fetchData]);
-
-  /* ================= HANDLERS ================= */
+  fetchData(page);
+}, [page]);
 
   const handleFilter = () => {
-    // Nếu đang ở page 1 thì gọi luôn API
-    if (page === 1) {
-      fetchData(1);
-    } else {
-      setPage(1);
-    }
-  };
+  setPage(1);
+  fetchData(1);
+};
 
   const handlePrev = () => {
     if (page > 1) setPage((prev) => prev - 1);
