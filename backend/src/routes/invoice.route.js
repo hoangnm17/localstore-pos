@@ -5,8 +5,10 @@ const PERMISSIONS = require("../constants/permissions");
 
 const invoiceController = require("../controllers/invoice.controller")
 
-router.get("/", protect(PERMISSIONS.VIEW_INVOICE), invoiceController.getAllInvoice)
-// router.put("/:id/sync", )
-router.post("/create", protect(PERMISSIONS.CREATE_INVOICE), invoiceController.createInvoice)
+router.get("/", invoiceController.getAllInvoice)
+router.post("/", invoiceController.createInvoice);
+router.patch("/:id", invoiceController.updateInvoice);
+router.get("/drafts", invoiceController.getDrafts);
+router.get("/:id", invoiceController.getDetail);
 
 module.exports = router
