@@ -30,6 +30,7 @@ exports.getProducts = async (filters) => {
             p.salePrice,
             p.costPrice,
             p.status,
+            p.allowDecimal,
             c.name AS categoryName,
             ISNULL(s.quantityOnHand, 0) AS stockQuantity
         FROM Products p
@@ -230,6 +231,20 @@ exports.stopSellingProduct = async (id) => {
     return result.rowsAffected[0] > 0;
 };
 
+exports.startSellingProduct = async (id) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`
+            UPDATE Products
+            SET status = 'Selling',
+                updatedAt = GETDATE()
+            WHERE id = @id
+        `);
+
+    return result.rowsAffected[0] > 0;
+};
 
 exports.getProductById = async (id) => {
     const pool = await connectDB();
