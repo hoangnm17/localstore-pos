@@ -53,6 +53,7 @@ function PurchaseOrderReport() {
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFilter = (e) => {

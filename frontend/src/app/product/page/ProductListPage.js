@@ -88,7 +88,6 @@ const ProductListPage = () => {
     const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     const toggleSelectAll = () => setSelectedIds(selectedIds.length === products.length ? [] : products.map(p => p.id));
 
-    const confirmAction = (productId, action) => setConfirmModal({ open: true, productId, action });
 
     const executeAction = async () => {
         const { productId, action } = confirmModal;

@@ -28,7 +28,7 @@ function getCategoryById(id) {
     return api.get(`/categories/${id}`);
 }
 
-export default {
+const categoryService = {
     fetchCategoryTree,
     fetchCategoryList,
     createCategory,
@@ -36,3 +36,5 @@ export default {
     deleteCategory,
     getCategoryById
 };
+
+export default categoryService;

@@ -12,6 +12,7 @@ function ProblematicPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // eslint-disable-next-line no-unused-vars
   const [filters, setFilters] = useState({
     status: "",
     createdFrom: "",
@@ -86,8 +87,10 @@ function ProblematicPage() {
 
   useEffect(() => {
     fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
+  // eslint-disable-next-line no-unused-vars
   const handleCreate = async (e) => {
     e.preventDefault();
 

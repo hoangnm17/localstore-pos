@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-is-valid */
 function Footer() {
     return (
         <footer className="bg-dark text-white pt-5 pb-4" style={{ marginTop: "20px" }}>

@@ -37,6 +37,7 @@ export default function Product({ addItem }) {
 
   useEffect(() => {
     fetchProductList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, search, selectedCategory]);
 
   const fetchProductList = async () => {

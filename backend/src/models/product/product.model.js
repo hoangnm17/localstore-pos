@@ -30,7 +30,7 @@ exports.getProducts = async (filters) => {
             p.salePrice,
             p.costPrice,
             p.status,
-            p.allowDecimal,
+            p.allowDecimalQuantity,
             c.name AS categoryName,
             ISNULL(s.quantityOnHand, 0) AS stockQuantity
         FROM Products p
@@ -108,7 +108,7 @@ exports.getProductDetail = async (id) => {
                 costPrice,
                 status,
                 categoryId,
-                allowDecimal
+                allowDecimalQuantity
             FROM Products
             WHERE id = @id
         `);
@@ -153,7 +153,7 @@ exports.getProductByBarcode = async (barcode) => {
                 pu.unitType,
                 pu.conversionFactor,
                 pu.price,
-                p.allowDecimal
+                p.allowDecimalQuantity
             FROM ProductUnits pu
             JOIN Products p ON p.id = pu.productId
             WHERE pu.barcode = @barcode
