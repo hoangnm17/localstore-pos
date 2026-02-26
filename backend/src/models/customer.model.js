@@ -1,5 +1,17 @@
 const { connectDB, sql } = require("../config/database.js");
 
+const validateFields = (data) => {
+    const { loyaltyPoints, totalSpending } = data;
+
+    if (loyaltyPoints !== undefined && parseInt(loyaltyPoints) < 0) {
+        throw new Error('Điểm tích lũy không được là số âm');
+    }
+
+    if (totalSpending !== undefined && parseFloat(totalSpending) < 0) {
+        throw new Error('Tổng chi tiêu không được là số âm');
+    }
+};
+
 exports.getCustomers = async (filters) => {
     const pool = await connectDB();
     const {
@@ -78,6 +90,8 @@ exports.createCustomer = async (data) => {
     const pool = await connectDB();
     const { name, phone, status = 'Active', loyaltyPoints = 0, totalSpending = 0 } = data;
 
+    validateFields(data);
+
     const result = await pool.request()
         .input('name', sql.NVarChar, name)
         .input('phone', sql.VarChar, phone)
@@ -97,6 +111,8 @@ exports.createCustomer = async (data) => {
 exports.updateCustomer = async (id, data) => {
     const pool = await connectDB();
     const { name, phone, status, loyaltyPoints, totalSpending } = data;
+
+    validateFields(data);
 
     // Dynamic partial update — chỉ SET những field nào được truyền vào
     const setClauses = [];

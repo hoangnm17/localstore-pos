@@ -357,6 +357,7 @@ function PromotionsTab() {
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(DEFAULT_PROMOTION);
     const [itemsTarget, setItemsTarget] = useState(null);
+    const [alertMsg, setAlertMsg] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -374,7 +375,9 @@ function PromotionsTab() {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
             setShowModal(false); fetchData();
-        } catch (e) { alert(e.response?.data?.message || e.message); }
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        }
     };
 
     return (
@@ -426,6 +429,7 @@ function PromotionsTab() {
                     <PromotionItemsManager promotionId={itemsTarget.id} />
                 </Modal>
             )}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
     );
 }
@@ -478,6 +482,7 @@ function VouchersTab() {
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(DEFAULT_VOUCHER);
+    const [alertMsg, setAlertMsg] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -495,7 +500,9 @@ function VouchersTab() {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
             setShowModal(false); fetchData();
-        } catch (e) { alert(e.response?.data?.message || e.message); }
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        }
     };
 
     return (
@@ -541,6 +548,7 @@ function VouchersTab() {
                     </div>
                 </Modal>
             )}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
     );
 }

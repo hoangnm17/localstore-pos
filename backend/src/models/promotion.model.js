@@ -10,12 +10,34 @@ const VALID_STATUSES = ['Active', 'Expired', 'Disabled'];
  * Validate type và status theo đúng CHECK CONSTRAINT của DB.
  * Ném lỗi rõ ràng thay vì để SQL Server trả về lỗi khó đọc.
  */
-const validateFields = ({ type, status }) => {
+const validateFields = (data) => {
+    const { type, status, value, startDate, endDate } = data;
+
     if (type !== undefined && !VALID_TYPES.includes(type)) {
         throw new Error(`type không hợp lệ. Chỉ chấp nhận: ${VALID_TYPES.join(', ')}`);
     }
     if (status !== undefined && !VALID_STATUSES.includes(status)) {
         throw new Error(`status không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
+    }
+
+    if (value !== undefined && parseFloat(value) < 0) {
+        throw new Error('Giá trị khuyến mãi không được là số âm');
+    }
+
+    if (startDate && isNaN(Date.parse(startDate))) {
+        throw new Error('Ngày bắt đầu không hợp lệ');
+    }
+
+    if (endDate && isNaN(Date.parse(endDate))) {
+        throw new Error('Ngày kết thúc không hợp lệ');
+    }
+
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (start > end) {
+            throw new Error('Ngày bắt đầu không được lớn hơn ngày kết thúc');
+        }
     }
 };
 
@@ -107,7 +129,7 @@ exports.createPromotion = async (data) => {
     const { name, type, value, startDate, endDate, status = 'Active' } = data;
 
     // Validate trước khi INSERT — tránh lỗi constraint từ SQL Server
-    validateFields({ type, status });
+    validateFields(data);
 
     const result = await pool.request()
         .input('name', sql.NVarChar, name)
@@ -132,10 +154,18 @@ exports.createPromotion = async (data) => {
  */
 exports.updatePromotion = async (id, data) => {
     const pool = await connectDB();
+    const existing = await exports.getPromotionById(id);
+    if (!existing) return null;
+
     const { name, value, startDate, endDate, status } = data;
 
-    // Validate status nếu được truyền vào
-    validateFields({ status });
+    // Merge existing dates with new ones for validation
+    const validationData = {
+        ...data,
+        startDate: startDate !== undefined ? startDate : existing.startDate,
+        endDate: endDate !== undefined ? endDate : existing.endDate
+    };
+    validateFields(validationData);
 
     const setClauses = [];
     const request = pool.request().input('id', sql.BigInt, id);
