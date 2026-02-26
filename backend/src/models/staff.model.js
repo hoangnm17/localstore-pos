@@ -129,7 +129,7 @@ module.exports.getUserByUsername = async (username) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('un', sql.VarChar, username)
-        .query("SELECT id FROM Users WHERE username = @un");
+        .query("SELECT id, passwordHash, isActive, roleId FROM Users WHERE username = @un");
     return result.recordset[0];
 };
 

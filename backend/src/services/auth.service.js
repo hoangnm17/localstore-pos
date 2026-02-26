@@ -10,7 +10,9 @@ module.exports.login = async (email, password) => {
     if (!user) {
         throw new Error("Tài khoản này không tồn tại!");
     }
-
+    if (user.isActive === 'locked') {
+        throw new Error("Tài khoản của bạn đã bị khóa.Huhu!");
+    }
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     console.log('Password match:', isMatch);
 
