@@ -16,7 +16,7 @@ const ShiftList = () => {
   });
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({}); 
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const navigate = useNavigate();
 
@@ -70,67 +70,83 @@ const ShiftList = () => {
     setErrorMsg('');
   };
 
-const validateForm = () => {
-  const errors = {};
+  const validateForm = () => {
+    const errors = {};
 
-  if (!formData.name.trim()) {
-    errors.name = "Tên ca làm việc không được để trống!";
-  } else if (formData.name.length < 3) {
-    errors.name = "Tên ca làm việc phải có ít nhất 3 ký tự!";
-  } else if (formData.name.length > 50) {
-    errors.name = "Tên ca làm việc không được quá 50 ký tự!";
-  }
+    if (!formData.name.trim()) {
+      errors.name = "Tên ca làm việc không được để trống!";
+    } else if (formData.name.length < 3) {
+      errors.name = "Tên ca làm việc phải có ít nhất 3 ký tự!";
+    } else if (formData.name.length > 50) {
+      errors.name = "Tên ca làm việc không được quá 50 ký tự!";
+    }
 
-  if (!formData.startTime) {
-    errors.startTime = "Vui lòng chọn giờ bắt đầu!";
-  }
+    if (!formData.startTime) {
+      errors.startTime = "Vui lòng chọn giờ bắt đầu!";
+    }
 
-  if (!formData.endTime) {
-    errors.endTime = "Vui lòng chọn giờ kết thúc!";
-  }
+    if (!formData.endTime) {
+      errors.endTime = "Vui lòng chọn giờ kết thúc!";
+    }
 
-  if (formData.startTime && formData.endTime) {
-    
-    if (formData.startTime >= formData.endTime) {
-      errors.endTime = "Giờ kết thúc phải sau giờ bắt đầu!";
-    } 
-    else {
-      const start = new Date(`2000-01-01T${formData.startTime}:00`);
-      const end = new Date(`2000-01-01T${formData.endTime}:00`);
-      const diffMinutes = (end - start) / (1000 * 60);
-      
-      // Kiểm tra thời gian tối thiểu
-      if (diffMinutes < 30) {
-        errors.endTime = "⏱Thời gian làm việc tối thiểu là 30 phút!";
+    if (formData.startTime && formData.endTime) {
+
+      if (formData.startTime >= formData.endTime) {
+        errors.endTime = "Giờ kết thúc phải sau giờ bắt đầu!";
       }
-      // Kiểm tra thời gian tối đa
-      else if (diffMinutes > 12 * 60) { // 12 giờ
-        errors.endTime = "⏱Thời gian làm việc không được quá 12 giờ!";
+      else {
+        const start = new Date(`2000-01-01T${formData.startTime}:00`);
+        const end = new Date(`2000-01-01T${formData.endTime}:00`);
+        const diffMinutes = (end - start) / (1000 * 60);
+
+        // Kiểm tra thời gian tối thiểu
+        if (diffMinutes < 30) {
+          errors.endTime = "⏱Thời gian làm việc tối thiểu là 30 phút!";
+        }
+        // Kiểm tra thời gian tối đa
+        else if (diffMinutes > 12 * 60) { // 12 giờ
+          errors.endTime = "⏱Thời gian làm việc không được quá 12 giờ!";
+        }
       }
     }
-  }
 
-  setFieldErrors(errors);
-  return Object.keys(errors).length === 0;
-};
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
+    const handleResponse = (res) => {
+      // Interceptor trả về resolved promise cho lỗi 4xx với {success: false, message}
+      const isSuccess = res.data?.success ?? res.success;
+      const message = res.data?.message ?? res.message ?? "Có lỗi xảy ra!";
+
+      if (isSuccess === false) {
+        if (message.includes("tồn tại")) {
+          setFieldErrors(prev => ({ ...prev, name: message }));
+        } else {
+          setErrorMsg(message);
+        }
+        return false;
+      }
+      return true;
+    };
+
     try {
       if (modalType === 'create') {
         const res = await api.post('/shifts', formData);
-        if (res.data?.success) {
+        if (handleResponse(res)) {
           setSuccessMsg("Tạo ca làm việc thành công!");
           fetchShifts();
           setTimeout(() => handleCloseModal(), 1500);
         }
       } else {
         const res = await api.put(`/shifts/${selectedShift.id}`, formData);
-        if (res.data?.success) {
+        if (handleResponse(res)) {
           setSuccessMsg("Cập nhật ca làm việc thành công!");
           fetchShifts();
           setTimeout(() => handleCloseModal(), 1500);
@@ -138,11 +154,8 @@ const validateForm = () => {
       }
     } catch (err) {
       const serverMessage = err.response?.data?.message || "Có lỗi xảy ra!";
-      
-      if (serverMessage.includes("tên ca làm việc đã tồn tại")) {
-        setFieldErrors({ ...fieldErrors, name: serverMessage });
-      } else if (serverMessage.includes("trùng với ca")) {
-        setErrorMsg(serverMessage);
+      if (serverMessage.includes("tồn tại")) {
+        setFieldErrors(prev => ({ ...prev, name: serverMessage }));
       } else {
         setErrorMsg(serverMessage);
       }
@@ -151,7 +164,7 @@ const validateForm = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm(" Bạn có chắc chắn muốn xóa ca làm việc này?")) return;
-    
+
     try {
       const res = await api.delete(`/shifts/${id}`);
       if (res.data?.success) {
@@ -160,7 +173,7 @@ const validateForm = () => {
       }
     } catch (err) {
       const serverMessage = err.response?.data?.message || "Không thể xóa ca làm việc!";
-      
+
       if (serverMessage.includes("đã được phân công")) {
         alert(" Không thể xóa ca đã được phân công cho nhân viên!");
       } else {
@@ -172,13 +185,13 @@ const validateForm = () => {
   return (
     <div className="d-flex" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
       <Sidebar />
-      
+
       <div className="flex-grow-1" style={{ padding: '20px' }}>
         <div className="container-fluid p-4">
           <div className="card shadow border-0 p-4 rounded-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h2 className="fw-bold m-0">Danh Sách Ca Làm Việc</h2>
-              <button 
+              <button
                 className="btn btn-primary px-4 fw-bold"
                 onClick={() => handleOpenModal('create')}
               >
@@ -208,14 +221,14 @@ const validateForm = () => {
                       <td>{shift.endTime}</td>
                       <td>
                         <div className="d-flex justify-content-center gap-2">
-                          <button 
+                          <button
                             className="btn btn-sm btn-outline-primary"
                             onClick={() => handleOpenModal('edit', shift)}
                             title="Chỉnh sửa"
                           >
                             <i className="bi bi-pencil-square"></i>
                           </button>
-                          <button 
+                          <button
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => handleDelete(shift.id)}
                             title="Xóa"
@@ -241,7 +254,7 @@ const validateForm = () => {
         </div>
       </div>
 
-      {/* MODAL TẠO/SỬA CA LÀM */}
+
       {showModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -261,7 +274,7 @@ const validateForm = () => {
                       <span>{errorMsg}</span>
                     </div>
                   )}
-                  
+
                   {successMsg && (
                     <div className="alert alert-success py-2 d-flex align-items-center">
                       <i className="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -341,16 +354,16 @@ const validateForm = () => {
                 </div>
 
                 <div className="modal-footer border-0 bg-light">
-                  <button 
-                    type="button" 
-                    className="btn btn-outline-secondary px-4" 
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary px-4"
                     onClick={handleCloseModal}
                   >
                     <i className="bi bi-x-lg me-2"></i>
                     HỦY
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="btn btn-primary px-4"
                   >
                     <i className={`bi ${modalType === 'create' ? 'bi-save' : 'bi-check-lg'} me-2`}></i>
