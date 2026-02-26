@@ -24,3 +24,8 @@ export const invoiceGetDetail = async (id) => {
   const res = await api.get(`/invoices/${id}`);
   return res.data;
 };
+
+export const invoiceUpdateCustomer = async (id, data) => {
+  const res = await api.patch(`/invoices/customer/${id}`, data);
+  return res.data;
+};
