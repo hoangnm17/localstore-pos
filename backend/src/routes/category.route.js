@@ -5,6 +5,7 @@ const { protect } = require('../middlewares/protect.middleware');
 const PERMISSIONS = require('../constants/permissions');
 
 router.get('/tree', protect(PERMISSIONS.VIEW_CATEGORY), categoryController.getCategoryTree);
+router.get('/all', categoryController.getAllCategories);
 router.get('/', protect(PERMISSIONS.VIEW_CATEGORY), categoryController.getCategoryList);
 router.get('/:id', protect(PERMISSIONS.VIEW_CATEGORY), categoryController.getCategoryById);
 router.post('/', protect(PERMISSIONS.CREATE_CATEGORY), categoryController.createCategory);

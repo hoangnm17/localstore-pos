@@ -1,6 +1,6 @@
 const { connectDB, sql } = require("../config/database");
 
-exports.getProductsByCategory = async (
+const getProductsByCategory = async (
     categoryId,
     search,
     limit,
@@ -40,7 +40,7 @@ exports.getProductsByCategory = async (
     return result.recordset;
 };
 
-exports.countProductsByCategory = async (categoryId, search) => {
+const countProductsByCategory = async (categoryId, search) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -56,7 +56,7 @@ exports.countProductsByCategory = async (categoryId, search) => {
     return result.recordset[0].total;
 };
 
-exports.updateStock = async (productId, quantity) => {
+const updateStock = async (productId, quantity) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -72,7 +72,7 @@ exports.updateStock = async (productId, quantity) => {
 };
 
 // Thêm hàm mới để lấy thông tin cơ bản sản phẩm (dùng trong controller)
-exports.getProductBasicInfo = async (productId) => {
+const getProductBasicInfo = async (productId) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -86,7 +86,7 @@ exports.getProductBasicInfo = async (productId) => {
     return result.recordset[0] || null;
 };
 
-exports.getProductsBySupplier = async (supplierId, search) => {
+const getProductsBySupplier = async (supplierId, search) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -114,7 +114,7 @@ exports.getProductsBySupplier = async (supplierId, search) => {
     return result.recordset;
 };
 
-exports.countProductsBySupplier = async (supplierId, search) => {
+const countProductsBySupplier = async (supplierId, search) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -129,3 +129,38 @@ exports.countProductsBySupplier = async (supplierId, search) => {
 
     return result.recordset[0].total;
 };
+
+const getStockByProductId = async (transaction, productId) => {
+  const result = await new sql.Request(transaction)
+    .input("productId", sql.Int, productId)
+    .query(`
+      SELECT quantity
+      FROM InventoryStocks WITH (UPDLOCK, ROWLOCK)
+      WHERE productId = @productId
+    `);
+
+  return result.recordset[0] || null;
+};
+
+const detuctStock = async (transaction, productId, quantity) => {
+  await new sql.Request(transaction)
+    .input("productId", sql.Int, productId)
+    .input("quantity", sql.Int, quantity)
+    .query(`
+      UPDATE InventoryStocks
+      SET quantity = @quantity,
+          updatedAt = GETDATE()
+      WHERE productId = @productId
+    `);
+};
+
+module.exports = {
+    getStockByProductId,
+    updateStock,
+    detuctStock,
+    getProductsByCategory,
+    countProductsByCategory,
+    getProductBasicInfo,
+    countProductsBySupplier,
+    getProductsBySupplier
+}

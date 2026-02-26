@@ -1,36 +1,68 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { formatCurrency } from "utils/formatters";
+import { LOW_STOCK_THRESHOLD } from "config/stock";
 
 const ProductCard = ({ product, isSelected, onSelect }) => {
-  const variants = product?.variants || [];
-  const variantCount = variants.length;
+  const {
+    name,
+    imageUrl,
+    salePrice,
+    stockQuantity = 0,
+  } = product || {};
 
-  let displayPrice = null;
+  const stockStatus = useMemo(() => {
+    if (stockQuantity <= 0) return "OUT_OF_STOCK";
+    if (stockQuantity <= LOW_STOCK_THRESHOLD) return "LOW_STOCK";
+    return "NORMAL";
+  }, [stockQuantity]);
 
-  // Chỉ hiển thị giá nếu đúng 1 variant
-  if (variantCount === 1) {
-    displayPrice = Number(variants[0]?.price);
-  }
+  const isOut = stockStatus === "OUT_OF_STOCK";
+  const isLowStock = stockStatus === "LOW_STOCK";
+
+  const handleClick = () => {
+    if (isOut) return;
+    onSelect(product);
+  };
+
+  const getStockBadgeClass = () => {
+    if (isOut) return "bg-danger";
+    if (isLowStock) return "bg-warning text-dark";
+    return "bg-success";
+  };
+
+  const getStockText = () => {
+    if (isOut) return "Hết hàng";
+    if (isLowStock) return `Sắp hết (${stockQuantity})`;
+    return `Tồn: ${stockQuantity}`;
+  };
 
   return (
     <div
-      onClick={() => onSelect(product)}
-      className={`position-relative rounded-4 overflow-hidden border shadow-sm transition-all ${
-        isSelected ? "border-primary border-3 ring-active" : "border-light"
-      }`}
+      onClick={handleClick}
+      className={`position-relative rounded-4 overflow-hidden border shadow-sm transition-all 
+        ${isSelected ? "border-primary border-3 ring-active" : "border-light"}
+        ${isOut ? "opacity-50" : ""}
+      `}
       style={{
         width: 150,
-        height: 180,
-        cursor: "pointer",
+        height: 190,
+        cursor: isOut ? "not-allowed" : "pointer",
         backgroundColor: "#fff",
       }}
     >
       {/* IMAGE */}
       <img
-        src={product?.imageUrl || "https://via.placeholder.com/150"}
-        alt={product?.name}
+        src={imageUrl || "https://via.placeholder.com/150"}
+        alt={name}
         className="w-100 h-100 object-fit-cover"
       />
+
+      {/* STOCK BADGE */}
+      <div className="position-absolute top-0 end-0 m-2">
+        <span className={`badge ${getStockBadgeClass()}`}>
+          {getStockText()}
+        </span>
+      </div>
 
       {/* GRADIENT */}
       <div
@@ -42,34 +74,22 @@ const ProductCard = ({ product, isSelected, onSelect }) => {
         }}
       />
 
-      {/* VARIANT BADGE */}
-      <div className="position-absolute top-0 end-0 p-2">
-        <span
-          className="badge rounded-pill bg-primary shadow-sm"
-          style={{ fontSize: "0.7rem" }}
-        >
-          {variantCount} mẫu
-        </span>
-      </div>
-
-      {/* BOTTOM INFO */}
+      {/* INFO */}
       <div className="position-absolute bottom-0 start-0 w-100 p-2 text-white">
         <div
-          className="fw-bold text-truncate mb-0"
+          className="fw-bold text-truncate"
           style={{ fontSize: "0.9rem" }}
         >
-          {product?.name}
+          {name}
         </div>
 
-        {displayPrice != null && (
-          <div className="small text-warning fw-semibold">
-            {formatCurrency(displayPrice)}
-          </div>
-        )}
+        <div className="small text-warning fw-semibold">
+          {formatCurrency(salePrice || 0)}
+        </div>
       </div>
 
-      {/* SELECTED ICON */}
-      {isSelected && (
+      {/* SELECTED */}
+      {isSelected && !isOut && (
         <div className="position-absolute top-0 start-0 m-2">
           <div
             className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
