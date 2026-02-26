@@ -83,3 +83,32 @@ exports.updateProductStock = async (productId, quantity) => {
 exports.getProductBasicInfo = async (productId) => {
     return await productModel.getProductBasicInfo(productId);
 };
+
+const deductStock = async (transaction, items) => {
+
+  for (const item of items) {
+
+    const stock = await productModel.getStockByProductId(
+      transaction,
+      item.productId
+    );
+
+    if (!stock) {
+      throw new Error(`Stock not found for product ${item.productId}`);
+    }
+
+    if (stock.quantity < item.quantity) {
+      throw new Error(`Insufficient stock for product ${item.productId}`);
+    }
+
+    await productModel.updateStock(
+      transaction,
+      item.productId,
+      stock.quantity - item.quantity
+    );
+  }
+};
+
+module.exports = {
+    deductStock,
+}
