@@ -141,3 +141,17 @@ module.exports.getStaffByPhone = async (phone) => {
         .query("SELECT id FROM Staff WHERE phoneNumber = @p");
     return result.recordset[0];
 };
+
+module.exports.getStaffByUserId = async (userId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .query(`
+            SELECT s.*
+            FROM Staff s
+            WHERE s.userId = @userId
+        `);
+
+    return result.recordset[0];
+};
