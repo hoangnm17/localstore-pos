@@ -9,6 +9,7 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const redirectByRole = (role) => {
+    const normalizedRole = role.trim().toLowerCase();
     switch (role) {
       case 'Manager':
         navigate("/dashboard");
