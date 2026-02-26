@@ -31,20 +31,28 @@ exports.getReports = async ({ userId, isManager, filters }) => {
     }
 
     // 🔹 Filter status
-    if (filters.status) {
+    if (filters.status && filters.status !== "ALL") {
         query += " AND status = @status";
         request.input("status", sql.NVarChar, filters.status);
     }
 
-    // 🔹 Filter ngày tạo
+    // 🔹 Filter ngày tạo (FROM)
     if (filters.createdFrom) {
         query += " AND createdAt >= @createdFrom";
-        request.input("createdFrom", sql.DateTime, filters.createdFrom);
+        request.input(
+            "createdFrom",
+            sql.DateTime,
+            new Date(filters.createdFrom)
+        );
     }
 
+    // 🔹 Filter ngày tạo (TO) — set 23:59:59
     if (filters.createdTo) {
+        const endDate = new Date(filters.createdTo);
+        endDate.setHours(23, 59, 59, 999);
+
         query += " AND createdAt <= @createdTo";
-        request.input("createdTo", sql.DateTime, filters.createdTo);
+        request.input("createdTo", sql.DateTime, endDate);
     }
 
     query += " ORDER BY createdAt DESC";
@@ -53,7 +61,6 @@ exports.getReports = async ({ userId, isManager, filters }) => {
 
     return result.recordset;
 };
-
 exports.getById = async (reportId) => {
     const pool = await connectDB();
 

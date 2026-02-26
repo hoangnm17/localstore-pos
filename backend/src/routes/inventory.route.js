@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
-const mockAuth = require("../middleware/mockAuth.js");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
 const supplierController = require("../controllers/supplier.controller");
 const { protect } = require("../middlewares/helperPermission.middleware");
