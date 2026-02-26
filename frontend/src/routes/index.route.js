@@ -4,6 +4,11 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import CategoryRoutes from "./category.route.js";
 import ProductRoutes from "./product.route";
+// import ProtectedRoute from "./protected.route";
+import staffRoute from "./staff.route";
+import crmRoute from "./crm.route";
+import dashboardRoute from "./dashboard.route";
+import shiftRoute from "./shift.route";
 
 const AppRoutes = () => {
   return (
@@ -11,12 +16,17 @@ const AppRoutes = () => {
       {authRoute}
       {salesRoute}
       {InventoryRoutes}
-      {CategoryRoutes}
+      {staffRoute}
+      {shiftRoute}
       {ProductRoutes}
+      {CategoryRoutes}
+        {crmRoute}
+        {dashboardRoute}
+      {/* {CategoryRoutes} */}
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/inventory/*" element={<InventoryRoutes />} />
-      <Route path="/categories/*" element={<CategoryRoutes />} />
+      {/* <Route path="/categories/*" element={<CategoryRoutes />} /> */}
     </Routes>
   );
 };

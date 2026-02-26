@@ -2,16 +2,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --crm-bg: #0f172a;
-  --crm-surface: #1e293b;
+  --crm-bg: #f8fafc;
+  --crm-surface: #ffffff;
   --crm-primary: #6366f1;
   --crm-primary-hover: #4f46e5;
   --crm-secondary: #ec4899;
   --crm-danger: #ef4444;
-  --crm-text: #f8fafc;
-  --crm-text-muted: #94a3b8;
-  --crm-border: rgba(255, 255, 255, 0.08);
-  --crm-glass: rgba(30, 41, 59, 0.7);
+  --crm-text: #1e293b;
+  --crm-text-muted: #64748b;
+  --crm-border: #e2e8f0;
+  --crm-glass: rgba(255, 255, 255, 0.8);
   --radius: 12px;
 }
 
@@ -36,7 +36,7 @@
 .crm-title {
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #64748b 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -67,7 +67,7 @@
 
 .crm-tab:hover {
   color: var(--crm-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(99, 102, 241, 0.05);
 }
 
 .crm-tab.active {
@@ -82,8 +82,7 @@
   border: 1px solid var(--crm-border);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 /* ─── Toolbar ───────────────────────────────────────────────── */
@@ -96,14 +95,14 @@
 }
 
 .search-input {
-  background: rgba(0, 0, 0, 0.25);
+  background: #f1f5f9;
   border: 1px solid var(--crm-border);
   color: var(--crm-text);
   padding: 0.6rem 1rem;
   border-radius: 8px;
   width: 260px;
   outline: none;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
   font-family: inherit;
   font-size: 0.9rem;
 }
@@ -117,7 +116,7 @@
 }
 
 .filter-select {
-  background: rgba(0, 0, 0, 0.25);
+  background: #f1f5f9;
   border: 1px solid var(--crm-border);
   color: var(--crm-text);
   padding: 0.6rem 0.9rem;
@@ -126,7 +125,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 0.9rem;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
 }
 
 .filter-select:focus {
@@ -134,7 +133,7 @@
 }
 
 .filter-select option {
-  background: #1e293b;
+  background: #ffffff;
 }
 
 .total-badge {
@@ -172,7 +171,7 @@
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.07);
+  background: #f1f5f9;
   color: var(--crm-text-muted);
   border: 1px solid var(--crm-border);
   padding: 0.65rem 1.25rem;
@@ -185,7 +184,7 @@
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: #e2e8f0;
   color: var(--crm-text);
 }
 
@@ -275,7 +274,7 @@
 }
 
 .crm-table tr:hover td {
-  background: rgba(255, 255, 255, 0.025);
+  background: #f8fafc;
 }
 
 .text-muted {
@@ -338,18 +337,19 @@
 
 .voucher-code {
   font-family: 'Courier New', monospace;
-  background: rgba(99, 102, 241, 0.1);
-  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4f46e5;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.88rem;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 /* ─── Usage bar ─────────────────────────────────────────────── */
 .usage-bar-wrap {
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
+  background: #f1f5f9;
   border-radius: 99px;
   height: 8px;
   width: 100px;
@@ -406,7 +406,7 @@
 }
 
 .page-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
   border: 1px solid var(--crm-border);
   color: var(--crm-text-muted);
   padding: 0.4rem 0.75rem;
@@ -419,9 +419,9 @@
 }
 
 .page-btn:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.15);
+  background: #f1f5f9;
   color: var(--crm-text);
-  border-color: var(--crm-primary);
+  border-color: #cbd5e1;
 }
 
 .page-btn.active {
@@ -460,14 +460,14 @@
 }
 
 .crm-modal {
-  background: #1e293b;
+  background: #ffffff;
   border: 1px solid var(--crm-border);
   border-radius: 16px;
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
   animation: slideUp 0.25s ease;
 }
 
@@ -552,7 +552,7 @@
 }
 
 .form-input {
-  background: rgba(0, 0, 0, 0.25);
+  background: #f8fafc;
   border: 1px solid var(--crm-border);
   color: var(--crm-text);
   padding: 0.65rem 0.9rem;
@@ -560,13 +560,14 @@
   outline: none;
   font-family: inherit;
   font-size: 0.92rem;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
   width: 100%;
   box-sizing: border-box;
 }
 
 .form-input:focus {
   border-color: var(--crm-primary);
+  background: #ffffff;
 }
 
 .form-input::placeholder {
@@ -574,7 +575,7 @@
 }
 
 .form-input option {
-  background: #1e293b;
+  background: #ffffff;
 }
 
 .form-input:disabled {
@@ -588,14 +589,14 @@
 
 /* ─── Confirm Dialog ────────────────────────────────────────── */
 .crm-confirm {
-  background: #1e293b;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: #ffffff;
+  border: 1px solid #fee2e2;
   border-radius: 16px;
   width: 100%;
   max-width: 380px;
   padding: 2rem;
   text-align: center;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
   animation: slideUp 0.25s ease;
 }
 

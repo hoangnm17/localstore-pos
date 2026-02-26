@@ -73,6 +73,21 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     );
 }
 
+function AlertModal({ message, onClose }) {
+    return (
+        <div className="crm-modal-overlay" onClick={onClose}>
+            <div className="crm-confirm" style={{ borderTop: '4px solid #f87171' }} onClick={e => e.stopPropagation()}>
+                <div className="crm-confirm-icon" style={{ color: '#f87171' }}>🚫</div>
+                <h3 style={{ color: '#1e293b', marginBottom: 8, fontSize: '1.2rem' }}>Thông báo</h3>
+                <p className="crm-confirm-msg">{message}</p>
+                <div className="crm-modal-footer" style={{ justifyContent: 'center', marginTop: 20 }}>
+                    <button className="btn-primary" onClick={onClose} style={{ padding: '8px 30px' }}>Đóng</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function Pagination({ page, totalPages, onPageChange }) {
     if (!totalPages || totalPages <= 1) return null;
     const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
@@ -239,6 +254,7 @@ function CustomersTab() {
     const [saving, setSaving] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [detailTarget, setDetailTarget] = useState(null);
+    const [alertMsg, setAlertMsg] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -256,13 +272,24 @@ function CustomersTab() {
     }, [searchInput]);
 
     const handleSave = async () => {
+        const VN_PHONE_REGEX = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+
+        if (!VN_PHONE_REGEX.test(form.phone || "")) {
+            setAlertMsg("Số điện thoại không đúng định dạng (ví dụ: 0912345678)");
+            return;
+        }
+
         setSaving(true);
         try {
             if (editTarget) await updateCustomer(editTarget.id, form);
             else await createCustomer(form);
-            setShowModal(false); fetchData();
-        } catch (e) { alert(e.response?.data?.message || e.message); }
-        finally { setSaving(false); }
+            setShowModal(false);
+            fetchData();
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -313,6 +340,7 @@ function CustomersTab() {
             )}
             {detailTarget && <CustomerDetailModal customer={detailTarget} onClose={() => setDetailTarget(null)} />}
             {deleteTarget && <ConfirmDialog message={`Vô hiệu hóa khách hàng "${deleteTarget.name}"?`} onConfirm={async () => { await deleteCustomer(deleteTarget.id); setDeleteTarget(null); fetchData(); }} onCancel={() => setDeleteTarget(null)} />}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
     );
 }
@@ -329,6 +357,7 @@ function PromotionsTab() {
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(DEFAULT_PROMOTION);
     const [itemsTarget, setItemsTarget] = useState(null);
+    const [alertMsg, setAlertMsg] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -346,7 +375,9 @@ function PromotionsTab() {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
             setShowModal(false); fetchData();
-        } catch (e) { alert(e.response?.data?.message || e.message); }
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        }
     };
 
     return (
@@ -398,6 +429,7 @@ function PromotionsTab() {
                     <PromotionItemsManager promotionId={itemsTarget.id} />
                 </Modal>
             )}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
     );
 }
@@ -450,6 +482,7 @@ function VouchersTab() {
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(DEFAULT_VOUCHER);
+    const [alertMsg, setAlertMsg] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -467,7 +500,9 @@ function VouchersTab() {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
             setShowModal(false); fetchData();
-        } catch (e) { alert(e.response?.data?.message || e.message); }
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        }
     };
 
     return (
@@ -513,6 +548,7 @@ function VouchersTab() {
                     </div>
                 </Modal>
             )}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
     );
 }
