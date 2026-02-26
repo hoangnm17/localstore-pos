@@ -31,7 +31,7 @@ exports.createPromotion = async (req, res) => {
         const promotion = await promotionService.createPromotion(req.body);
         res.status(201).json({ success: true, data: promotion });
     } catch (err) {
-        const status = err.message.includes('không hợp lệ') ? 400 : 500;
+        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
         res.status(status).json({ success: false, message: err.message });
     }
 };
@@ -42,7 +42,7 @@ exports.updatePromotion = async (req, res) => {
         if (!promotion) return res.status(404).json({ success: false, message: 'Không tìm thấy promotion' });
         res.json({ success: true, data: promotion });
     } catch (err) {
-        const status = err.message.includes('không hợp lệ') ? 400 : 500;
+        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
         res.status(status).json({ success: false, message: err.message });
     }
 };

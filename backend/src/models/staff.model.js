@@ -129,7 +129,7 @@ module.exports.getUserByUsername = async (username) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('un', sql.VarChar, username)
-        .query("SELECT id FROM Users WHERE username = @un");
+        .query("SELECT id, passwordHash, isActive, roleId FROM Users WHERE username = @un");
     return result.recordset[0];
 };
 
@@ -139,5 +139,19 @@ module.exports.getStaffByPhone = async (phone) => {
     const result = await pool.request()
         .input('p', sql.VarChar, phone)
         .query("SELECT id FROM Staff WHERE phoneNumber = @p");
+    return result.recordset[0];
+};
+
+module.exports.getStaffByUserId = async (userId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .query(`
+            SELECT s.*
+            FROM Staff s
+            WHERE s.userId = @userId
+        `);
+
     return result.recordset[0];
 };

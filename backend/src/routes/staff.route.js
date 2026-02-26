@@ -15,4 +15,7 @@ router.put("/update",protect(PERMISSIONS.UPDATE_STAFF)
     
 router.get("/detail", protect(PERMISSIONS.DETAIL_STAFF)
     , staffController.getDetail);
+
+router.put("/toggle-status", protect(PERMISSIONS.UPDATE_STAFF)
+    , staffController.toggleStatus);
 module.exports = router;

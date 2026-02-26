@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
-const mockAuth = require("../middleware/mockAuth.js");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
 const supplierController = require("../controllers/supplier.controller");
 const { protect } = require("../middlewares/helperPermission.middleware");
@@ -26,10 +25,13 @@ router.put("/products/stock", protect(PERMISSIONS.UPDATE_STOCK), inventoryContro
 router.get("/suppliers/:supplierId/products", inventoryController.getProductsBySupplier);
 
 //POST send problematic report
-router.post("/reports/send", mockAuth, inventoryController.createProblematicReport);
+router.post("/reports/send", protect(PERMISSIONS.CREATE_PROBLEMATIC), inventoryController.createProblematicReport);
 
 //GET get problematic reports
-router.get("/reports/list", mockAuth, inventoryController.getProblematicReports);
+router.get("/reports/list", protect(PERMISSIONS.VIEW_PROBLEMATIC), inventoryController.getProblematicReports);
+
+//PUT update problematic report status
+router.put("/reports/:id/status", protect(PERMISSIONS.PROCESS_PROBLEMATIC), inventoryController.updateProblematicStatus);
 
 // CREATE PURCHASE ORDER
 router.post("/purchase-orders/request", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), purchaseOrderController.createPurchaseOrder);

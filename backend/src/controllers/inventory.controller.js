@@ -152,13 +152,14 @@ exports.getProductsBySupplier = async (req, res) => {
 
 exports.createProblematicReport = async (req, res) => {
     try {
-        await problematicService.createReport(req.body, req.user);
+        const result = await problematicService.createReport(req.body, req.user);
+
+        console.log("Service result:", result);
 
         return res.status(201).json({
             success: true,
-            data: {
-                message: "Report created successfully"
-            }
+            message: "Report created successfully",
+            data: result
         });
 
     } catch (err) {
@@ -166,6 +167,27 @@ exports.createProblematicReport = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: "Permission denied"
+            });
+        }
+
+        if (err.message === "TITLE_REQUIRED") {
+            return res.status(400).json({
+                success: false,
+                message: "Title is required"
+            });
+        }
+
+        if (err.message === "DESCRIPTION_REQUIRED") {
+            return res.status(400).json({
+                success: false,
+                message: "Issue description is required"
+            });
+        }
+
+        if (err.message === "STAFF_NOT_FOUND") {
+            return res.status(400).json({
+                success: false,
+                message: "Staff not found for this user"
             });
         }
 
@@ -178,13 +200,18 @@ exports.createProblematicReport = async (req, res) => {
 
 exports.getProblematicReports = async (req, res) => {
     try {
-        const { userId, role } = req.user;
-        const filters = req.query;
+        const { id, roleId } = req.user;
+
+        const { status, createdFrom, createdTo } = req.query;
 
         const reports = await problematicService.getReports({
-            userId,
-            role,
-            filters
+            userId: id,
+            roleId,
+            filters: {
+                status,
+                createdFrom,
+                createdTo
+            }
         });
 
         return res.status(200).json({
@@ -194,6 +221,33 @@ exports.getProblematicReports = async (req, res) => {
 
     } catch (err) {
         return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
+exports.updateProblematicStatus = async (req, res) => {
+    try {
+        const { id, roleId } = req.user;
+        const reportId = req.params.id;
+        const { status } = req.body;
+
+        const result = await problematicService.updateStatus({
+            reportId,
+            status,
+            roleId,
+            updatedBy: id
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Status updated successfully",
+            data: result
+        });
+
+    } catch (err) {
+        return res.status(400).json({
             success: false,
             message: err.message
         });

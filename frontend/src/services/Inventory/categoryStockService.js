@@ -18,8 +18,10 @@ function createReport(data) {
   return api.post("/inventory/reports/send", data);
 }
 
-export default {
+const categoryStockService = {
   getCategoryStock,
   getReports,
   createReport
 };
+
+export default categoryStockService;

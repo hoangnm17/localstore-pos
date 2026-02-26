@@ -353,8 +353,9 @@ export const useInvoiceTabs = () => {
   ===================================================== */
 
   useEffect(() => {
+    const timeouts = saveTimeouts.current;
     return () => {
-      Object.values(saveTimeouts.current).forEach(clearTimeout);
+      Object.values(timeouts).forEach(clearTimeout);
     };
   }, []);
 

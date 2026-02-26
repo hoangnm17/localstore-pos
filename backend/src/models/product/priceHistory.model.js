@@ -25,3 +25,17 @@ exports.getLatestByProductId = async (productId) => {
         `);
     return rs.recordset[0] || null;
 };
+
+exports.getAllByProductId = async (productId) => {
+    const pool = await connectDB();
+    const rs = await pool.request()
+        .input('productId', sql.BigInt, productId)
+        .query(`
+            SELECT ph.*, s.fullName AS changedByName
+            FROM ProductPriceHistories ph
+            LEFT JOIN Staff s ON ph.changedBy = s.id
+            WHERE ph.productId = @productId
+            ORDER BY ph.changedAt DESC
+        `);
+    return rs.recordset;
+};

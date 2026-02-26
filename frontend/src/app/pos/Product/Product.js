@@ -3,7 +3,7 @@ import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
-import { getProducts } from "services/productService";
+import { getProducts } from "services/Product/product.service";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 8,
@@ -37,6 +37,7 @@ export default function Product({ addItem }) {
 
   useEffect(() => {
     fetchProductList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, search, selectedCategory]);
 
   const fetchProductList = async () => {
@@ -49,7 +50,7 @@ export default function Product({ addItem }) {
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
-      
+
 
       if (res.data.success) {
         setProducts(res.data.data || []);
