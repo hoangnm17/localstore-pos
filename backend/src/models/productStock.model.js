@@ -134,7 +134,7 @@ const getStockByProductId = async (transaction, productId) => {
   const result = await new sql.Request(transaction)
     .input("productId", sql.Int, productId)
     .query(`
-      SELECT quantity
+      SELECT quantityOnHand
       FROM InventoryStocks WITH (UPDLOCK, ROWLOCK)
       WHERE productId = @productId
     `);
@@ -145,11 +145,10 @@ const getStockByProductId = async (transaction, productId) => {
 const updateStock = async (transaction, productId, quantity) => {
   await new sql.Request(transaction)
     .input("productId", sql.Int, productId)
-    .input("quantity", sql.Int, quantity)
+    .input("quantity", sql.Decimal(15, 3), quantity)
     .query(`
       UPDATE InventoryStocks
-      SET quantity = @quantity,
-          updatedAt = GETDATE()
+      SET quantityOnHand = @quantity
       WHERE productId = @productId
     `);
 };
