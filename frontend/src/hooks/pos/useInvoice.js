@@ -89,11 +89,11 @@ export const useInvoiceTabs = () => {
           prev.map(inv =>
             inv.id === invoiceId
               ? {
-                  ...inv,
-                  id: newDbId,
-                  status: "UNPAID",
-                  isSaving: false
-                }
+                ...inv,
+                id: newDbId,
+                status: "UNPAID",
+                isSaving: false
+              }
               : inv
           )
         );
@@ -236,8 +236,9 @@ export const useInvoiceTabs = () => {
      CLEANUP
   ===================================================== */
   useEffect(() => {
+    const timeouts = saveTimeouts.current;
     return () => {
-      Object.values(saveTimeouts.current).forEach(clearTimeout);
+      Object.values(timeouts).forEach(clearTimeout);
     };
   }, []);
 

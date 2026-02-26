@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import api from '../../services/axiosInstance';
 
 const ShiftList = () => {
   const [shifts, setShifts] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(''); // 'create' or 'edit'
@@ -18,7 +18,6 @@ const ShiftList = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchShifts();

@@ -18,9 +18,6 @@ const TABS = [
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
 const PROMOTION_TYPES = ['Percent', 'Amount', 'BuyXGetY'];
-const PROMOTION_STATUS = ['Active', 'Expired', 'Disabled'];
-const VOUCHER_TYPES = ['Percent', 'Fixed'];
-const VOUCHER_STATUS = ['Active', 'Expired', 'Disabled'];
 const PAGE_SIZE = 10;
 
 const DEFAULT_CUSTOMER = { name: '', phone: '', status: 'Active' };

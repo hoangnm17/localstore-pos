@@ -56,7 +56,7 @@ function getMonthlyPOReport(params = {}) {
   });
 }
 
-export default {
+const purchaseOrderService = {
   getPurchaseOrders,
   getPurchaseOrderDetail,
   createPurchaseOrder,
@@ -64,3 +64,5 @@ export default {
   receivePurchaseOrder,
   getMonthlyPOReport
 };
+
+export default purchaseOrderService;

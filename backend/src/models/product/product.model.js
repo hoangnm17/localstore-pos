@@ -30,6 +30,7 @@ exports.getProducts = async (filters) => {
             p.salePrice,
             p.costPrice,
             p.status,
+            p.allowDecimalQuantity,
             c.name AS categoryName,
             ISNULL(s.quantityOnHand, 0) AS stockQuantity
         FROM Products p
@@ -107,7 +108,7 @@ exports.getProductDetail = async (id) => {
                 costPrice,
                 status,
                 categoryId,
-                allowDecimal
+                allowDecimalQuantity
             FROM Products
             WHERE id = @id
         `);
@@ -152,7 +153,7 @@ exports.getProductByBarcode = async (barcode) => {
                 pu.unitType,
                 pu.conversionFactor,
                 pu.price,
-                p.allowDecimal
+                p.allowDecimalQuantity
             FROM ProductUnits pu
             JOIN Products p ON p.id = pu.productId
             WHERE pu.barcode = @barcode
@@ -230,6 +231,20 @@ exports.stopSellingProduct = async (id) => {
     return result.rowsAffected[0] > 0;
 };
 
+exports.startSellingProduct = async (id) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`
+            UPDATE Products
+            SET status = 'Selling',
+                updatedAt = GETDATE()
+            WHERE id = @id
+        `);
+
+    return result.rowsAffected[0] > 0;
+};
 
 exports.getProductById = async (id) => {
     const pool = await connectDB();

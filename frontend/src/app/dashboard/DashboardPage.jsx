@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './DashboardPage.css';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-    Search, Bell, User, ChevronRight, Users, Box, List, FileText,
-    CreditCard, Banknote, AlertTriangle, Package, History, Ticket, Activity, LogOut
+    Search, Bell, User, ChevronRight, Users, List
 } from 'lucide-react';
 
 const DashboardPage = () => {
