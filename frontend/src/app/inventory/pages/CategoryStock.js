@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import categoryService from "../../../services/Inventory/categoryStockService";
-import CategoryCard from "../InventoryModal/CategoryCard";
+import CategoryCard from "../InventoryModal/CategoryCard.js";
 
 function CategoryStock() {
   const [categories, setCategories] = useState([]);
