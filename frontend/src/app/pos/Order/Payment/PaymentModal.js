@@ -9,8 +9,8 @@ import BankPayment from "./PaymentModal/BankPayment";
 export default function PaymentModal({
   orderId,
   total = 0,
-  onClose = () => {},
-  onConfirm = () => {},
+  onClose = () => { },
+  onConfirm = () => { },
 }) {
   const safeTotal = useMemo(() => Number(total) || 0, [total]);
   const [method, setMethod] = useState("CASH");
@@ -66,15 +66,25 @@ export default function PaymentModal({
           {/* CONTENT */}
           {method === "CASH" && (
             <CashPayment
-              total={safeTotal}
-              onConfirm={handleConfirm}
+              total={total}
+              onConfirm={(data) =>
+                onConfirm({
+                  method: "CASH",
+                  amount: data.amount
+                })
+              }
             />
           )}
 
           {method === "BANK" && (
             <BankPayment
-              total={safeTotal}
-              onConfirm={handleConfirm}
+              total={total}
+              onConfirm={(data) =>
+                onConfirm({
+                  method: "QR_VNPAY",
+                  amount: data.amount
+                })
+              }
             />
           )}
         </div>

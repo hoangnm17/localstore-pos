@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createPayment } from "services/Payment/payment.service";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
@@ -15,40 +14,35 @@ export default function Order({
   decrease,
   remove,
   onSelectCustomer,
+  onPay,
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
-  const handleConfirmPayment = async ({ method, customerPay }) => {
-    const payload = {
-      orderId: orderId,
-      method: method,
-      customerPay: customerPay,
-      customer: customer,
-    };
+  const handleConfirmPayment = async ({ method, amount }) => {
+    try {
+      const res = await onPay({
+        method,
+        amount
+      });
 
-    await createPayment(payload);
+      if (res?.paid || res?.success) {
+        setShowPayment(false);
+      }
 
-    setShowPayment(false);
+      if (res?.pending && res?.paymentUrl) {
+        window.location.href = res.paymentUrl;
+      }
+
+    } catch (error) {
+      console.error("Payment error:", error);
+    }
   };
 
   const isEmpty = orderItems.length === 0;
 
-  const handleSelectCustomer = async (selectedCustomer) => {
-    try {
-      onSelectCustomer(selectedCustomer);
-
-      if (selectedCustomer) {
-        // await attachCustomerToInvoice(orderId, selectedCustomer.id);
-      } else {
-        // await detachCustomerFromInvoice(orderId);
-      }
-
-
-    } catch (error) {
-      console.error("Attach/Detach customer error:", error);
-    }
-  };
-
+const handleSelectCustomer = (selectedCustomer) => {
+  onSelectCustomer(selectedCustomer);
+};
   return (
     <div
       className="d-flex flex-column h-100 bg-white"
