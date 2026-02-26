@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-
 export const useAuth = () => {
   const [user, setUser] = useState(null);
 
@@ -10,7 +9,7 @@ export const useAuth = () => {
     }
   }, []);
 
-  const features = user?.features || [];
+  const features = user?.hasFeature || [];
   return {
     // user, 
     // roleName,
