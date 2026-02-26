@@ -3,6 +3,8 @@ import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import ProductVariant from "./ProductList/ProductVariantModal";
 import Pagination from "components/Pagination/Pagination";
+import { getAllCategories } from "services/Category/category.service";
+import { getProducts } from "services/productService";
 
 // Cấu hình tập trung, dễ dàng thay đổi mà không cần tìm trong code
 const PAGE_CONFIG = {
