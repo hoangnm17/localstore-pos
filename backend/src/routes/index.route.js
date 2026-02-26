@@ -9,6 +9,7 @@ const categoryRoutes = require("./category.route");
 const productRoutes = require("./product.route");
 const productUnitRoutes = require("./productUnit.route");
 const priceHistoryRoutes = require("./priceHistory.route");
+const paymentRoutes = require("./payment.route")
 
 module.exports = (app) => {
     const version = "/api";
@@ -17,7 +18,7 @@ module.exports = (app) => {
     app.use(version + "/inventory", inventoryRoutes);
     app.use(version + "/invoices", invoiceRoutes);
     app.use(version + "/auth", authRoutes);
-
+    app.use(version + "/payment", paymentRoutes)
     app.use(version + "/customers", customerRoutes);
     app.use(version + "/promotions", promotionRoutes);
     app.use(version + "/vouchers", voucherRoutes);
