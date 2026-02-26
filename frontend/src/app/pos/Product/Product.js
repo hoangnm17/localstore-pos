@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
-import productStockService from "services/productStockService";
 import { getAllCategories } from "services/Category/category.service";
 import { getProducts } from "services/productService";
 
