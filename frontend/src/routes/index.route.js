@@ -3,6 +3,7 @@ import salesRoute from "./sales.route";
 import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import CategoryRoutes from "./category.route.js";
+import ProductRoutes from "./product.route";
 
 const AppRoutes = () => {
   return (
@@ -11,6 +12,7 @@ const AppRoutes = () => {
       {salesRoute}
       {InventoryRoutes}
       {CategoryRoutes}
+      {ProductRoutes}
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/inventory/*" element={<InventoryRoutes />} />

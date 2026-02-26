@@ -1,12 +1,16 @@
-import { Routes } from 'react-router-dom';
+import { Route } from 'react-router-dom';
+import ManagerLayout from '../layouts/ManagerLayout';
 import ProductList from '../app/product/ProductList';
 
-function AppRoutes() {
-    return (
-        <Routes>
-            <Route path="/manager/products" element={<ProductList />} />
-        </Routes>
-    );
-}
+const ProductRoutes = (
+    <Route
+        path="/products/list"
+        element={
+            <ManagerLayout>
+                <ProductList />
+            </ManagerLayout>
+        }
+    />
+);
 
-export default AppRoutes;
+export default ProductRoutes;
