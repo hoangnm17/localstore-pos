@@ -4,12 +4,14 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import CategoryRoutes from "./category.route.js";
 import ProductRoutes from "./product.route";
+import InvocieRoutes from "./invoice.route"
 
 const AppRoutes = () => {
   return (
     <Routes>
       {authRoute}
       {salesRoute}
+      {InvocieRoutes}
       {InventoryRoutes}
       {CategoryRoutes}
       {ProductRoutes}
