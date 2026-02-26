@@ -4,6 +4,7 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 // import CategoryRoutes from "./category.route.js";
 import staffRoute from "./staff.route";
+import shiftRoute from "./shift.route";
 
 const AppRoutes = () => {
   return (
@@ -12,6 +13,7 @@ const AppRoutes = () => {
       {salesRoute}
       {InventoryRoutes}
       {staffRoute}
+      {shiftRoute}
       {/* {CategoryRoutes} */}
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />
