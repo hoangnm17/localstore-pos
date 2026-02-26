@@ -5,8 +5,8 @@ exports.recordInitialPrice = async (productId, data) => {
 
     await priceHistoryModel.insert({
         productId,
-        price: data.salePrice,
-        cost: data.costPrice,
+        salePrice: data.salePrice,
+        costPrice: data.costPrice,
         createdBy: data.createdBy || null
     });
 };
@@ -14,8 +14,8 @@ exports.recordInitialPrice = async (productId, data) => {
 exports.recordPriceChange = async (productId, data) => {
     await priceHistoryModel.insert({
         productId,
-        price: data.salePrice,
-        cost: data.costPrice,
+        salePrice: data.salePrice,
+        costPrice: data.costPrice,
         createdBy: data.updatedBy || null
     });
 };

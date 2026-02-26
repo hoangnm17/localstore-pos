@@ -20,8 +20,12 @@ exports.getByBarcode = async (req, res) => {
 };
 
 exports.getByProduct = async (req, res) => {
-    const data = await service.getByProduct(req.params.productId);
-    res.json({ success: true, data });
+    try {
+        const data = await service.getByProduct(req.params.productId);
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
 };
 
 exports.create = async (req, res) => {

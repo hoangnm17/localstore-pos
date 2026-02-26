@@ -15,3 +15,20 @@ exports.getSupplierList = async (query) => {
 
     return suppliers;
 };
+/* ==============================
+   GET SUPPLIER BY ID
+============================== */
+exports.getSupplierById = async (id) => {
+
+    if (!id) {
+        throw new Error("SUPPLIER_ID_REQUIRED");
+    }
+
+    const supplier = await supplierModel.getById(id);
+
+    if (!supplier) {
+        throw new Error("SUPPLIER_NOT_FOUND");
+    }
+
+    return supplier;
+};

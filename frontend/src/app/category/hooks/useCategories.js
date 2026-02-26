@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import * as api from '../../../services/category.service';
+import categoryService from '../../../services/categoryService';
 export default function useCategories() {
     const [categories, setCategories] = useState([]);
 
     async function load() {
-        const res = await api.fetchCategoryTree({ page: 1, limit: 100 });
-        setCategories(res.data.data || []);
-
+        try {
+            const res = await categoryService.fetchCategoryTree('', 1, 10);
+            setCategories(res?.data?.data || []);
+        } catch (err) {
+            console.error('Lỗi tải danh mục:', err);
+            setCategories([]);
+        }
     }
 
     async function remove(id) {
         if (!window.confirm('Xóa category này?')) return;
-        await api.deleteCategory(id);
+        await categoryService.deleteCategory(id);
         load();
     }
 
