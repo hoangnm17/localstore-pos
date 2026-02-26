@@ -4,7 +4,7 @@ import {
     getProductUnits, createProductUnit, updateProductUnit, deleteProductUnit,
     getAllPriceHistory,
     getComboItems, addComboItem, removeComboItem,
-} from '../../services/Product/productService';
+} from '../../services/Product/product.service';
 
 const useProductDetail = (productId = null) => {
     const [product, setProduct] = useState(null);

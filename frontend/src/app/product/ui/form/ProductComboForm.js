@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getProducts } from '../../../../services/Product/productService';
+import { getProducts } from '../../../../services/Product/product.service';
 import '../ProductModal.css';
 
 const ProductComboForm = ({

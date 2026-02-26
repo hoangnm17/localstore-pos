@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
-import { getAllPriceHistory } from '../../../services/Product/productService';
+import { getAllPriceHistory } from '../../../services/Product/product.service';
 import './ProductModal.css';
 
 const PriceHistoryModal = ({ productId, productName, onClose }) => {

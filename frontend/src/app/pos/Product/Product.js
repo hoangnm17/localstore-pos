@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
-import productStockService from "services/productStockService";
+import productStockService from "services/Inventory/productStockService";
 import { getAllCategories } from "services/Category/category.service";
-import { getProducts } from "services/productService";
+import { getProducts } from "services/Product/product.service";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 8,
@@ -50,7 +50,7 @@ export default function Product({ addItem }) {
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
-      
+
 
       if (res.data.success) {
         setProducts(res.data.data || []);

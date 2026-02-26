@@ -71,7 +71,7 @@ const CreateProductModal = ({ onClose, onSuccess, onError }) => {
 
         //Tạo units nếu có (chỉ khi PIECE)
         if (!isWeight && pendingUnits.length > 0) {
-            const { createProductUnit } = await import('../../../services/Product/productService');
+            const { createProductUnit } = await import('../../../services/Product/product.service');
             const unitResults = await Promise.all(
                 pendingUnits.map(u => createProductUnit({ ...u, productId: newProductId }))
             );

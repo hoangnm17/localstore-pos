@@ -3,7 +3,7 @@ import BaseModal from '../../../components/common/BaseModal';
 import ProductInfoForm from './form/ProductInfoForm';
 import ProductComboForm from './form/ProductComboForm';
 import useProductDetail from '../../../hooks/product/useProductDetail';
-import { addComboItem } from '../../../services/Product/productService';
+import { addComboItem } from '../../../services/Product/product.service';
 import './ProductModal.css';
 
 const defaultForm = {
