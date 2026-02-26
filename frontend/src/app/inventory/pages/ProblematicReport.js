@@ -16,7 +16,7 @@ function ProblematicPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  // ✅ FILTER STATE
+  // Filter state
   const [filters, setFilters] = useState({
     status: "",
     createdFrom: "",
@@ -28,18 +28,15 @@ function ProblematicPage() {
     fetchReports();
   }, [filters]);
 
-  // ✅ FETCH WITH CLEAN FILTERS
   const fetchReports = async () => {
     try {
       const cleanedFilters = Object.fromEntries(
-        Object.entries(filters).filter(([_, v]) => v)
+        Object.entries(filters).filter(([_, v]) => v !== "")
       );
 
       const res = await problematicService.getReports(cleanedFilters);
 
-      const data = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : [];
+      const data = Array.isArray(res?.data?.data) ? res.data.data : [];
 
       const normalized = data.map((r) => ({
         ...r,
@@ -77,81 +74,74 @@ function ProblematicPage() {
   };
 
   const getStatusBadge = (status) => {
+    const base = "badge rounded-pill px-3 py-2 fw-semibold fs-6";
     switch (status) {
       case "OPEN":
-        return (
-          <span className="badge bg-warning text-dark">
-            Chưa xử lý
-          </span>
-        );
+        return <span className={`${base} bg-warning text-dark`}>Chưa xử lý</span>;
       case "PROCESSED":
-        return (
-          <span className="badge bg-success">
-            Đã xử lý
-          </span>
-        );
+        return <span className={`${base} bg-success text-white`}>Đã xử lý</span>;
       default:
-        return (
-          <span className="badge bg-secondary">
-            Không xác định
-          </span>
-        );
+        return <span className={`${base} bg-secondary text-white`}>Không xác định</span>;
     }
   };
 
   return (
-    <div className="container py-4">
-      {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div className="container-fluid py-4 px-md-4">
+      {/* Header */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div className="d-flex align-items-center gap-3">
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary btn-lg rounded-pill shadow-sm"
             onClick={() => navigate("/inventory/menu")}
           >
-            <i className="bi bi-arrow-left me-1"></i> Quay lại
+            <i className="bi bi-arrow-left me-2"></i>
+            Quay lại
           </button>
 
-          <h2 className="mb-0 fw-semibold">
+          <h2 className="mb-0 fw-bold text-primary fs-3">
             Hàng hóa có vấn đề
           </h2>
         </div>
 
         <button
-          className="btn btn-primary"
+          className="btn btn-primary btn-lg rounded-pill shadow shadow-lg-hover d-flex align-items-center gap-2"
           onClick={() => setShowCreateModal(true)}
         >
-          <i className="bi bi-plus-lg me-1"></i>
+          <i className="bi bi-plus-lg fs-4"></i>
           Tạo báo cáo mới
         </button>
       </div>
 
-      {/* ✅ FILTER CARD */}
-      <div className="card mb-3 shadow-sm border-0">
-        <div className="card-body">
+      {/* Filter Card - Modern & Compact */}
+      <div className="card border-0 shadow-lg rounded-4 mb-4 overflow-hidden">
+        <div className="card-body p-4">
           <div className="row g-3 align-items-end">
-
             {/* Status */}
-            <div className="col-md-3">
-              <label className="form-label fw-medium">Trạng thái</label>
+            <div className="col-12 col-sm-6 col-md-3">
+              <label className="form-label fw-semibold text-muted small mb-1">
+                Trạng thái
+              </label>
               <select
-                className="form-select"
+                className="form-select form-select-lg rounded-3 border-secondary-subtle shadow-sm"
                 value={filters.status}
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value })
                 }
               >
-                <option value="">Tất cả</option>
+                <option value="">Tất cả trạng thái</option>
                 <option value="OPEN">Chưa xử lý</option>
                 <option value="PROCESSED">Đã xử lý</option>
               </select>
             </div>
 
             {/* From Date */}
-            <div className="col-md-3">
-              <label className="form-label fw-medium">Từ ngày</label>
+            <div className="col-12 col-sm-6 col-md-3">
+              <label className="form-label fw-semibold text-muted small mb-1">
+                Từ ngày
+              </label>
               <input
                 type="date"
-                className="form-control"
+                className="form-control form-control-lg rounded-3 border-secondary-subtle shadow-sm"
                 value={filters.createdFrom}
                 onChange={(e) =>
                   setFilters({ ...filters, createdFrom: e.target.value })
@@ -160,11 +150,13 @@ function ProblematicPage() {
             </div>
 
             {/* To Date */}
-            <div className="col-md-3">
-              <label className="form-label fw-medium">Đến ngày</label>
+            <div className="col-12 col-sm-6 col-md-3">
+              <label className="form-label fw-semibold text-muted small mb-1">
+                Đến ngày
+              </label>
               <input
                 type="date"
-                className="form-control"
+                className="form-control form-control-lg rounded-3 border-secondary-subtle shadow-sm"
                 value={filters.createdTo}
                 onChange={(e) =>
                   setFilters({ ...filters, createdTo: e.target.value })
@@ -173,9 +165,9 @@ function ProblematicPage() {
             </div>
 
             {/* Reset */}
-            <div className="col-md-3">
+            <div className="col-12 col-sm-6 col-md-3">
               <button
-                className="btn btn-outline-secondary w-100"
+                className="btn btn-outline-secondary btn-lg w-100 rounded-3 shadow-sm mt-4 mt-md-0"
                 onClick={() =>
                   setFilters({
                     status: "",
@@ -184,47 +176,57 @@ function ProblematicPage() {
                   })
                 }
               >
+                <i className="bi bi-arrow-repeat me-2"></i>
                 Reset bộ lọc
               </button>
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="card shadow-sm border-0">
+      {/* Table Card */}
+      <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div className="card-header bg-gradient-primary text-white py-3">
+          <h5 className="mb-0 fw-semibold">Danh sách báo cáo</h5>
+        </div>
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="table table-hover table-striped align-middle mb-0">
               <thead className="table-light">
                 <tr>
-                  <th className="ps-4">Mã</th>
-                  <th>Tiêu đề</th>
-                  <th>Trạng thái</th>
-                  <th>Ngày tạo</th>
-                  <th className="text-center">Hành động</th>
+                  <th className="ps-4 py-3 fw-semibold text-uppercase small">Mã</th>
+                  <th className="py-3 fw-semibold text-uppercase small">Tiêu đề</th>
+                  <th className="py-3 fw-semibold text-uppercase small">Trạng thái</th>
+                  <th className="py-3 fw-semibold text-uppercase small">Ngày tạo</th>
+                  <th className="py-3 text-center fw-semibold text-uppercase small">
+                    Hành động
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-muted">
                 {reports.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-5 text-muted">
+                    <td colSpan="5" className="text-center py-5 fs-5 text-secondary">
+                      <i className="bi bi-exclamation-circle me-2 fs-4"></i>
                       Không tìm thấy báo cáo nào
                     </td>
                   </tr>
                 ) : (
                   reports.map((r) => (
-                    <tr key={r.id}>
-                      <td className="ps-4 fw-medium">{r.id}</td>
-                      <td>{r.title}</td>
+                    <tr key={r.id} className="align-middle">
+                      <td className="ps-4 fw-medium text-dark">{r.id}</td>
+                      <td className="fw-medium">{r.title}</td>
                       <td>{getStatusBadge(r.status)}</td>
                       <td>
-                        {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                        {new Date(r.createdAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
                       </td>
                       <td className="text-center">
                         <button
-                          className="btn btn-sm btn-outline-primary"
+                          className="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm hover-lift"
                           onClick={() => handleViewDetail(r)}
                         >
                           <i className="bi bi-eye me-1"></i> Xem
@@ -239,7 +241,7 @@ function ProblematicPage() {
         </div>
       </div>
 
-      {/* MODALS */}
+      {/* Modals */}
       <ProblematicDetailModal
         show={showDetailModal}
         report={selectedReport}
