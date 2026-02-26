@@ -9,64 +9,92 @@ exports.createPurchaseOrderWithItems = async ({
     createdBy,
     items
 }) => {
+
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
 
     try {
         await transaction.begin();
 
-        const request = new sql.Request(transaction);
-
-        const poResult = await request
+        // 1️⃣ Insert PurchaseOrder
+        const poResult = await new sql.Request(transaction)
             .input("supplierId", sql.Int, supplierId)
-            .input("note", sql.NVarChar, note)
             .input("createdBy", sql.BigInt, createdBy)
+            .input("note", sql.NVarChar(sql.MAX), note) 
             .query(`
                 INSERT INTO PurchaseOrders 
-                (supplierId, note, status, createdBy, createdAt)
+                (supplierId, status, createdBy, note, createdAt)
                 OUTPUT INSERTED.*
-                VALUES (@supplierId, @note, 'Pending', @createdBy, GETDATE())
+                VALUES (@supplierId, 'Pending', @createdBy, @note, GETDATE())
             `);
 
         const purchaseOrder = poResult.recordset[0];
 
+        let totalAmount = 0;
+
+        // 2️⃣ Insert từng item
         for (const item of items) {
 
-            const stockRequest = new sql.Request(transaction);
-
-            const stockResult = await stockRequest
+            // Lấy thông tin sản phẩm + tồn kho
+            const productResult = await new sql.Request(transaction)
                 .input("productId", sql.BigInt, item.productId)
                 .query(`
-                    SELECT quantityOnHand
-                    FROM InventoryStocks
-                    WHERE productId = @productId
+                    SELECT 
+                        p.baseUnit,
+                        p.costPrice,
+                        s.quantityOnHand
+                    FROM Products p
+                    JOIN InventoryStocks s ON s.productId = p.id
+                    WHERE p.id = @productId
                 `);
 
-            if (stockResult.recordset.length === 0) {
+            if (productResult.recordset.length === 0) {
                 throw new Error("PRODUCT_NOT_FOUND");
             }
 
-            const quantityBefore = stockResult.recordset[0].quantityOnHand;
+            const product = productResult.recordset[0];
 
-            const itemRequest = new sql.Request(transaction);
+            const quantityBefore = product.quantityOnHand;
+            const baseUnit = product.baseUnit;
+            const costPrice = product.costPrice;
 
-            await itemRequest
+            // Insert PurchaseOrderItem
+            await new sql.Request(transaction)
                 .input("poId", sql.Int, purchaseOrder.id)
                 .input("productId", sql.BigInt, item.productId)
-                .input("quantityBeforeOrdered", sql.Decimal(15, 3), quantityBefore)
-                .input("quantityOrdered", sql.Int, item.quantityOrdered)
+                .input("quantityBeforeOrdered", sql.Decimal(15,3), quantityBefore)
+                .input("quantityOrdered", sql.Decimal(15,3), item.quantityOrdered)
+                .input("baseUnit", sql.NVarChar(20), baseUnit)
+                .input("costPrice", sql.Decimal(15,2), costPrice)
                 .query(`
                     INSERT INTO PurchaseOrderItems
-                    (poId, productId, quantityBeforeOrdered, quantityOrdered)
-                    VALUES (@poId, @productId, @quantityBeforeOrdered, @quantityOrdered)
+                    (poId, productId, quantityBeforeOrdered, quantityOrdered, baseUnit, costPrice)
+                    VALUES (@poId, @productId, @quantityBeforeOrdered, @quantityOrdered, @baseUnit, @costPrice)
                 `);
+
+            totalAmount += item.quantityOrdered * costPrice;
         }
 
+        // 3️⃣ Update totalAmount
+        await new sql.Request(transaction)
+            .input("poId", sql.Int, purchaseOrder.id)
+            .input("totalAmount", sql.Decimal(18,2), totalAmount)
+            .query(`
+                UPDATE PurchaseOrders
+                SET totalAmount = @totalAmount
+                WHERE id = @poId
+            `);
+
         await transaction.commit();
+
+        purchaseOrder.totalAmount = totalAmount;
+
         return purchaseOrder;
 
     } catch (err) {
-        await transaction.rollback();
+        try {
+            await transaction.rollback();
+        } catch {}
         throw err;
     }
 };
@@ -203,6 +231,7 @@ exports.getDetailById = async (poId) => {
                 po.status,
                 po.totalAmount,
                 po.createdAt,
+                po.note,
 
                 po.createdBy,
                 po.processBy,
@@ -256,6 +285,7 @@ exports.getDetailById = async (poId) => {
         status: row.status,
         createdAt: row.createdAt,
         totalAmount: row.totalAmount,
+        note: row.note,
         totalQuantity,
 
         supplier: {
