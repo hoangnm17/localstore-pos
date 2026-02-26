@@ -47,7 +47,7 @@ export default function CashPayment({ total, onConfirm }) {
     if (customerPayNumber < total) return;
 
     onConfirm({
-      customerPay: customerPayNumber,
+      amount: customerPayNumber,
     });
   };
 

@@ -4,7 +4,7 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import CategoryRoutes from "./category.route.js";
 import ProductRoutes from "./product.route";
-// import ProtectedRoute from "./protected.route";
+import InvocieRoutes from "./invoice.route"
 import staffRoute from "./staff.route";
 import crmRoute from "./crm.route";
 import dashboardRoute from "./dashboard.route";
@@ -15,6 +15,7 @@ const AppRoutes = () => {
     <Routes>
       {authRoute}
       {salesRoute}
+      {InvocieRoutes}
       {InventoryRoutes}
       {staffRoute}
       {shiftRoute}

@@ -1,3 +1,5 @@
 const COUNTER_ID = 1;
 
-module.export = COUNTER_ID;
+module.exports = {
+    COUNTER_ID
+};

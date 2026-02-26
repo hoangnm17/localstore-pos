@@ -13,6 +13,7 @@ export default function SalesHome() {
     updateInvoiceItems,
     updateInvoiceCustomer,
     closeTab,
+    pay,
   } = useInvoiceTabs();
 
   const {
@@ -53,9 +54,11 @@ export default function SalesHome() {
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
-  const handleSelectCustomer = (customer) => {
-    updateInvoiceCustomer(activeInvoice.id, customer);
-  }
+  const handleSelectCustomer = async (customer) => {
+    if (!activeInvoice) return;
+
+    await updateInvoiceCustomer(activeInvoice.id, customer);
+  };
 
   const total = calculateTotal(activeInvoice?.items || []);
   const totalQuantity = calculateTotalQuantity(
@@ -72,7 +75,7 @@ export default function SalesHome() {
   }
 
   return (
-    <div className="vh-100 d-flex bg-light flex-column">
+    <div className="vh-100 d-flex bg-light flex-column overflow-hidden">
 
       {/* TAB BAR */}
       <div className="d-flex align-items-center border-bottom bg-white px-2">
@@ -84,11 +87,10 @@ export default function SalesHome() {
             <div
               key={inv.id}
               onClick={() => setActiveInvoiceId(inv.id)}
-              className={`px-3 py-2 me-2 rounded-top d-flex align-items-center gap-2 ${
-                isActive
-                  ? "bg-primary text-white"
-                  : "bg-light"
-              }`}
+              className={`px-3 py-2 me-2 rounded-top d-flex align-items-center gap-2 ${isActive
+                ? "bg-primary text-white"
+                : "bg-light"
+                }`}
               style={{ cursor: "pointer" }}
             >
               <span>
@@ -122,7 +124,7 @@ export default function SalesHome() {
       </div>
 
       {/* MAIN */}
-      <div className="d-flex flex-grow-1">
+      <div className="d-flex flex-grow-1 overflow-hidden">
 
         {/* ORDER */}
         <div
@@ -130,6 +132,7 @@ export default function SalesHome() {
           style={{ flex: 4 }}
         >
           <Order
+            key={activeInvoice.id}
             orderId={activeInvoice.id}
             orderItems={activeInvoice.items}
             customer={activeInvoice.customer}
@@ -140,11 +143,12 @@ export default function SalesHome() {
             remove={handleRemove}
             onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
+            onPay={pay}
           />
         </div>
 
         {/* PRODUCT */}
-        <div style={{ flex: 6 }}>
+        <div style={{ flex: 6 }} className="overflow-auto">
           <Product addItem={handleAddItem} />
         </div>
 

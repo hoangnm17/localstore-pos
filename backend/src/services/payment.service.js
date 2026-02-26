@@ -48,31 +48,49 @@ const createPaymentService = ({
   };
 
   const handleReturn = async (query) => {
-    const { invoiceId, amount, vnp_ResponseCode, vnp_SecureHash } = query;
+  const { invoiceId, amount, vnp_ResponseCode, vnp_SecureHash } = query;
 
-    if (!vnpayUtil.verifyHash(invoiceId, amount, vnp_SecureHash)) {
+  return runInTransaction(async (transaction) => {
+
+    // 1. verify hash
+    const isValid = vnpayUtil.verifyHash(
+      invoiceId,
+      amount,
+      vnp_SecureHash
+    );
+
+    if (!isValid) {
       throw new Error("Invalid signature");
     }
 
-    const paymentStatus =
-      vnp_ResponseCode === "00" ? "SUCCESS" : "FAILED";
+    if (vnp_ResponseCode !== "00") {
+      throw new Error("Payment failed");
+    }
 
-    const invoiceStatus =
-      vnp_ResponseCode === "00" ? "PAID" : "CANCELLED";
-
-    await paymentModel.updateStatus(invoiceId, paymentStatus);
-    await invoiceModel.updateStatus(invoiceId, invoiceStatus);
-    await vnpayModel.updateStatus(
+    // 2. update payment
+    await invoiceModel.updatePaymentStatus(
+      transaction,
       invoiceId,
-      paymentStatus,
-      vnp_ResponseCode
+      "SUCCESS"
     );
 
-    return {
+    // 3. load invoice items
+    const invoiceItems =
+      await invoiceModel.getInvoiceItems(transaction, invoiceId);
+
+    // 4. deduct stock
+    await inventoryService.deductStock(transaction, invoiceItems);
+
+    // 5. update invoice status
+    await invoiceModel.updateStatus(
+      transaction,
       invoiceId,
-      invoiceStatus,
-    };
-  };
+      "PAID"
+    );
+
+    return { paid: true };
+  });
+};
 
   return {
     createPayment,

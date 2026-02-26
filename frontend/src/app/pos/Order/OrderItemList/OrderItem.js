@@ -2,9 +2,7 @@
 
   const OrderItem = ({ item, increase, decrease, remove }) => {
 
-    const displayName = item.variantName
-      ? `${item.productName} - ${item.variantName}`
-      : item.productName;
+    const displayName = item.name ? item.name : item.productName;
       
     const lineTotal = (item.unitPrice || 0) * item.quantity;
 

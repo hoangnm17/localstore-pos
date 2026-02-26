@@ -19,36 +19,24 @@ const paymentService = createPaymentService({
 
 const createPayment = async (req, res) => {
   try {
-    const { items } = req.body;
+    const { invoiceId, method, customerPay } = req.body;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        message: "Items is required",
-      });
+    if (!invoiceId) {
+      return res.status(400).json({ message: "invoiceId is required" });
     }
 
-    const calculatedTotal = items.reduce(
-      (sum, item) => sum + Number(item.lineTotal || 0),
-      0
-    );
-
-    const data = {
-      ...req.body,
-      staffId: req.body.staffId,
-      counterId: req.body.counterId,
-      customerId: req.body.customerId || null,
-      total: calculatedTotal,
-    };
-
-    const result = await paymentService.createPayment(data);
+    const result = await paymentService.createPayment({
+      invoiceId,
+      method,
+      customerPay,
+      staffId: req.user.id, // lấy từ token
+    });
 
     res.json(result);
 
   } catch (err) {
     console.error("createPayment error:", err);
-    res.status(400).json({
-      message: err.message,
-    });
+    res.status(400).json({ message: err.message });
   }
 };
 
