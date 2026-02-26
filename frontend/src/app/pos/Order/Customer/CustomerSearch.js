@@ -13,8 +13,9 @@ export default function CustomerSearch({
   const { result, loading } = useCustomerSearch(phone);
 
   useEffect(() => {
-    setPhone("");
-  }, [invoiceId]);
+    // whenever invoice or selected customer updates we want to reflect it
+    setPhone(customer?.phone || "");
+  }, [invoiceId, customer]);
 
   const handlePhoneChange = (e) => {
     const value = e.target.value;

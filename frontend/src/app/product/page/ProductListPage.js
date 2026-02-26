@@ -1,291 +1,285 @@
 import { useState, useEffect, useRef } from 'react';
-import useProducts from '../../../hooks/product/useProduct';
+import useProduct from '../../../hooks/product/useProduct';
 import { useProductContext } from '../ui/ProductContext';
-import ProductFormModal from '../ui/ProductFormModal';
+import CreateProductModal from '../ui/CreateProductModal';
+import CreateComboModal from '../ui/CreateComboModal';
+import EditProductModal from '../ui/EditProductModal';
 import ProductDetailModal from '../ui/ProductDetailModal';
 import PriceHistoryModal from '../ui/PriceHistoryModal';
-import Toast from '../../../components/common/Toast';
 import categoryService from '../../../services/categoryService';
 import './ProductListPage.css';
+
+// Flatten nested tree [{id, name, parentId, children:[]}] thành mảng phẳng
+function flattenTree(nodes) {
+    const result = [];
+    for (const node of nodes) {
+        result.push({ id: node.id, name: node.name, parentId: node.parentId || null });
+        if (node.children?.length) result.push(...flattenTree(node.children));
+    }
+    return result;
+}
 
 const STATUS_OPTIONS = [
     { value: 'Selling', label: 'Đang bán' },
     { value: 'StopSelling', label: 'Ngừng bán' },
-    { value: 'Suspended', label: 'Tạm khóa' },
 ];
 
 const STATUS_BADGE = {
-    Selling: { label: 'Đang bán', className: 'badge badge--selling' },
-    StopSelling: { label: 'Ngừng bán', className: 'badge badge--stop' },
-    Suspended: { label: 'Tạm khóa', className: 'badge badge--suspended' },
+    Selling: { label: 'Đang bán', cls: 'plp-badge plp-badge--selling' },
+    StopSelling: { label: 'Ngừng bán', cls: 'plp-badge plp-badge--stop' },
 };
 
 const ProductListPage = () => {
     const {
         products, total, totalPages, loading, error,
         filters, updateFilters, changePage,
-        handleStopSelling, handleStartSelling,
-    } = useProducts();
+        handleStopSelling, handleStartSelling, refetch,
+    } = useProduct();
 
     const {
-        detailModal, formModal, priceHistoryModal, toast,
+        createModal, createComboModal, editModal, detailModal, priceHistoryModal,
+        openCreate, closeCreate,
+        openCreateCombo, closeCreateCombo,
+        openEdit, closeEdit,
         openDetail, closeDetail,
-        openForm, closeForm,
         openPriceHistory, closePriceHistory,
-        showToast,
     } = useProductContext();
 
     const [searchInput, setSearchInput] = useState('');
     const [selectedIds, setSelectedIds] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ open: false, productId: null, action: null });
+    const [toast, setToast] = useState(null);
+    const [addDropdown, setAddDropdown] = useState(false);
 
-    // Category filter
     const [categories, setCategories] = useState([]);
-    const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
-    const categoryDropdownRef = useRef(null);
+    const [categoryOpen, setCategoryOpen] = useState(false);
+    const categoryRef = useRef(null);
+    const addDropdownRef = useRef(null);
 
     useEffect(() => {
-        const loadCategories = async () => {
-            const res = await categoryService.fetchCategoryList('', 1, 100);
+        categoryService.fetchCategoryTree('', 1, 999).then(res => {
             if (res.success !== false) {
-                setCategories(res.data?.data || []);
+                const tree = res.data?.data || [];
+                setCategories(flattenTree(tree));
             }
-        };
-        loadCategories();
+        });
     }, []);
 
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
-                setCategoryDropdownOpen(false);
-            }
+        const handler = (e) => {
+            if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
+            if (addDropdownRef.current && !addDropdownRef.current.contains(e.target)) setAddDropdown(false);
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    const showToast = (type, message) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 3500);
+    };
 
     const selectedCategory = categories.find(c => c.id === filters.categoryId);
 
-    const handleCategorySelect = (categoryId) => {
-        updateFilters({ categoryId: categoryId || null });
-        setCategoryDropdownOpen(false);
-    };
-
     const handleSearch = (e) => {
-        if (e.key === 'Enter' || e.type === 'click') {
-            updateFilters({ search: searchInput });
-        }
+        if (e.key === 'Enter' || e.type === 'click') updateFilters({ search: searchInput });
     };
 
-    const handleStatusFilter = (status) => {
-        updateFilters({ status });
-    };
+    const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    const toggleSelectAll = () => setSelectedIds(selectedIds.length === products.length ? [] : products.map(p => p.id));
 
-    const toggleSelect = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
-    };
-
-    const toggleSelectAll = () => {
-        if (selectedIds.length === products.length) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(products.map(p => p.id));
-        }
-    };
-
-    const confirmAction = (productId, action) => {
-        setConfirmModal({ open: true, productId, action });
-    };
 
     const executeAction = async () => {
         const { productId, action } = confirmModal;
         setConfirmModal({ open: false, productId: null, action: null });
-        let res;
-        if (action === 'stop') {
-            res = await handleStopSelling(productId);
-            if (res.success) showToast('success', 'Đã ngừng bán sản phẩm');
-            else showToast('error', res.message);
-        } else if (action === 'start') {
-            res = await handleStartSelling(productId);
-            if (res.success) showToast('success', 'Đã bật bán sản phẩm');
-            else showToast('error', res.message);
-        }
-    };
-
-    const formatPrice = (val) =>
-        val != null ? Number(val).toLocaleString('vi-VN') + 'đ' : '—';
-
-    const renderPagination = () => {
-        const pages = [];
-        for (let i = 1; i <= totalPages; i++) {
-            pages.push(
-                <button
-                    key={i}
-                    className={`page-btn${filters.page === i ? ' page-btn--active' : ''}`}
-                    onClick={() => changePage(i)}
-                >
-                    {i}
-                </button>
-            );
-        }
-        return (
-            <div className="pagination">
-                <button className="page-btn" onClick={() => changePage(Math.max(1, filters.page - 1))} disabled={filters.page === 1}>‹</button>
-                {pages}
-                <button className="page-btn" onClick={() => changePage(Math.min(totalPages, filters.page + 1))} disabled={filters.page === totalPages}>›</button>
-            </div>
+        const res = action === 'stop'
+            ? await handleStopSelling(productId)
+            : await handleStartSelling(productId);
+        showToast(
+            res.success ? 'success' : 'error',
+            res.success
+                ? (action === 'stop' ? 'Đã ngừng bán sản phẩm' : 'Đã bật bán lại sản phẩm')
+                : res.message
         );
     };
 
+    const fmt = (val) => val != null ? Number(val).toLocaleString('vi-VN') + 'đ' : '—';
+
     return (
-        <div className="product-page">
+        <div className="plp">
             {/* Header */}
-            <div className="product-page__header">
-                <h1 className="product-page__title">Danh sách sản phẩm</h1>
-                <button className="btn btn--primary" onClick={() => openForm(null)}>
-                    + Thêm sản phẩm
-                </button>
+            <div className="plp__header">
+                <h1 className="plp__title">Danh sách sản phẩm</h1>
+
+                {/* Dropdown thêm sản phẩm */}
+                <div className="plp-add-dropdown" ref={addDropdownRef}>
+                    <button
+                        className="plp-btn plp-btn--primary plp-add-btn"
+                        onClick={() => setAddDropdown(p => !p)}
+                    >
+                        + Thêm sản phẩm ▾
+                    </button>
+                    {addDropdown && (
+                        <div className="plp-add-menu">
+                            <button className="plp-add-menu__item" onClick={() => { openCreate(); setAddDropdown(false); }}>
+                                <span className="plp-add-menu__icon">📦</span>
+                                <div>
+                                    <div className="plp-add-menu__label">Sản phẩm thường</div>
+                                    <div className="plp-add-menu__hint">Sản phẩm đơn lẻ hoặc bán theo cân</div>
+                                </div>
+                            </button>
+                            <button className="plp-add-menu__item" onClick={() => { openCreateCombo(); setAddDropdown(false); }}>
+                                <span className="plp-add-menu__icon">🎁</span>
+                                <div>
+                                    <div className="plp-add-menu__label">Sản phẩm combo</div>
+                                    <div className="plp-add-menu__hint">Gồm nhiều sản phẩm con đóng gói chung</div>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Toolbar */}
-            <div className="product-page__toolbar">
-                {/* Search */}
-                <div className="search-box">
-                    <span className="search-box__icon">🔍</span>
-                    <input
-                        className="search-box__input"
-                        placeholder="Theo mã, tên sản phẩm, barcode..."
+            <div className="plp__toolbar">
+                <div className="plp-search">
+                    <span className="plp-search__icon">🔍</span>
+                    <input className="plp-search__input"
+                        placeholder="Mã, tên, barcode..."
                         value={searchInput}
                         onChange={e => setSearchInput(e.target.value)}
                         onKeyDown={handleSearch}
                     />
-                    <button className="search-box__btn" onClick={handleSearch}>Tìm</button>
+                    <button className="plp-search__btn" onClick={handleSearch}>Tìm</button>
                 </div>
 
-                {/* Category dropdown */}
-                <div className="category-filter" ref={categoryDropdownRef}>
+                {/* Category */}
+                <div className="plp-cat" ref={categoryRef}>
                     <button
-                        className={`category-filter__btn${filters.categoryId ? ' category-filter__btn--active' : ''}`}
-                        onClick={() => setCategoryDropdownOpen(prev => !prev)}
+                        className={`plp-cat__btn${filters.categoryId ? ' plp-cat__btn--active' : ''}`}
+                        onClick={() => setCategoryOpen(p => !p)}
                     >
-                        <span>📂</span>
-                        <span className="category-filter__label">
-                            {selectedCategory ? selectedCategory.name : 'Danh mục'}
-                        </span>
-                        <span className="category-filter__arrow">{categoryDropdownOpen ? '▲' : '▼'}</span>
+                        📂 {selectedCategory ? selectedCategory.name : 'Danh mục'} {categoryOpen ? '▲' : '▼'}
                     </button>
-
-                    {categoryDropdownOpen && (
-                        <div className="category-dropdown">
+                    {categoryOpen && (
+                        <div className="plp-cat__dropdown">
                             <div
-                                className={`category-dropdown__item${!filters.categoryId ? ' category-dropdown__item--active' : ''}`}
-                                onClick={() => handleCategorySelect(null)}
+                                className={`plp-cat__item${!filters.categoryId ? ' plp-cat__item--active' : ''}`}
+                                onClick={() => { updateFilters({ categoryId: null }); setCategoryOpen(false); }}
                             >
                                 Tất cả danh mục
                             </div>
-                            {categories.map(cat => (
-                                <div
-                                    key={cat.id}
-                                    className={`category-dropdown__item${filters.categoryId === cat.id ? ' category-dropdown__item--active' : ''}${cat.parentId ? ' category-dropdown__item--child' : ''}`}
-                                    onClick={() => handleCategorySelect(cat.id)}
-                                >
-                                    {cat.parentId ? '└ ' : ''}{cat.name}
-                                </div>
-                            ))}
+                            {/* Nhóm cha → con */}
+                            {categories.filter(c => !c.parentId).map(parent => {
+                                const children = categories.filter(c => c.parentId === parent.id);
+                                return (
+                                    <div key={parent.id}>
+                                        {/* Tên danh mục cha: không click được, chỉ là header */}
+                                        <div className="plp-cat__group-header">
+                                            📂 {parent.name}
+                                        </div>
+                                        {children.length === 0 ? (
+                                            <div className="plp-cat__item plp-cat__item--empty">Chưa có danh mục con</div>
+                                        ) : children.map(child => (
+                                            <div key={child.id}
+                                                className={`plp-cat__item plp-cat__item--child${filters.categoryId === child.id ? ' plp-cat__item--active' : ''}`}
+                                                onClick={() => { updateFilters({ categoryId: child.id }); setCategoryOpen(false); }}
+                                            >
+                                                └ {child.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
                 {/* Status tabs */}
-                <div className="status-tabs">
-                    {STATUS_OPTIONS.map(opt => (
-                        <button
-                            key={opt.value}
-                            className={`status-tab${filters.status === opt.value ? ' status-tab--active' : ''}`}
-                            onClick={() => handleStatusFilter(opt.value)}
+                <div className="plp-status-tabs">
+                    {STATUS_OPTIONS.map(o => (
+                        <button key={o.value}
+                            className={`plp-status-tab${filters.status === o.value ? ' plp-status-tab--active' : ''}`}
+                            onClick={() => updateFilters({ status: o.value })}
                         >
-                            {opt.label}
+                            {o.label}
                         </button>
                     ))}
                 </div>
 
-                {/* Clear filters */}
                 {(filters.categoryId || filters.search) && (
-                    <button
-                        className="btn-clear-filters"
-                        onClick={() => { updateFilters({ categoryId: null, search: '' }); setSearchInput(''); }}
-                    >
+                    <button className="plp-clear-btn"
+                        onClick={() => { updateFilters({ categoryId: null, search: '' }); setSearchInput(''); }}>
                         ✕ Xóa bộ lọc
                     </button>
                 )}
             </div>
 
             {/* Table */}
-            <div className="product-table-wrap">
-                {error && <div className="error-msg">{error}</div>}
-                <table className="product-table">
+            <div className="plp__table-wrap">
+                {error && <div className="plp-error">{error}</div>}
+                <table className="plp-table">
                     <thead>
                         <tr>
                             <th>
-                                <input
-                                    type="checkbox"
+                                <input type="checkbox"
                                     checked={selectedIds.length === products.length && products.length > 0}
                                     onChange={toggleSelectAll}
                                 />
                             </th>
                             <th>#</th>
                             <th>Mã SP</th>
-                            <th>Barcode</th>
                             <th>Tên sản phẩm</th>
                             <th>Danh mục</th>
                             <th>Giá vốn</th>
                             <th>Giá bán</th>
                             <th>Tồn kho</th>
                             <th>Đơn vị</th>
+                            <th>Loại</th>
                             <th>Trạng thái</th>
                             <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={12} className="table-loading">Đang tải...</td></tr>
+                            <tr><td colSpan={12} className="plp-table__state">Đang tải...</td></tr>
                         ) : products.length === 0 ? (
-                            <tr><td colSpan={12} className="table-empty">Không có sản phẩm nào</td></tr>
+                            <tr><td colSpan={12} className="plp-table__state">Không có sản phẩm nào</td></tr>
                         ) : products.map((p, idx) => (
-                            <tr key={p.id} className={selectedIds.includes(p.id) ? 'row--selected' : ''}>
+                            <tr key={p.id} className={selectedIds.includes(p.id) ? 'plp-table__row--selected' : ''}>
                                 <td>
-                                    <input
-                                        type="checkbox"
+                                    <input type="checkbox"
                                         checked={selectedIds.includes(p.id)}
                                         onChange={() => toggleSelect(p.id)}
                                     />
                                 </td>
                                 <td>{(filters.page - 1) * filters.limit + idx + 1}</td>
-                                <td className="cell--code">{p.code}</td>
-                                <td>{p.barcode || '—'}</td>
-                                <td className="cell--name">{p.name}</td>
+                                <td className="plp-cell--code">{p.code}</td>
+                                <td className="plp-cell--name">{p.name}</td>
                                 <td>{p.categoryName || '—'}</td>
-                                <td className="cell--price">{formatPrice(p.costPrice)}</td>
-                                <td className="cell--price">{formatPrice(p.salePrice)}</td>
+                                <td className="plp-cell--price">{fmt(p.costPrice)}</td>
+                                <td className="plp-cell--price">{fmt(p.salePrice)}</td>
                                 <td>{p.stockQuantity ?? 0}</td>
                                 <td>{p.baseUnit}</td>
                                 <td>
-                                    <span className={STATUS_BADGE[p.status]?.className || 'badge'}>
+                                    {p.isCombo
+                                        ? <span className="plp-type-badge plp-type-badge--combo">🎁 Combo</span>
+                                        : p.allowDecimalQuantity
+                                            ? <span className="plp-type-badge plp-type-badge--weight">⚖️ Cân</span>
+                                            : <span className="plp-type-badge">📦 Thường</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span className={STATUS_BADGE[p.status]?.cls || 'plp-badge'}>
                                         {STATUS_BADGE[p.status]?.label || p.status}
                                     </span>
                                 </td>
                                 <td>
-                                    <div className="action-btns">
-                                        <button className="action-btn action-btn--view" title="Chi tiết" onClick={() => openDetail(p.id)}>👁</button>
-                                        <button className="action-btn action-btn--history" title="Lịch sử giá" onClick={() => openPriceHistory(p.id)}>📋</button>
-                                        <button className="action-btn action-btn--edit" title="Chỉnh sửa" onClick={() => openForm(p.id)}>✏️</button>
-                                        {p.status === 'Selling' ? (
-                                            <button className="action-btn action-btn--stop" title="Ngừng bán" onClick={() => confirmAction(p.id, 'stop')}>🚫</button>
-                                        ) : (
-                                            <button className="action-btn action-btn--start" title="Bán lại" onClick={() => confirmAction(p.id, 'start')}>✅</button>
-                                        )}
+                                    <div className="plp-actions">
+                                        <button className="plp-action plp-action--view" title="Chi tiết" onClick={() => openDetail(p.id)}>👁</button>
+                                        <button className="plp-action plp-action--history" title="Lịch sử giá" onClick={() => openPriceHistory(p.id, p.name)}>📋</button>
+                                        <button className="plp-action plp-action--edit" title="Chỉnh sửa" onClick={() => openEdit(p.id)}>✏️</button>
+
                                     </div>
                                 </td>
                             </tr>
@@ -295,52 +289,82 @@ const ProductListPage = () => {
             </div>
 
             {/* Footer */}
-            <div className="product-page__footer">
-                <span className="total-label">Tổng: <strong>{total}</strong> sản phẩm</span>
-                {renderPagination()}
+            <div className="plp__footer">
+                <span className="plp__total">Tổng: <strong>{total}</strong> sản phẩm</span>
+                <div className="plp-pagination">
+                    <button className="plp-page-btn" onClick={() => changePage(filters.page - 1)} disabled={filters.page === 1}>‹</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                        <button key={n}
+                            className={`plp-page-btn${filters.page === n ? ' plp-page-btn--active' : ''}`}
+                            onClick={() => changePage(n)}
+                        >{n}</button>
+                    ))}
+                    <button className="plp-page-btn" onClick={() => changePage(filters.page + 1)} disabled={filters.page >= totalPages || totalPages === 0}>›</button>
+                </div>
             </div>
 
-            {/* Confirm Modal */}
+            {/* Confirm */}
             {confirmModal.open && (
-                <div className="modal-overlay" onClick={() => setConfirmModal({ open: false, productId: null, action: null })}>
-                    <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-                        <p className="confirm-modal__text">
+                <div className="plp-overlay" onClick={() => setConfirmModal({ open: false, productId: null, action: null })}>
+                    <div className="plp-confirm" onClick={e => e.stopPropagation()}>
+                        <p className="plp-confirm__text">
                             {confirmModal.action === 'stop'
                                 ? 'Bạn có chắc muốn ngừng bán sản phẩm này?'
                                 : 'Bạn có chắc muốn bán lại sản phẩm này?'}
                         </p>
-                        <div className="confirm-modal__btns">
-                            <button className="btn btn--ghost" onClick={() => setConfirmModal({ open: false, productId: null, action: null })}>Hủy</button>
-                            <button className="btn btn--danger" onClick={executeAction}>Xác nhận</button>
+                        <div className="plp-confirm__btns">
+                            <button className="plp-btn plp-btn--ghost"
+                                onClick={() => setConfirmModal({ open: false, productId: null, action: null })}>Hủy</button>
+                            <button className="plp-btn plp-btn--danger" onClick={executeAction}>Xác nhận</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Modals */}
+            {createModal && (
+                <CreateProductModal
+                    onClose={closeCreate}
+                    onSuccess={(msg) => { closeCreate(); refetch(); showToast('success', msg); }}
+                    onError={(msg) => showToast('error', msg)}
+                />
+            )}
+            {createComboModal && (
+                <CreateComboModal
+                    onClose={closeCreateCombo}
+                    onSuccess={(msg) => { closeCreateCombo(); refetch(); showToast('success', msg); }}
+                    onError={(msg) => showToast('error', msg)}
+                />
+            )}
+            {editModal.open && (
+                <EditProductModal
+                    productId={editModal.productId}
+                    onClose={closeEdit}
+                    onSuccess={(msg) => { closeEdit(); refetch(); showToast('success', msg); }}
+                    onError={(msg) => showToast('error', msg)}
+                />
+            )}
             {detailModal.open && (
                 <ProductDetailModal
                     productId={detailModal.productId}
                     onClose={closeDetail}
-                    onEdit={() => { closeDetail(); openForm(detailModal.productId); }}
-                />
-            )}
-            {formModal.open && (
-                <ProductFormModal
-                    productId={formModal.productId}
-                    onClose={closeForm}
-                    onSuccess={(msg) => { closeForm(); showToast('success', msg); }}
-                    onError={(msg) => showToast('error', msg)}
+                    onEdit={() => { closeDetail(); openEdit(detailModal.productId); }}
                 />
             )}
             {priceHistoryModal.open && (
                 <PriceHistoryModal
                     productId={priceHistoryModal.productId}
+                    productName={priceHistoryModal.productName}
                     onClose={closePriceHistory}
                 />
             )}
 
-            {toast && <Toast type={toast.type} message={toast.message} />}
+            {/* Toast */}
+            {toast && (
+                <div className={`plp-toast plp-toast--${toast.type}`}>
+                    {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+                </div>
+            )}
         </div>
     );
 };

@@ -10,15 +10,14 @@ export const useAuth = () => {
     }
   }, []);
 
-  const roleName = user?.roleName || ""; 
-
+  const features = user?.features || [];
   return {
     // user, 
     // roleName,
     // isManager: roleName === "Manager",
     // isCashier: roleName === "Cashier",
     // isWarehouse: roleName === "Warehouse",
-    user, 
+    user,
     roleName: user?.roleName || "",
     hasFeature: (featureKey) => features.includes(featureKey),
     isAuthenticated: !!user // Trả về true nếu có user

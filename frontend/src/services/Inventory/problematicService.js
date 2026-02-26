@@ -16,8 +16,10 @@ function updateReportStatus(reportId, status) {
   });
 }
 
-export default {
+const problematicService = {
   getReports,
   createReport,
   updateReportStatus
 };
+
+export default problematicService;
