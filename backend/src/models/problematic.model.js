@@ -53,3 +53,37 @@ exports.getReports = async ({ userId, isManager, filters }) => {
 
     return result.recordset;
 };
+
+exports.getById = async (reportId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("reportId", sql.BigInt, reportId)
+        .query(`
+            SELECT * 
+            FROM ProblematicGoodsReport 
+            WHERE id = @reportId
+        `);
+
+    return result.recordset[0];
+};
+
+exports.updateStatus = async ({ reportId, status, updatedBy }) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("reportId", sql.BigInt, reportId)
+        .input("status", sql.NVarChar, status)
+        .input("updatedBy", sql.BigInt, updatedBy)
+        .query(`
+            UPDATE ProblematicGoodsReport
+            SET 
+                status = @status
+            WHERE id = @reportId;
+
+            SELECT * FROM ProblematicGoodsReport 
+            WHERE id = @reportId;
+        `);
+
+    return result.recordset[0];
+};
