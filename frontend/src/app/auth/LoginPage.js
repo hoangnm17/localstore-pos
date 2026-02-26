@@ -9,6 +9,7 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const redirectByRole = (role) => {
+    const normalizedRole = role.trim().toLowerCase();
     switch (role) {
       case 'Manager':
         navigate("/dashboard");
@@ -17,7 +18,7 @@ function LoginPage() {
         navigate("/sales");
         break;
       case 'Warehouse':
-        navigate("/inventory");
+        navigate("/inventory/menu");
         break;
       default:
         navigate("/sales");
