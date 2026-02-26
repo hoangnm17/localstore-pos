@@ -155,3 +155,19 @@ exports.isCircularParent = async (id, parentId) => {
         `);
     return rs.recordset[0].total > 0;
 };
+
+exports.getAllCategories = async () => {
+    const pool = await connectDB();
+
+    const result = await pool.request().query(`
+        SELECT 
+            id,
+            name,
+            imageUrl,
+            parentId
+        FROM Categories
+        ORDER BY name ASC
+  `);
+
+    return result.recordset;
+};

@@ -79,6 +79,42 @@ exports.updateStatus = async (req, res) => {
     }
 };
 
+/* ==============================
+   RECEIVE PURCHASE ORDER (WAREHOUSE)
+============================== */
+exports.receive = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await purchaseOrderService.updateStatus(
+            parseInt(id),
+            "Received",
+            req.user
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (err) {
+
+        if (err.message === "PERMISSION_DENIED")
+            return res.status(403).json({ success: false, message: "Permission denied" });
+
+        if (err.message === "INVALID_TRANSITION")
+            return res.status(400).json({ success: false, message: "Invalid status transition" });
+
+        if (err.message === "PO_NOT_FOUND")
+            return res.status(404).json({ success: false, message: "Purchase order not found" });
+
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
 
 /* ==============================
    GET DETAIL

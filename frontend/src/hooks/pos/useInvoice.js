@@ -8,7 +8,6 @@ export const useInvoiceTabs = () => {
 
   const [invoices, setInvoices] = useState([]);
   const [activeInvoiceId, setActiveInvoiceId] = useState(null);
-
   const saveTimeouts = useRef({});
 
   /* =====================================================
@@ -21,7 +20,6 @@ export const useInvoiceTabs = () => {
       id: localId,
       items: [],
       status: "LOCAL",
-      isDirty: false,
       isSaving: false
     };
 
@@ -29,64 +27,73 @@ export const useInvoiceTabs = () => {
     setActiveInvoiceId(localId);
   }, []);
 
-  /* INIT FIRST TAB */
   useEffect(() => {
     createInvoiceTab();
   }, [createInvoiceTab]);
 
-  /* ACTIVE INVOICE */
+  /* =====================================================
+     ACTIVE INVOICE
+  ===================================================== */
   const activeInvoice =
     invoices.find(i => i.id === activeInvoiceId) || null;
 
   /* =====================================================
-     UPDATE ITEMS (FIXED)
+     CLEAR AUTOSAVE
+  ===================================================== */
+  const clearAutoSave = (id) => {
+    if (saveTimeouts.current[id]) {
+      clearTimeout(saveTimeouts.current[id]);
+      delete saveTimeouts.current[id];
+    }
+  };
+
+  /* =====================================================
+     UPDATE ITEMS
   ===================================================== */
   const updateInvoiceItems = async (invoiceId, newItems) => {
 
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
 
-    // ===============================
-    // 1️⃣ UPDATE UI FIRST (OPTIMISTIC)
-    // ===============================
+    // Update UI immediately (optimistic)
     setInvoices(prev =>
       prev.map(inv =>
         inv.id === invoiceId
-          ? {
-            ...inv,
-            items: newItems,
-            isDirty: true,
-            isSaving: inv.status === "LOCAL" // chỉ show saving nếu LOCAL
-          }
+          ? { ...inv, items: newItems }
           : inv
       )
     );
 
-    // ===============================
-    // 2️⃣ IF LOCAL → CREATE DB RECORD
-    // ===============================
-    if (invoice.status === "LOCAL") {
+    /* ========= LOCAL → CREATE DB ========= */
+    if (invoice.status === "LOCAL" && newItems.length > 0) {
+
       try {
-
-        const res = await invoiceCreate({
-          items: newItems,
-          status: "DRAFT"
-        });
-
-        if (!res?.data?.id) return;
-
-        const newDbId = res.data.id;
 
         setInvoices(prev =>
           prev.map(inv =>
             inv.id === invoiceId
+              ? { ...inv, isSaving: true }
+              : inv
+          )
+        );
+
+        const res = await invoiceCreate({
+          items: newItems
+        });
+
+        const newDbId = res?.data?.id;
+        if (!newDbId) return;
+
+        // Replace local invoice with DB invoice
+        setInvoices(prev =>
+          prev.map(inv =>
+            inv.id === invoiceId
               ? {
-                ...inv,
-                id: newDbId,
-                status: "DRAFT",
-                isDirty: false,
-                isSaving: false
-              }
+                  ...inv,
+                  id: newDbId,
+                  status: "UNPAID",
+                  isSaving: false
+                }
               : inv
           )
         );
@@ -96,7 +103,6 @@ export const useInvoiceTabs = () => {
       } catch (err) {
         console.error("Create invoice failed:", err);
 
-        // rollback saving state
         setInvoices(prev =>
           prev.map(inv =>
             inv.id === invoiceId
@@ -105,104 +111,82 @@ export const useInvoiceTabs = () => {
           )
         );
       }
+
+      return;
     }
 
-    // Nếu là DRAFT → autosave sẽ xử lý
-  };
+    /* ========= UNPAID → AUTOSAVE ========= */
+    if (invoice.status === "UNPAID") {
 
-  const updateInvoiceCustomer = (invoiceId, customer) => {
-    setInvoices(prev =>
-      prev.map(inv =>
-        inv.id === invoiceId
-          ? { ...inv, customer }
-          : inv
-      )
-    );
-  };
+      clearAutoSave(invoiceId);
 
-  /* =====================================================
-     AUTOSAVE (DEBOUNCED PER INVOICE)
-  ===================================================== */
-  useEffect(() => {
-
-    invoices.forEach(inv => {
-
-      if (!inv.isDirty || inv.status !== "DRAFT") return;
-
-      if (saveTimeouts.current[inv.id]) {
-        clearTimeout(saveTimeouts.current[inv.id]);
-      }
-
-      saveTimeouts.current[inv.id] = setTimeout(async () => {
-
-        const latest = invoices.find(i => i.id === inv.id);
-        if (!latest) return;
+      saveTimeouts.current[invoiceId] = setTimeout(async () => {
 
         try {
+
           setInvoices(prev =>
-            prev.map(i =>
-              i.id === inv.id
-                ? { ...i, isSaving: true }
-                : i
+            prev.map(inv =>
+              inv.id === invoiceId
+                ? { ...inv, isSaving: true }
+                : inv
             )
           );
 
-          await invoiceUpdate(inv.id, {
-            items: latest.items
+          await invoiceUpdate(invoiceId, {
+            items: newItems
           });
-
-          setInvoices(prev =>
-            prev.map(i =>
-              i.id === inv.id
-                ? { ...i, isDirty: false, isSaving: false }
-                : i
-            )
-          );
 
         } catch (error) {
           console.error("Auto save failed:", error);
-
+        } finally {
           setInvoices(prev =>
-            prev.map(i =>
-              i.id === inv.id
-                ? { ...i, isSaving: false }
-                : i
+            prev.map(inv =>
+              inv.id === invoiceId
+                ? { ...inv, isSaving: false }
+                : inv
             )
           );
         }
 
-      }, 2000);
-    });
-
-  }, [invoices]);
+      }, 800);
+    }
+  };
 
   /* =====================================================
-     PAY
+     PAY → AUTO CLOSE TAB
   ===================================================== */
   const pay = async (paymentInfo) => {
 
-    if (!activeInvoice || activeInvoice.status !== "DRAFT")
-      return;
+    const invoice = invoices.find(i => i.id === activeInvoiceId);
+    if (!invoice || invoice.status !== "UNPAID") return;
 
     try {
 
-      await invoiceUpdate(activeInvoice.id, {
-        items: activeInvoice.items,
+      clearAutoSave(invoice.id);
+
+      await invoiceUpdate(invoice.id, {
         status: "PAID",
         payment: paymentInfo
       });
 
-      const remaining = invoices.filter(
-        i => i.id !== activeInvoice.id
-      );
+      // Remove tab after successful payment
+      setInvoices(prev => {
+        const remaining = prev.filter(i => i.id !== invoice.id);
 
-      setInvoices(remaining);
+        if (remaining.length === 0) {
+          const newLocalId = "local-" + crypto.randomUUID();
+          setActiveInvoiceId(newLocalId);
+          return [{
+            id: newLocalId,
+            items: [],
+            status: "LOCAL",
+            isSaving: false
+          }];
+        }
 
-      if (remaining.length > 0) {
         setActiveInvoiceId(remaining[0].id);
-      } else {
-        createInvoiceTab();
-      }
+        return remaining;
+      });
 
     } catch (error) {
       console.error("Payment failed:", error);
@@ -210,27 +194,47 @@ export const useInvoiceTabs = () => {
   };
 
   /* =====================================================
-     CLOSE TAB
+     CLOSE TAB → CANCEL IF NEEDED
   ===================================================== */
-  const closeTab = (id) => {
+  const closeTab = async (id, shouldCancel = true) => {
 
-    if (invoices.length === 1) return;
+    const invoice = invoices.find(i => i.id === id);
+    if (!invoice) return;
 
-    if (saveTimeouts.current[id]) {
-      clearTimeout(saveTimeouts.current[id]);
-      delete saveTimeouts.current[id];
+    clearAutoSave(id);
+
+    if (invoice.status === "LOCAL") {
+      removeTab(id);
+      return;
     }
 
-    const remaining = invoices.filter(i => i.id !== id);
-
-    setInvoices(remaining);
-
-    if (id === activeInvoiceId) {
-      setActiveInvoiceId(remaining[0]?.id || null);
+    if (shouldCancel && invoice.status === "UNPAID") {
+      try {
+        await invoiceUpdate(id, { status: "CANCELLED" });
+      } catch (err) {
+        console.error("Cancel invoice failed:", err);
+        return;
+      }
     }
+
+    removeTab(id);
   };
 
-  /* CLEANUP */
+  const removeTab = (id) => {
+    setInvoices(prev => {
+      const remaining = prev.filter(i => i.id !== id);
+
+      if (id === activeInvoiceId) {
+        setActiveInvoiceId(remaining[0]?.id || null);
+      }
+
+      return remaining;
+    });
+  };
+
+  /* =====================================================
+     CLEANUP
+  ===================================================== */
   useEffect(() => {
     return () => {
       Object.values(saveTimeouts.current).forEach(clearTimeout);
@@ -245,7 +249,6 @@ export const useInvoiceTabs = () => {
     createInvoiceTab,
     updateInvoiceItems,
     pay,
-    updateInvoiceCustomer,
     closeTab
   };
 };
