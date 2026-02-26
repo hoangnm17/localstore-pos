@@ -5,11 +5,13 @@ import authRoute from "./auth.route";
 import ProtectedRoute from "./protected.route";
 import staffRoute from "./staff.route";
 import crmRoute from "./crm.route";
+import dashboardRoute from "./dashboard.route";
 
 const AppRoutes = () => {
   return (
     <Routes>
       {authRoute}
+      {dashboardRoute}
       {/* <Route element={<ProtectedRoute allowedRoles={['Manager', 'Cashier']} />}>
         {salesRoute}
       </Route>
@@ -30,7 +32,7 @@ const AppRoutes = () => {
       {crmRoute}
 
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };

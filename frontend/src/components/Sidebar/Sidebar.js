@@ -15,21 +15,21 @@ const Sidebar = () => {
     const menuItems = [
         { title: 'Tổng Quan', icon: 'bi-grid-1x2-fill', path: '/dashboard' },
         { title: 'Bán Hàng', icon: 'bi-cart-plus-fill', path: '/sales' },
-        { 
+        {
             title: 'Đơn Hàng', icon: 'bi-receipt', id: 'orders',
-            children: [{ title: 'Danh sách đơn', path: '/orders' }] 
+            children: [{ title: 'Danh sách đơn', path: '/orders' }]
         },
-        { 
+        {
             title: 'Kho Hàng', icon: 'bi-box-seam-fill', id: 'inventory',
             children: [{ title: 'Tồn kho', path: '/inventory' },
-                 { title: 'Nhập kho', path: '/inventory/import' }] 
+            { title: 'Nhập kho', path: '/inventory/import' }]
         },
         { title: 'Sản Phẩm', icon: 'bi-archive-fill', path: '/products' },
-        { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/promo' },
-        { 
+        { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/crm' },
+        {
             title: 'Nhân Sự', icon: 'bi-people-fill', id: 'staff',
             children: [{ title: 'Danh sách nhân viên', path: '/staff' },
-                { title: 'Tạo mới nhân viên', path: '/staff/create' }]
+            { title: 'Tạo mới nhân viên', path: '/staff/create' }]
         },
         { title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports' },
     ];
@@ -46,7 +46,7 @@ const Sidebar = () => {
             <div className="sidebar-content">
                 {menuItems.map((item) => (
                     <div key={item.title}>
-                        <div 
+                        <div
                             className={`menu-item ${location.pathname.includes(item.path || item.id) ? 'active' : ''}`}
                             onClick={() => item.children ? toggleSubMenu(item.id) : navigate(item.path)}
                         >
@@ -60,7 +60,7 @@ const Sidebar = () => {
                                 </>
                             )}
                         </div>
-                        
+
                         {!isCollapsed && item.children && openMenus[item.id] && (
                             <div className="sub-menu-list">
                                 {item.children.map(child => (
