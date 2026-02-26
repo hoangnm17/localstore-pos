@@ -9,7 +9,7 @@ export const useAuth = () => {
     }
   }, []);
 
-  const features = user?.hasFeature || [];
+  const features = user?.features || [];
   return {
     // user, 
     // roleName,
