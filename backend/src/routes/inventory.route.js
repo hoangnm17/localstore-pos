@@ -37,6 +37,8 @@ router.post("/purchase-orders/request", protect(PERMISSIONS.CREATE_PURCHASE_ORDE
 // UPDATE PO STATUS
 router.patch("/purchase-orders/status/:id", protect(PERMISSIONS.UPDATE_PURCHASE_ORDER), purchaseOrderController.updateStatus);
 
+router.patch("/purchase-orders/receive/:id", protect(PERMISSIONS.RECEIVE_PURCHASE_ORDER), purchaseOrderController.receive);
+
 // // GET LIST PURCHASE ORDERS
 router.get("/purchase-orders/list", protect(PERMISSIONS.VIEW_PURCHASE_ORDER), purchaseOrderController.getList);
 

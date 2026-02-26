@@ -40,9 +40,8 @@ exports.createPurchaseOrder = async (data, user) => {
 ============================== */
 exports.updateStatus = async (poId, newStatus, currentUser) => {
 
-    if (!currentUser.permissions.includes("UPDATE_PURCHASE_ORDER")) {
-        throw new Error("PERMISSION_DENIED");
-    }
+    const hasUpdatePermission = currentUser.permissions.includes("UPDATE_PURCHASE_ORDER");
+    const hasReceivePermission = currentUser.permissions.includes("RECEIVE_PURCHASE_ORDER");
 
     const userId = currentUser.id;
 
@@ -51,20 +50,33 @@ exports.updateStatus = async (poId, newStatus, currentUser) => {
         "Rejected",
         "WaitingForDelivery",
         "CannotDeliver",
-        "Received" 
+        "Received"
     ];
 
     if (!validStatuses.includes(newStatus)) {
         throw new Error("INVALID_TRANSITION");
     }
 
-    // ✅ Nếu là Received → gọi hàm riêng
-    if (newStatus === "Received") {
+    if (hasUpdatePermission) {
+
+        // Nếu là Received thì gọi hàm receive riêng
+        if (newStatus === "Received") {
+            return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
+        }
+
+        return await purchaseOrderModel.updateStatus(poId, newStatus, userId);
+    }
+
+    if (hasReceivePermission) {
+
+        if (newStatus !== "Received") {
+            throw new Error("PERMISSION_DENIED");
+        }
+
         return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
     }
 
-    // ✅ Trạng thái bình thường
-    return await purchaseOrderModel.updateStatus(poId, newStatus, userId);
+    throw new Error("PERMISSION_DENIED");
 };
 
 exports.getDetail = async (poId) => {
