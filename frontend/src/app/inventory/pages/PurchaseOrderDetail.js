@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import supplierService from "../../../services/Inventory/supplierService"; // ← import service nhà cung cấp
-import PurchaseOrderActions from "../inventoryComponents/PurchaseOrderAction";
-import SupplierDetailModal from "../inventoryComponents/SupplierDetailModal";
+import PurchaseOrderActions from "../InventoryModal/PurchaseOrderAction";
+import SupplierDetailModal from "../InventoryModal/SupplierDetailModal";
 
 const PurchaseOrderDetail = () => {
   const user = JSON.parse(localStorage.getItem("user"));

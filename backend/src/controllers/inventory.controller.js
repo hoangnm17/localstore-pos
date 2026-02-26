@@ -201,12 +201,17 @@ exports.createProblematicReport = async (req, res) => {
 exports.getProblematicReports = async (req, res) => {
     try {
         const { id, roleId } = req.user;
-        const filters = req.query;
+
+        const { status, createdFrom, createdTo } = req.query;
 
         const reports = await problematicService.getReports({
             userId: id,
             roleId,
-            filters
+            filters: {
+                status,
+                createdFrom,
+                createdTo
+            }
         });
 
         return res.status(200).json({
