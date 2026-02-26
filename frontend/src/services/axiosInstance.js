@@ -34,6 +34,8 @@ api.interceptors.response.use(
     const { status, data } = error.response;
 
     if (status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       return Promise.resolve({
         success: false,
         message: "Phiên đăng nhập đã hết hạn",

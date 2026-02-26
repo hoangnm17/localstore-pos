@@ -19,3 +19,17 @@ module.exports.login = async (req, res) => {
         });
     }
 };
+module.exports.logout = async (req, res) => {
+    try {
+        
+        return res.status(200).json({
+            success: true,
+            message: "Đăng xuất thành công trên hệ thống."
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi Server khi đăng xuất!"
+        });
+    }
+};
