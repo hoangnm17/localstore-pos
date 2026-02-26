@@ -18,10 +18,12 @@ function LoginPage() {
     try {
       setLoading(true);
       setError("");
-      
+
       const response = await loginAPI(form);
-      
-      const serverData = response.data; 
+
+      // axiosInstance trả về {success, message} phẳng khi lỗi HTTP (không có .data)
+      // Khi thành công, trả về axios response nên cần đọc .data
+      const serverData = response.data ?? response;
 
       if (serverData.success) {
         const { token, user } = serverData.data;
@@ -34,7 +36,7 @@ function LoginPage() {
 
         switch (role) {
           case 'Manager':
-            navigate("/staff"); 
+            navigate("/staff");
             break;
           case 'Cashier':
             navigate("/sales");
@@ -43,14 +45,14 @@ function LoginPage() {
             navigate("/inventory");
             break;
           default:
-            navigate("/sales"); 
+            navigate("/sales");
         }
       } else {
         setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
       console.error("Lỗi Login:", err);
-      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
+      setError("Sai email hoặc mật khẩu");
     } finally {
       setLoading(false);
     }

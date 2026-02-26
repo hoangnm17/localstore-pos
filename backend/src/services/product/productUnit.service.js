@@ -1,4 +1,5 @@
 const productUnitModel = require('../../models/product/productUnit.model');
+const productModel = require('../../models/product/product.model');
 
 const VALID_UNIT_TYPES = ['PIECE', 'WEIGHT'];
 
