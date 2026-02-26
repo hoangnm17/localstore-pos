@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import purchaseOrderService from "../../../services/purchaseOrderService";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import SummaryCard from "../inventoryComponents/SummaryCard";
 
 // Chart.js imports
@@ -60,8 +60,19 @@ function PurchaseOrderReport() {
     fetchReport();
   };
 
-  const dailyChartData = useMemo(() => {
-    if (!report?.dailyStats) return null;
+  // Format tiền tệ VNĐ
+  const formatCurrency = (value) =>
+    value != null ? value.toLocaleString("vi-VN") + " ₫" : "0 ₫";
+
+  // Tính % cho tooltip và danh sách top NCC
+  const getPercentage = (amount) => {
+    const total = report?.summary?.totalAmount || 1;
+    return ((amount / total) * 100).toFixed(1) + "%";
+  };
+
+  // Biểu đồ số lượng theo ngày
+  const dailyQuantityData = useMemo(() => {
+    if (!report?.dailyStats?.length) return null;
     return {
       labels: report.dailyStats.map((d) => `Ngày ${d.day}`),
       datasets: [
@@ -70,34 +81,54 @@ function PurchaseOrderReport() {
           data: report.dailyStats.map((d) => d.totalQuantity),
           backgroundColor: (ctx) => {
             const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, "rgba(54, 162, 235, 0.9)");
-            gradient.addColorStop(1, "rgba(54, 162, 235, 0.4)");
+            gradient.addColorStop(0, "rgba(54, 162, 235, 0.85)");
+            gradient.addColorStop(1, "rgba(54, 162, 235, 0.35)");
             return gradient;
           },
           borderColor: "rgba(54, 162, 235, 1)",
           borderWidth: 2,
-          borderRadius: 12,
+          borderRadius: 10,
           borderSkipped: false,
-          barPercentage: 0.7,
-          categoryPercentage: 0.9,
         },
       ],
     };
   }, [report]);
 
-  const supplierChartData = useMemo(() => {
-    if (!report?.supplierStats) return null;
+  // Biểu đồ giá trị theo ngày
+  const dailyAmountData = useMemo(() => {
+    if (!report?.dailyStats?.length) return null;
+    return {
+      labels: report.dailyStats.map((d) => `Ngày ${d.day}`),
+      datasets: [
+        {
+          label: "Giá trị nhập (VNĐ)",
+          data: report.dailyStats.map((d) => d.totalAmount),
+          backgroundColor: (ctx) => {
+            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, "rgba(255, 159, 64, 0.85)");
+            gradient.addColorStop(1, "rgba(255, 159, 64, 0.35)");
+            return gradient;
+          },
+          borderColor: "rgba(255, 159, 64, 1)",
+          borderWidth: 2,
+          borderRadius: 10,
+          borderSkipped: false,
+        },
+      ],
+    };
+  }, [report]);
+
+  // Biểu đồ phân bổ giá trị theo NCC
+  const supplierAmountData = useMemo(() => {
+    if (!report?.supplierStats?.length) return null;
     return {
       labels: report.supplierStats.map((s) => s.name),
       datasets: [
         {
-          label: "Tổng số lượng",
-          data: report.supplierStats.map((s) => s.totalQuantity),
-          backgroundColor: [
-            "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0",
-            "#9966FF", "#FF9F40", "#E7E9ED", "#C9CBCF",
-          ],
-          hoverOffset: 25,
+          label: "Tổng giá trị",
+          data: report.supplierStats.map((s) => s.totalAmount),
+          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
+          hoverOffset: 30,
         },
       ],
     };
@@ -105,37 +136,46 @@ function PurchaseOrderReport() {
 
   return (
     <div className="container-fluid bg-light min-vh-100 py-4 px-md-5">
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center">
+        <div className="d-flex align-items-center gap-3">
           <button
-            className="btn btn-outline-secondary me-3 shadow-sm"
+            className="btn btn-outline-secondary shadow-sm px-4"
             onClick={() => navigate("/inventory/menu")}
           >
             <i className="bi bi-arrow-left me-2"></i>
-            Quay lại Inventory
+            Quay lại
           </button>
           <h2 className="fw-bold text-primary mb-0">
-            <i className="bi bi-bar-chart-line-fill me-3"></i>
-            Báo cáo Đơn Nhập Hàng Theo Tháng
+            <i className="bi bi-truck me-3"></i>
+            Báo cáo Nhập Hàng Theo Tháng
           </h2>
         </div>
-        <small className="text-muted">
-          Tháng {month} / {year}
+        <small className="text-muted fs-5">
+          {month}/{year}
         </small>
       </div>
 
-      {/* Filter */}
-      <div className="card shadow-lg border-0 mb-5 rounded-4 overflow-hidden">
+      {/* Bộ lọc */}
+      <div className="card shadow border-0 rounded-4 mb-5 overflow-hidden">
         <div
-          className="card-body bg-gradient-primary text-white"
-          style={{ background: "linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)" }}
+          className="card-body text-white p-4"
+          style={{
+            background: "linear-gradient(135deg, #0d6efd 0%, #6610f2 100%)",
+          }}
         >
           <form className="row g-3 align-items-end" onSubmit={handleFilter}>
             <div className="col-md-4">
               <label className="form-label fw-semibold">Tháng</label>
-              <select className="form-select" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+              <select
+                className="form-select form-select-lg"
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+              >
                 {[...Array(12)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>Tháng {i + 1}</option>
+                  <option key={i + 1} value={i + 1}>
+                    Tháng {i + 1}
+                  </option>
                 ))}
               </select>
             </div>
@@ -143,7 +183,7 @@ function PurchaseOrderReport() {
               <label className="form-label fw-semibold">Năm</label>
               <input
                 type="number"
-                className="form-control"
+                className="form-control form-control-lg"
                 min="2020"
                 max="2030"
                 value={year}
@@ -153,19 +193,16 @@ function PurchaseOrderReport() {
             <div className="col-md-4">
               <button
                 type="submit"
-                className="btn btn-light w-100 fw-bold shadow-sm"
+                className="btn btn-light btn-lg w-100 fw-bold shadow"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
                     Đang tải...
                   </>
                 ) : (
-                  <>
-                    <i className="bi bi-funnel-fill me-2"></i>
-                    Áp dụng bộ lọc
-                  </>
+                  "Xem báo cáo"
                 )}
               </button>
             </div>
@@ -174,85 +211,221 @@ function PurchaseOrderReport() {
       </div>
 
       {loading && !report ? (
-        <div className="text-center my-5">
-          <div className="spinner-border text-primary" style={{ width: "3rem", height: "3rem" }}></div>
-          <p className="mt-3 text-muted">Đang tải dữ liệu báo cáo...</p>
+        <div className="text-center py-5 my-5">
+          <div className="spinner-border text-primary" style={{ width: "4rem", height: "4rem" }}></div>
+          <p className="mt-4 fs-4 text-muted">Đang tải báo cáo nhập hàng...</p>
         </div>
       ) : report ? (
         <>
-          {/* Summary Cards - Thêm totalDistinctProducts nếu có */}
+          {/* Summary Cards - 3 card mỗi dòng */}
           <div className="row g-4 mb-5">
-            <SummaryCard color="primary" icon="bi-receipt-cutoff" title="Tổng đơn mua" value={report.summary.totalPO} />
+            <SummaryCard color="primary" icon="bi-receipt-cutoff" title="Tổng đơn nhập" value={report.summary.totalPO} />
             <SummaryCard color="success" icon="bi-box-seam-fill" title="Tổng số lượng" value={report.summary.totalQuantity} />
             <SummaryCard color="warning" icon="bi-building-fill" title="Nhà cung cấp" value={report.summary.totalSuppliers} />
             <SummaryCard color="info" icon="bi-grid-3x3-gap-fill" title="Sản phẩm riêng biệt" value={report.summary.totalProducts} />
+            <SummaryCard color="danger" icon="bi-currency-dollar" title="Tổng giá trị" value={report.summary.totalAmount} isCurrency={true} />
+            <SummaryCard color="dark" icon="bi-calculator" title="Giá trị TB/đơn" value={Math.round(report.summary.avgPOValue || 0)} isCurrency={true} />
           </div>
 
-          {/* Biểu đồ */}
+          {/* Phần biểu đồ - Biểu đồ tròn lên đầu + nội dung bổ sung */}
           <div className="row g-4 mb-5">
-            <div className="col-lg-8">
+            {/* Card biểu đồ tròn + Top NCC */}
+            <div className="col-lg-5">
               <div className="card shadow border-0 rounded-4 h-100">
-                <div className="card-body">
-                  <h5 className="card-title fw-bold mb-4">
-                    <i className="bi bi-graph-up me-2 text-primary"></i>
-                    Số lượng nhập theo ngày trong tháng
+                <div className="card-body p-4 d-flex flex-column">
+                  <h5 className="fw-bold mb-4 text-success">
+                    <i className="bi bi-pie-chart-fill me-2"></i>
+                    Phân bổ giá trị theo nhà cung cấp
                   </h5>
-                  <div style={{ height: "340px", position: "relative" }}>
-                    {dailyChartData && <Bar data={dailyChartData} options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: { legend: { position: "top" } },
-                      scales: { y: { beginAtZero: true } },
-                      animation: { duration: 1800, easing: "easeOutQuart" },
-                    }} />}
+
+                  {/* Biểu đồ tròn */}
+                  <div style={{ height: "320px" }}>
+                    {supplierAmountData && (
+                      <Doughnut
+                        data={supplierAmountData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "bottom",
+                              labels: { font: { size: 13 }, padding: 20 },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: (context) => {
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((context.raw / total) * 100).toFixed(1);
+                                  return `${context.label}: ${formatCurrency(context.raw)} (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                          cutout: "65%",
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Top 3 NCC + % để lấp chỗ trống */}
+                  <div className="mt-4 pt-3 border-top">
+                    <h6 className="fw-semibold mb-3 text-dark">Top nhà cung cấp chiếm tỷ lệ cao</h6>
+                    <div className="list-group list-group-flush">
+                      {report?.supplierStats
+                        ?.sort((a, b) => b.totalAmount - a.totalAmount)
+                        .slice(0, 3)
+                        .map((sup, index) => {
+                          const percentage = getPercentage(sup.totalAmount);
+                          return (
+                            <div
+                              key={sup.id}
+                              className="list-group-item d-flex justify-content-between align-items-center px-0 py-2"
+                            >
+                              <div className="d-flex align-items-center">
+                                <span
+                                  className="badge rounded-pill me-3"
+                                  style={{
+                                    backgroundColor: supplierAmountData?.datasets?.[0]?.backgroundColor?.[index] || "#ccc",
+                                    width: "24px",
+                                    height: "24px",
+                                  }}
+                                ></span>
+                                <span className="fw-medium text-truncate" style={{ maxWidth: "180px" }}>
+                                  {sup.name}
+                                </span>
+                              </div>
+                              <div className="text-end">
+                                <div className="fw-bold text-primary">{formatCurrency(sup.totalAmount)}</div>
+                                <small className="text-muted">{percentage}</small>
+                              </div>
+                            </div>
+                          );
+                        }) || (
+                          <div className="text-center text-muted py-3">Không có dữ liệu nhà cung cấp</div>
+                        )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="col-lg-4">
-              <div className="card shadow border-0 rounded-4 h-100">
-                <div className="card-body">
-                  <h5 className="card-title fw-bold mb-4">
-                    <i className="bi bi-pie-chart-fill me-2 text-success"></i>
-                    Phân bổ số lượng theo nhà cung cấp
-                  </h5>
-                  <div style={{ height: "340px", position: "relative" }}>
-                    {supplierChartData && <Doughnut data={supplierChartData} options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: { legend: { position: "bottom" } },
-                    }} />}
+            {/* Hai biểu đồ cột bên phải */}
+            <div className="col-lg-7">
+              <div className="row g-4">
+                <div className="col-12">
+                  <div className="card shadow border-0 rounded-4">
+                    <div className="card-body p-4">
+                      <h5 className="fw-bold mb-4 text-primary">
+                        <i className="bi bi-graph-up me-2"></i>
+                        Số lượng nhập theo ngày
+                      </h5>
+                      <div style={{ height: "320px" }}>
+                        {dailyQuantityData && <Bar data={dailyQuantityData} options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: { legend: { position: "top" } },
+                          scales: { y: { beginAtZero: true } },
+                        }} />}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-12">
+                  <div className="card shadow border-0 rounded-4">
+                    <div className="card-body p-4">
+                      <h5 className="fw-bold mb-4 text-warning">
+                        <i className="bi bi-currency-dollar me-2"></i>
+                        Giá trị nhập theo ngày
+                      </h5>
+                      <div style={{ height: "320px" }}>
+                        {dailyAmountData && <Bar data={dailyAmountData} options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: { legend: { position: "top" } },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: { callback: (v) => v.toLocaleString("vi-VN") },
+                            },
+                          },
+                        }} />}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bảng Nhà cung cấp - Thêm cột sản phẩm riêng biệt */}
+          {/* Top sản phẩm */}
+          <div className="row g-4 mb-5">
+            <div className="col-12">
+              <div className="card shadow border-0 rounded-4">
+                <div className="card-body p-4">
+                  <h5 className="fw-bold mb-4 text-warning">
+                    <i className="bi bi-star-fill me-2"></i>
+                    Top sản phẩm nhập nhiều nhất
+                  </h5>
+                  <div className="table-responsive">
+                    <table className="table table-hover table-striped">
+                      <thead className="table-warning">
+                        <tr>
+                          <th>Sản phẩm</th>
+                          <th className="text-center">Số lượng</th>
+                          <th className="text-end">Giá trị</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.topProducts?.map((p) => (
+                          <tr key={p.id}>
+                            <td className="fw-medium">{p.name}</td>
+                            <td className="text-center">{p.totalQuantity}</td>
+                            <td className="text-end fw-bold text-danger">
+                              {formatCurrency(p.totalAmount)}
+                            </td>
+                          </tr>
+                        )) || (
+                            <tr>
+                              <td colSpan={3} className="text-center py-4">
+                                Không có dữ liệu
+                              </td>
+                            </tr>
+                          )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bảng Nhà cung cấp */}
           <div className="card shadow border-0 rounded-4 mb-5">
-            <div className="card-body">
-              <h5 className="fw-bold mb-4">
-                <i className="bi bi-building me-2 text-primary"></i>
+            <div className="card-body p-4">
+              <h5 className="fw-bold mb-4 text-primary">
+                <i className="bi bi-building me-2"></i>
                 Thống kê Nhà cung cấp
               </h5>
               <div className="table-responsive">
-                <table className="table table-hover table-striped align-middle">
+                <table className="table table-hover table-striped">
                   <thead className="table-dark">
                     <tr>
                       <th>Nhà cung cấp</th>
                       <th className="text-center">Số đơn</th>
-                      <th className="text-center">Tổng số lượng</th>
-                      <th className="text-center">Số sản phẩm nhập</th>
+                      <th className="text-center">Số lượng</th>
+                      <th className="text-end">Tổng giá trị</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {report.supplierStats.map((supplier) => (
-                      <tr key={supplier.id}>
-                        <td className="fw-medium">{supplier.name}</td>
-                        <td className="text-center">{supplier.totalPO}</td>
-                        <td className="text-center">{supplier.totalQuantity}</td>
-                        <td className="text-center">{supplier.totalDistinctProducts}</td>
+                    {report.supplierStats.map((s) => (
+                      <tr key={s.id}>
+                        <td className="fw-medium">{s.name}</td>
+                        <td className="text-center">{s.totalPO}</td>
+                        <td className="text-center">{s.totalQuantity}</td>
+                        <td className="text-end fw-bold text-primary">
+                          {formatCurrency(s.totalAmount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -261,28 +434,30 @@ function PurchaseOrderReport() {
             </div>
           </div>
 
-          {/* Bảng Ngày - Thêm cột sản phẩm riêng biệt */}
+          {/* Bảng theo ngày */}
           <div className="card shadow border-0 rounded-4">
-            <div className="card-body">
-              <h5 className="fw-bold mb-4">
-                <i className="bi bi-calendar3 me-2 text-info"></i>
-                Thống kê theo ngày trong tháng
+            <div className="card-body p-4">
+              <h5 className="fw-bold mb-4 text-info">
+                <i className="bi bi-calendar3 me-2"></i>
+                Thống kê theo ngày
               </h5>
               <div className="table-responsive">
-                <table className="table table-hover table-striped align-middle">
+                <table className="table table-hover table-striped">
                   <thead className="table-primary">
                     <tr>
                       <th className="text-center">Ngày</th>
-                      <th className="text-center">Tổng số lượng nhập</th>
-                      <th className="text-center">Số sản phẩm nhập</th>
+                      <th className="text-center">Số lượng</th>
+                      <th className="text-end">Giá trị nhập</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {report.dailyStats.map((day) => (
-                      <tr key={day.day}>
-                        <td className="text-center fw-medium">{day.day}</td>
-                        <td className="text-center">{day.totalQuantity}</td>
-                        <td className="text-center">{day.totalDistinctProducts}</td>
+                    {report.dailyStats.map((d) => (
+                      <tr key={d.day}>
+                        <td className="text-center fw-medium">{d.day}</td>
+                        <td className="text-center">{d.totalQuantity}</td>
+                        <td className="text-end fw-bold text-success">
+                          {formatCurrency(d.totalAmount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -292,8 +467,8 @@ function PurchaseOrderReport() {
           </div>
         </>
       ) : (
-        <div className="alert alert-info text-center my-5">
-          Chưa có dữ liệu. Vui lòng chọn tháng/năm và áp dụng bộ lọc.
+        <div className="alert alert-info text-center py-5 my-5 fs-5">
+          Chưa có dữ liệu báo cáo. Vui lòng chọn tháng/năm và nhấn "Xem báo cáo".
         </div>
       )}
     </div>

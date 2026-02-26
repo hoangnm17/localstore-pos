@@ -10,8 +10,8 @@ function Category() {
         setLoading(true);
         setError(null);
         try {
-            const response = await categoryService.getCategories();
-            setCategories(response.data);
+            const response = await categoryService.fetchCategoryList();
+            setCategories(response.data.data || []);
         } catch (err) {
             setError("Failed to fetch categories");
         }
@@ -29,7 +29,7 @@ function Category() {
             <ul>
                 {categories.map((category) => (
                     <li key={category.id}>
-                        <Link to={`/categories/${category.id}`}>{category.categoryName}</Link>
+                        <Link to={`/categories/${category.id}`}>{category.name}</Link>
                     </li>
                 ))}
             </ul>

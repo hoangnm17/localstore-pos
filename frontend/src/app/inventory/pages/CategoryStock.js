@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import categoryService from "../../../services/categoryStockService";
+import categoryService from "../../../services/Inventory/categoryStockService";
 import CategoryCard from "../inventoryComponents/CategoryCard";
 
 function CategoryStock() {
@@ -32,26 +32,32 @@ function CategoryStock() {
 
   // load data (useCallback để tránh recreate function)
   const loadCategories = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await categoryService.getCategoryStock(
-        search,
-        page,
-        limit
-      );
+  setLoading(true);
+  try {
+    const res = await categoryService.getCategoryStock(
+      search,
+      page,
+      limit
+    );
 
-      // interceptor đã return response.data
-      setCategories(res?.data?.categories || []);
-      setTotalPages(res?.data?.pagination?.totalPages || 1);
+    const response = res?.data;
 
-    } catch (err) {
-      console.error("Lỗi tải danh mục tồn kho:", err);
+    if (response?.success) {
+      setCategories(response.data?.categories || []);
+      setTotalPages(response.data?.pagination?.totalPages || 1);
+    } else {
       setCategories([]);
       setTotalPages(1);
-    } finally {
-      setLoading(false);
     }
-  }, [search, page]);
+
+  } catch (err) {
+    console.error("Lỗi tải danh mục tồn kho:", err);
+    setCategories([]);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+}, [search, page]);
 
   // gọi load khi page hoặc search thay đổi
   useEffect(() => {

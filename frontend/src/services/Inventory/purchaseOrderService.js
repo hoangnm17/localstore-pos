@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import api from "../axiosInstance";
 
 /**
  * GET LIST PURCHASE ORDERS
@@ -38,6 +38,15 @@ function updatePurchaseOrderStatus(id, newStatus) {
 }
 
 /**
+ * WAREHOUSE - RECEIVE PURCHASE ORDER
+ */
+function receivePurchaseOrder(id) {
+  return api.patch(
+    `/inventory/purchase-orders/receive/${id}`
+  );
+}
+
+/**
  * GET MONTHLY PURCHASE ORDER REPORT
  * GET /inventory/purchase-orders/report
  */
@@ -52,5 +61,6 @@ export default {
   getPurchaseOrderDetail,
   createPurchaseOrder,
   updatePurchaseOrderStatus,
+  receivePurchaseOrder,
   getMonthlyPOReport
 };
