@@ -37,7 +37,7 @@ module.exports.toggleStatus = async (req, res) => {
 
 module.exports.createStaff = async (req, res) => {
     try {
-        const { fullName, email, phoneNumber, roleId, salaryType, baseSalary, status, password, createdAt } = req.body;
+        const { fullName, email, phoneNumber, roleId, salaryType, baseSalary, isActive, password, createdAt } = req.body;
 
         const checkUser = await staffModel.getUserByUsername(email);
         if (checkUser) return res.status(400).json({ success: false, message: "Email/Tên đăng nhập này đã tồn tại!" });
@@ -45,11 +45,14 @@ module.exports.createStaff = async (req, res) => {
         const checkPhone = await staffModel.getStaffByPhone(phoneNumber);
         if (checkPhone) return res.status(400).json({ success: false, message: "Số điện thoại này đã được nhân viên khác sử dụng!" });
 
+        const checkName = await staffModel.getStaffByFullName(fullName);
+        if (checkName) return res.status(400).json({ success: false, message: "Họ tên này đã tồn tại trong hệ thống!" });
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await staffModel.create({
             fullName, email, phoneNumber, roleId, salaryType,
-            baseSalary, status, hashedPassword, createdAt
+            baseSalary, status: isActive, hashedPassword, createdAt
         });
 
         res.json({ success: true, message: "Thành công!" });

@@ -12,7 +12,7 @@ const StaffUpdate = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [statusMsg, setStatusMsg] = useState("");
     const [msgType, setMsgType] = useState("");
-    
+
     // Lưu bản gốc để so sánh
     const [originalData, setOriginalData] = useState(null);
     const [formData, setFormData] = useState({
@@ -52,11 +52,11 @@ const StaffUpdate = () => {
                         isActive: staffData.isActive || 'active',
                         employmentStatus: staffData.employmentStatus || 'working',
                         createdAt: formattedDate,
-                        newPassword: '' 
+                        newPassword: ''
                     };
-                    
+
                     setFormData(data);
-                    setOriginalData(data); 
+                    setOriginalData(data);
                 }
             } catch (err) {
                 setMsgType("danger");
@@ -84,17 +84,60 @@ const StaffUpdate = () => {
         }
 
         const nameRegex = /^[\p{L}]+(?:\s[\p{L}]+)*$/u;
-        const phoneRegex = /^[0-9]{10,11}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+        const phoneRegex = /^0[0-9]{9,10}$/;
 
-        if (!formData.fullName?.trim() || !nameRegex.test(formData.fullName)) {
+        if (!formData.fullName?.trim()) {
             setMsgType("danger");
-            setStatusMsg("Họ tên không hợp lệ!");
+            setStatusMsg("Họ tên không được để trống!");
+            return;
+        }
+
+        if (!nameRegex.test(formData.fullName.trim())) {
+            setMsgType("danger");
+            setStatusMsg("Họ tên không được chứa số hay ký tự lạ!");
+            return;
+        }
+
+        if (!formData.email?.trim()) {
+            setMsgType("danger");
+            setStatusMsg("Email không được để trống!");
+            return;
+        }
+
+        if (!emailRegex.test(formData.email)) {
+            setMsgType("danger");
+            setStatusMsg("Định dạng Email không hợp lệ! (VD: abc@email.com)");
+            return;
+        }
+
+        if (!formData.phoneNumber?.trim()) {
+            setMsgType("danger");
+            setStatusMsg("Số điện thoại không được để trống!");
             return;
         }
 
         if (!phoneRegex.test(formData.phoneNumber)) {
             setMsgType("danger");
-            setStatusMsg("Số điện thoại không hợp lệ!");
+            setStatusMsg("SĐT phải bắt đầu từ 0 và có 10-11 chữ số!");
+            return;
+        }
+
+        if (!formData.roleId) {
+            setMsgType("danger");
+            setStatusMsg("Vui lòng chọn vai trò!");
+            return;
+        }
+
+        if (!formData.createdAt) {
+            setMsgType("danger");
+            setStatusMsg("Vui lòng chọn ngày vào làm!");
+            return;
+        }
+
+        if (formData.baseSalary < 0) {
+            setMsgType("danger");
+            setStatusMsg("Lương cơ bản không được âm!");
             return;
         }
 
@@ -115,8 +158,8 @@ const StaffUpdate = () => {
                 setMsgType("success");
                 setStatusMsg("Cập nhật thông tin nhân viên thành công!");
                 window.scrollTo(0, 0);
-                
-                setOriginalData({...formData}); 
+
+                setOriginalData({ ...formData });
 
                 setTimeout(() => navigate('/staff'), 3000);
             } else {
@@ -195,13 +238,13 @@ const StaffUpdate = () => {
                                     <div className="mb-3 mt-4 p-3 border rounded bg-light shadow-sm">
                                         <label className="small fw-bold text-danger">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
                                         <div className="input-group">
-                                            <input 
-                                                type={showPassword ? "text" : "password"} 
-                                                name="newPassword" 
-                                                className="form-control" 
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="newPassword"
+                                                className="form-control"
                                                 value={formData.newPassword}
-                                                placeholder="Nhập mật khẩu mới" 
-                                                onChange={handleChange} 
+                                                placeholder="Nhập mật khẩu mới"
+                                                onChange={handleChange}
                                             />
                                             <button className="btn btn-outline-secondary" type="button" onClick={() => setShowPassword(!showPassword)}>
                                                 <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
