@@ -23,3 +23,7 @@ exports.recordPriceChange = async (productId, data) => {
 exports.getLatestByProductId = async (productId) => {
     return await priceHistoryModel.getLatestByProductId(productId);
 };
+
+exports.getAllByProductId = async (productId) => {
+    return await priceHistoryModel.getAllByProductId(productId);
+};

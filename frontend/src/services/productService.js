@@ -11,6 +11,10 @@ export const getProduct = async (id) => {
     return api.get(`/products/${id}`);
 };
 
+export const getProductDetail = async (id) => {
+    return api.get(`/products/${id}`);
+};
+
 export const createProduct = async (payload) => {
     return api.post('/products', payload);
 };

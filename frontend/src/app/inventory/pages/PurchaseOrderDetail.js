@@ -71,10 +71,10 @@ const PurchaseOrderDetail = () => {
   const formatDate = (dateStr) =>
     dateStr
       ? new Date(dateStr).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "—";
 
   // Helper hiển thị tổng số lượng theo đơn vị khác nhau

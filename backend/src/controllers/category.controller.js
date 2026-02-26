@@ -1,45 +1,43 @@
 const categoryService = require('../services/category.service');
 
+function toVietnamese(err) {
+    const map = {
+        'CATEGORY_NOT_FOUND': 'Không tìm thấy danh mục.',
+        'CATEGORY_HAS_PRODUCT': 'Không thể xóa danh mục đang có sản phẩm.',
+        'CIRCULAR_PARENT': 'Không thể đặt danh mục con làm cha của chính nó.',
+        'NAME_REQUIRED': 'Tên danh mục không được để trống.',
+        'Category not found': 'Không tìm thấy danh mục.',
+        'Category name is required': 'Tên danh mục không được để trống.',
+    };
+    return map[err.message] || err.message;
+}
+
 exports.getCategoryList = async (req, res) => {
     try {
         const { search = '', page = 1, limit = 10 } = req.query;
-
-        const data = await categoryService.getCategoryList(
-            search,
-            parseInt(page),
-            parseInt(limit)
-        );
-
+        const data = await categoryService.getCategoryList(search, parseInt(page), parseInt(limit));
         res.json({ success: true, ...data });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: toVietnamese(err) });
     }
 };
 
 exports.getCategoryTree = async (req, res) => {
     try {
         const { search = '', page = 1, limit = 10 } = req.query;
-
-        const data = await categoryService.getCategoryTree(
-            search,
-            parseInt(page),
-            parseInt(limit)
-        );
-
+        const data = await categoryService.getCategoryTree(search, parseInt(page), parseInt(limit));
         res.json({ success: true, ...data });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: toVietnamese(err) });
     }
 };
 
 exports.getCategoryById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await categoryService.getCategoryById(id);
+        const data = await categoryService.getCategoryById(req.params.id);
         res.json({ success: true, data });
     } catch (err) {
-        res.status(404).json({ success: false, message: err.message });
+        res.status(404).json({ success: false, message: toVietnamese(err) });
     }
 };
 
@@ -47,12 +45,10 @@ exports.createCategory = async (req, res) => {
     try {
         const { name, parentId, imageUrl } = req.body;
         if (!name) throw new Error('NAME_REQUIRED');
-
         const id = await categoryService.createCategory(name, parentId, imageUrl);
-
         res.json({ success: true, id });
     } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
+        res.status(400).json({ success: false, message: toVietnamese(err) });
     }
 };
 
@@ -60,23 +56,19 @@ exports.updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, parentId, imageUrl } = req.body;
-
         await categoryService.updateCategory(id, name, parentId, imageUrl);
-
         res.json({ success: true });
     } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
+        res.status(400).json({ success: false, message: toVietnamese(err) });
     }
 };
 
 exports.deleteCategory = async (req, res) => {
     try {
         const { id } = req.params;
-
         await categoryService.deleteCategory(id);
-
         res.json({ success: true });
     } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
+        res.status(400).json({ success: false, message: toVietnamese(err) });
     }
 };
