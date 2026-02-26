@@ -8,7 +8,7 @@ const Sidebar = () => {
     const [openMenus, setOpenMenus] = useState({});
     const navigate = useNavigate();
     const location = useLocation();
-const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState(false);
     const toggleSubMenu = (menu) => {
         setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
     };
@@ -32,7 +32,12 @@ const [showModal, setShowModal] = useState(false);
             children: [{ title: 'Danh sách nhân viên', path: '/staff' },
             { title: 'Tạo mới nhân viên', path: '/staff/create' }]
         },
+        {
+            title: 'Quản lý ca',icon: 'bi-clock-fill',id: 'shifts',
+            children: [{ title: 'Danh sách ca', path: '/shifts' }]
+        },
         { title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports' },
+
     ];
 
     return (
@@ -76,32 +81,32 @@ const [showModal, setShowModal] = useState(false);
             </div>
 
             <>
-      <div className="sidebar-footer" onClick={() => setShowModal(true)}>
-        <i className="bi bi-box-arrow-right fs-4"></i>
-        {!isCollapsed && <span>ĐĂNG XUẤT</span>}
-      </div>
+                <div className="sidebar-footer" onClick={() => setShowModal(true)}>
+                    <i className="bi bi-box-arrow-right fs-4"></i>
+                    {!isCollapsed && <span>ĐĂNG XUẤT</span>}
+                </div>
 
-      {showModal && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
-              <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold">Xác nhận thoát</h5>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
-              </div>
-              <div className="modal-body text-center py-4">
-                <i className="bi bi-exclamation-triangle text-warning display-4"></i>
-                <p className="mt-3">Bạn có chắc chắn muốn kết thúc phiên làm việc không?</p>
-              </div>
-              <div className="modal-footer border-0 justify-content-center pb-4">
-                <button className="btn btn-light px-4" onClick={() => setShowModal(false)}>Hủy bỏ</button>
-                <button className="btn btn-danger px-4" onClick={logout}>Đăng xuất ngay</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+                {showModal && (
+                    <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <div className="modal-dialog modal-dialog-centered">
+                            <div className="modal-content border-0 shadow">
+                                <div className="modal-header border-0">
+                                    <h5 className="modal-title fw-bold">Xác nhận thoát</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                                </div>
+                                <div className="modal-body text-center py-4">
+                                    <i className="bi bi-exclamation-triangle text-warning display-4"></i>
+                                    <p className="mt-3">Bạn có chắc chắn muốn kết thúc phiên làm việc không?</p>
+                                </div>
+                                <div className="modal-footer border-0 justify-content-center pb-4">
+                                    <button className="btn btn-light px-4" onClick={() => setShowModal(false)}>Hủy bỏ</button>
+                                    <button className="btn btn-danger px-4" onClick={logout}>Đăng xuất ngay</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </>
         </div>
     );
 };
