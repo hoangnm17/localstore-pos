@@ -25,7 +25,7 @@ const Sidebar = () => {
             { title: 'Nhập kho', path: '/inventory/import' }]
         },
         {
-            title: 'Sản phẩm', icon: 'bi-box-seam-fill', id: 'products',
+            title: 'Sản phẩm', icon: 'bi-box-seam-fill', id: 'products, categories',
             children: [{ title: 'Danh mục sản phẩm', path: '/categories' },
             { title: 'Danh sách sản phẩm', path: '/products/list' }]
         },
