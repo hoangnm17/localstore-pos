@@ -129,3 +129,32 @@ exports.countProductsBySupplier = async (supplierId, search) => {
 
     return result.recordset[0].total;
 };
+
+const getStockByProductId = async (transaction, productId) => {
+  const result = await new sql.Request(transaction)
+    .input("productId", sql.Int, productId)
+    .query(`
+      SELECT quantity
+      FROM InventoryStocks WITH (UPDLOCK, ROWLOCK)
+      WHERE productId = @productId
+    `);
+
+  return result.recordset[0] || null;
+};
+
+const updateStock = async (transaction, productId, quantity) => {
+  await new sql.Request(transaction)
+    .input("productId", sql.Int, productId)
+    .input("quantity", sql.Int, quantity)
+    .query(`
+      UPDATE InventoryStocks
+      SET quantity = @quantity,
+          updatedAt = GETDATE()
+      WHERE productId = @productId
+    `);
+};
+
+module.exports = {
+    getStockByProductId,
+    updateStock,
+}

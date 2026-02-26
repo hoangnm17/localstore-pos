@@ -9,7 +9,7 @@ export function useCustomerSearch(phone) {
 
   useEffect(() => {
     if (!phone || phone.length < 6) {
-      setResult(null)
+      setResult([])
       setLoading(false)
       return
     }
@@ -21,9 +21,10 @@ export function useCustomerSearch(phone) {
     const timer = setTimeout(async () => {
       try {
         const res = await customersSearch(phone)
+        const customers = res?.data?.data || [];
         
         if (requestId === activeRequest.current) {
-          setResult(res?.data?.data || null)
+          setResult(customers)
         }
       } catch (error) {
         console.error("Search customer error:", error)

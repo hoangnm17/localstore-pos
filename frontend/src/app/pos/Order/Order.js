@@ -23,6 +23,7 @@ export default function Order({
       orderId: orderId,
       method: method,
       customerPay: customerPay,
+      customer: customer,
     };
 
     await createPayment(payload);
@@ -34,13 +35,17 @@ export default function Order({
 
   const handleSelectCustomer = async (selectedCustomer) => {
     try {
-      if (!selectedCustomer) return;
-
       onSelectCustomer(selectedCustomer);
-      // await attachCustomerToInvoice(orderId, selectedCustomer.id);
+
+      if (selectedCustomer) {
+        // await attachCustomerToInvoice(orderId, selectedCustomer.id);
+      } else {
+        // await detachCustomerFromInvoice(orderId);
+      }
+
 
     } catch (error) {
-      console.error("Attach customer error:", error);
+      console.error("Attach/Detach customer error:", error);
     }
   };
 
