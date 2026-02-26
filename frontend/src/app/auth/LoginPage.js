@@ -17,7 +17,7 @@ function LoginPage() {
         navigate("/sales");
         break;
       case 'Warehouse':
-        navigate("/inventory");
+        navigate("/inventory/menu");
         break;
       default:
         navigate("/sales");
