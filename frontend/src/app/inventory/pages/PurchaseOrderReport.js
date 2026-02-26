@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import purchaseOrderService from "../../../services/purchaseOrderService";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import SummaryCard from "../inventoryComponents/SummaryCard";
 
 // Chart.js imports
@@ -301,8 +301,8 @@ function PurchaseOrderReport() {
                             </div>
                           );
                         }) || (
-                        <div className="text-center text-muted py-3">Không có dữ liệu nhà cung cấp</div>
-                      )}
+                          <div className="text-center text-muted py-3">Không có dữ liệu nhà cung cấp</div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -386,12 +386,12 @@ function PurchaseOrderReport() {
                             </td>
                           </tr>
                         )) || (
-                          <tr>
-                            <td colSpan={3} className="text-center py-4">
-                              Không có dữ liệu
-                            </td>
-                          </tr>
-                        )}
+                            <tr>
+                              <td colSpan={3} className="text-center py-4">
+                                Không có dữ liệu
+                              </td>
+                            </tr>
+                          )}
                       </tbody>
                     </table>
                   </div>
