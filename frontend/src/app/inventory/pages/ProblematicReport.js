@@ -1,25 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import inventoryService from "../../../services/Inventory/categoryStockService";
 import problematicService from "../../../services/Inventory/problematicService";
 import ProblematicDetailModal from "../InventoryModal/ProblematicDetailModal";
 import ProblematicCreateModal from "../InventoryModal/ProblematicCreateModal";
 
 function ProblematicPage() {
-
   const user = JSON.parse(localStorage.getItem("user"));
-  const hasProcessPermission = user?.features?.includes("PROCESS_PROBLEMATIC") || false;
-  console.log("User:", user);
-  console.log("Has permission:", hasProcessPermission);
+  const hasProcessPermission =
+    user?.features?.includes("PROCESS_PROBLEMATIC") || false;
+
   const navigate = useNavigate();
 
   const [reports, setReports] = useState([]);
-  const [title, setTitle] = useState("");
-  const [issueDescription, setIssueDescription] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // ✅ FILTER STATE
   const [filters, setFilters] = useState({
     status: "",
     createdFrom: "",
@@ -30,17 +27,30 @@ function ProblematicPage() {
     window.scrollTo(0, 0);
     fetchReports();
   }, [filters]);
+
+  // ✅ FETCH WITH CLEAN FILTERS
   const fetchReports = async () => {
-    const res = await problematicService.getReports(filters);
+    try {
+      const cleanedFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, v]) => v)
+      );
 
-    const data = Array.isArray(res?.data?.data) ? res.data.data : [];
+      const res = await problematicService.getReports(cleanedFilters);
 
-    const normalized = data.map(r => ({
-      ...r,
-      status: r.status?.toUpperCase().trim()
-    }));
+      const data = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
 
-    setReports(normalized);
+      const normalized = data.map((r) => ({
+        ...r,
+        status: r.status?.toUpperCase().trim(),
+      }));
+
+      setReports(normalized);
+    } catch (error) {
+      console.error("Fetch reports error:", error);
+      setReports([]);
+    }
   };
 
   const handleCreate = async (data) => {
@@ -63,11 +73,8 @@ function ProblematicPage() {
     );
 
     await fetchReports();
-
     setShowDetailModal(false);
   };
-
-
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -86,7 +93,7 @@ function ProblematicPage() {
       default:
         return (
           <span className="badge bg-secondary">
-            Chưa xử lý
+            Không xác định
           </span>
         );
     }
@@ -94,6 +101,7 @@ function ProblematicPage() {
 
   return (
     <div className="container py-4">
+      {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-3">
           <button
@@ -117,6 +125,74 @@ function ProblematicPage() {
         </button>
       </div>
 
+      {/* ✅ FILTER CARD */}
+      <div className="card mb-3 shadow-sm border-0">
+        <div className="card-body">
+          <div className="row g-3 align-items-end">
+
+            {/* Status */}
+            <div className="col-md-3">
+              <label className="form-label fw-medium">Trạng thái</label>
+              <select
+                className="form-select"
+                value={filters.status}
+                onChange={(e) =>
+                  setFilters({ ...filters, status: e.target.value })
+                }
+              >
+                <option value="">Tất cả</option>
+                <option value="OPEN">Chưa xử lý</option>
+                <option value="PROCESSED">Đã xử lý</option>
+              </select>
+            </div>
+
+            {/* From Date */}
+            <div className="col-md-3">
+              <label className="form-label fw-medium">Từ ngày</label>
+              <input
+                type="date"
+                className="form-control"
+                value={filters.createdFrom}
+                onChange={(e) =>
+                  setFilters({ ...filters, createdFrom: e.target.value })
+                }
+              />
+            </div>
+
+            {/* To Date */}
+            <div className="col-md-3">
+              <label className="form-label fw-medium">Đến ngày</label>
+              <input
+                type="date"
+                className="form-control"
+                value={filters.createdTo}
+                onChange={(e) =>
+                  setFilters({ ...filters, createdTo: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Reset */}
+            <div className="col-md-3">
+              <button
+                className="btn btn-outline-secondary w-100"
+                onClick={() =>
+                  setFilters({
+                    status: "",
+                    createdFrom: "",
+                    createdTo: "",
+                  })
+                }
+              >
+                Reset bộ lọc
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* TABLE */}
       <div className="card shadow-sm border-0">
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -163,7 +239,7 @@ function ProblematicPage() {
         </div>
       </div>
 
-      {/* Modal Detail */}
+      {/* MODALS */}
       <ProblematicDetailModal
         show={showDetailModal}
         report={selectedReport}
@@ -173,7 +249,6 @@ function ProblematicPage() {
         hasProcessPermission={hasProcessPermission}
       />
 
-      {/* Modal Create */}
       <ProblematicCreateModal
         show={showCreateModal}
         onClose={() => setShowCreateModal(false)}

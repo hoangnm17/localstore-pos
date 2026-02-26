@@ -22,7 +22,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredFeatures={["VIEW_SALES"]} />}>
         {salesRoute}
       </Route>
-      <Route element={<ProtectedRoute requiredFeatures={["VIEW_INVENTORY"]} />}>
+      <Route >
         {InventoryRoutes}
       </Route>
       <Route element={<ProtectedRoute requiredFeatures={["MANAGE_PRODUCTS"]} />}>
