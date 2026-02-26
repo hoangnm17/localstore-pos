@@ -1,5 +1,17 @@
 const { connectDB, sql } = require("../config/database.js");
 
+const validateFields = (data) => {
+    const { loyaltyPoints, totalSpending } = data;
+
+    if (loyaltyPoints !== undefined && parseInt(loyaltyPoints) < 0) {
+        throw new Error('Điểm tích lũy không được là số âm');
+    }
+
+    if (totalSpending !== undefined && parseFloat(totalSpending) < 0) {
+        throw new Error('Tổng chi tiêu không được là số âm');
+    }
+};
+
 exports.getCustomers = async (filters) => {
     const pool = await connectDB();
     const {
@@ -78,6 +90,8 @@ exports.createCustomer = async (data) => {
     const pool = await connectDB();
     const { name, phone, status = 'Active', loyaltyPoints = 0, totalSpending = 0 } = data;
 
+    validateFields(data);
+
     const result = await pool.request()
         .input('name', sql.NVarChar, name)
         .input('phone', sql.VarChar, phone)
@@ -86,8 +100,9 @@ exports.createCustomer = async (data) => {
         .input('totalSpending', sql.Decimal(15, 2), totalSpending)
         .query(`
             INSERT INTO Customers (name, phone, status, loyaltyPoints, totalSpending)
-            OUTPUT INSERTED.*
-            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending)
+            VALUES (@name, @phone, @status, @loyaltyPoints, @totalSpending);
+            
+            SELECT * FROM Customers WHERE id = SCOPE_IDENTITY();
         `);
 
     return result.recordset[0];
@@ -96,6 +111,8 @@ exports.createCustomer = async (data) => {
 exports.updateCustomer = async (id, data) => {
     const pool = await connectDB();
     const { name, phone, status, loyaltyPoints, totalSpending } = data;
+
+    validateFields(data);
 
     // Dynamic partial update — chỉ SET những field nào được truyền vào
     const setClauses = [];
@@ -127,8 +144,9 @@ exports.updateCustomer = async (id, data) => {
     const result = await request.query(`
         UPDATE Customers
         SET ${setClauses.join(', ')}
-        OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        SELECT * FROM Customers WHERE id = @id;
     `);
 
     return result.recordset[0];
@@ -143,8 +161,9 @@ exports.deleteCustomer = async (id) => {
         .query(`
             UPDATE Customers
             SET status = 'Inactive'
-            OUTPUT INSERTED.*
-            WHERE id = @id
+            WHERE id = @id;
+
+            SELECT * FROM Customers WHERE id = @id;
         `);
     return result.recordset[0];
 };

@@ -52,7 +52,8 @@ function LoginPage() {
       }
     } catch (err) {
       console.error("Lỗi Login:", err);
-      setError("Sai email hoặc mật khẩu");
+      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
+
     } finally {
       setLoading(false);
     }

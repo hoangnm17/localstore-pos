@@ -29,7 +29,7 @@ const Sidebar = () => {
             children: [{ title: 'Danh mục sản phẩm', path: '/categories' },
             { title: 'Danh sách sản phẩm', path: '/products/list' }]
         },
-        { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/promo' },
+        { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/crm' },
         {
             title: 'Nhân Sự', icon: 'bi-people-fill', id: 'staff',
             children: [{ title: 'Danh sách nhân viên', path: '/staff' },
