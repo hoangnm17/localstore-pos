@@ -7,9 +7,9 @@ const productStockService = {
     });
   },
 
-  getProductsBySupplier(supplierId, search = "", page = 1, limit = 10) {
+  getProductsBySupplier(supplierId, search = "") {
     return api.get(`/inventory/suppliers/${supplierId}/products`, {
-      params: { search, page, limit }
+      params: { search }
     });
   },
 

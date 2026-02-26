@@ -4,6 +4,12 @@ import purchaseOrderService from "../../../services/Inventory/purchaseOrderServi
 import PurchaseOrderActions from "../inventoryComponents/PurchaseOrderAction";
 
 const PurchaseOrderDetail = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  console.log("USER:", user);
+  console.log("FEATURES:", user?.features);
+  const canUpdatePO = user?.features?.includes("UPDATE_PURCHASE_ORDER");
+  const canReceivePO = user?.features?.includes("RECEIVE_PURCHASE_ORDER");
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -64,13 +70,11 @@ const PurchaseOrderDetail = () => {
 
   const formatDate = (dateStr) =>
     dateStr
-      ? new Date(dateStr).toLocaleString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      ? new Date(dateStr).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
       : "—";
 
   // Helper hiển thị tổng số lượng theo đơn vị khác nhau
@@ -92,9 +96,9 @@ const PurchaseOrderDetail = () => {
       Approved: { color: "success", text: "Đã duyệt" },
       Pending: { color: "warning", text: "Chờ duyệt" },
       Cancelled: { color: "danger", text: "Đã hủy" },
-      WaitingForDelivery: { color: "primary", text: "Chờ giao hàng" }, // vàng - chờ giao
-      Rejected: { color: "danger", text: "Đã từ chối" },               // đỏ - từ chối
-      CannotDeliver: { color: "dark", text: "Không thể giao" },        // xám đen - không giao được
+      WaitingForDelivery: { color: "primary", text: "Chờ giao hàng" },
+      Rejected: { color: "danger", text: "Đã từ chối" },
+      CannotDeliver: { color: "dark", text: "Không thể giao" },
     };
 
     const info = statusMap[status] || { color: "secondary", text: status || "Không xác định" };
@@ -112,11 +116,11 @@ const PurchaseOrderDetail = () => {
   return (
     <div className="container-fluid py-4 px-3 px-md-5 bg-light min-vh-100">
       <div className="card shadow-xl border-0 rounded-4 overflow-hidden">
-        {/* Header - Màu mới: gradient xanh dương đậm → xanh nhạt */}
+        {/* Header */}
         <div
           className="card-header text-white d-flex align-items-center justify-content-between py-4 px-4 px-md-5 shadow"
           style={{
-            background: "linear-gradient(135deg, #0d47a1 0%, #1976d2 100%)", // Xanh dương chuyên nghiệp
+            background: "linear-gradient(135deg, #0d47a1 0%, #1976d2 100%)",
           }}
         >
           <div className="d-flex align-items-center gap-3">
@@ -233,6 +237,35 @@ const PurchaseOrderDetail = () => {
                 </div>
               </div>
             </div>
+
+            {/* Ghi chú - Card riêng full width */}
+            <div className="col-lg-12">
+              <div className="card shadow-sm border-0 rounded-4">
+                <div className="card-body p-4">
+                  <h5 className="fw-bold text-primary mb-3">
+                    <i className="bi bi-journal-text me-2"></i>
+                    Ghi chú
+                  </h5>
+                  <div
+                    className="p-3 bg-white border rounded-3"
+                    style={{
+                      minHeight: "100px",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      backgroundColor: po.note ? "#f8f9fa" : "transparent",
+                    }}
+                  >
+                    {po.note ? (
+                      <p className="mb-0 text-dark fs-5">{po.note}</p>
+                    ) : (
+                      <p className="mb-0 text-muted fst-italic">
+                        Không có ghi chú
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Danh sách sản phẩm */}
@@ -268,7 +301,7 @@ const PurchaseOrderDetail = () => {
                             </small>
                           </td>
                           <td className="text-center">{item.baseUnit || "—"}</td>
-                          <td className="text-center">{item.currentStock ?? "—"}</td>
+                          <td className="text-center">{item.quantityBeforeOrdered ?? "—"}</td>
                           <td className="text-center">{formatCurrency(item.costPrice)}</td>
                           <td className="text-center fw-bold text-primary">
                             {item.quantityOrdered} {item.baseUnit || ""}
@@ -306,7 +339,12 @@ const PurchaseOrderDetail = () => {
             <div className="text-muted">
               Đơn #{po.id} • Tạo lúc {formatDate(po.createdAt)}
             </div>
-            <PurchaseOrderActions po={po} onReload={fetchDetail} />
+            <PurchaseOrderActions
+              po={po}
+              onReload={fetchDetail}
+              canUpdatePO={canUpdatePO}
+              canReceivePO={canReceivePO}
+            />
           </div>
         </div>
       </div>

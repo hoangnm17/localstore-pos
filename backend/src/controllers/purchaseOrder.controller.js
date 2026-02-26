@@ -16,7 +16,6 @@ exports.createPurchaseOrder = async (req, res) => {
         });
 
     } catch (err) {
-
         if (err.message === "PERMISSION_DENIED")
             return res.status(403).json({ success: false, message: "Permission denied" });
 
@@ -64,7 +63,6 @@ exports.updateStatus = async (req, res) => {
         });
 
     } catch (err) {
-
         if (err.message === "PERMISSION_DENIED")
             return res.status(403).json({ success: false, message: "Permission denied" });
 

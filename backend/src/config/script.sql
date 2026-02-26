@@ -286,6 +286,8 @@ CREATE TABLE PurchaseOrders (
     processBy BIGINT NULL,
     receivedBy BIGINT NULL,
 
+    note NVARCHAR(MAX),
+
     supplierId INT NOT NULL,
 
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
