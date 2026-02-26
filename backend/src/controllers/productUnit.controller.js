@@ -1,4 +1,4 @@
-const service = require('../services/productUnit.service');
+const service = require('../services/product/productUnit.service');
 
 exports.getProductUnits = async (req, res) => {
     try {
@@ -20,21 +20,37 @@ exports.getByBarcode = async (req, res) => {
 };
 
 exports.getByProduct = async (req, res) => {
-    const data = await service.getByProduct(req.params.productId);
-    res.json({ success: true, data });
+    try {
+        const data = await service.getByProduct(req.params.productId);
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
 };
 
 exports.create = async (req, res) => {
-    const id = await service.create(req.body);
-    res.json({ success: true, id });
+    try {
+        const id = await service.create(req.body);
+        res.json({ success: true, id });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
 };
 
 exports.update = async (req, res) => {
-    await service.update(req.params.id, req.body);
-    res.json({ success: true });
+    try {
+        await service.update(req.params.id, req.body);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
 };
 
 exports.remove = async (req, res) => {
-    await service.remove(req.params.id);
-    res.json({ success: true });
+    try {
+        await service.remove(req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
 };

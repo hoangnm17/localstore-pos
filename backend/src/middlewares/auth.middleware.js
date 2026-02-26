@@ -32,8 +32,9 @@ const verifyToken = async (req, res, next) => {
 
         req.user = {
             id: user.id,
+            counterId: decoded.counterId,
             roleId: user.roleId,
-            permissions: permissions.map(p => p.code) 
+            permissions: permissions.map(p => p.featureKey)
         };
 
         next();

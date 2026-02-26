@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { customerCreate } from "services/Customer/customer.service";
 import BaseModal from "components/common/BaseModal";
 import AlertMessage from "components/common/AlertMessage";
 import { isValidPhone, isNotEmpty } from "utils/validators";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 export default function CustomerCreateModal({
   phone,
@@ -14,10 +15,12 @@ export default function CustomerCreateModal({
     phone: phone || "",
   });
 
+  const { showNotification } = useNotification();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const nameRef = useRef(null);
+  const phoneRef = useRef(null);
 
-  // Sync phone khi prop thay đổi
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
@@ -26,13 +29,16 @@ export default function CustomerCreateModal({
   }, [phone]);
 
   const handleSubmit = async () => {
+    if (saving) return;
     if (!isNotEmpty(form.name)) {
       setError("Vui lòng nhập tên khách hàng");
+      nameRef.current?.focus();
       return;
     }
 
     if (!isValidPhone(form.phone)) {
       setError("Số điện thoại không hợp lệ");
+      phoneRef.current?.focus();
       return;
     }
 
@@ -40,20 +46,24 @@ export default function CustomerCreateModal({
       setSaving(true);
       setError("");
 
-      const res = await customerCreate(form);
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+      }
 
+      const res = await customerCreate(payload);
       onCreated(res.data);
+      showNotification("Tạo khách hàng thành công", "success");
       onClose();
     } catch (err) {
-      console.error(err);
-      setError("Tạo khách hàng thất bại. Vui lòng thử lại!");
+      setError(err?.message || "Có lỗi xảy ra.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <BaseModal onClose={onClose}>
+    <BaseModal onClose={onClose} disableClose={saving}>
       <div
         className="modal-content border-0 shadow-lg bg-white"
         style={{
@@ -82,6 +92,7 @@ export default function CustomerCreateModal({
               TÊN KHÁCH HÀNG
             </label>
             <input
+              ref={nameRef}
               className="form-control"
               style={{
                 borderRadius: "10px",
@@ -91,9 +102,17 @@ export default function CustomerCreateModal({
               placeholder="Nhập tên khách hàng..."
               value={form.name}
               autoFocus
-              onChange={(e) =>
+              onChange={(e) => {
+                setError("");
                 setForm({ ...form, name: e.target.value })
               }
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  phoneRef.current?.focus();
+                }
+              }}
             />
           </div>
 
@@ -103,6 +122,7 @@ export default function CustomerCreateModal({
               SỐ ĐIỆN THOẠI
             </label>
             <input
+              ref={phoneRef}
               className="form-control"
               style={{
                 borderRadius: "10px",
@@ -112,12 +132,19 @@ export default function CustomerCreateModal({
               placeholder="Nhập số điện thoại..."
               value={form.phone}
               inputMode="numeric"
-              onChange={(e) =>
+              onChange={(e) => {
+                setError("");
                 setForm({
                   ...form,
                   phone: e.target.value.replace(/\D/g, ""),
-                })
-              }
+                });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
             />
           </div>
 

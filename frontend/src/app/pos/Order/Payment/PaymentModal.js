@@ -5,7 +5,6 @@ import { formatCurrency } from "utils/formatters";
 import PaymentMethodSelector from "./PaymentModal/PaymentMethodSelector";
 import CashPayment from "./PaymentModal/CashPayment";
 import BankPayment from "./PaymentModal/BankPayment";
-// import usePaymentKeyboard from "./usePaymentKeyboard";
 
 export default function PaymentModal({
   orderId,
@@ -14,7 +13,6 @@ export default function PaymentModal({
   onConfirm = () => {},
 }) {
   const safeTotal = useMemo(() => Number(total) || 0, [total]);
-
   const [method, setMethod] = useState("CASH");
 
   useEffect(() => {
@@ -29,39 +27,43 @@ export default function PaymentModal({
     });
   };
 
-  // usePaymentKeyboard({
-  //   method,
-  //   setMethod,
-  //   onClose,
-  // });
-
   return (
     <BaseModal onClose={onClose}>
-      <div className="bg-white rounded-4 shadow-lg overflow-hidden">
-
+      <div
+        className="bg-white rounded-3 shadow-sm overflow-hidden"
+        style={{
+          width: "480px",
+          maxWidth: "95vw",
+        }}
+      >
         {/* HEADER */}
-        <div className="d-flex justify-content-between align-items-center pt-4 px-4 pb-0">
-          <h5 className="fw-bold fs-4 mb-0">Thanh toán</h5>
+        <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+          <span className="fw-semibold">Thanh toán</span>
           <button className="btn-close shadow-none" onClick={onClose} />
         </div>
 
         {/* BODY */}
-        <div className="p-4">
+        <div className="p-3">
 
-          <div className="text-center mb-4 p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
-            <div className="text-secondary small fw-bold text-uppercase mb-1">
-              Tổng tiền cần thu
+          {/* TOTAL */}
+          <div className="text-center mb-3 p-2 rounded-3 bg-light border">
+            <div className="small text-muted mb-1">
+              <strong>Tổng tiền cần thu</strong>
             </div>
-            <h2 className="text-primary fw-bold mb-0">
-              {formatCurrency(safeTotal)}
-            </h2>
+            <div className="h3 fw-bold text-primary mb-0">
+              <strong>{formatCurrency(safeTotal)}</strong>
+            </div>
           </div>
 
-          <PaymentMethodSelector
-            method={method}
-            setMethod={setMethod}
-          />
+          {/* METHOD */}
+          <div className="mb-2">
+            <PaymentMethodSelector
+              method={method}
+              setMethod={setMethod}
+            />
+          </div>
 
+          {/* CONTENT */}
           {method === "CASH" && (
             <CashPayment
               total={safeTotal}
@@ -75,9 +77,7 @@ export default function PaymentModal({
               onConfirm={handleConfirm}
             />
           )}
-
         </div>
-
       </div>
     </BaseModal>
   );

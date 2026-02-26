@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import purchaseOrderService from "../../../services/purchaseOrderService";
+import { useEffect, useState, useCallback } from "react";
+import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import { useNavigate } from "react-router-dom";
 
 const PurchaseOrderList = () => {
@@ -8,11 +8,13 @@ const PurchaseOrderList = () => {
   const [orders, setOrders] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
   const [filters, setFilters] = useState({
     from: "",
     to: "",
     status: "",
   });
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,7 +30,10 @@ const PurchaseOrderList = () => {
     Rejected: { label: "Từ chối", color: "danger" },
   };
 
-  const fetchData = async (customPage = page) => {
+  /* ================= FETCH DATA ================= */
+
+  const fetchData = useCallback(
+  async (customPage = page) => {
     try {
       setLoading(true);
 
@@ -39,24 +44,49 @@ const PurchaseOrderList = () => {
         status: filters.status || undefined,
       });
 
-      // interceptor đã return response.data
-      setOrders(Array.isArray(res?.data) ? res.data : []);
-      setTotalPages(res?.totalPages || 1);
-      setPage(res?.page || customPage);
+      const response = res?.data;
+
+      if (!response?.success) {
+        setOrders([]);
+        return;
+      }
+
+      const paginationData = response.data;
+
+      setOrders(
+        Array.isArray(paginationData?.data)
+          ? paginationData.data
+          : []
+      );
+
+      setTotalPages(paginationData?.totalPages || 1);
+      setPage(paginationData?.page || customPage);
+
     } catch (err) {
       console.error("Fetch PO error:", err);
       setOrders([]);
     } finally {
       setLoading(false);
     }
-  };
+  },
+  [filters, page]
+);
+
+  /* ================= EFFECT ================= */
 
   useEffect(() => {
     fetchData(page);
-  }, [page]);
+  }, [page, filters, fetchData]);
+
+  /* ================= HANDLERS ================= */
 
   const handleFilter = () => {
-    setPage(1);
+    // Nếu đang ở page 1 thì gọi luôn API
+    if (page === 1) {
+      fetchData(1);
+    } else {
+      setPage(1);
+    }
   };
 
   const handlePrev = () => {
@@ -74,6 +104,8 @@ const PurchaseOrderList = () => {
   const handleCreatePO = () => {
     navigate("/inventory/purchase-orders/create");
   };
+
+  /* ================= UI ================= */
 
   return (
     <div className="container-fluid py-4 bg-light min-vh-100">
@@ -203,9 +235,8 @@ const PurchaseOrderList = () => {
                             <td className="ps-4 fw-medium">#{po.id}</td>
                             <td>
                               <span
-                                className={`badge rounded-pill bg-${
-                                  status?.color || "secondary"
-                                }`}
+                                className={`badge rounded-pill bg-${status?.color || "secondary"
+                                  }`}
                               >
                                 {status?.label || po.status}
                               </span>
@@ -215,8 +246,8 @@ const PurchaseOrderList = () => {
                             <td>
                               {po.createdAt
                                 ? new Date(po.createdAt).toLocaleDateString(
-                                    "vi-VN"
-                                  )
+                                  "vi-VN"
+                                )
                                 : "—"}
                             </td>
                             <td className="text-center">
@@ -252,9 +283,8 @@ const PurchaseOrderList = () => {
                     </li>
 
                     <li
-                      className={`page-item ${
-                        page >= totalPages ? "disabled" : ""
-                      }`}
+                      className={`page-item ${page >= totalPages ? "disabled" : ""
+                        }`}
                     >
                       <button className="page-link" onClick={handleNext}>
                         Sau

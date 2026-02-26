@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -93,7 +94,7 @@ function InventoryMenu() {
           <div className="col">
             <div
               className="card h-100 border-0 shadow-lg rounded-4 overflow-hidden text-center transition hover-shadow-xl cursor-pointer"
-              onClick={() => navigate("/inventory/reports")}
+              onClick={() => navigate("/inventory/purchase-orders/report")}
               role="button"
               tabIndex={0}
             >

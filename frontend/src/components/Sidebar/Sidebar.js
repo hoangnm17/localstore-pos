@@ -24,7 +24,11 @@ const Sidebar = () => {
             children: [{ title: 'Tồn kho', path: '/inventory' },
             { title: 'Nhập kho', path: '/inventory/import' }]
         },
-        { title: 'Sản Phẩm', icon: 'bi-archive-fill', path: '/products' },
+        {
+            title: 'Sản phẩm', icon: 'bi-box-seam-fill', id: 'products',
+            children: [{ title: 'Danh mục sản phẩm', path: '/categories' },
+            { title: 'Danh sách sản phẩm', path: '/products/list' }]
+        },
         { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/crm' },
         {
             title: 'Nhân Sự', icon: 'bi-people-fill', id: 'staff',

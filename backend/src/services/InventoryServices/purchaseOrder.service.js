@@ -9,7 +9,7 @@ const WAREHOUSE = "warehouse_staff";
 ============================== */
 exports.createPurchaseOrder = async (data, user) => {
 
-    if (!CREATE_PO_ROLES.includes(user.role)) {
+    if (!user.permissions.includes("CREATE_PURCHASE_ORDER")) {
         throw new Error("PERMISSION_DENIED");
     }
 
@@ -22,86 +22,61 @@ exports.createPurchaseOrder = async (data, user) => {
     }
 
     for (const item of data.items) {
-        if (!item.productId || !item.quantityOrdered || item.quantityOrdered <= 0) {
-            throw new Error("INVALID_ITEM_DATA");
-        }
+    if (!item.productId || !item.quantityOrdered || item.quantityOrdered <= 0) {
+        throw new Error("INVALID_ITEM_DATA");
     }
+}
 
     return await purchaseOrderModel.createPurchaseOrderWithItems({
         supplierId: data.supplierId,
         note: data.note || null,
-        createdBy: user.staffId,
+        createdBy: user.id,
         items: data.items
     });
 };
 
-
 /* ==============================
    UPDATE STATUS
 ============================== */
-exports.updateStatus = async (poId, newStatus, user) => {
+exports.updateStatus = async (poId, newStatus, currentUser) => {
 
-    const po = await purchaseOrderModel.getById(poId);
-    if (!po) throw new Error("PO_NOT_FOUND");
+    const hasUpdatePermission = currentUser.permissions.includes("UPDATE_PURCHASE_ORDER");
+    const hasReceivePermission = currentUser.permissions.includes("RECEIVE_PURCHASE_ORDER");
 
-    const currentStatus = po.status;
+    const userId = currentUser.id;
 
-    // -------------------------
-    // ROLE CHECK
-    // -------------------------
+    const validStatuses = [
+        "Approved",
+        "Rejected",
+        "WaitingForDelivery",
+        "CannotDeliver",
+        "Received"
+    ];
 
-    if (user.role === MANAGER) {
+    if (!validStatuses.includes(newStatus)) {
+        throw new Error("INVALID_TRANSITION");
+    }
 
-        if (
-            (currentStatus === "Pending" &&
-                ["Approved", "Rejected"].includes(newStatus)) ||
+    if (hasUpdatePermission) {
 
-            (currentStatus === "Approved" &&
-                ["WaitingForDelivery", "CannotDeliver"].includes(newStatus)) ||
-
-            (currentStatus === "WaitingForDelivery" &&
-                newStatus === "Received")
-        ) {
-            // hợp lệ
-        } else {
-            throw new Error("INVALID_TRANSITION");
+        // Nếu là Received thì gọi hàm receive riêng
+        if (newStatus === "Received") {
+            return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
         }
 
-    } else if (user.role === WAREHOUSE) {
+        return await purchaseOrderModel.updateStatus(poId, newStatus, userId);
+    }
 
-        if (
-            currentStatus === "WaitingForDelivery" &&
-            newStatus === "Received"
-        ) {
-            // hợp lệ
-        } else {
+    if (hasReceivePermission) {
+
+        if (newStatus !== "Received") {
             throw new Error("PERMISSION_DENIED");
         }
 
-    } else {
-        throw new Error("PERMISSION_DENIED");
+        return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
     }
 
-    // -------------------------
-    // RECEIVE → transaction + receivedBy
-    // -------------------------
-
-    if (newStatus === "Received") {
-        return await purchaseOrderModel.receivePurchaseOrder(
-            poId,
-            user.staffId
-        );
-    }
-
-    // -------------------------
-    // Other status → processBy nếu cần
-    // -------------------------
-
-    return await purchaseOrderModel.updateStatus(
-        poId,
-        newStatus,
-        user.staffId
-    );
+    throw new Error("PERMISSION_DENIED");
 };
 
 exports.getDetail = async (poId) => {
@@ -126,5 +101,25 @@ exports.getList = async (query) => {
         from: query.from,
         to: query.to,
         status: query.status
+    });
+};
+
+/* ==============================
+   PO MONTHLY REPORT
+============================== */
+exports.getMonthlyReport = async ({
+    month,
+    year,
+    supplierId
+}) => {
+
+    if (month < 1 || month > 12) {
+        throw new Error("INVALID_MONTH");
+    }
+
+    return await purchaseOrderModel.getMonthlyReport({
+        month,
+        year,
+        supplierId
     });
 };

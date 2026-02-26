@@ -7,124 +7,110 @@ export default function CustomerSearch({
   customer,
   onSelectCustomer
 }) {
-  const [phone, setPhone] = useState(customer?.phone || "");
+  const [phone, setPhone] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
   const { result, loading } = useCustomerSearch(phone);
 
-  // Khi đổi tab → sync phone theo invoice
   useEffect(() => {
-    setPhone(customer?.phone || "");
-  }, [invoiceId, customer]);
+    setPhone("");
+  }, [invoiceId]);
 
   const handlePhoneChange = (e) => {
     const value = e.target.value;
+
     if (!value || /^[0-9]+$/.test(value)) {
+      if (customer) {
+        onSelectCustomer(null);
+      }
       setPhone(value);
     }
   };
 
-  useEffect(() => {
-    if (phone.length === 10 && result) {
-      onSelectCustomer(result);
-    }
-  }, [phone, result]);
-
-  const handleClear = () => {
+  const handleSelectCustomer = (cust) => {
+    onSelectCustomer(cust);
     setPhone("");
-    onSelectCustomer(null); // 👈 clear customer trong invoice
-  };
-
-  const handleSelect = () => {
-    if (result) {
-      onSelectCustomer(result);
-    }
   };
 
   return (
-    <div className="card border-0 shadow-sm rounded-4">
-      <div className="card-body p-3">
+    <div className="border-bottom p-2">
 
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <label className="small fw-bold text-secondary text-uppercase mb-0">
-            Khách hàng
-          </label>
-          {phone && (
-            <button
-              className="btn btn-sm p-0 text-danger border-0 bg-transparent"
-              onClick={handleClear}
-              style={{ fontSize: "0.75rem" }}
-            >
-              Làm mới
-            </button>
-          )}
-        </div>
+      {/* INPUT */}
+      <div className="d-flex align-items-center gap-2">
+        <input
+          type="tel"
+          className="form-control form-control-sm"
+          placeholder="SĐT khách hàng..."
+          value={phone}
+          onChange={handlePhoneChange}
+          maxLength={11}
+        />
 
-        <div className="position-relative">
-          <input
-            type="tel"
-            className="form-control form-control-lg border-0 bg-light rounded-3 shadow-none"
-            placeholder="Tìm theo số điện thoại..."
-            value={phone}
-            onChange={handlePhoneChange}
-            maxLength={11}
-          />
-
-          {loading && (
-            <div className="position-absolute top-50 end-0 translate-middle-y pe-3">
-              <div className="spinner-border spinner-border-sm text-primary"></div>
-            </div>
-          )}
-        </div>
-
-        {(result || (phone.length >= 6 && !loading && !result)) && (
-          <div className="mt-3 pt-2 border-top">
-
-            {result && !loading && (
-              <div
-                className="d-flex align-items-center p-2 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-10 cursor-pointer"
-                onClick={handleSelect}
-              >
-                <div
-                  className="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-2"
-                  style={{ width: "32px", height: "32px" }}
-                >
-                  {result.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div className="fw-bold text-primary">
-                    {result.name}
-                  </div>
-                  <div className="text-muted small">
-                    {result.phone} • {result.loyaltyPoints} điểm
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {phone.length >= 6 && !loading && !result && (
-              <div className="d-flex justify-content-between bg-light p-2 rounded-3">
-                <span className="text-danger small">Chưa có thành viên</span>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setShowCreate(true)}
-                >
-                  + ĐĂNG KÝ
-                </button>
-              </div>
-            )}
-
-            
-          </div>
+        {loading && (
+          <div className="spinner-border spinner-border-sm text-primary" />
         )}
       </div>
+
+      {/* SEARCH RESULT */}
+      {phone.length >= 6 && !loading && (
+        <div className="mt-2">
+
+          {result.length > 0 ? (
+            result.map((cust) => (
+              <div
+                key={cust.id}
+                className="small py-1 px-2 rounded bg-light cursor-pointer"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSelectCustomer(cust)}
+              >
+                <strong>{cust.name}</strong> — {cust.phone}
+                <span className="text-warning ms-2">
+                  {cust.loyaltyPoints ?? 0}đ
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="small text-danger d-flex justify-content-between">
+              <span>Chưa có thành viên</span>
+              <button
+                className="btn btn-sm btn-primary py-0 px-2"
+                onClick={() => setShowCreate(true)}
+              >
+                + Tạo
+              </button>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* DISPLAY SELECTED CUSTOMER */}
+      {customer && (
+        <div className="mt-2 small d-flex align-items-center text-primary">
+
+          <div className="flex-grow-1">
+            <strong>{customer.name}</strong> — {customer.phone}
+            <span className="text-warning ms-2">
+              <strong>{customer.loyaltyPoints ?? 0} điểm</strong>
+            </span>
+          </div>
+
+          <i
+            className="bi bi-x-circle-fill text-danger ms-2 cursor-pointer"
+            style={{ fontSize: "0.9rem", cursor: "pointer" }}
+            onClick={() => onSelectCustomer(null)}
+            title="Xóa khách"
+          />
+        </div>
+      )}
 
       {showCreate && (
         <CustomerCreateModal
           phone={phone}
           onClose={() => setShowCreate(false)}
           onCreated={(newCustomer) => {
-            onSelectCustomer(newCustomer); // 👈 cập nhật invoice
+            onSelectCustomer(newCustomer);
+            setPhone("");
             setShowCreate(false);
           }}
         />
