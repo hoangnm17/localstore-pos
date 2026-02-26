@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
+import supplierService from "../../../services/Inventory/supplierService"; // ← import service nhà cung cấp
 import PurchaseOrderActions from "../inventoryComponents/PurchaseOrderAction";
+import SupplierDetailModal from "../inventoryComponents/SupplierDetailModal";
 
 const PurchaseOrderDetail = () => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -17,6 +19,11 @@ const PurchaseOrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // State cho modal chi tiết nhà cung cấp
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [supplierDetail, setSupplierDetail] = useState(null);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+
   const fetchDetail = async () => {
     try {
       const res = await purchaseOrderService.getPurchaseOrderDetail(id);
@@ -25,6 +32,27 @@ const PurchaseOrderDetail = () => {
       setError("Không thể tải thông tin đơn đặt hàng. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSupplierDetail = async (supplierId) => {
+    if (!supplierId) return;
+    setSupplierLoading(true);
+    try {
+      const res = await supplierService.getSupplierById(supplierId);
+      setSupplierDetail(res?.data?.data || null);
+    } catch (err) {
+      console.error("Lỗi khi tải thông tin nhà cung cấp:", err);
+      setSupplierDetail(null);
+    } finally {
+      setSupplierLoading(false);
+    }
+  };
+
+  const handleSupplierClick = () => {
+    if (po?.supplier?.id) {
+      fetchSupplierDetail(po.supplier.id);
+      setShowSupplierModal(true);
     }
   };
 
@@ -71,13 +99,12 @@ const PurchaseOrderDetail = () => {
   const formatDate = (dateStr) =>
     dateStr
       ? new Date(dateStr).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "—";
 
-  // Helper hiển thị tổng số lượng theo đơn vị khác nhau
   const getQuantitySummary = (items) => {
     if (!items?.length) return "0";
     const unitMap = items.reduce((acc, item) => {
@@ -166,11 +193,42 @@ const PurchaseOrderDetail = () => {
             </div>
 
             <div className="col-md-3 col-sm-6">
-              <div className="card bg-info text-white shadow border-0 rounded-4 h-100">
-                <div className="card-body text-center">
-                  <i className="bi bi-building fs-2 mb-2"></i>
-                  <h6 className="mb-1 opacity-90">Nhà cung cấp</h6>
-                  <h5 className="fw-bold mb-0 text-truncate">{po.supplier?.name || "—"}</h5>
+              <div
+                className="card bg-info text-white shadow border-0 rounded-4 h-100 position-relative overflow-hidden transition-all"
+                onClick={handleSupplierClick}
+                style={{
+                  cursor: po?.supplier?.id ? "pointer" : "default",
+                  transition: "all 0.25s ease",
+                }}
+              // Hover effect bằng CSS class (thêm vào file CSS hoặc inline)
+              // Bạn có thể thêm class hover:shadow-2xl hover:scale-[1.03] hover:bg-info-dark (tùy chỉnh)
+              >
+                {/* Overlay khi hover (tùy chọn - làm nổi bật hơn) */}
+                {po?.supplier?.id && (
+                  <div
+                    className="position-absolute top-0 end-0 p-2 opacity-0 transition-opacity"
+                    style={{ transition: "opacity 0.3s ease" }}
+                  >
+                    <i className="bi bi-arrow-right-circle-fill fs-4"></i>
+                  </div>
+                )}
+
+                <div className="card-body text-center d-flex flex-column justify-content-center">
+                  <i className="bi bi-building fs-1 mb-3"></i>
+                  <h6 className="mb-2 opacity-90 fw-semibold">Nhà cung cấp</h6>
+                  <h5 className="fw-bold mb-1 text-truncate">
+                    {po.supplier?.name || "—"}
+                  </h5>
+
+                  {/* Hint click - chỉ hiển thị nếu có supplier */}
+                  {po?.supplier?.id ? (
+                    <small className="opacity-85 mt-2">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Nhấn để xem chi tiết
+                    </small>
+                  ) : (
+                    <small className="opacity-75 mt-2 fst-italic">Chưa có nhà cung cấp</small>
+                  )}
                 </div>
               </div>
             </div>
@@ -238,7 +296,7 @@ const PurchaseOrderDetail = () => {
               </div>
             </div>
 
-            {/* Ghi chú - Card riêng full width */}
+            {/* Ghi chú */}
             <div className="col-lg-12">
               <div className="card shadow-sm border-0 rounded-4">
                 <div className="card-body p-4">
@@ -348,6 +406,14 @@ const PurchaseOrderDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal chi tiết nhà cung cấp */}
+      <SupplierDetailModal
+        show={showSupplierModal}
+        onHide={() => setShowSupplierModal(false)}
+        supplier={supplierDetail}
+        loading={supplierLoading}
+      />
     </div>
   );
 };

@@ -6,6 +6,11 @@ function getSupplierList(search = "") {
   });
 }
 
+function getSupplierById(id) {
+  return api.get(`/inventory/suppliers/${id}`);
+}
+
 export default {
-  getSupplierList
+  getSupplierList,
+  getSupplierById
 };
