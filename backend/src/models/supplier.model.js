@@ -30,3 +30,27 @@ exports.getList = async ({
 
     return result.recordset;
 };
+
+/* ==============================
+   GET SUPPLIER BY ID
+============================== */
+exports.getById = async (id) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("id", sql.Int, id)
+        .query(`
+            SELECT 
+                id,
+                name,
+                contactInfo,
+                address
+            FROM Suppliers
+            WHERE id = @id
+        `);
+
+    if (result.recordset.length === 0) return null;
+
+    return result.recordset[0];
+};

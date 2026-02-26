@@ -46,6 +46,10 @@ router.get("/purchase-orders/detail/:id", protect(PERMISSIONS.VIEW_PURCHASE_ORDE
 // GET SUPPLIER LIST
 router.get("/suppliers/list", supplierController.getSupplierList);
 
+// GET SUPPLIER DETAIL
+router.get("/suppliers/:id", supplierController.getSupplierDetail);
+
+// GET MONTHLY REPORT
 router.get("/purchase-orders/report", purchaseOrderController.getMonthlyReport);
 
 
