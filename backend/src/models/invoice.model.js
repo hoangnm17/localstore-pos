@@ -39,16 +39,21 @@ const getInvoiceList = async ({
       i.status,
 
       -- Staff
-      s.id   AS staffId,
-      s.fullName AS staffName,
+      s.id         AS staffId,
+      s.fullName   AS staffName,
 
       -- Counter
-      c.id   AS counterId,
-      c.counterName AS counterName
+      c.id         AS counterId,
+      c.counterName AS counterName,
+
+      -- Customer
+      cu.id        AS customerId,
+      cu.name  AS customerName
 
     FROM Invoices i
-    LEFT JOIN Staff s   ON i.staffId = s.id
-    LEFT JOIN Counters c ON i.counterId = c.id
+    LEFT JOIN Staff s     ON i.staffId = s.id
+    LEFT JOIN Counters c  ON i.counterId = c.id
+    LEFT JOIN Customers cu ON i.customerId = cu.id
 
     ${whereClause}
 
