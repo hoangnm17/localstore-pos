@@ -9,6 +9,7 @@ import staffRoute from "./staff.route";
 import crmRoute from "./crm.route";
 import dashboardRoute from "./dashboard.route";
 import shiftRoute from "./shift.route";
+import scheduleRoute from "./schedule.route";
 
 const AppRoutes = () => {
   return (
@@ -23,6 +24,7 @@ const AppRoutes = () => {
       {CategoryRoutes}
         {crmRoute}
         {dashboardRoute}
+        {scheduleRoute}
       {/* {CategoryRoutes} */}
       {/* <Route path="/inventory/*" element={<InventoryRoutes />} /> */}
       <Route path="/" element={<Navigate to="/login" replace />} />

@@ -18,8 +18,23 @@ const useProductDetail = (productId = null) => {
     const fetchProduct = useCallback(async (id) => {
         if (!id) return; setLoading(true); setError(null);
         const res = await getProduct(id);
-        if (res.success === false) setError(res.message); else setProduct(res.data?.data || null);
-        setLoading(false);
+        if (res.success === false) setError(res.message);
+        else {
+            const rawProduct = res.data?.data || null;
+
+            if (rawProduct) {
+                setProduct({
+                    ...rawProduct,
+                    isCombo:
+                        rawProduct.isCombo === 1 ||
+                        rawProduct.isCombo === true ||
+                        rawProduct.isCombo === '1' ||
+                        rawProduct.type === 'Combo',
+                });
+            } else {
+                setProduct(null);
+            }
+        } setLoading(false);
     }, []);
 
     const fetchUnits = useCallback(async (id) => {
