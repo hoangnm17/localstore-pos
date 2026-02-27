@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getProducts, stopSellingProduct, startSellingProduct } from '../../services/Product/product.service';
+import {
+    getProducts,
+    stopSellingProduct,
+    startSellingProduct
+} from '../../services/Product/product.service';
 
 const useProduct = () => {
     const [products, setProducts] = useState([]);
@@ -7,34 +11,123 @@ const useProduct = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [filters, setFilters] = useState({ search: '', categoryId: null, status: 'Selling', page: 1, limit: 10 });
 
+    const [filters, setFilters] = useState({
+        search: '',
+        categoryId: null,
+        status: 'Selling',
+        page: 1,
+        limit: 10
+    });
+
+    /**
+     * Lấy danh sách sản phẩm
+     */
     const fetchProducts = useCallback(async () => {
-        setLoading(true); setError(null);
-        const res = await getProducts(filters);
-        if (res.success === false) setError(res.message);
-        else { setProducts(res.data?.data || []); setTotal(res.data?.total || 0); setTotalPages(res.data?.totalPages || 1); }
-        setLoading(false);
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await getProducts(filters); // axios response
+            const payload = res.data || {};
+
+            const rawProducts = payload.data || [];
+
+            // Chuẩn hoá dữ liệu cho UI
+            const mappedProducts = rawProducts.map(p => ({
+                ...p,
+                isComboUI:
+                    p.isCombo === 1 ||
+                    p.isCombo === true ||
+                    p.isCombo === '1' ||
+                    p.type === 'Combo'
+            }));
+
+            setProducts(mappedProducts);
+            setTotal(payload.total || 0);
+            setTotalPages(payload.totalPages || 1);
+
+        } catch (err) {
+            setError(
+                err?.response?.data?.message ||
+                'Không thể tải danh sách sản phẩm'
+            );
+        } finally {
+            setLoading(false);
+        }
     }, [filters]);
 
-    useEffect(() => { fetchProducts(); }, [fetchProducts]);
+    /**
+     * Tự động load khi filter thay đổi
+     */
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
 
-    const updateFilters = useCallback((f) => setFilters(p => ({ ...p, ...f, page: 1 })), []);
-    const changePage = useCallback((page) => setFilters(p => ({ ...p, page })), []);
+    /**
+     * Cập nhật filter (reset về trang 1)
+     */
+    const updateFilters = useCallback((newFilters) => {
+        setFilters(prev => ({
+            ...prev, ...newFilters, page: 1
+        }));
+    }, []);
 
+    /**
+     * Đổi trang
+     */
+    const changePage = useCallback((page) => {
+        setFilters(prev => ({
+            ...prev,
+            page
+        }));
+    }, []);
+
+    /**
+     * Ngừng bán sản phẩm
+     */
     const handleStopSelling = useCallback(async (id) => {
-        const res = await stopSellingProduct(id);
-        if (res.success === false) return { success: false, message: res.message };
-        await fetchProducts(); return { success: true };
+        try {
+            await stopSellingProduct(id);
+            await fetchProducts();
+            return { success: true };
+        } catch (err) {
+            return {
+                success: false,
+                message: err?.response?.data?.message || 'Không thể ngừng bán'
+            };
+        }
     }, [fetchProducts]);
 
+    /**
+     * Bán lại sản phẩm
+     */
     const handleStartSelling = useCallback(async (id) => {
-        const res = await startSellingProduct(id);
-        if (res.success === false) return { success: false, message: res.message };
-        await fetchProducts(); return { success: true };
+        try {
+            await startSellingProduct(id);
+            await fetchProducts();
+            return { success: true };
+        } catch (err) {
+            return {
+                success: false,
+                message: err?.response?.data?.message || 'Không thể bán lại'
+            };
+        }
     }, [fetchProducts]);
 
-    return { products, total, totalPages, loading, error, filters, updateFilters, changePage, handleStopSelling, handleStartSelling, refetch: fetchProducts };
+    return {
+        products,
+        total,
+        totalPages,
+        loading,
+        error,
+        filters,
+        updateFilters,
+        changePage,
+        handleStopSelling,
+        handleStartSelling,
+        refetch: fetchProducts
+    };
 };
 
 export default useProduct;

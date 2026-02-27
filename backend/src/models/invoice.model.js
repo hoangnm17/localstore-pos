@@ -5,55 +5,89 @@ const MAX_PAGE_SIZE = 50;
 /* =====================================================
    GET INVOICE LIST (Pagination - NO TRANSACTION)
 ===================================================== */
-const getInvoiceList = async ({ page = 1, pageSize = 10 }) => {
-    const pool = await connectDB();
+const getInvoiceList = async ({
+  page = 1,
+  pageSize = 10,
+  status
+}) => {
 
-    const currentPage = page > 0 ? page : 1;
-    let limit = pageSize > 0 ? pageSize : 10;
-    if (limit > MAX_PAGE_SIZE) limit = MAX_PAGE_SIZE;
+  const pool = await connectDB();
 
-    const offset = (currentPage - 1) * limit;
+  const currentPage = page > 0 ? page : 1;
+  const limit = pageSize > 0 ? pageSize : 10;
+  const offset = (currentPage - 1) * limit;
 
-    const listResult = await pool
-        .request()
-        .input("offset", sql.Int, offset)
-        .input("limit", sql.Int, limit)
-        .query(`
-      SELECT
-        i.id,
-        i.invoiceCode,
-        i.createdAt,
-        i.finalAmount,
-        i.status,
-        s.fullName AS staffName,
-        c.counterName AS counterName,
-        cu.name AS customerName
-      FROM Invoices i
-      JOIN Staff s ON i.staffId = s.id
-      JOIN Counters c ON i.counterId = c.id
-      LEFT JOIN Customers cu ON i.customerId = cu.id
-      ORDER BY i.createdAt DESC
-      OFFSET @offset ROWS
-      FETCH NEXT @limit ROWS ONLY
-    `);
+  let whereClause = "WHERE 1=1";
+  const request = pool.request();
 
-    const countResult = await pool.request().query(`
-      SELECT COUNT(*) AS total FROM Invoices
+  if (status) {
+    whereClause += " AND i.status = @status";
+    request.input("status", sql.VarChar(20), status);
+  }
+
+  request.input("offset", sql.Int, offset);
+  request.input("limit", sql.Int, limit);
+
+  /* ================= LIST QUERY ================= */
+
+  const listResult = await request.query(`
+    SELECT
+      i.id,
+      i.invoiceCode,
+      i.createdAt,
+      i.finalAmount,
+      i.status,
+
+      -- Staff
+      s.id         AS staffId,
+      s.fullName   AS staffName,
+
+      -- Counter
+      c.id         AS counterId,
+      c.counterName AS counterName,
+
+      -- Customer
+      cu.id        AS customerId,
+      cu.name  AS customerName
+
+    FROM Invoices i
+    LEFT JOIN Staff s     ON i.staffId = s.id
+    LEFT JOIN Counters c  ON i.counterId = c.id
+    LEFT JOIN Customers cu ON i.customerId = cu.id
+
+    ${whereClause}
+
+    ORDER BY i.createdAt DESC
+    OFFSET @offset ROWS
+    FETCH NEXT @limit ROWS ONLY
   `);
 
-    const totalItems = countResult.recordset[0].total;
+  /* ================= COUNT QUERY ================= */
 
-    return {
-        data: listResult.recordset,
-        pagination: {
-            page: currentPage,
-            pageSize: limit,
-            totalItems,
-            totalPages: Math.ceil(totalItems / limit),
-        },
-    };
+  const countRequest = pool.request();
+
+  if (status) {
+    countRequest.input("status", sql.VarChar(20), status);
+  }
+
+  const countResult = await countRequest.query(`
+    SELECT COUNT(*) AS total
+    FROM Invoices i
+    ${whereClause}
+  `);
+
+  const totalItems = countResult.recordset[0].total;
+
+  return {
+    data: listResult.recordset,
+    pagination: {
+      page: currentPage,
+      pageSize: limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    }
+  };
 };
-
 /* =====================================================
    TRANSACTION FUNCTIONS
 ===================================================== */
@@ -73,17 +107,28 @@ const insertInvoice = async (transaction, { staffId, invoiceCode, counterId }) =
     return result.recordset[0].id;
 };
 
+const updateInvoiceCode = async (transaction, invoiceId, invoiceCode) => {
+    await new sql.Request(transaction)
+        .input("invoiceId", sql.Int, invoiceId)
+        .input("invoiceCode", sql.VarChar, invoiceCode)
+        .query(`
+            UPDATE Invoices
+            SET invoiceCode = @invoiceCode
+            WHERE id = @invoiceId
+        `);
+};
+
 const getInvoiceById = async (transaction, id) => {
-  const result = await new sql.Request(transaction)
-    .input("id", sql.Int, id)
-    .query(`
+    const result = await new sql.Request(transaction)
+        .input("id", sql.Int, id)
+        .query(`
       SELECT id, status, totalAmount, finalAmount
       FROM Invoices WITH (UPDLOCK, ROWLOCK)
       WHERE id = @id
       AND status NOT IN ('PAID', 'CANCELLED')
     `);
 
-  return result.recordset[0] || null;
+    return result.recordset[0] || null;
 };
 
 const updateAmounts = async (transaction, invoiceId, { totalAmount, finalAmount }) => {
@@ -94,8 +139,7 @@ const updateAmounts = async (transaction, invoiceId, { totalAmount, finalAmount 
         .query(`
       UPDATE Invoices
       SET totalAmount = @totalAmount,
-          finalAmount = @finalAmount,
-          updatedAt = GETDATE()
+          finalAmount = @finalAmount
       WHERE id = @invoiceId
     `);
 };
@@ -106,8 +150,7 @@ const updateStatus = async (transaction, invoiceId, status) => {
         .input("status", sql.VarChar, status)
         .query(`
       UPDATE Invoices
-      SET status = @status,
-          updatedAt = GETDATE()
+      SET status = @status
       WHERE id = @invoiceId
     `);
 };
@@ -123,19 +166,20 @@ const deleteInvoiceItems = async (transaction, invoiceId) => {
 
 const insertInvoiceItem = async (
     transaction,
-    { invoiceId, productId, quantity, unitPrice, lineTotal }
+    { invoiceId, productId, productName, quantity, unitPrice, lineTotal }
 ) => {
     await new sql.Request(transaction)
         .input("invoiceId", sql.Int, invoiceId)
         .input("productId", sql.Int, productId)
+        .input("productName", sql.NVarChar, productName)
         .input("quantity", sql.Int, quantity)
         .input("unitPrice", sql.Decimal(18, 2), unitPrice)
         .input("lineTotal", sql.Decimal(18, 2), lineTotal)
         .query(`
       INSERT INTO InvoiceItems
-      (invoiceId, productId, quantity, unitPrice, lineTotal)
+      (invoiceId, productId, productName, quantity, unitPrice, lineTotal)
       VALUES
-      (@invoiceId, @productId, @quantity, @unitPrice, @lineTotal)
+      (@invoiceId, @productId, @productName, @quantity, @unitPrice, @lineTotal)
     `);
 };
 
@@ -143,7 +187,10 @@ const getProductById = async (transaction, productId) => {
     const result = await new sql.Request(transaction)
         .input("id", sql.Int, productId)
         .query(`
-      SELECT salePrice
+      SELECT 
+        id,
+        name,
+        salePrice
       FROM Products
       WHERE id = @id AND status = 'Selling'
     `);
@@ -153,15 +200,16 @@ const getProductById = async (transaction, productId) => {
 
 const insertPayment = async (
     transaction,
-    { invoiceId, method, amount }
+    { invoiceId, paymentMethod, amount, status }
 ) => {
     await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("method", sql.VarChar, method)
-        .input("amount", sql.Decimal(18, 2), amount)
+        .input("invoiceId", sql.BigInt, invoiceId)
+        .input("paymentMethod", sql.VarChar, paymentMethod)
+        .input("amount", sql.Decimal(15, 2), amount)
+        .input("status", sql.VarChar, status)
         .query(`
-      INSERT INTO Payments (invoiceId, method, amount, createdAt)
-      VALUES (@invoiceId, @method, @amount, GETDATE())
+      INSERT INTO Payments (invoiceId, paymentMethod, amount, status)
+      VALUES (@invoiceId, @paymentMethod, @amount, @status)
     `);
 };
 
@@ -169,7 +217,7 @@ const insertPayment = async (
    NON-TRANSACTION READ FUNCTIONS
 ===================================================== */
 
-const getDraftInvoices = async () => {
+const getDraftInvoices = async (counterId) => {
     const pool = await connectDB();
 
     const result = await pool.request().query(`
@@ -224,6 +272,40 @@ const getInvoiceItems = async (transaction, invoiceId) => {
     return result.recordset;
 };
 
+const getPaymentByInvoiceId = async (transaction, invoiceId) => {
+    const result = await new sql.Request(transaction)
+        .input("invoiceId", sql.BigInt, invoiceId)
+        .query(`
+      SELECT TOP 1 *
+      FROM Payments
+      WHERE invoiceId = @invoiceId
+    `);
+
+    return result.recordset[0];
+};
+
+const getCustomerById = (transaction, customerId) => {
+  return transaction.request()
+    .input("customerId", customerId)
+    .query(`
+      SELECT id
+      FROM Customers
+      WHERE id = @customerId
+    `)
+    .then(res => res.recordset[0]);
+};
+
+const updateCustomer = (transaction, invoiceId, customerId) => {
+  return transaction.request()
+    .input("invoiceId", invoiceId)
+    .input("customerId", customerId)
+    .query(`
+      UPDATE Invoices
+      SET customerId = @customerId
+      WHERE id = @invoiceId
+    `);
+};
+
 /* =====================================================
    EXPORT
 ===================================================== */
@@ -231,6 +313,7 @@ const getInvoiceItems = async (transaction, invoiceId) => {
 module.exports = {
     getInvoiceList,
     insertInvoice,
+    updateInvoiceCode,
     getInvoiceById,
     updateAmounts,
     updateStatus,
@@ -241,4 +324,7 @@ module.exports = {
     getInvoiceItems,
     getDraftInvoices,
     getInvoiceDetail,
+    getPaymentByInvoiceId,
+    getCustomerById,
+    updateCustomer,
 };

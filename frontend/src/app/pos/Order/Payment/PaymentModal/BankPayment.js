@@ -20,7 +20,7 @@ export default function BankPayment({ total, onConfirm }) {
         className="btn btn-primary w-100"
         onClick={() =>
           onConfirm({
-            customerPay: total,
+            amount: total,
           })
         }
       >

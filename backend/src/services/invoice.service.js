@@ -2,6 +2,12 @@ const sql = require("mssql");
 const { connectDB } = require("../config/database");
 const invoiceModel = require("../models/invoice.model");
 const inventoryService = require("./InventoryServices/inventory.service");
+const paymentModel = require("../models/payment.model")
+const createVnpayUtil = require("../utils/vnpay.mockup");
+
+const vnpayUtil = createVnpayUtil({
+    secretKey: "MOCK_SECRET",
+});
 
 
 const runInTransaction = async (callback) => {
@@ -41,8 +47,12 @@ const validateItems = (items) => {
     }
 };
 
-const getAllInvoice = async ({ page, pageSize } = {}) => {
-    return invoiceModel.getInvoiceList({ page, pageSize });
+const getAllInvoice = async ({ page, pageSize, status } = {}) => {
+    return invoiceModel.getInvoiceList({
+        page,
+        pageSize,
+        status
+    });
 };
 
 const createInvoice = async ({ items, staffId, counterId }) => {
@@ -80,6 +90,7 @@ const createInvoice = async ({ items, staffId, counterId }) => {
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId,
                 productId: item.productId,
+                productName: product.name,
                 quantity: item.quantity,
                 unitPrice,
                 lineTotal,
@@ -95,19 +106,29 @@ const createInvoice = async ({ items, staffId, counterId }) => {
     });
 };
 
-const updateInvoice = async (id, { items, status, payment } = {}) => {
+const updateInvoice = async (id, { items, status, payment, customerId } = {}) => {
     return runInTransaction(async (transaction) => {
 
-        const invoice = await invoiceModel.getInvoiceById(transaction, id, { forUpdate: true });
+        /* ================= LOAD & LOCK ================= */
+
+        const invoice = await invoiceModel.getInvoiceById(
+            transaction,
+            id,
+            { forUpdate: true }
+        );
+
         if (!invoice) throw new Error("Invoice not found");
 
         if (["PAID", "CANCELLED"].includes(invoice.status)) {
             throw new Error("Cannot update this invoice");
         }
 
-        let totalAmount = invoice.totalAmount || 0;
+        let totalAmount = invoice.finalAmount || 0;
+
+        /* ================= UPDATE ITEMS ================= */
 
         if (Array.isArray(items)) {
+
             validateItems(items);
 
             await invoiceModel.deleteInvoiceItems(transaction, id);
@@ -115,8 +136,14 @@ const updateInvoice = async (id, { items, status, payment } = {}) => {
             totalAmount = 0;
 
             for (const item of items) {
-                const product = await invoiceModel.getProductById(transaction, item.productId);
-                if (!product) throw new Error(`Product ${item.productId} not found`);
+
+                const product = await invoiceModel.getProductById(
+                    transaction,
+                    item.productId
+                );
+
+                if (!product)
+                    throw new Error(`Product ${item.productId} not found`);
 
                 const unitPrice = product.salePrice;
                 const lineTotal = unitPrice * item.quantity;
@@ -126,6 +153,7 @@ const updateInvoice = async (id, { items, status, payment } = {}) => {
                 await invoiceModel.insertInvoiceItem(transaction, {
                     invoiceId: id,
                     productId: item.productId,
+                    productName: product.name,
                     quantity: item.quantity,
                     unitPrice,
                     lineTotal,
@@ -138,40 +166,94 @@ const updateInvoice = async (id, { items, status, payment } = {}) => {
             });
         }
 
+        /* ================= CANCEL ================= */
+
         if (status === "CANCELLED") {
             await invoiceModel.updateStatus(transaction, id, "CANCELLED");
             return { cancelled: true };
         }
 
+        /* ================= PAY ================= */
+
         if (status === "PAID") {
-            if (!payment?.method) throw new Error("Invalid payment information");
+
+            if (!payment?.method)
+                throw new Error("Invalid payment information");
 
             const payAmount = Number(payment.amount ?? totalAmount);
-            if (!Number.isFinite(payAmount) || payAmount <= 0) {
-                throw new Error("Invalid payment information");
-            }
 
-            const invoiceItems = await invoiceModel.getInvoiceItems(transaction, id);
-            if (!invoiceItems.length) throw new Error("Cannot pay empty invoice");
+            if (!Number.isFinite(payAmount) || payAmount <= 0)
+                throw new Error("Invalid payment amount");
 
-            if (totalAmount <= 0) throw new Error("Cannot pay empty invoice");
-
-            if (payAmount < totalAmount) {
+            if (payAmount < totalAmount)
                 throw new Error("Payment amount is not enough");
+
+            const invoiceItems =
+                await invoiceModel.getInvoiceItems(transaction, id);
+
+            if (!invoiceItems.length)
+                throw new Error("Cannot pay empty invoice");
+
+            /* ===== CHECK EXISTING PAYMENT ===== */
+
+            const existingPayment =
+                await invoiceModel.getPaymentByInvoiceId(
+                    transaction,
+                    id
+                );
+
+            /* ================= CASH ================= */
+
+            if (payment.method === "CASH") {
+
+                if (!existingPayment) {
+                    await invoiceModel.insertPayment(transaction, {
+                        invoiceId: id,
+                        paymentMethod: "CASH",
+                        amount: payAmount,
+                        status: "SUCCESS",
+                    });
+                } else {
+                    await paymentModel.updatePaymentStatus(
+                        transaction,
+                        id,
+                        "SUCCESS"
+                    );
+                }
+
+                await inventoryService.deductStock(transaction, invoiceItems);
+
+                await invoiceModel.updateStatus(transaction, id, "PAID");
+
+                return { paid: true };
             }
 
-            await inventoryService.deductStock(transaction, invoiceItems);
+            /* ================= QR_VNPAY ================= */
 
-            await invoiceModel.insertPayment(transaction, {
-                invoiceId: id,
-                method: payment.method,
-                amount: payAmount,
-            });
+            if (payment.method === "QR_VNPAY") {
 
-            await invoiceModel.updateStatus(transaction, id, "PAID");
+                if (!existingPayment) {
+                    await invoiceModel.insertPayment(transaction, {
+                        invoiceId: id,
+                        paymentMethod: "QR_VNPAY",
+                        amount: totalAmount,
+                        status: "PENDING",
+                    });
+                }
 
-            return { paid: true };
+                const paymentUrl =
+                    vnpayUtil.generatePayUrl(id, totalAmount);
+
+                return {
+                    pending: true,
+                    paymentUrl
+                };
+            }
+
+            throw new Error("Unsupported payment method");
         }
+
+        /* ================= OTHER STATUS ================= */
 
         if (status) {
             await invoiceModel.updateStatus(transaction, id, status);
@@ -191,10 +273,54 @@ const getInvoiceDetail = async (id) => {
     return invoice;
 };
 
+const updateInvoiceCustomer = async (
+    id,
+    { items, status, payment, customerId } = {}
+) => {
+    return runInTransaction(async (transaction) => {
+
+        const invoice = await invoiceModel.getInvoiceById(
+            transaction,
+            id,
+            { forUpdate: true }
+        );
+
+        if (!invoice) {
+            throw new Error("Invoice not found");
+        }
+
+        if (["PAID", "CANCELLED"].includes(invoice.status)) {
+            throw new Error("Cannot update this invoice");
+        }
+
+
+        if (customerId !== undefined) {
+
+            if (customerId !== null) {
+                const customer = await invoiceModel.getCustomerById(
+                    transaction,
+                    customerId
+                );
+
+                if (!customer) {
+                    throw new Error("Customer not found");
+                }
+            }
+            await invoiceModel.updateCustomer(
+                transaction,
+                id,
+                customerId
+            );
+        }
+
+    });
+};
+
 module.exports = {
     getAllInvoice,
     createInvoice,
     updateInvoice,
     getDraftInvoices,
     getInvoiceDetail,
+    updateInvoiceCustomer,
 };

@@ -4,7 +4,13 @@ export const getProducts = async ({ page = 1, limit = 20, search = '', status = 
   const params = { page, limit, status };
   if (search) params.search = search;
   if (categoryId) params.categoryId = categoryId;
-  return api.get('/products', { params });
+  return api.get('/products', {
+    params,
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
+  });
 };
 
 export const getProduct = async (id) => api.get(`/products/${id}`);

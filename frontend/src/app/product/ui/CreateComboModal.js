@@ -140,6 +140,7 @@ const CreateComboModal = ({ onClose, onSuccess, onError }) => {
                             )}
                             <ProductComboForm
                                 productId={null}
+                                comboItems={pendingItems}
                                 onItemsChange={setPendingItems}
                                 onError={onError}
                             />
