@@ -6,61 +6,82 @@ const MAX_PAGE_SIZE = 50;
    GET INVOICE LIST (Pagination - NO TRANSACTION)
 ===================================================== */
 const getInvoiceList = async ({
-    page = 1,
-    pageSize = 10,
-    status
+  page = 1,
+  pageSize = 10,
+  status
 }) => {
 
-    const pool = await connectDB();
+  const pool = await connectDB();
 
-    const currentPage = page > 0 ? page : 1;
-    const limit = pageSize > 0 ? pageSize : 10;
-    const offset = (currentPage - 1) * limit;
+  const currentPage = page > 0 ? page : 1;
+  const limit = pageSize > 0 ? pageSize : 10;
+  const offset = (currentPage - 1) * limit;
 
-    let whereClause = "WHERE 1=1";
-    const request = pool.request();
+  let whereClause = "WHERE 1=1";
+  const request = pool.request();
 
-    if (status) {
-        whereClause += " AND i.status = @status";
-        request.input("status", sql.VarChar(20), status);
-    }
+  if (status) {
+    whereClause += " AND i.status = @status";
+    request.input("status", sql.VarChar(20), status);
+  }
 
-    request.input("offset", sql.Int, offset);
-    request.input("limit", sql.Int, limit);
+  request.input("offset", sql.Int, offset);
+  request.input("limit", sql.Int, limit);
 
-    const listResult = await request.query(`
+  /* ================= LIST QUERY ================= */
+
+  const listResult = await request.query(`
     SELECT
       i.id,
       i.invoiceCode,
       i.createdAt,
       i.finalAmount,
-      i.status
+      i.status,
+
+      -- Staff
+      s.id   AS staffId,
+      s.fullName AS staffName,
+
+      -- Counter
+      c.id   AS counterId,
+      c.counterName AS counterName
+
     FROM Invoices i
+    LEFT JOIN Staff s   ON i.staffId = s.id
+    LEFT JOIN Counters c ON i.counterId = c.id
+
     ${whereClause}
+
     ORDER BY i.createdAt DESC
     OFFSET @offset ROWS
     FETCH NEXT @limit ROWS ONLY
   `);
 
-    const countResult = await pool.request()
-        .input("status", sql.VarChar(20), status || null)
-        .query(`
-      SELECT COUNT(*) AS total
-      FROM Invoices i
-      ${whereClause}
-    `);
+  /* ================= COUNT QUERY ================= */
 
-    const totalItems = countResult.recordset[0].total;
+  const countRequest = pool.request();
 
-    return {
-        data: listResult.recordset,
-        pagination: {
-            page: currentPage,
-            pageSize: limit,
-            totalItems,
-            totalPages: Math.ceil(totalItems / limit),
-        }
-    };
+  if (status) {
+    countRequest.input("status", sql.VarChar(20), status);
+  }
+
+  const countResult = await countRequest.query(`
+    SELECT COUNT(*) AS total
+    FROM Invoices i
+    ${whereClause}
+  `);
+
+  const totalItems = countResult.recordset[0].total;
+
+  return {
+    data: listResult.recordset,
+    pagination: {
+      page: currentPage,
+      pageSize: limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    }
+  };
 };
 /* =====================================================
    TRANSACTION FUNCTIONS
@@ -191,7 +212,7 @@ const insertPayment = async (
    NON-TRANSACTION READ FUNCTIONS
 ===================================================== */
 
-const getDraftInvoices = async () => {
+const getDraftInvoices = async (counterId) => {
     const pool = await connectDB();
 
     const result = await pool.request().query(`

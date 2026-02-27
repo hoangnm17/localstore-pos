@@ -12,7 +12,6 @@ const priceHistoryRoutes = require("./priceHistory.route");
 const paymentRoutes = require("./payment.route")
 const staffRoutes = require("./staff.route");
 const rosterRoutes = require("./roster.route");
-
 const shiftRoutes = require("./shift.route");
 module.exports = (app) => {
     const version = "/api";

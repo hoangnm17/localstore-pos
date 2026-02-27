@@ -6,9 +6,11 @@ import {
   invoiceGetDetail,
   invoiceUpdateCustomer
 } from "../../services/Invoices/invoice.service";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 export const useInvoiceTabs = () => {
 
+  const { showNotification } = useNotification();
   const [invoices, setInvoices] = useState([]);
   const [activeInvoiceId, setActiveInvoiceId] = useState(null);
   const saveTimeouts = useRef({});
@@ -26,7 +28,7 @@ export const useInvoiceTabs = () => {
 
   const createLocalInvoice = () => ({
     id: "local-" + crypto.randomUUID(),
-    items: [],                 // 🔥 luôn là array
+    items: [],                
     status: "LOCAL",
     isSaving: false,
     itemsLoaded: true
@@ -55,7 +57,7 @@ export const useInvoiceTabs = () => {
 
         const formatted = drafts.map(inv => ({
           ...inv,
-          items: [],             // 🔥 luôn array
+          items: [],             
           itemsLoaded: false,
           isSaving: false
         }));
@@ -100,7 +102,7 @@ export const useInvoiceTabs = () => {
             inv.id === activeInvoice.id
               ? {
                 ...inv,
-                items: detail?.items ?? [],   // 🔥 luôn array
+                items: detail?.items ?? [],   
                 itemsLoaded: true
               }
               : inv
@@ -237,7 +239,6 @@ export const useInvoiceTabs = () => {
         });
       }
 
-      // 🔥 update state để UI render
       setInvoices(prev =>
         prev.map(inv =>
           String(inv.id) === id
@@ -268,7 +269,7 @@ export const useInvoiceTabs = () => {
         payment: paymentInfo
       });
 
-      // ✅ bắt paid từ nhiều kiểu response khác nhau
+      // bắt paid từ nhiều kiểu response khác nhau
       const paid =
         res?.paid ??
         res?.data?.paid ??
@@ -278,11 +279,17 @@ export const useInvoiceTabs = () => {
         res?.data?.data?.success;
 
       // nếu backend trả pending thì xử lý riêng
-      if (res?.pending || res?.data?.pending) return res;
+      if (res?.pending || res?.data?.pending) {
+        showNotification("Đang chờ....!", "error");
+        return res;
+      }
+      //  nếu update ok (paid/success) thì cập nhật UI
+      if (!paid) {
+        showNotification("Thanh toán thất bại!", "success");
+        return res;
+      }
 
-      // ✅ nếu update ok (paid/success) thì cập nhật UI
-      if (!paid) return res;
-
+      showNotification("Thanh toán thành công!", "success");
       let nextActiveId = null;
 
       setInvoices(prev => {
