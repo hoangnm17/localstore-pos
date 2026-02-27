@@ -6,7 +6,7 @@ import { getAllCategories } from "services/Category/category.service";
 import { getProducts } from "services/Product/product.service";
 
 const PAGE_CONFIG = {
-  ITEMS_PER_PAGE: 8,
+  ITEMS_PER_PAGE: 10,
 };
 
 export default function Product({ addItem }) {
