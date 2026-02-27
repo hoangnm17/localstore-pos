@@ -18,8 +18,8 @@ const formatDate = (d) => d.toISOString().split('T')[0];
 const dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 const WorkSchedule = () => {
-    const { hasPermission } = useAuth();
-    const canAssign = hasPermission('ASSIGN_SHIFT');
+    const { hasFeature } = useAuth();
+    const canAssign = hasFeature('CREATE_SHIFT');
 
     const [currentMonday, setCurrentMonday] = useState(getMonday(new Date()));
     const [staffList, setStaffList] = useState([]);
@@ -27,11 +27,11 @@ const WorkSchedule = () => {
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [filterMode, setFilterMode] = useState('staff');
-    const [roleFilter, setRoleFilter] = useState('all'); // all | Cashier | Warehouse
+    const [roleFilter, setRoleFilter] = useState('all');
 
     const [showModal, setShowModal] = useState(false);
     const [modalCell, setModalCell] = useState(null);
-    const [selectedShiftId, setSelectedShiftId] = useState('');
+    const [selectedShiftIds, setSelectedShiftIds] = useState([]);   
     const [modalMsg, setModalMsg] = useState('');
 
     const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -74,24 +74,33 @@ const WorkSchedule = () => {
 
     const openAssignModal = (staff, dateStr) => {
         setModalCell({ staffId: staff.staffId, fullName: staff.fullName, workDate: dateStr });
-        setSelectedShiftId('');
+        setSelectedShiftIds([]);   // ← reset mảng
         setModalMsg('');
         setShowModal(true);
     };
 
     const handleAssign = async () => {
-        if (!selectedShiftId) { setModalMsg('Vui lòng chọn ca!'); return; }
+        if (selectedShiftIds.length === 0) {
+            setModalMsg('Vui lòng chọn ít nhất một ca!');
+            return;
+        }
         try {
-            const res = await api.post('/roster', {
-                staffId: modalCell.staffId,
-                shiftId: selectedShiftId,
-                workDate: modalCell.workDate
-            });
-            if (res.data?.success) {
+            // Gọi API song song cho từng ca được chọn
+            const results = await Promise.all(
+                selectedShiftIds.map(shiftId =>
+                    api.post('/roster', {
+                        staffId: modalCell.staffId,
+                        shiftId,
+                        workDate: modalCell.workDate
+                    })
+                )
+            );
+            const failedResult = results.find(r => !r.data?.success);
+            if (!failedResult) {
                 setShowModal(false);
                 fetchData();
             } else {
-                setModalMsg(res.data?.message || 'Lỗi phân công!');
+                setModalMsg(failedResult.data?.message || 'Lỗi phân công!');
             }
         } catch (err) {
             setModalMsg(err.response?.data?.message || 'Lỗi phân công!');
@@ -122,6 +131,13 @@ const WorkSchedule = () => {
 
     const shiftColors = ['bg-success', 'bg-primary', 'bg-warning text-dark', 'bg-info text-dark', 'bg-danger', 'bg-secondary'];
     const getShiftColor = (shiftId) => shiftColors[(shiftId - 1) % shiftColors.length];
+
+    const toggleShift = (shiftId) => {
+        setModalMsg('');
+        setSelectedShiftIds(prev =>
+            prev.includes(shiftId) ? prev.filter(id => id !== shiftId) : [...prev, shiftId]
+        );
+    };
 
     return (
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
@@ -233,18 +249,15 @@ const WorkSchedule = () => {
                                                 </td>
 
                                                 {weekDates.map((d, i) => {
-                                                    const dateStr  = formatDate(d);
+                                                    const dateStr   = formatDate(d);
                                                     const dayShifts = isCashier ? (staff.schedules?.[dateStr] || []) : [];
                                                     return (
                                                         <td key={i} className="p-1" style={{ verticalAlign: 'middle' }}>
                                                             {isWarehouse ? (
-                                                                /* Warehouse: hiện badge cố định, không cho gán ca */
-                                                                <span className="badge bg-light text-secondary border"
-                                                                    style={{ fontSize: '0.7rem' }}>
-                                                                    <i className="bi bi-calendar-month me-1"></i>Theo tháng
-                                                                </span>
+                                                                // Warehouse: ô trống, không cho gán ca
+                                                                null
                                                             ) : (
-                                                                /* Cashier: hiện ca và nút + (nếu có quyền) */
+                                                                // Cashier: hiện ca và nút + (nếu có quyền)
                                                                 <>
                                                                     {dayShifts.map(sc => (
                                                                         <div
@@ -300,7 +313,7 @@ const WorkSchedule = () => {
                             <div className="modal-header bg-dark text-white">
                                 <h5 className="modal-title fw-bold">
                                     <i className="bi bi-calendar-plus me-2"></i>
-                                    Phân công ca
+                                    Gán lịch làm việc
                                 </h5>
                                 <button className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
                             </div>
@@ -309,18 +322,39 @@ const WorkSchedule = () => {
                                 <p className="mb-3"><strong>Ngày:</strong> {new Date(modalCell?.workDate + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
 
                                 <label className="form-label fw-bold">Chọn ca làm việc *</label>
-                                <select
-                                    className="form-select"
-                                    value={selectedShiftId}
-                                    onChange={e => { setSelectedShiftId(e.target.value); setModalMsg(''); }}
+
+                                {/* Checkbox grid — giống ảnh 3 */}
+                                <div
+                                    className="border rounded p-3"
+                                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}
                                 >
-                                    <option value="">-- Chọn ca --</option>
                                     {shifts.map(s => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name} ({s.startTime} – {s.endTime})
-                                        </option>
+                                        <div
+                                            key={s.id}
+                                            className="p-3 border rounded"
+                                            style={{
+                                                cursor: 'pointer',
+                                                background: selectedShiftIds.includes(s.id) ? '#eef2ff' : 'white',
+                                                borderColor: selectedShiftIds.includes(s.id) ? '#6366f1' : '#dee2e6'
+                                            }}
+                                            onClick={() => toggleShift(s.id)}
+                                        >
+                                            <div className="d-flex align-items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-check-input mt-0"
+                                                    checked={selectedShiftIds.includes(s.id)}
+                                                    onChange={() => {}}
+                                                    readOnly
+                                                />
+                                                <strong>{s.name}</strong>
+                                            </div>
+                                            <div className="text-secondary ms-4" style={{ fontSize: '0.8rem' }}>
+                                                {s.startTime} - {s.endTime}
+                                            </div>
+                                        </div>
                                     ))}
-                                </select>
+                                </div>
 
                                 {modalMsg && (
                                     <div className="alert alert-danger mt-3 py-2">
@@ -330,10 +364,10 @@ const WorkSchedule = () => {
                                 )}
                             </div>
                             <div className="modal-footer border-0">
-                                <button className="btn btn-light px-4" onClick={() => setShowModal(false)}>Hủy</button>
-                                <button className="btn btn-dark px-4 fw-bold" onClick={handleAssign}>
+                                <button className="btn btn-light px-4" onClick={() => setShowModal(false)}>Thoát</button>
+                                <button className="btn btn-primary px-4 fw-bold" onClick={handleAssign}>
                                     <i className="bi bi-check-circle me-2"></i>
-                                    Xác nhận
+                                    Lưu
                                 </button>
                             </div>
                         </div>
