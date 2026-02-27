@@ -85,7 +85,7 @@ function ProductStock() {
 
   const handleUpdateStock = (product) => {
     setSelectedProduct(product);
-    setNewQuantity(product.quantityOnHand.toString());
+    setNewQuantity((product.quantityOnHand ?? 0).toString());
     setError("");
     setShowModal(true);
   };
@@ -284,7 +284,7 @@ function ProductStock() {
                         <td className="py-4 fw-medium">{p.productName}</td>
                         <td className="text-center py-4 text-muted small">{p.productCode}</td>
                         <td className="text-center py-4 fw-bold fs-5">
-                          {p.quantityOnHand.toLocaleString()}
+                          {(p.quantityOnHand ?? 0).toLocaleString()}
                         </td>
                         <td className="text-center py-4">
                           <span
