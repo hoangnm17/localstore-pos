@@ -4,14 +4,13 @@ const ProtectedRoute = ({ requiredFeatures = [] }) => {
   const token = localStorage.getItem("token");
   const userString = localStorage.getItem("user");
 
-  // 🟢 Không có yêu cầu quyền → ai cũng vào được
-  if (!requiredFeatures || requiredFeatures.length === 0) {
-    return <Outlet />;
-  }
-
-  // 🔒 Có yêu cầu quyền mà chưa login → chặn
   if (!token || !userString) {
     return <Navigate to="/login" replace />;
+  }
+
+  // 🟢 Không có yêu cầu quyền cụ thể → CHỈ CẦN TOKEN là đủ
+  if (!requiredFeatures || requiredFeatures.length === 0) {
+    return <Outlet />;
   }
 
   let currentUser;

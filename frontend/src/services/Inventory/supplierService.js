@@ -10,7 +10,9 @@ function getSupplierById(id) {
   return api.get(`/inventory/suppliers/${id}`);
 }
 
-export default {
+const supplierService = {
   getSupplierList,
   getSupplierById
 };
+
+export default supplierService;

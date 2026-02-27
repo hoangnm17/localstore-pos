@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
 
@@ -7,6 +7,29 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const redirectByRole = (role) => {
+    switch (role) {
+      case 'Manager':
+        navigate("/dashboard");
+        break;
+      case 'Cashier':
+        navigate("/sales");
+        break;
+      case 'Warehouse':
+        navigate("/inventory/menu");
+        break;
+      default:
+        navigate("/sales");
+    }
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      localStorage.clear();
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,11 +41,10 @@ function LoginPage() {
     try {
       setLoading(true);
       setError("");
-
+      localStorage.clear();
+      
       const response = await loginAPI(form);
 
-      // axiosInstance trả về {success, message} phẳng khi lỗi HTTP (không có .data)
-      // Khi thành công, trả về axios response nên cần đọc .data
       const serverData = response.data ?? response;
 
       if (serverData.success) {
@@ -33,26 +55,13 @@ function LoginPage() {
 
         const role = user.roleName;
         console.log("Đăng nhập thành công với Role:", role);
-
-        switch (role) {
-          case 'Manager':
-            navigate("/staff");
-            break;
-          case 'Cashier':
-            navigate("/sales");
-            break;
-          case 'Warehouse':
-            navigate("/inventory");
-            break;
-          default:
-            navigate("/sales");
-        }
+        redirectByRole(user.roleName);
       } else {
         setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
       console.error("Lỗi Login:", err);
-      setError("Sai email hoặc mật khẩu");
+      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
     } finally {
       setLoading(false);
     }

@@ -31,13 +31,17 @@ const StaffCreate = () => {
 
     const validateForm = () => {
         const nameRegex = /^[\p{L}]+(?:\s[\p{L}]+)*$/u;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^[0-9]{10,11}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+        const phoneRegex = /^0[0-9]{9,10}$/;
 
-        if (!nameRegex.test(formData.fullName)) return "Họ tên không được chứa số hay ký tự lạ!";
-        if (!emailRegex.test(formData.email)) return "Định dạng Email không hợp lệ!";
-        if (!phoneRegex.test(formData.phoneNumber)) return "SĐT phải là số, từ 10-11 ký tự!";
+        if (!formData.fullName.trim()) return "Họ tên không được để trống!";
+        if (!nameRegex.test(formData.fullName.trim())) return "Họ tên không được chứa số hay ký tự lạ!";
+        if (!formData.email.trim()) return "Email không được để trống!";
+        if (!emailRegex.test(formData.email)) return "Định dạng Email không hợp lệ! (VD: abc@email.com)";
+        if (!phoneRegex.test(formData.phoneNumber)) return "SĐT phải bắt đầu từ 0 và có 10-11 chữ số!";
         if (!formData.roleId) return "Vui lòng chọn vai trò!";
+        if (!formData.createdAt) return "Vui lòng chọn ngày vào làm!";
+        if (formData.baseSalary < 0) return "Lương cơ bản không được âm!";
         if (formData.password.length < 6) return "Mật khẩu phải từ 6 ký tự!";
         return null;
     };
@@ -59,7 +63,7 @@ const StaffCreate = () => {
                 }, 1500);
             }
         } catch (err) {
-            setErrorMsg(err.response?.data?.message || "Có thể trùng Email hoặc SĐT.");
+            setErrorMsg(err.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!");
         } finally {
             setLoading(false);
         }

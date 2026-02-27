@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
-import SummaryCard from "../inventoryComponents/SummaryCard";
+import SummaryCard from "../InventoryModal/SummaryCard";
 
 // Chart.js imports
 import {
@@ -53,6 +53,7 @@ function PurchaseOrderReport() {
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFilter = (e) => {

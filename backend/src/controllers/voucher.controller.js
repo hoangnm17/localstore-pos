@@ -41,7 +41,8 @@ exports.createVoucher = async (req, res) => {
         const voucher = await voucherService.createVoucher(req.body);
         res.status(201).json({ success: true, data: voucher });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
+        res.status(status).json({ success: false, message: err.message });
     }
 };
 
@@ -51,7 +52,8 @@ exports.updateVoucher = async (req, res) => {
         if (!voucher) return res.status(404).json({ success: false, message: 'Voucher không tồn tại' });
         res.json({ success: true, data: voucher });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
+        res.status(status).json({ success: false, message: err.message });
     }
 };
 

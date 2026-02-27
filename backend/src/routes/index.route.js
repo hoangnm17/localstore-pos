@@ -11,6 +11,7 @@ const productUnitRoutes = require("./productUnit.route");
 const priceHistoryRoutes = require("./priceHistory.route");
 const paymentRoutes = require("./payment.route")
 
+const shiftRoutes = require("./shift.route");
 module.exports = (app) => {
     const version = "/api";
 
@@ -26,4 +27,8 @@ module.exports = (app) => {
     app.use(version + "/products", productRoutes);
     app.use(version + "/product-units", productUnitRoutes);
     app.use(version + "/price-history", priceHistoryRoutes);
+    app.use(version + "/payment", paymentRoutes);
+    app.use(version + "/staff", staffRoutes);
+    app.use(version + "/shifts", shiftRoutes);
 };
+

@@ -1,5 +1,47 @@
 const { connectDB, sql } = require("../config/database.js");
 
+const VALID_TYPES = ['Percent', 'Fixed'];
+const VALID_STATUSES = ['Active', 'Expired', 'Disabled'];
+
+const validateFields = (data) => {
+    const { type, status, value, minOrderValue, maxUsage, startDate, expiryDate } = data;
+
+    if (type !== undefined && !VALID_TYPES.includes(type)) {
+        throw new Error(`type không hợp lệ. Chỉ chấp nhận: ${VALID_TYPES.join(', ')}`);
+    }
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+        throw new Error(`status không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
+    }
+
+    if (value !== undefined && parseFloat(value) < 0) {
+        throw new Error('Giá trị voucher không được là số âm');
+    }
+
+    if (minOrderValue !== undefined && parseFloat(minOrderValue) < 0) {
+        throw new Error('Giá trị đơn hàng tối thiểu không được là số âm');
+    }
+
+    if (maxUsage !== undefined && parseInt(maxUsage) < 0) {
+        throw new Error('Số lượt sử dụng tối đa không được là số âm');
+    }
+
+    if (startDate && isNaN(Date.parse(startDate))) {
+        throw new Error('Ngày bắt đầu không hợp lệ');
+    }
+
+    if (expiryDate && isNaN(Date.parse(expiryDate))) {
+        throw new Error('Ngày hết hạn không hợp lệ');
+    }
+
+    if (startDate && expiryDate) {
+        const start = new Date(startDate);
+        const end = new Date(expiryDate);
+        if (start > end) {
+            throw new Error('Ngày bắt đầu không được lớn hơn ngày hết hạn');
+        }
+    }
+};
+
 exports.getVouchers = async (filters) => {
     const pool = await connectDB();
     const {
@@ -60,6 +102,8 @@ exports.createVoucher = async (data) => {
     const pool = await connectDB();
     const { code, value, type, minOrderValue = 0, maxUsage = 100, startDate, expiryDate, status = 'Active' } = data;
 
+    validateFields(data);
+
     const result = await pool.request()
         .input('code', sql.VarChar, code)
         .input('value', sql.Decimal(15, 2), value)
@@ -71,15 +115,27 @@ exports.createVoucher = async (data) => {
         .input('status', sql.VarChar, status)
         .query(`
             INSERT INTO Vouchers (code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status)
-            OUTPUT INSERTED.*
-            VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status)
+            VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status);
+
+            SELECT * FROM Vouchers WHERE id = SCOPE_IDENTITY();
         `);
     return result.recordset[0];
 };
 
 exports.updateVoucher = async (id, data) => {
     const pool = await connectDB();
+    const existing = await exports.getVoucherById(id);
+    if (!existing) return null;
+
     const { value, type, minOrderValue, maxUsage, startDate, expiryDate, status } = data;
+
+    // Merge for validation
+    const validationData = {
+        ...data,
+        startDate: startDate !== undefined ? startDate : existing.startDate,
+        expiryDate: expiryDate !== undefined ? expiryDate : existing.expiryDate
+    };
+    validateFields(validationData);
 
     const setClauses = [];
     const request = pool.request().input('id', sql.Int, id);
@@ -97,8 +153,9 @@ exports.updateVoucher = async (id, data) => {
     const result = await request.query(`
         UPDATE Vouchers
         SET ${setClauses.join(', ')}
-        OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        SELECT * FROM Vouchers WHERE id = @id;
     `);
     return result.recordset[0];
 };
@@ -111,8 +168,9 @@ exports.deleteVoucher = async (id) => {
         .query(`
             UPDATE Vouchers
             SET status = 'Disabled'
-            OUTPUT INSERTED.*
-            WHERE id = @id
+            WHERE id = @id;
+
+            SELECT * FROM Vouchers WHERE id = @id;
         `);
     return result.recordset[0];
 };

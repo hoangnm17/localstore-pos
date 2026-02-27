@@ -32,7 +32,8 @@ exports.createCustomer = async (req, res) => {
         const customer = await customerService.createCustomer(req.body);
         res.status(201).json({ success: true, data: customer });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        const status = (err.message.includes('số âm') || err.message.includes('không hợp lệ')) ? 400 : 500;
+        res.status(status).json({ success: false, message: err.message });
     }
 };
 
@@ -42,7 +43,8 @@ exports.updateCustomer = async (req, res) => {
         if (!customer) return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
         res.json({ success: true, data: customer });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        const status = (err.message.includes('số âm') || err.message.includes('không hợp lệ')) ? 400 : 500;
+        res.status(status).json({ success: false, message: err.message });
     }
 };
 
