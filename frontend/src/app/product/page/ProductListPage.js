@@ -19,6 +19,11 @@ function flattenTree(nodes) {
     return result;
 }
 
+const getChildCategoryIds = (parentId, categories) =>
+    categories
+        .filter(c => c.parentId === parentId)
+        .map(c => c.id);
+
 const STATUS_OPTIONS = [
     { value: 'Selling', label: 'Đang bán' },
     { value: 'StopSelling', label: 'Ngừng bán' },
@@ -28,6 +33,29 @@ const STATUS_BADGE = {
     Selling: { label: 'Đang bán', cls: 'plp-badge plp-badge--selling' },
     StopSelling: { label: 'Ngừng bán', cls: 'plp-badge plp-badge--stop' },
 };
+
+// Pagination rút gọn
+function getPaginationPages(current, total, delta = 1) {
+    if (total <= 1) return [1];
+
+    const pages = [];
+    const left = Math.max(2, current - delta);
+    const right = Math.min(total - 1, current + delta);
+
+    pages.push(1);
+
+    if (left > 2) pages.push('...');
+
+    for (let i = left; i <= right; i++) {
+        pages.push(i);
+    }
+
+    if (right < total - 1) pages.push('...');
+
+    if (total > 1) pages.push(total);
+
+    return pages;
+}
 
 const ProductListPage = () => {
     const {
@@ -74,6 +102,17 @@ const ProductListPage = () => {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            updateFilters({
+                search: searchInput || '',
+                page: 1,
+            });
+        }, 300); // debounce 300ms
+
+        return () => clearTimeout(timeout);
+    }, [searchInput]);
+
     const showToast = (type, message) => {
         setToast({ type, message });
         setTimeout(() => setToast(null), 3500);
@@ -82,7 +121,12 @@ const ProductListPage = () => {
     const selectedCategory = categories.find(c => c.id === filters.categoryId);
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' || e.type === 'click') updateFilters({ search: searchInput });
+        if (e?.key === 'Enter' || e?.type === 'click') {
+            updateFilters({
+                search: searchInput || '',
+                page: 1,
+            });
+        }
     };
 
     const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -175,7 +219,20 @@ const ProductListPage = () => {
                                 return (
                                     <div key={parent.id}>
                                         {/* Tên danh mục cha: không click được, chỉ là header */}
-                                        <div className="plp-cat__group-header">
+                                        <div
+                                            className="plp-cat__group-header plp-cat__group-header--clickable"
+                                            onClick={() => {
+                                                const childIds = getChildCategoryIds(parent.id, categories);
+
+                                                updateFilters({
+                                                    categoryIds: childIds, // 👈 QUAN TRỌNG
+                                                    categoryId: null,
+                                                    page: 1,
+                                                });
+
+                                                setCategoryOpen(false);
+                                            }}
+                                        >
                                             📂 {parent.name}
                                         </div>
                                         {children.length === 0 ? (
@@ -183,7 +240,13 @@ const ProductListPage = () => {
                                         ) : children.map(child => (
                                             <div key={child.id}
                                                 className={`plp-cat__item plp-cat__item--child${filters.categoryId === child.id ? ' plp-cat__item--active' : ''}`}
-                                                onClick={() => { updateFilters({ categoryId: child.id }); setCategoryOpen(false); }}
+                                                onClick={() => {
+                                                    updateFilters({
+                                                        ...filters,
+                                                        categoryId: child.id,
+                                                        page: 1,
+                                                    }); setCategoryOpen(false);
+                                                }}
                                             >
                                                 └ {child.name}
                                             </div>
@@ -200,7 +263,10 @@ const ProductListPage = () => {
                     {STATUS_OPTIONS.map(o => (
                         <button key={o.value}
                             className={`plp-status-tab${filters.status === o.value ? ' plp-status-tab--active' : ''}`}
-                            onClick={() => updateFilters({ status: o.value })}
+                            onClick={() => updateFilters({
+                                status: o.value,
+                                page: 1,
+                            })}
                         >
                             {o.label}
                         </button>
@@ -262,7 +328,7 @@ const ProductListPage = () => {
                                 <td>{p.stockQuantity ?? 0}</td>
                                 <td>{p.baseUnit}</td>
                                 <td>
-                                    {p.isCombo
+                                    {p.isComboUI
                                         ? <span className="plp-type-badge plp-type-badge--combo">🎁 Combo</span>
                                         : p.allowDecimalQuantity
                                             ? <span className="plp-type-badge plp-type-badge--weight">⚖️ Cân</span>
@@ -293,12 +359,19 @@ const ProductListPage = () => {
                 <span className="plp__total">Tổng: <strong>{total}</strong> sản phẩm</span>
                 <div className="plp-pagination">
                     <button className="plp-page-btn" onClick={() => changePage(filters.page - 1)} disabled={filters.page === 1}>‹</button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                        <button key={n}
-                            className={`plp-page-btn${filters.page === n ? ' plp-page-btn--active' : ''}`}
-                            onClick={() => changePage(n)}
-                        >{n}</button>
-                    ))}
+                    {getPaginationPages(filters.page, totalPages).map((p, idx) =>
+                        p === '...' ? (
+                            <span key={`dots-${idx}`} className="plp-page-dots">…</span>
+                        ) : (
+                            <button
+                                key={p}
+                                className={`plp-page-btn${filters.page === p ? ' plp-page-btn--active' : ''}`}
+                                onClick={() => changePage(p)}
+                            >
+                                {p}
+                            </button>
+                        )
+                    )}
                     <button className="plp-page-btn" onClick={() => changePage(filters.page + 1)} disabled={filters.page >= totalPages || totalPages === 0}>›</button>
                 </div>
             </div>
