@@ -2,6 +2,7 @@ const sql = require("mssql");
 const { connectDB } = require("../config/database");
 const invoiceModel = require("../models/invoice.model");
 const inventoryService = require("./InventoryServices/inventory.service");
+const paymentModel = require("../models/payment.model")
 const createVnpayUtil = require("../utils/vnpay.mockup");
 
 const vnpayUtil = createVnpayUtil({
@@ -213,7 +214,7 @@ const updateInvoice = async (id, { items, status, payment, customerId } = {}) =>
                         status: "SUCCESS",
                     });
                 } else {
-                    await invoiceModel.updatePaymentStatus(
+                    await paymentModel.updatePaymentStatus(
                         transaction,
                         id,
                         "SUCCESS"

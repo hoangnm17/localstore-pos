@@ -92,8 +92,10 @@ const deductStock = async (transaction, items) => {
         if (stock.quantity < item.quantity) {
             throw new Error(`Insufficient stock for product ${item.productId}`);
         }
+        console.log(item);
+        console.log(stock)
 
-        await productModel.updateStock(
+        await productModel.detuctStock(
             transaction,
             item.productId,
             stock.quantityOnHand - item.quantity

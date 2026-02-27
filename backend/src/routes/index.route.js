@@ -10,7 +10,7 @@ const productRoutes = require("./product.route");
 const productUnitRoutes = require("./productUnit.route");
 const priceHistoryRoutes = require("./priceHistory.route");
 const paymentRoutes = require("./payment.route")
-
+const staffRoutes = require("./staff.route")
 const shiftRoutes = require("./shift.route");
 module.exports = (app) => {
     const version = "/api";
