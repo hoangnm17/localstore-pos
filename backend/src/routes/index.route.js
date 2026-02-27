@@ -13,6 +13,7 @@ const paymentRoutes = require("./payment.route")
 const staffRoutes = require("./staff.route");
 const rosterRoutes = require("./roster.route");
 const shiftRoutes = require("./shift.route");
+const salaryRoutes = require("./salary.route");
 module.exports = (app) => {
     const version = "/api";
 
@@ -32,6 +33,7 @@ module.exports = (app) => {
     app.use(version + "/staff", staffRoutes);
     app.use(version + "/shifts", shiftRoutes);
     app.use(version + "/roster", rosterRoutes);
+    app.use(version + "/salary", require("./salary.route")); 
 
 };
 
