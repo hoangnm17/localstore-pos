@@ -22,7 +22,7 @@ router.get("/categories/:categoryId/products", inventoryController.getProductSto
 router.put("/products/stock", protect(PERMISSIONS.UPDATE_STOCK), inventoryController.updateProductStock);
 
 // GET products by supplier
-router.get("/suppliers/:supplierId/products", inventoryController.getProductsBySupplier);
+//router.get("/suppliers/:supplierId/products", inventoryController.getProductsBySupplier);
 
 //POST send problematic report
 router.post("/reports/send", protect(PERMISSIONS.CREATE_PROBLEMATIC), inventoryController.createProblematicReport);
@@ -55,6 +55,18 @@ router.get("/suppliers/:id", supplierController.getSupplierDetail);
 
 // GET MONTHLY REPORT
 router.get("/purchase-orders/report", purchaseOrderController.getMonthlyReport);
+
+// GET PRODUCTS BY SUPPLIER
+router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
+
+// GET PRODUCTS NOT IN SUPPLIER
+router.get("/suppliers/:id/products/available", supplierController.getProductsNotInSupplier);
+
+// ADD PRODUCT TO SUPPLIER
+router.post("/suppliers/:id/products", supplierController.addProductToSupplier);
+
+// CREATE NEW SUPPLIER
+router.post("/create/supplier", supplierController.createSupplier);
 
 
 module.exports = router;
