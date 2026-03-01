@@ -71,5 +71,8 @@ router.post("/create/supplier", supplierController.createSupplier);
 // UPDATE PRODUCT OF SUPPLIER
 router.put("/suppliers/:id/products/:productId", supplierController.updateProductOfSupplier);
 
+// UPDATE SUPPLIER
+router.put("/suppliers/:id", supplierController.updateSupplier);
+
 
 module.exports = router;

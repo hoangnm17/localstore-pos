@@ -37,6 +37,10 @@ function updateProductOfSupplier(id, productId, data) {
   );
 }
 
+function updateSupplier(id, data) {
+  return api.put(`/inventory/suppliers/${id}`, data);
+}
+
 export default {
   getSupplierList,
   getSupplierById,
@@ -44,5 +48,6 @@ export default {
   getAvailableProducts,
   addProductToSupplier,
   createSupplier,
-  updateProductOfSupplier
+  updateProductOfSupplier,
+  updateSupplier
 };

@@ -168,6 +168,32 @@ const updateProductOfSupplier = async (
         `);
 };
 
+const updateSupplier = async (
+    id,
+    name,
+    contactInfo,
+    address
+) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("id", sql.Int, id)
+        .input("name", sql.NVarChar, name)
+        .input("contactInfo", sql.NVarChar, contactInfo || null)
+        .input("address", sql.NVarChar, address || null)
+        .query(`
+            UPDATE Suppliers
+            SET name = @name,
+                contactInfo = @contactInfo,
+                address = @address
+            OUTPUT INSERTED.*
+            WHERE id = @id
+        `);
+
+    return result.recordset[0];
+};
+
 module.exports = {
     getList,
     getById,
@@ -175,5 +201,6 @@ module.exports = {
     getProductsNotInSupplier,
     addProductToSupplier,
     createSupplier,
-    updateProductOfSupplier
+    updateProductOfSupplier,
+    updateSupplier
 };

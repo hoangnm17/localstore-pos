@@ -115,6 +115,32 @@ const updateProductOfSupplier = async (
     );
 };
 
+const updateSupplier = async (id, body) => {
+
+    if (!id) {
+        throw new Error("SUPPLIER_ID_REQUIRED");
+    }
+
+    const { name, contactInfo, address } = body;
+
+    if (!name || name.trim() === "") {
+        throw new Error("SUPPLIER_NAME_REQUIRED");
+    }
+
+    const supplier = await supplierModel.getById(id);
+
+    if (!supplier) {
+        throw new Error("SUPPLIER_NOT_FOUND");
+    }
+
+    return await supplierModel.updateSupplier(
+        id,
+        name.trim(),
+        contactInfo,
+        address
+    );
+};
+
 module.exports = {
     getSupplierList,
     getSupplierById,
@@ -122,5 +148,6 @@ module.exports = {
     getProductsNotInSupplier,
     addProductToSupplier,
     createSupplier,
-    updateProductOfSupplier
+    updateProductOfSupplier,
+    updateSupplier
 }
