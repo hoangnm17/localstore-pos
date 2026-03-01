@@ -1,21 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import supplierService from "../../../services/Inventory/supplierService";
 import CreateSupplierModal from "../InventoryModal/CreateSupplierModal";
 import EditSupplierModal from "../InventoryModal/EditSupplierModal";
 
 function SupplierList() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const canUpdateSupplier = user?.features?.includes("UPDATE_SUPPLIER");
+
   const navigate = useNavigate();
 
   const [suppliers, setSuppliers] = useState([]);
+
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
-  const fetchSuppliers = async (keyword = "") => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const fetchSuppliers = useCallback(async (keyword = "") => {
     try {
       setLoading(true);
       const res = await supplierService.getSupplierList(keyword);
@@ -25,16 +39,17 @@ function SupplierList() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchSuppliers();
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchSuppliers(search.trim());
-  };
+  // Load lần đầu
+  useEffect(() => {
+    fetchSuppliers("");
+  }, [fetchSuppliers]);
+
+  // Load lại khi search thay đổi
+  useEffect(() => {
+    fetchSuppliers(search);
+  }, [search, fetchSuppliers]);
 
   const handleOpenEdit = (e, supplier) => {
     e.stopPropagation();
@@ -44,7 +59,7 @@ function SupplierList() {
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* HEADER giữ nguyên */}
+      {/* HEADER giữ nguyên UI */}
       <header className="bg-white border-bottom shadow-sm">
         <div className="container-fluid px-3 px-md-4">
           <div className="d-flex align-items-center justify-content-between py-3">
@@ -53,26 +68,19 @@ function SupplierList() {
             </h1>
 
             <div className="d-flex align-items-center gap-3 gap-md-4">
-              <form
-                onSubmit={handleSearch}
-                className="position-relative d-none d-md-block"
-              >
+
+              {/* 🔥 SEARCH debounce */}
+              <div className="position-relative d-none d-md-block">
                 <input
                   type="search"
                   className="form-control form-control-md ps-4 pe-5 bg-light border-0 shadow-none"
                   placeholder="Tìm nhà cung cấp..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   style={{ width: "280px", borderRadius: "2rem" }}
                 />
-                <button
-                  type="submit"
-                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3 text-muted"
-                  style={{ border: "none", background: "none" }}
-                >
-                  <i className="bi bi-search fs-5"></i>
-                </button>
-              </form>
+                <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y pe-3 text-muted"></i>
+              </div>
 
               <button
                 className="btn btn-outline-secondary d-md-none rounded-circle p-2"
@@ -85,20 +93,22 @@ function SupplierList() {
                 <i className="bi bi-search"></i>
               </button>
 
-              <button
-                className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-medium shadow-sm"
-                onClick={() => setIsModalOpen(true)}
-                style={{ borderRadius: "2rem" }}
-              >
-                <i className="bi bi-plus-lg fs-5"></i>
-                Thêm mới
-              </button>
+              {canUpdateSupplier && (
+                <button
+                  className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-medium shadow-sm"
+                  onClick={() => setIsModalOpen(true)}
+                  style={{ borderRadius: "2rem" }}
+                >
+                  <i className="bi bi-plus-lg fs-5"></i>
+                  Thêm mới
+                </button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* MAIN giữ nguyên */}
       <main className="container-fluid px-3 px-md-4 py-4 pt-4">
         {loading ? (
           <div className="text-center py-5 my-5">
@@ -112,17 +122,8 @@ function SupplierList() {
           <div className="text-center py-5 my-5 bg-white rounded-4 shadow-sm border border-light">
             <i className="bi bi-building-slash display-1 text-muted opacity-50"></i>
             <h5 className="mt-4 fw-semibold text-dark">
-              Chưa có nhà cung cấp
+              Không tìm thấy nhà cung cấp
             </h5>
-            <p className="text-muted mb-4">
-              Bắt đầu bằng cách thêm mới
-            </p>
-            <button
-              className="btn btn-primary px-5 py-2"
-              onClick={() => setIsModalOpen(true)}
-            >
-              Thêm nhà cung cấp
-            </button>
           </div>
         ) : (
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
@@ -136,20 +137,21 @@ function SupplierList() {
                 >
                   <div className="card-body p-4 d-flex flex-column">
 
-                    {/* 🔥 HEADER CARD MỚI (không đè lên nhau nữa) */}
                     <div className="d-flex justify-content-between align-items-start mb-3">
                       <h5 className="fw-bold text-dark mb-0 pe-2 flex-grow-1">
                         {supplier.name}
                       </h5>
 
-                      <button
-                        className="btn btn-sm btn-light rounded-circle shadow-sm flex-shrink-0"
-                        onClick={(e) =>
-                          handleOpenEdit(e, supplier)
-                        }
-                      >
-                        <i className="bi bi-pencil"></i>
-                      </button>
+                      {canUpdateSupplier && (
+                        <button
+                          className="btn btn-sm btn-light rounded-circle shadow-sm flex-shrink-0"
+                          onClick={(e) =>
+                            handleOpenEdit(e, supplier)
+                          }
+                        >
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-auto">
@@ -179,14 +181,14 @@ function SupplierList() {
       <CreateSupplierModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onCreated={() => fetchSuppliers(search.trim())}
+        onCreated={() => fetchSuppliers(search)}
       />
 
       <EditSupplierModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         supplier={selectedSupplier}
-        onUpdated={() => fetchSuppliers(search.trim())}
+        onUpdated={() => fetchSuppliers(search)}
       />
     </div>
   );

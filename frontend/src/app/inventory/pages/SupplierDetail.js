@@ -5,6 +5,9 @@ import AddProductModal from "../InventoryModal/AddProductModal";
 import UpdateProductModal from "../InventoryModal/UpdateProductModal";
 
 function SupplierDetail() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const canUpdateProduct = user?.features?.includes("UPDATE_SUPPLIER_PRODUCT");
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -20,9 +23,7 @@ function SupplierDetail() {
 
   const limit = 10;
 
-  /* ===============================
-     LOAD SUPPLIER INFO
-  =============================== */
+  //Load supplier detail
   useEffect(() => {
     const loadSupplier = async () => {
       try {
@@ -37,10 +38,7 @@ function SupplierDetail() {
 
     loadSupplier();
   }, [id]);
-
-  /* ===============================
-     LOAD PRODUCTS
-  =============================== */
+  // Load products of supplier
   const loadProducts = async () => {
     setLoading(true);
     try {
@@ -61,10 +59,8 @@ function SupplierDetail() {
   useEffect(() => {
     loadProducts();
   }, [id]);
-
-  /* ===============================
-     PAGINATION
-  =============================== */
+ 
+  // Pagination
   const totalPages = Math.ceil(allProducts.length / limit);
 
   const currentProducts = useMemo(() => {
@@ -83,10 +79,6 @@ function SupplierDetail() {
     if (p > totalPages) p = totalPages;
     setPage(p);
   };
-
-  /* ===============================
-     RENDER
-  =============================== */
 
   return (
     <div className="container-fluid py-4">
@@ -114,12 +106,12 @@ function SupplierDetail() {
               </div>
             </div>
 
-            <button
+            {canUpdateProduct && (<button
               className="btn btn-primary"
               onClick={() => setShowAddModal(true)}
             >
               + Thêm sản phẩm
-            </button>
+            </button>)}
 
           </div>
         </div>
@@ -145,7 +137,7 @@ function SupplierDetail() {
                     <th>Giá nhập</th>
                     <th>Giá bán</th>
                     <th>Trạng thái</th>
-                    <th>Chỉnh sửa</th>
+                    {canUpdateProduct && <th>Chỉnh sửa</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -185,14 +177,14 @@ function SupplierDetail() {
                         </span>
                       </td>
 
-                      <td>
+                      {canUpdateProduct && (<td>
                         <button
                           className="btn btn-sm btn-outline-primary"
                           onClick={() => setEditingProduct(p)}
                         >
                           Sửa
                         </button>
-                      </td>
+                      </td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -247,7 +239,6 @@ function SupplierDetail() {
 
       </div>
 
-      {/* ADD PRODUCT MODAL */}
       <AddProductModal
         show={showAddModal}
         supplierId={id}
@@ -255,7 +246,6 @@ function SupplierDetail() {
         onSuccess={loadProducts}
       />
 
-      {/* EDIT PRODUCT MODAL */}
       <UpdateProductModal
         show={!!editingProduct}
         supplierId={id}

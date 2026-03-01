@@ -6,16 +6,10 @@ const supplierController = require("../controllers/supplier.controller");
 const { protect } = require("../middlewares/helperPermission.middleware");
 const PERMISSIONS = require("../constants/permissions");
 
-/**
- * Category stock
- * GET /api/inventory/categories
- */
+//Get category stock
 router.get("/categories", inventoryController.getCategoryStock);
 
-/**
- * Product stock by category (SEARCH + PAGING)
- * GET /api/inventory/categories/:categoryId/products
- */
+//Get product stock by category
 router.get("/categories/:categoryId/products", inventoryController.getProductStockByCategory);
 
 // PUT update stock
@@ -54,7 +48,7 @@ router.get("/suppliers/list", supplierController.getSupplierList);
 router.get("/suppliers/:id", supplierController.getSupplierDetail);
 
 // GET MONTHLY REPORT
-router.get("/purchase-orders/report", purchaseOrderController.getMonthlyReport);
+router.get("/purchase-orders/report", protect(PERMISSIONS.PO_Report), purchaseOrderController.getMonthlyReport);
 
 // GET PRODUCTS BY SUPPLIER
 router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
@@ -63,16 +57,16 @@ router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
 router.get("/suppliers/:id/products/available", supplierController.getProductsNotInSupplier);
 
 // ADD PRODUCT TO SUPPLIER
-router.post("/suppliers/:id/products", supplierController.addProductToSupplier);
+router.post("/suppliers/:id/products", protect(PERMISSIONS.UPDATE_SUPPLIER_PRODUCT), supplierController.addProductToSupplier);
 
 // CREATE NEW SUPPLIER
-router.post("/create/supplier", supplierController.createSupplier);
+router.post("/create/supplier", protect(PERMISSIONS.UPDATE_SUPPLIER), supplierController.createSupplier);
 
 // UPDATE PRODUCT OF SUPPLIER
-router.put("/suppliers/:id/products/:productId", supplierController.updateProductOfSupplier);
+router.put("/suppliers/:id/products/:productId", protect(PERMISSIONS.UPDATE_SUPPLIER_PRODUCT), supplierController.updateProductOfSupplier);
 
 // UPDATE SUPPLIER
-router.put("/suppliers/:id", supplierController.updateSupplier);
+router.put("/suppliers/:id", protect(PERMISSIONS.UPDATE_SUPPLIER), supplierController.updateSupplier);
 
 
 module.exports = router;
