@@ -30,13 +30,19 @@ function createSupplier(data) {
   return api.post("/inventory/create/supplier", data);
 }
 
-const supplierService = {
+function updateProductOfSupplier(id, productId, data) {
+  return api.put(
+    `/inventory/suppliers/${id}/products/${productId}`,
+    data
+  );
+}
+
+export default {
   getSupplierList,
   getSupplierById,
   getProductsBySupplier,
   getAvailableProducts,
   addProductToSupplier,
-  createSupplier
+  createSupplier,
+  updateProductOfSupplier
 };
-
-export default supplierService;
