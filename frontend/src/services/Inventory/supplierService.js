@@ -10,9 +10,33 @@ function getSupplierById(id) {
   return api.get(`/inventory/suppliers/${id}`);
 }
 
+function getProductsBySupplier(id, page = 1, limit = 10) {
+  return api.get(`/inventory/suppliers/${id}/products`, {
+    params: { page, limit }
+  });
+}
+
+function getAvailableProducts(id, search = "") {
+  return api.get(`/inventory/suppliers/${id}/products/available`, {
+    params: { search }
+  });
+}
+
+function addProductToSupplier(id, data) {
+  return api.post(`/inventory/suppliers/${id}/products`, data);
+}
+
+function createSupplier(data) {
+  return api.post("/inventory/create/supplier", data);
+}
+
 const supplierService = {
   getSupplierList,
-  getSupplierById
+  getSupplierById,
+  getProductsBySupplier,
+  getAvailableProducts,
+  addProductToSupplier,
+  createSupplier
 };
 
 export default supplierService;
