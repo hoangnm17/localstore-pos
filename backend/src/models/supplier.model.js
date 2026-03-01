@@ -60,7 +60,9 @@ const getProductsBySupplier = async (supplierId) => {
                 p.name,
                 p.code,
                 p.salePrice,
-                ps.supplyPrice
+                ps.supplyPrice,
+                p.imageUrl,
+                ps.status
             FROM ProductSuppliers ps
             INNER JOIN Products p ON ps.productId = p.id
             WHERE ps.supplierId = @supplierId
@@ -84,7 +86,13 @@ const getProductsNotInSupplier = async (supplierId, search) => {
     `;
 
     if (search) {
-        whereClause += " AND p.name LIKE @search";
+        whereClause += `
+            AND (
+                p.name LIKE @search
+                OR p.code LIKE @search
+                OR p.barcode LIKE @search
+            )
+        `;
         request.input("search", sql.NVarChar, `%${search}%`);
     }
 
@@ -93,6 +101,7 @@ const getProductsNotInSupplier = async (supplierId, search) => {
             p.id,
             p.name,
             p.code,
+            p.barcode,
             p.salePrice
         FROM Products p
         ${whereClause}
@@ -136,11 +145,35 @@ const createSupplier = async ({
     return result.recordset[0];
 };
 
+const updateProductOfSupplier = async (
+    supplierId,
+    productId,
+    supplyPrice,
+    status
+) => {
+
+    const pool = await connectDB();
+
+    await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("productId", sql.BigInt, productId)
+        .input("supplyPrice", sql.Decimal(15, 2), supplyPrice)
+        .input("status", sql.VarChar(20), status)
+        .query(`
+            UPDATE ProductSuppliers
+            SET supplyPrice = @supplyPrice,
+                status = @status
+            WHERE supplierId = @supplierId
+            AND productId = @productId
+        `);
+};
+
 module.exports = {
     getList,
     getById,
     getProductsBySupplier,
     getProductsNotInSupplier,
     addProductToSupplier,
-    createSupplier
+    createSupplier,
+    updateProductOfSupplier
 };

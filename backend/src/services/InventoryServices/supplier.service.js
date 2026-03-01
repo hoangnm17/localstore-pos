@@ -1,6 +1,6 @@
 const supplierModel = require("../../models/supplier.model.js");
 
-exports.getSupplierList = async (query) => {
+const getSupplierList = async (query) => {
 
     const {
         search
@@ -13,7 +13,7 @@ exports.getSupplierList = async (query) => {
     return suppliers;
 };
 
-exports.getSupplierById = async (id) => {
+const getSupplierById = async (id) => {
 
     if (!id) {
         throw new Error("SUPPLIER_ID_REQUIRED");
@@ -28,7 +28,7 @@ exports.getSupplierById = async (id) => {
     return supplier;
 };
 
-exports.getProductsBySupplier = async (supplierId) => {
+const getProductsBySupplier = async (supplierId) => {
     if (!supplierId) {
         throw new Error("SUPPLIER_ID_REQUIRED");
     }
@@ -36,7 +36,7 @@ exports.getProductsBySupplier = async (supplierId) => {
     return await supplierModel.getProductsBySupplier(supplierId);
 };
 
-exports.getProductsNotInSupplier = async (supplierId, query) => {
+const getProductsNotInSupplier = async (supplierId, query) => {
     if (!supplierId) {
         throw new Error("SUPPLIER_ID_REQUIRED");
     }
@@ -49,7 +49,7 @@ exports.getProductsNotInSupplier = async (supplierId, query) => {
     );
 };
 
-exports.addProductToSupplier = async (supplierId, body) => {
+const addProductToSupplier = async (supplierId, body) => {
 
     if (!supplierId) {
         throw new Error("SUPPLIER_ID_REQUIRED");
@@ -68,7 +68,7 @@ exports.addProductToSupplier = async (supplierId, body) => {
     );
 };
 
-exports.createSupplier = async (body) => {
+const createSupplier = async (body) => {
 
     const { name, contactInfo, address } = body;
 
@@ -82,3 +82,45 @@ exports.createSupplier = async (body) => {
         address
     });
 };
+
+const updateProductOfSupplier = async (
+    supplierId,
+    productId,
+    body
+) => {
+
+    if (!supplierId) {
+        throw new Error("SUPPLIER_ID_REQUIRED");
+    }
+
+    if (!productId) {
+        throw new Error("PRODUCT_ID_REQUIRED");
+    }
+
+    const { supplyPrice, status } = body;
+
+    if (supplyPrice == null || !status) {
+        throw new Error("PRICE_AND_STATUS_REQUIRED");
+    }
+
+    if (!["ACTIVE", "INACTIVE"].includes(status)) {
+        throw new Error("INVALID_STATUS");
+    }
+
+    await supplierModel.updateProductOfSupplier(
+        supplierId,
+        productId,
+        supplyPrice,
+        status
+    );
+};
+
+module.exports = {
+    getSupplierList,
+    getSupplierById,
+    getProductsBySupplier,
+    getProductsNotInSupplier,
+    addProductToSupplier,
+    createSupplier,
+    updateProductOfSupplier
+}

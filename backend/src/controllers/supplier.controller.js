@@ -1,6 +1,6 @@
 const supplierService = require("../services/InventoryServices/supplier.service");
 
-exports.getSupplierList = async (req, res) => {
+const getSupplierList = async (req, res) => {
     try {
 
         const suppliers = await supplierService.getSupplierList(req.query);
@@ -21,7 +21,7 @@ exports.getSupplierList = async (req, res) => {
     }
 };
 
-exports.getSupplierDetail = async (req, res) => {
+const getSupplierDetail = async (req, res) => {
     try {
 
         const { id } = req.params;
@@ -48,7 +48,7 @@ exports.getSupplierDetail = async (req, res) => {
     }
 };
 
-exports.getSupplierProducts = async (req, res) => {
+const getSupplierProducts = async (req, res) => {
     console.log("PARAM ID:", req.params.id);
     try {
 
@@ -72,7 +72,7 @@ exports.getSupplierProducts = async (req, res) => {
     }
 };
 
-exports.getProductsNotInSupplier = async (req, res) => {
+const getProductsNotInSupplier = async (req, res) => {
     try {
 
         const { id } = req.params;
@@ -96,7 +96,7 @@ exports.getProductsNotInSupplier = async (req, res) => {
     }
 };
 
-exports.addProductToSupplier = async (req, res) => {
+const addProductToSupplier = async (req, res) => {
     try {
 
         const { id } = req.params;
@@ -123,7 +123,7 @@ exports.addProductToSupplier = async (req, res) => {
     }
 };
 
-exports.createSupplier = async (req, res) => {
+const createSupplier = async (req, res) => {
     try {
 
         const supplier = await supplierService.createSupplier(req.body);
@@ -149,3 +149,52 @@ exports.createSupplier = async (req, res) => {
         });
     }
 };
+
+const updateProductOfSupplier = async (req, res) => {
+    try {
+
+        const { id, productId } = req.params;
+
+        await supplierService.updateProductOfSupplier(
+            parseInt(id),
+            parseInt(productId),
+            req.body
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Product updated successfully"
+        });
+
+    } catch (err) {
+
+        if (err.message === "SUPPLIER_ID_REQUIRED")
+            return res.status(400).json({ success: false, message: "Supplier ID is required" });
+
+        if (err.message === "PRODUCT_ID_REQUIRED")
+            return res.status(400).json({ success: false, message: "Product ID is required" });
+
+        if (err.message === "PRICE_AND_STATUS_REQUIRED")
+            return res.status(400).json({ success: false, message: "Supply price and status are required" });
+
+        if (err.message === "INVALID_STATUS")
+            return res.status(400).json({ success: false, message: "Status must be ACTIVE or INACTIVE" });
+
+        console.error("UPDATE_PRODUCT_ERROR:", err);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
+module.exports = {
+    getSupplierList,
+    getSupplierDetail,
+    getSupplierProducts,
+    getProductsNotInSupplier,
+    addProductToSupplier,
+    createSupplier,
+    updateProductOfSupplier 
+}

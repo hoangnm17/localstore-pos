@@ -68,5 +68,8 @@ router.post("/suppliers/:id/products", supplierController.addProductToSupplier);
 // CREATE NEW SUPPLIER
 router.post("/create/supplier", supplierController.createSupplier);
 
+// UPDATE PRODUCT OF SUPPLIER
+router.put("/suppliers/:id/products/:productId", supplierController.updateProductOfSupplier);
+
 
 module.exports = router;
