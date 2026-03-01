@@ -41,7 +41,12 @@ const Sidebar = () => {
                 { title: 'Thời khóa biểu', path: '/schedule' }
             ]
         },
-        { title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports' },
+        {
+            title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports',
+            children: [
+                { title: 'Báo cáo lương', path: '/salary' }
+            ]
+        },
 
     ];
 
