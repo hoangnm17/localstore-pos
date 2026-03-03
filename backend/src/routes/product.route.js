@@ -11,6 +11,7 @@ router.post('/', protect(PERMISSIONS.CREATE_PRODUCT), productController.createPr
 router.put('/:id', protect(PERMISSIONS.UPDATE_PRODUCT), productController.updateProduct);
 router.delete('/:id', protect(PERMISSIONS.DELETE_PRODUCT), productController.deleteProduct);
 router.patch('/:id/start-selling', protect(PERMISSIONS.UPDATE_PRODUCT), productController.startSellingProduct);
+router.get('/barcode/:barcode', productController.getProductWithBarcode);
 
 // Combo routes
 router.get('/:productId/combos', protect(PERMISSIONS.VIEW_PRODUCT), comboController.getComboItems);

@@ -83,3 +83,16 @@ exports.startSellingProduct = async (req, res) => {
         res.status(404).json({ success: false, message: err.message });
     }
 };
+
+exports.getProductWithBarcode = async (req, res) => {
+    try {
+        const barcode = req.params.barcode;
+        const product = await productService.getProductWithBarcode(barcode);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.json({ success: true, data: product });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};

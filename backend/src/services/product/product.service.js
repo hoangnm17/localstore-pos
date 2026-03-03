@@ -87,3 +87,11 @@ exports.startSellingProduct = async (id) => {
     }
     return true;
 };
+
+exports.getProductWithBarcode = async (barcode) => {
+    const product = await productModel.getProductWithBarcode(barcode);
+    if (!product) {
+        throw new Error('Không có sản phẩm.')
+    }
+    return product;
+}

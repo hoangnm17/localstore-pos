@@ -273,3 +273,20 @@ exports.getProductById = async (id) => {
 
     return result.recordset[0] || null;
 };
+
+exports.getProductWithBarcode = async (barcode) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('barcode', sql.VarChar, barcode)
+        .query(`
+            SELECT
+                id,
+                name,
+                baseUnit,
+                salePrice
+            FROM Products
+            WHERE barcode = @barcode
+        `);
+    return result.recordset[0] || null;
+};
