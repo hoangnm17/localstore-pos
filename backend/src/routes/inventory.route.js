@@ -3,6 +3,7 @@ const router = express.Router();
 const inventoryController = require("../controllers/inventory.controller");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
 const supplierController = require("../controllers/supplier.controller");
+const adjustController = require("../controllers/adjust.controller");
 const { protect } = require("../middlewares/helperPermission.middleware");
 const PERMISSIONS = require("../constants/permissions");
 
@@ -68,6 +69,19 @@ router.put("/suppliers/:id/products/:productId", protect(PERMISSIONS.UPDATE_SUPP
 // UPDATE SUPPLIER
 router.put("/suppliers/:id", protect(PERMISSIONS.UPDATE_SUPPLIER), supplierController.updateSupplier);
 
+// UPDATE MIN THRESHOLD
 router.put("/:productId/min-threshold", protect(PERMISSIONS.EDIT_LOWSTOCK), inventoryController.updateMinThreshold);
+
+//CREATE ADJUSTMENT
+router.post("/adjustments", protect(PERMISSIONS.CREATE_ADJUST), adjustController.createAdjustment);
+
+// UPDATE ADJUSTMENT STATUS
+router.patch("/adjustments/:id/status", protect(PERMISSIONS.PROCESS_ADJUST), adjustController.updateStatus);
+
+// GET ADJUSTMENTS
+router.get("/adjustments/list", adjustController.getAdjustments);
+
+// GET ADJUSTMENT DETAIL
+router.get("/adjustments/detail/:id", adjustController.getAdjustmentDetail);
 
 module.exports = router;

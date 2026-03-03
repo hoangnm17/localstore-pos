@@ -56,12 +56,11 @@ const countProductsByCategory = async (categoryId, search) => {
     return result.recordset[0].total;
 };
 
-const updateStock = async (productId, quantity) => {
-    const pool = await connectDB();
+const updateStock = async (transaction, productId, quantity) => {
 
-    const result = await pool.request()
+    const result = await new sql.Request(transaction)
         .input("productId", sql.BigInt, productId)
-        .input("quantity", sql.Decimal(15, 3), quantity)   // ← Đổi từ sql.Int → sql.Decimal(15,3)
+        .input("quantity", sql.Decimal(15, 3), quantity)
         .query(`
             UPDATE InventoryStocks
             SET quantityOnHand = @quantity

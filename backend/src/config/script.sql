@@ -348,12 +348,17 @@ GO
 CREATE TABLE [InventoryAdjustments] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [createdBy] BIGINT NOT NULL,
+    [processedBy] BIGINT NULL,
     [reason] NVARCHAR(50) NOT NULL,
     [status] VARCHAR(20) DEFAULT 'Pending',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
+    [processedAt] DATETIME2 NULL,
 
     CONSTRAINT [FK_Adjustment_Staff]
         FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id]),
+
+    CONSTRAINT [FK_Adjustment_Staff]
+        FOREIGN KEY ([processedBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [CK_Adjustment_Status]
         CHECK ([status] IN ('Pending','Approved','Rejected'))
