@@ -48,7 +48,7 @@ router.get("/suppliers/list", supplierController.getSupplierList);
 router.get("/suppliers/:id", supplierController.getSupplierDetail);
 
 // GET MONTHLY REPORT
-router.get("/purchase-orders/report", protect(PERMISSIONS.PO_Report), purchaseOrderController.getMonthlyReport);
+router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), purchaseOrderController.getMonthlyReport);
 
 // GET PRODUCTS BY SUPPLIER
 router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
@@ -68,5 +68,6 @@ router.put("/suppliers/:id/products/:productId", protect(PERMISSIONS.UPDATE_SUPP
 // UPDATE SUPPLIER
 router.put("/suppliers/:id", protect(PERMISSIONS.UPDATE_SUPPLIER), supplierController.updateSupplier);
 
+router.put("/:productId/min-threshold", protect(PERMISSIONS.EDIT_LOWSTOCK), inventoryController.updateMinThreshold);
 
 module.exports = router;
