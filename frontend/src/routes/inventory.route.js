@@ -10,6 +10,8 @@ import PurchaseOrderCreate from "../app/inventory/pages/PurchaseOrderCreate";
 import PurchaseOrderReport from "../app/inventory/pages/PurchaseOrderReport";
 import SupplierList from "../app/inventory/pages/SuppliersList";
 import SupplierDetail from "../app/inventory/pages/SupplierDetail";
+import AdjustmentList from "../app/inventory/pages/AdjustmentList";
+import AdjustmentDetail from "../app/inventory/pages/AdjustmentDetail";
 
 const InventoryRoutes = (
     <Route path="/inventory" element={<MainLayout />}>
@@ -25,6 +27,8 @@ const InventoryRoutes = (
         <Route path="purchase-orders/report" element={<PurchaseOrderReport />} />
         <Route path="suppliers" element={<SupplierList />} />
         <Route path="suppliers/:id" element={<SupplierDetail />} />
+        <Route path="requests/adjust" element={<AdjustmentList />} />
+        <Route path="requests/adjust/:id" element={<AdjustmentDetail />} />
         <Route path="menu" element={<InventoryMenu />} />
     </Route>
 );
