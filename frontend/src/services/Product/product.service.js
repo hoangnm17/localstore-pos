@@ -33,3 +33,8 @@ export const getPriceHistory = async (productId) => api.get(`/price-history/${pr
 export const getComboItems = async (productId) => api.get(`/products/${productId}/combos`);
 export const addComboItem = async (productId, payload) => api.post(`/products/${productId}/combos`, payload);
 export const removeComboItem = async (productId, comboItemId) => api.delete(`/products/${productId}/combos/${comboItemId}`);
+
+export const getProductWithBarcode = async (barcode) => {
+  const res = await api.get(`/products/barcode/${barcode}`);
+  return res.data;
+}

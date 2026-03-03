@@ -21,8 +21,6 @@ export const useOrderItems = () => {
         id: crypto.randomUUID(),
         productId: product.productId,
         productName: product.productName,
-        variantId: product.variantId,
-        variantName: product.variantName,
         unitPrice: product.unitPrice,
         quantity: 1
       }

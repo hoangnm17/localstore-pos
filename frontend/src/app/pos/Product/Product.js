@@ -4,6 +4,8 @@ import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
 import { getProducts } from "services/Product/product.service";
+import ScanBarcode from "components/pos/ScanBarcode";
+import { getProductWithBarcode } from "services/Product/product.service";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 8,
@@ -19,6 +21,42 @@ export default function Product({ addItem }) {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showScan, setShowScan] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setShowScan(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const handleBarcode = async (barcode) => {
+    try {
+      const res = await getProductWithBarcode(barcode);
+      if (!res.success) return;
+
+      const product = res.data;
+      addItem({
+        productId: product.id,
+        productName: product.name,
+        unitPrice: product.salePrice,
+      });
+
+    } catch (err) {
+      console.error("Scan error:", err);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -109,6 +147,13 @@ export default function Product({ addItem }) {
                     });
                   }}
                 />
+                {showScan && (
+                  <ScanBarcode
+                    open={showScan}
+                    onClose={() => setShowScan(false)}
+                    onDetected={handleBarcode}
+                  />
+                )}
 
                 {/* PAGINATION */}
                 <div className="mt-4 border-top pt-4">
