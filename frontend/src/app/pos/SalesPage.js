@@ -1,5 +1,6 @@
 import Order from "./Order/Order";
 import Product from "./Product/Product";
+import { useState } from "react"
 import { useInvoiceTabs } from "hooks/pos/useInvoice";
 import { useOrderItems } from "hooks/pos/useOrderItems";
 
@@ -25,12 +26,17 @@ export default function SalesHome() {
     calculateTotalQuantity,
   } = useOrderItems();
 
+  const [activeItemId, setActiveItemId] = useState(null);
+  const [focusSignal, setFocusSignal] = useState(0);
 
   const handleAddItem = (product) => {
     if (!activeInvoice) return;
 
-    const newItems = addItem(activeInvoice.items, product);
-    updateInvoiceItems(activeInvoice.id, newItems);
+    const result = addItem(activeInvoice.items, product);
+
+    updateInvoiceItems(activeInvoice.id, result.items);
+    setActiveItemId(result.activeId);
+    setFocusSignal(prev => prev + 1);
   };
 
   const handleIncrease = (id) => {
@@ -64,6 +70,16 @@ export default function SalesHome() {
   const totalQuantity = calculateTotalQuantity(
     activeInvoice?.items || []
   );
+
+  const handleChangeQty = (id, quantity) => {
+    if (!activeInvoice) return;
+
+    const newItems = activeInvoice.items.map(it =>
+      it.id === id ? { ...it, quantity } : it
+    );
+
+    updateInvoiceItems(activeInvoice.id, newItems);
+  };
 
 
   if (!activeInvoice) {
@@ -144,6 +160,9 @@ export default function SalesHome() {
             onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
             onPay={pay}
+            activeItemId={activeItemId}
+            onChangeQty={handleChangeQty}
+            focusSignal={focusSignal}
           />
         </div>
 

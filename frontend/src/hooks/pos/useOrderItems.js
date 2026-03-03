@@ -1,31 +1,38 @@
 export const useOrderItems = () => {
 
-  const addItem = (items, product) => {
-    const existed = items.find(
-      p =>
-        p.productId === product.productId &&
-        p.unitPrice === product.unitPrice
+const addItem = (items, product) => {
+  const existed = items.find(
+    p =>
+      p.productId === product.productId &&
+      p.unitPrice === product.unitPrice
+  );
+
+  if (existed) {
+    const updated = items.map(p =>
+      p.id === existed.id
+        ? { ...p, quantity: p.quantity + 1 }
+        : p
     );
 
-    if (existed) {
-      return items.map(p =>
-        p.id === existed.id
-          ? { ...p, quantity: p.quantity + 1 }
-          : p
-      );
-    }
+    return {
+      items: updated,
+      activeId: existed.id
+    };
+  }
 
-    return [
-      ...items,
-      {
-        id: crypto.randomUUID(),
-        productId: product.productId,
-        productName: product.productName,
-        unitPrice: product.unitPrice,
-        quantity: 1
-      }
-    ];
+  const newItem = {
+    id: crypto.randomUUID(),
+    productId: product.productId,
+    productName: product.productName,
+    unitPrice: product.unitPrice,
+    quantity: 1
   };
+
+  return {
+    items: [...items, newItem],
+    activeId: newItem.id
+  };
+};
 
   const increase = (items, id) =>
     items.map(item =>

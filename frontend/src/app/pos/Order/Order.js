@@ -15,6 +15,9 @@ export default function Order({
   remove,
   onSelectCustomer,
   onPay,
+  activeItemId,
+  onChangeQty,
+  focusSignal,
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
@@ -67,6 +70,9 @@ const handleSelectCustomer = (selectedCustomer) => {
           increase={increase}
           decrease={decrease}
           remove={remove}
+          activeItemId={activeItemId}
+          onChangeQty={onChangeQty}
+          focusSignal={focusSignal}
         />
       </div>
 

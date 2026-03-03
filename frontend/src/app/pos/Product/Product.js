@@ -6,12 +6,14 @@ import { getAllCategories } from "services/Category/category.service";
 import { getProducts } from "services/Product/product.service";
 import ScanBarcode from "components/pos/ScanBarcode";
 import { getProductWithBarcode } from "services/Product/product.service";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 8,
 };
 
 export default function Product({ addItem }) {
+  const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
 
@@ -44,14 +46,16 @@ export default function Product({ addItem }) {
   const handleBarcode = async (barcode) => {
     try {
       const res = await getProductWithBarcode(barcode);
-      if (!res.success) return;
-
-      const product = res.data;
-      addItem({
-        productId: product.id,
-        productName: product.name,
-        unitPrice: product.salePrice,
-      });
+      if (res?.success) {
+        const product = res.data;
+        addItem({
+          productId: product.id,
+          productName: product.name,
+          unitPrice: product.salePrice,
+        });
+      } else {
+        showNotification(res?.message || "Sản phẩm không tồn tại!", "error")
+      }
 
     } catch (err) {
       console.error("Scan error:", err);
