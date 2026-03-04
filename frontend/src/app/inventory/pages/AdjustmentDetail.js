@@ -3,6 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
 
 function AdjustmentDetail() {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const canProcess = user?.features?.includes("PROCESS_ADJUST");
+
+
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -12,6 +16,7 @@ function AdjustmentDetail() {
     const [showRedirectButton, setShowRedirectButton] = useState(false);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         fetchDetail();
     }, [id]);
 
@@ -201,17 +206,17 @@ function AdjustmentDetail() {
                             data.items.map((item, idx) => (
                                 <tr key={idx} className={idx % 2 === 0 ? "bg-body-tertiary" : ""}>
                                     <td className="text-center py-3 fw-medium">{idx + 1}</td>
-                                    <td className="ps-3 pe-2 py-3 fw-medium">{item.productId}</td>
+                                    <td className="ps-3 pe-2 py-3 fw-medium">{item.code}</td>
                                     <td className="ps-3 pe-2 py-3">{item.name}</td>
                                     <td className="text-end px-3 py-3 fw-medium">{item.systemQuantity.toLocaleString("vi-VN")}</td>
                                     <td className="text-end px-3 py-3 fw-medium">{item.actualQuantity.toLocaleString("vi-VN")}</td>
                                     <td className="text-end px-3 py-3">
                                         <span
                                             className={`fw-bold px-3 py-2 rounded fs-5 d-inline-block ${item.difference > 0
-                                                    ? "text-success bg-success-subtle"
-                                                    : item.difference < 0
-                                                        ? "text-danger bg-danger-subtle"
-                                                        : "text-secondary bg-secondary-subtle"
+                                                ? "text-success bg-success-subtle"
+                                                : item.difference < 0
+                                                    ? "text-danger bg-danger-subtle"
+                                                    : "text-secondary bg-secondary-subtle"
                                                 }`}
                                             style={{ minWidth: '80px', textAlign: 'center' }}
                                         >
@@ -227,7 +232,7 @@ function AdjustmentDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="position-sticky bottom-0 bg-white border-top py-3 px-4 shadow-lg d-flex justify-content-end gap-3" style={{ zIndex: 10 }}>
+            {canProcess && (<div className="position-sticky bottom-0 bg-white border-top py-3 px-4 shadow-lg d-flex justify-content-end gap-3" style={{ zIndex: 10 }}>
                 {data.status === "Pending" && (
                     <>
                         <button
@@ -259,7 +264,7 @@ function AdjustmentDetail() {
                         Xem danh sách ({data.status})
                     </button>
                 )}
-            </div>
+            </div>)}
         </div>
     );
 }

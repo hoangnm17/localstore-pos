@@ -12,6 +12,7 @@ import SupplierList from "../app/inventory/pages/SuppliersList";
 import SupplierDetail from "../app/inventory/pages/SupplierDetail";
 import AdjustmentList from "../app/inventory/pages/AdjustmentList";
 import AdjustmentDetail from "../app/inventory/pages/AdjustmentDetail";
+import CreateAdjustment from "../app/inventory/pages/CreateAdjustment";
 
 const InventoryRoutes = (
     <Route path="/inventory" element={<MainLayout />}>
@@ -29,6 +30,7 @@ const InventoryRoutes = (
         <Route path="suppliers/:id" element={<SupplierDetail />} />
         <Route path="requests/adjust" element={<AdjustmentList />} />
         <Route path="requests/adjust/:id" element={<AdjustmentDetail />} />
+        <Route path="requests/adjust/create" element={<CreateAdjustment />} />
         <Route path="menu" element={<InventoryMenu />} />
     </Route>
 );

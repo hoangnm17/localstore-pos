@@ -80,7 +80,9 @@ function AdjustmentList() {
                         Về Menu
                     </button>
 
-                    <button className="btn btn-primary d-flex align-items-center gap-2">
+                    <button className="btn btn-primary d-flex align-items-center gap-2"
+                        onClick={() => navigate("/inventory/requests/adjust/create")}
+                    >
                         <i className="bi bi-plus-lg"></i>
                         Tạo đơn mới
                     </button>
@@ -147,7 +149,6 @@ function AdjustmentList() {
                             />
                         </div>
 
-                        {/* Nút hành động - nhóm lại, full width trên mobile */}
                         <div className="col-12 col-sm-12 col-md-4 col-lg-6 d-flex gap-2 flex-column flex-sm-row">
                             <button
                                 className="btn btn-primary flex-fill d-flex align-items-center justify-content-center gap-2 py-2 fs-5"
@@ -171,7 +172,6 @@ function AdjustmentList() {
                 </div>
             </div>
 
-            {/*Table*/}
             <div className="card shadow-sm border-0 rounded-3 overflow-hidden">
                 <div className="card-header bg-light border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 className="mb-0 fw-semibold text-dark">

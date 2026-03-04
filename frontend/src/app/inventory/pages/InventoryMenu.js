@@ -204,6 +204,13 @@ function InventoryMenu() {
                     Từ chối
                   </button>
 
+                  <button
+                    className="btn btn-primary btn-lg rounded-pill"
+                    onClick={() => navigate("/inventory/requests/adjust/create")}
+                  >
+                    Tạo đơn
+                  </button>
+
                 </div>
               </div>
             </div>

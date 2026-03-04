@@ -24,6 +24,12 @@ const productStockService = {
     return api.put(`/inventory/${productId}/min-threshold`, {
       minThreshold
     });
+  },
+
+  searchProduct(keyword) {
+    return api.get(`/inventory/products/search`, {
+      params: { keyword }
+  });
   }
 };
 
