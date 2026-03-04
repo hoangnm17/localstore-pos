@@ -277,6 +277,25 @@ const updateMinThreshold = async (req, res) => {
     }
 };
 
+const searchProducts = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+
+    const products = await inventoryService.searchProducts(keyword);
+
+    return res.status(200).json({
+      success: true,
+      data: products,
+    });
+  } catch (error) {
+    console.error("Search products error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
     getCategoryStock,
     getProductStockByCategory,
@@ -285,5 +304,6 @@ module.exports = {
     createProblematicReport,
     getProblematicReports,
     updateProblematicStatus,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts
 }

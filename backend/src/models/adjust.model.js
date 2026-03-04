@@ -203,6 +203,7 @@ const getAdjustmentDetail = async (adjustmentId) => {
             SELECT 
                 iai.productId,
                 p.name,
+                p.code,
                 iai.systemQuantity,
                 iai.actualQuantity,
                 (iai.actualQuantity - iai.systemQuantity) AS difference

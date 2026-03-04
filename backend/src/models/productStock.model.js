@@ -129,6 +129,36 @@ const countProductsBySupplier = async (supplierId, search) => {
     return result.recordset[0].total;
 };
 
+const searchProducts = async (keyword) => {
+  const pool = await sql.connect();
+
+  const result = await pool.request()
+    .input("keyword", sql.NVarChar, `%${keyword}%`)
+    .query(`
+      SELECT TOP 20
+          p.id,
+          p.code,
+          p.barcode,
+          p.name,
+          p.baseUnit,
+          p.salePrice,
+          p.allowDecimalQuantity,
+          ISNULL(s.quantityOnHand, 0) AS quantityOnHand
+      FROM Products p
+      LEFT JOIN InventoryStocks s 
+          ON p.id = s.productId
+      WHERE 
+          p.status = 'Selling'
+          AND (
+              p.name LIKE @keyword
+              OR p.code LIKE @keyword
+          )
+      ORDER BY p.name ASC
+    `);
+
+  return result.recordset;
+};
+
 const getStockByProductId = async (transaction, productId) => {
   const result = await new sql.Request(transaction)
     .input("productId", sql.Int, productId)
@@ -179,5 +209,6 @@ module.exports = {
     getProductBasicInfo,
     countProductsBySupplier,
     getProductsBySupplier,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts,
 }

@@ -124,6 +124,16 @@ const updateMinThreshold = async (productId, minThreshold) => {
     return updatedStock;
 };
 
+const searchProducts = async (keyword) => {
+  if (!keyword || keyword.trim().length < 2) {
+    return [];
+  }
+
+  const products = await productModel.searchProducts(keyword.trim());
+
+  return products;
+};
+
 module.exports = {
     deductStock,
     getCategoryStock,
@@ -131,5 +141,6 @@ module.exports = {
     getProductsBySupplier,
     updateProductStock,
     getProductBasicInfo,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts
 }

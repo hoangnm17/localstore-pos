@@ -84,4 +84,7 @@ router.get("/adjustments/list", adjustController.getAdjustments);
 // GET ADJUSTMENT DETAIL
 router.get("/adjustments/detail/:id", adjustController.getAdjustmentDetail);
 
+// SEARCH PRODUCTS
+router.get("/products/search", inventoryController.searchProducts);
+
 module.exports = router;
