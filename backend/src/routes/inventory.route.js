@@ -87,4 +87,10 @@ router.get("/adjustments/detail/:id", adjustController.getAdjustmentDetail);
 // SEARCH PRODUCTS
 router.get("/products/search", inventoryController.searchProducts);
 
+//GET product unit
+router.get("/products/:productId/units", supplierController.getProductUnits);
+
+// GET price history detail
+router.get("/suppliers/:id/products/:productId/price-history", supplierController.getPriceHistoryDetail);
+
 module.exports = router;

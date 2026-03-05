@@ -59,12 +59,25 @@ const getProductsBySupplier = async (supplierId) => {
                 p.id,
                 p.name,
                 p.code,
-                p.salePrice,
-                ps.supplyPrice,
+                pu.price as salePrice,
                 p.imageUrl,
-                ps.status
+                spp.price as supplyPrice,
+                ps.status,
+                pu.unitName,
+                p.baseUnit,
+                p.salePrice as price
             FROM ProductSuppliers ps
             INNER JOIN Products p ON ps.productId = p.id
+
+            OUTER APPLY (
+                SELECT TOP 1 price, unitId
+                FROM SupplierProductPrices
+                WHERE productId = p.id
+                AND supplierId = ps.supplierId
+                ORDER BY createdAt DESC
+            ) spp
+            LEFT JOIN ProductUnits pu ON pu.id = spp.unitId
+
             WHERE ps.supplierId = @supplierId
             ORDER BY p.name ASC
         `);
@@ -111,17 +124,66 @@ const getProductsNotInSupplier = async (supplierId, search) => {
     return result.recordset;
 };
 
-const addProductToSupplier = async (supplierId, productId, supplyPrice) => {
+const getUnitsByProductId = async (productId) => {
+
     const pool = await connectDB();
 
-    await pool.request()
-        .input("supplierId", sql.Int, supplierId)
+    const result = await pool.request()
         .input("productId", sql.BigInt, productId)
-        .input("supplyPrice", sql.Decimal(15, 2), supplyPrice)
         .query(`
-            INSERT INTO ProductSuppliers (productId, supplierId, supplyPrice)
-            VALUES (@productId, @supplierId, @supplyPrice)
+            SELECT 
+                id,
+                productId,
+                unitName,
+                unitType,
+                conversionFactor,
+                price,
+                barcode
+            FROM ProductUnits
+            WHERE productId = @productId
         `);
+
+    return result.recordset;
+};
+
+const addProductToSupplier = async (supplierId, productId, price, productUnitId, userId) => {
+
+    const pool = await connectDB();
+
+    const transaction = new sql.Transaction(pool);
+
+    await transaction.begin();
+
+    try {
+
+        const request = new sql.Request(transaction);
+
+        await request
+            .input("supplierId", sql.Int, supplierId)
+            .input("productId", sql.BigInt, productId)
+            .query(`
+                INSERT INTO ProductSuppliers (productId, supplierId)
+                VALUES (@productId, @supplierId)
+            `);
+
+        await request
+            .input("productUnitId", sql.Int, productUnitId)
+            .input("price", sql.Decimal(15,2), price)
+            .input("userId", sql.Int, userId)
+            .query(`
+                INSERT INTO SupplierProductPrices
+                (productId, supplierId, unitId, price, createdBy)
+                VALUES
+                (@productId, @supplierId, @productUnitId, @price, @userId)
+            `);
+
+        await transaction.commit();
+
+    } catch (err) {
+
+        await transaction.rollback();
+        throw err;
+    }
 };
 
 const createSupplier = async ({
@@ -148,7 +210,54 @@ const createSupplier = async ({
 const updateProductOfSupplier = async (
     supplierId,
     productId,
-    supplyPrice,
+    price,
+    productUnitId,
+    userId
+) => {
+
+    const pool = await connectDB();
+
+    await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("productId", sql.BigInt, productId)
+        .input("productUnitId", sql.Int, productUnitId)
+        .input("price", sql.Decimal(15,2), price)
+        .input("userId", sql.Int, userId)
+        .query(`
+            INSERT INTO SupplierProductPrices
+            (productId, supplierId, unitId, price, createdBy)
+            VALUES
+            (@productId, @supplierId, @productUnitId, @price, @userId)
+        `);
+};
+
+const updateProductOfSupplierPrice = async (
+    supplierId,
+    productId,
+    price,
+    productUnitId,
+    userId
+) => {
+
+    const pool = await connectDB();
+
+    await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("productId", sql.BigInt, productId)
+        .input("productUnitId", sql.Int, productUnitId)
+        .input("price", sql.Decimal(15,2), price)
+        .input("userId", sql.Int, userId)
+        .query(`
+            INSERT INTO SupplierProductPrices
+            (productId, supplierId, unitId, price, createdBy)
+            VALUES
+            (@productId, @supplierId, @productUnitId, @price, @userId)
+        `);
+};
+
+const updateProductSupplierStatus = async (
+    supplierId,
+    productId,
     status
 ) => {
 
@@ -157,12 +266,10 @@ const updateProductOfSupplier = async (
     await pool.request()
         .input("supplierId", sql.Int, supplierId)
         .input("productId", sql.BigInt, productId)
-        .input("supplyPrice", sql.Decimal(15, 2), supplyPrice)
         .input("status", sql.VarChar(20), status)
         .query(`
             UPDATE ProductSuppliers
-            SET supplyPrice = @supplyPrice,
-                status = @status
+            SET status = @status
             WHERE supplierId = @supplierId
             AND productId = @productId
         `);
@@ -194,6 +301,40 @@ const updateSupplier = async (
     return result.recordset[0];
 };
 
+const getPriceHistoryDetail = async (supplierId, productId) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("supplierId", sql.Int, supplierId)
+        .input("productId", sql.BigInt, productId)
+        .query(`
+            SELECT 
+                spp.id,
+                spp.price,
+                pu.unitName,
+                spp.createdAt,
+                st.fullName AS updatedBy
+            FROM SupplierProductPrices spp
+
+            JOIN ProductUnits pu 
+                ON spp.unitId = pu.id
+
+            LEFT JOIN Users u
+                ON spp.createdBy = u.id
+
+            LEFT JOIN Staff st
+                ON st.userId = u.id
+
+            WHERE spp.supplierId = @supplierId
+            AND spp.productId = @productId
+
+            ORDER BY spp.createdAt DESC
+        `);
+
+    return result.recordset;
+};
+
 module.exports = {
     getList,
     getById,
@@ -202,5 +343,9 @@ module.exports = {
     addProductToSupplier,
     createSupplier,
     updateProductOfSupplier,
-    updateSupplier
+    updateSupplier,
+    getUnitsByProductId,
+    updateProductOfSupplierPrice,
+    updateProductSupplierStatus,
+    getPriceHistoryDetail
 };
