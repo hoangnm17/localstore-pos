@@ -123,6 +123,7 @@ export default function Product({ addItem }) {
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
+                addItem={addItem}
               />
             </div>
 

@@ -21,11 +21,14 @@ export default function Order({
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
-  const handleConfirmPayment = async ({ method, amount }) => {
+  const handleConfirmPayment = async ({ method, amount, discount }) => {
+    console.log(discount);
+    
     try {
       const res = await onPay({
         method,
-        amount
+        amount,
+        discount
       });
 
       if (res?.paid || res?.success) {
@@ -94,6 +97,7 @@ const handleSelectCustomer = (selectedCustomer) => {
         <PaymentModal
           orderId={orderId}
           total={total}
+          customer={customer}
           onClose={() => setShowPayment(false)}
           onConfirm={handleConfirmPayment}
         />

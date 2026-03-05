@@ -263,7 +263,8 @@ export const useInvoiceTabs = () => {
 
     try {
       clearAutoSave(paidInvoiceId);
-
+      console.log(paymentInfo);
+      
       const res = await invoiceUpdate(paidInvoiceId, {
         status: "PAID",
         payment: paymentInfo
