@@ -22,6 +22,10 @@ function getAvailableProducts(id, search = "") {
   });
 }
 
+function getProductUnits(id) {
+  return api.get(`/inventory/products/${id}/units`);
+}
+
 function addProductToSupplier(id, data) {
   return api.post(`/inventory/suppliers/${id}/products`, data);
 }
@@ -41,6 +45,10 @@ function updateSupplier(id, data) {
   return api.put(`/inventory/suppliers/${id}`, data);
 }
 
+function getPriceHistory(supplierId, productId) {
+  return api.get(`/inventory/suppliers/${supplierId}/products/${productId}/price-history`);
+}
+
 export default {
   getSupplierList,
   getSupplierById,
@@ -49,5 +57,7 @@ export default {
   addProductToSupplier,
   createSupplier,
   updateProductOfSupplier,
-  updateSupplier
+  updateSupplier,
+  getProductUnits,
+  getPriceHistory
 };

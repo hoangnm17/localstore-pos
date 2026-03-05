@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import supplierService from "../../../services/Inventory/supplierService";
 import AddProductModal from "../InventoryModal/AddProductModal";
 import UpdateProductModal from "../InventoryModal/UpdateProductModal";
+import PriceHistoryModal from "../InventoryModal/PriceHistoryModal";
 
 function SupplierDetail() {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -20,6 +21,10 @@ function SupplierDetail() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
 
   const limit = 10;
 
@@ -59,7 +64,7 @@ function SupplierDetail() {
   useEffect(() => {
     loadProducts();
   }, [id]);
- 
+
   // Pagination
   const totalPages = Math.ceil(allProducts.length / limit);
 
@@ -134,8 +139,10 @@ function SupplierDetail() {
                     <th>Ảnh</th>
                     <th>Tên sản phẩm</th>
                     <th>Code</th>
+                    <th>Đơn vị</th>
                     <th>Giá nhập</th>
                     <th>Giá bán</th>
+                    <th>Giá bán lẻ theo sản phẩm</th>
                     <th>Trạng thái</th>
                     {canUpdateProduct && <th>Chỉnh sửa</th>}
                   </tr>
@@ -162,16 +169,17 @@ function SupplierDetail() {
 
                       <td>{p.name}</td>
                       <td>{p.code}</td>
+                      <td>{p.unitName}</td>
                       <td>{p.supplyPrice?.toLocaleString()} đ</td>
                       <td>{p.salePrice?.toLocaleString()} đ</td>
+                      <td>{p.price?.toLocaleString()} đ <span>/{p.baseUnit}</span></td>
 
                       <td>
                         <span
-                          className={`badge ${
-                            p.status === "ACTIVE"
-                              ? "bg-success"
-                              : "bg-danger"
-                          }`}
+                          className={`badge ${p.status === "ACTIVE"
+                            ? "bg-success"
+                            : "bg-danger"
+                            }`}
                         >
                           {p.status}
                         </span>
@@ -183,6 +191,15 @@ function SupplierDetail() {
                           onClick={() => setEditingProduct(p)}
                         >
                           Sửa
+                        </button>
+                        <button
+                          className="btn btn-info btn-sm ms-2"
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setShowHistoryModal(true);
+                          }}
+                        >
+                          Lịch sử giá
                         </button>
                       </td>)}
                     </tr>
@@ -252,6 +269,13 @@ function SupplierDetail() {
         product={editingProduct}
         onClose={() => setEditingProduct(null)}
         onSuccess={loadProducts}
+      />
+      
+      <PriceHistoryModal
+        show={showHistoryModal}
+        supplierId={id}
+        product={selectedProduct}
+        onClose={() => setShowHistoryModal(false)}
       />
     </div>
   );
