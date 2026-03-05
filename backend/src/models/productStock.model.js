@@ -21,6 +21,7 @@ const getProductsByCategory = async (
                 p.code AS productCode,
                 p.imageUrl,
                 p.allowDecimalQuantity,   -- thêm trường này để frontend biết
+                p.baseUnit,
                 s.quantityOnHand,
                 s.minThreshold,
                 CASE
