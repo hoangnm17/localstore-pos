@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import useDebounce from "hooks/common/useDebounce";
+import { getProductWithBarcode } from "services/Product/product.service";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 const ITEMS_PER_PAGE = 4;
 
@@ -9,11 +11,33 @@ export default function FilterBar({
   categories = [],
   selectedCategory,
   onSelectCategory,
+  addItem,
 }) {
+  const { showNotification } = useNotification();
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
   const [categoryPage, setCategoryPage] = useState(1);
 
   const debouncedKeyword = useDebounce(displayKeyword, 500);
+
+
+  const handleAddItem = async (keyword) => {
+    try {
+      const res = await getProductWithBarcode(keyword);
+      if (res?.success) {
+        const product = res.data;
+        addItem({
+          productId: product.id,
+          productName: product.name,
+          unitPrice: product.salePrice,
+        });
+      } else {
+        showNotification(res?.message || "Sản phẩm không tồn tại!", "error")
+      }
+
+    } catch (err) {
+      console.error("Scan error:", err);
+    }
+  };
 
   useEffect(() => {
     onKeywordChange(debouncedKeyword);
@@ -62,6 +86,12 @@ export default function FilterBar({
             fontSize: "1rem",
             boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAddItem(displayKeyword)
+            }
+          }}
         />
       </div>
 
@@ -85,11 +115,10 @@ export default function FilterBar({
         >
           {/* TẤT CẢ */}
           <button
-            className={`btn rounded-pill px-4 py-2 fw-bold border-0 ${
-              !selectedCategory
-                ? "btn-primary shadow"
-                : "btn-light text-secondary bg-white shadow-sm"
-            }`}
+            className={`btn rounded-pill px-4 py-2 fw-bold border-0 ${!selectedCategory
+              ? "btn-primary shadow"
+              : "btn-light text-secondary bg-white shadow-sm"
+              }`}
             onClick={() => onSelectCategory(null)}
           >
             TẤT CẢ
@@ -101,11 +130,10 @@ export default function FilterBar({
             return (
               <button
                 key={cat.id}
-                className={`btn rounded-pill px-4 py-2 fw-bold border-0 ${
-                  isActive
-                    ? "btn-primary shadow"
-                    : "btn-light text-secondary bg-white shadow-sm"
-                }`}
+                className={`btn rounded-pill px-4 py-2 fw-bold border-0 ${isActive
+                  ? "btn-primary shadow"
+                  : "btn-light text-secondary bg-white shadow-sm"
+                  }`}
                 onClick={() => onSelectCategory(cat)}
               >
                 {cat.name.toUpperCase()}
