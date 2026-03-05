@@ -72,12 +72,6 @@ export default function ScanBarcode({ open, onDetected, onClose }) {
                         {error}
                     </div>
                 )}
-
-                {!error && (
-                    <small className="text-muted d-block mt-2">
-                        Đưa mã barcode vào khung để tự thêm sản phẩm.
-                    </small>
-                )}
             </div>
         </div>
     );
