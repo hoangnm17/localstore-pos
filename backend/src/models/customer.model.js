@@ -241,3 +241,35 @@ exports.countPurchaseHistory = async (customerId) => {
         .query(`SELECT COUNT(*) AS total FROM Invoices WHERE customerId = @customerId`);
     return result.recordset[0].total;
 };
+
+exports.getCustomerForUpdate = async (transaction, customerId) => {
+
+    const result = await new sql.Request(transaction)
+        .input("customerId", sql.Int, customerId)
+        .query(`
+            SELECT id, loyaltyPoints
+            FROM Customers
+            WHERE id = @customerId
+        `);
+
+    return result.recordset[0];
+
+};
+
+
+exports.updateCustomerPoints = async (
+    transaction,
+    customerId,
+    newPoints
+) => {
+
+    await new sql.Request(transaction)
+        .input("customerId", sql.Int, customerId)
+        .input("points", sql.Int, newPoints)
+        .query(`
+            UPDATE Customers
+            SET loyaltyPoints = @points
+            WHERE id = @customerId
+        `);
+
+};
