@@ -17,6 +17,25 @@ exports.getCustomerById = async (id) => {
 };
 
 exports.createCustomer = async (data) => {
+
+    const { phone } = data;
+
+    if (!phone) {
+        throw new Error("Số điện thoại không được để trống");
+    }
+
+    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+
+    if (!phoneRegex.test(phone)) {
+        throw new Error("Số điện thoại không hợp lệ");
+    }
+
+    const existed = await customerModel.getCustomerByPhone(phone);
+
+    if (existed) {
+        throw new Error("Số điện thoại đã tồn tại");
+    }
+
     return await customerModel.createCustomer(data);
 };
 
