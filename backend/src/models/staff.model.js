@@ -141,6 +141,13 @@ module.exports.getStaffByPhone = async (phone) => {
         .query("SELECT id FROM Staff WHERE phoneNumber = @p");
     return result.recordset[0];
 };
+module.exports.getStaffByFullName = async (fullName) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('fn', sql.NVarChar, fullName)
+        .query("SELECT id FROM Staff WHERE fullName = @fn");
+    return result.recordset[0];
+};
 
 module.exports.getStaffByUserId = async (userId) => {
     const pool = await connectDB();

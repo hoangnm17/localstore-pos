@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const userModel = require('../models/user.model');
 const roleModel = require('../models/role.model');
 const dotenv = require('dotenv');
+const { COUNTER_ID } = require('../config/pos.config');
 dotenv.config();
 
 const verifyToken = async (req, res, next) => {
@@ -32,7 +33,7 @@ const verifyToken = async (req, res, next) => {
 
         req.user = {
             id: user.id,
-            counterId: decoded.counterId,
+            counterId: COUNTER_ID,
             roleId: user.roleId,
             permissions: permissions.map(p => p.featureKey)
         };

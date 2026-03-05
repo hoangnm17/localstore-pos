@@ -9,7 +9,7 @@ import { getProductWithBarcode } from "services/Product/product.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 
 const PAGE_CONFIG = {
-  ITEMS_PER_PAGE: 8,
+  ITEMS_PER_PAGE: 10,
 };
 
 export default function Product({ addItem }) {

@@ -103,11 +103,33 @@ const deductStock = async (transaction, items) => {
     }
 };
 
+const updateMinThreshold = async (productId, minThreshold) => {
+    if (!productId) {
+        throw new Error("ProductId is required");
+    }
+
+    if (minThreshold == null || minThreshold < 0) {
+        throw new Error("Min threshold must be >= 0");
+    }
+
+    const updatedStock = await productModel.updateMinThreshold(
+        productId,
+        minThreshold
+    );
+
+    if (!updatedStock) {
+        throw new Error("Inventory stock not found");
+    }
+
+    return updatedStock;
+};
+
 module.exports = {
     deductStock,
     getCategoryStock,
     getProductStockByCategory,
     getProductsBySupplier,
     updateProductStock,
-    getProductBasicInfo
+    getProductBasicInfo,
+    updateMinThreshold
 }

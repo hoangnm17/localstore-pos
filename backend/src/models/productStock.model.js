@@ -153,6 +153,24 @@ const detuctStock = async (transaction, productId, quantity) => {
     `);
 };
 
+const updateMinThreshold = async (productId, minThreshold) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("productId", sql.BigInt, productId)
+        .input("minThreshold", sql.Decimal(15, 3), minThreshold)
+        .query(`
+            UPDATE InventoryStocks
+            SET minThreshold = @minThreshold
+            WHERE productId = @productId;
+
+            SELECT * FROM InventoryStocks
+            WHERE productId = @productId;
+        `);
+
+    return result.recordset[0];
+};
+
 module.exports = {
     getStockByProductId,
     updateStock,
@@ -161,5 +179,6 @@ module.exports = {
     countProductsByCategory,
     getProductBasicInfo,
     countProductsBySupplier,
-    getProductsBySupplier
+    getProductsBySupplier,
+    updateMinThreshold
 }

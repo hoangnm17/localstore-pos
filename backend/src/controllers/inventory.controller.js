@@ -1,7 +1,7 @@
 const inventoryService = require("../services/InventoryServices/inventory.service");
 const problematicService = require("../services/InventoryServices/problematic.service");
 
-exports.getCategoryStock = async (req, res) => {
+const getCategoryStock = async (req, res) => {
     try {
         const search = req.query.search || "";
         const page = parseInt(req.query.page) || 1;
@@ -26,7 +26,7 @@ exports.getCategoryStock = async (req, res) => {
     }
 };
 
-exports.getProductStockByCategory = async (req, res) => {
+const getProductStockByCategory = async (req, res) => {
     try {
         const { categoryId } = req.params;
         const { search = "", page = 1, limit = 10 } = req.query;
@@ -58,7 +58,7 @@ exports.getProductStockByCategory = async (req, res) => {
     }
 };
 
-exports.updateProductStock = async (req, res) => {
+const updateProductStock = async (req, res) => {
     try {
         const { productId, quantity } = req.body;
 
@@ -123,7 +123,7 @@ exports.updateProductStock = async (req, res) => {
     }
 };
 
-exports.getProductsBySupplier = async (req, res) => {
+const getProductsBySupplier = async (req, res) => {
     try {
         const { supplierId } = req.params;
         const { search = "" } = req.query;
@@ -150,7 +150,7 @@ exports.getProductsBySupplier = async (req, res) => {
     }
 };
 
-exports.createProblematicReport = async (req, res) => {
+const createProblematicReport = async (req, res) => {
     try {
         const result = await problematicService.createReport(req.body, req.user);
 
@@ -198,7 +198,7 @@ exports.createProblematicReport = async (req, res) => {
     }
 };
 
-exports.getProblematicReports = async (req, res) => {
+const getProblematicReports = async (req, res) => {
     try {
         const { id, roleId } = req.user;
 
@@ -227,7 +227,7 @@ exports.getProblematicReports = async (req, res) => {
     }
 };
 
-exports.updateProblematicStatus = async (req, res) => {
+const updateProblematicStatus = async (req, res) => {
     try {
         const { id, roleId } = req.user;
         const reportId = req.params.id;
@@ -253,3 +253,37 @@ exports.updateProblematicStatus = async (req, res) => {
         });
     }
 };
+
+const updateMinThreshold = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { minThreshold } = req.body;
+
+        const updatedStock = await inventoryService.updateMinThreshold(
+            productId,
+            minThreshold
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: updatedStock
+        });
+
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+module.exports = {
+    getCategoryStock,
+    getProductStockByCategory,
+    updateProductStock,
+    getProductsBySupplier,
+    createProblematicReport,
+    getProblematicReports,
+    updateProblematicStatus,
+    updateMinThreshold
+}
