@@ -28,7 +28,7 @@ export const useInvoiceTabs = () => {
 
   const createLocalInvoice = () => ({
     id: "local-" + crypto.randomUUID(),
-    items: [],                
+    items: [],
     status: "LOCAL",
     isSaving: false,
     itemsLoaded: true
@@ -57,7 +57,7 @@ export const useInvoiceTabs = () => {
 
         const formatted = drafts.map(inv => ({
           ...inv,
-          items: [],             
+          items: [],
           itemsLoaded: false,
           isSaving: false
         }));
@@ -96,13 +96,12 @@ export const useInvoiceTabs = () => {
       try {
         const res = await invoiceGetDetail(activeInvoice.id);
         const detail = res?.data;
-
         setInvoices(prev =>
           prev.map(inv =>
             inv.id === activeInvoice.id
               ? {
                 ...inv,
-                items: detail?.items ?? [],   
+                items: detail?.items ?? [],
                 itemsLoaded: true
               }
               : inv
@@ -137,7 +136,6 @@ export const useInvoiceTabs = () => {
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
 
-    // Optimistic UI update
     setInvoices(prev =>
       prev.map(inv =>
         inv.id === invoiceId
@@ -264,7 +262,7 @@ export const useInvoiceTabs = () => {
     try {
       clearAutoSave(paidInvoiceId);
       console.log(paymentInfo);
-      
+
       const res = await invoiceUpdate(paidInvoiceId, {
         status: "PAID",
         payment: paymentInfo

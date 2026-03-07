@@ -48,11 +48,15 @@ export default function Product({ addItem }) {
       const res = await getProductWithBarcode(barcode);
       if (res?.success) {
         const product = res.data;
-        addItem({
-          productId: product.id,
-          productName: product.name,
-          unitPrice: product.salePrice,
-        });
+        if (product.quantityOnHand > 0) {
+          addItem({
+            productId: product.id,
+            productName: product.name,
+            unitPrice: product.salePrice,
+          });
+        } else {
+          showNotification(res?.message || "Sản phẩm hết hàng!", "error")
+        }
       } else {
         showNotification(res?.message || "Sản phẩm không tồn tại!", "error")
       }
@@ -79,7 +83,6 @@ export default function Product({ addItem }) {
 
   useEffect(() => {
     fetchProductList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, search, selectedCategory]);
 
   const fetchProductList = async () => {
@@ -144,11 +147,12 @@ export default function Product({ addItem }) {
                   products={products}
                   onSelect={(product) => {
                     if (product.stockQuantity === 0) return;
-
+                    
                     addItem({
                       productId: product.id,
                       productName: product.name,
                       unitPrice: product.salePrice,
+                      quantityOnHand: product.stockQuantity,
                     });
                   }}
                 />

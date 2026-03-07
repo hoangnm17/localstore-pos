@@ -33,7 +33,6 @@ export default function SalesHome() {
     if (!activeInvoice) return;
 
     const result = addItem(activeInvoice.items, product);
-
     updateInvoiceItems(activeInvoice.id, result.items);
     setActiveItemId(result.activeId);
     setFocusSignal(prev => prev + 1);
@@ -74,9 +73,16 @@ export default function SalesHome() {
   const handleChangeQty = (id, quantity) => {
     if (!activeInvoice) return;
 
-    const newItems = activeInvoice.items.map(it =>
-      it.id === id ? { ...it, quantity } : it
-    );
+    const newItems = activeInvoice.items.map(it => {
+      if (it.id !== id) return it;
+
+      const safeQty = Math.max(
+        1,
+        Math.min(quantity, it.quantityOnHand)
+      );
+
+      return { ...it, quantity: safeQty };
+    });
 
     updateInvoiceItems(activeInvoice.id, newItems);
   };

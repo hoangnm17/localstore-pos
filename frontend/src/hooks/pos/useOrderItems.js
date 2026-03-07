@@ -1,45 +1,64 @@
 export const useOrderItems = () => {
 
-const addItem = (items, product) => {
-  const existed = items.find(
-    p =>
-      p.productId === product.productId &&
-      p.unitPrice === product.unitPrice
-  );
-
-  if (existed) {
-    const updated = items.map(p =>
-      p.id === existed.id
-        ? { ...p, quantity: p.quantity + 1 }
-        : p
+  const addItem = (items, product) => {
+    const existed = items.find(
+      p =>
+        p.productId === product.productId &&
+        p.unitPrice === product.unitPrice
     );
+
+    if (existed) {
+      const updated = items.map(p =>
+        p.id === existed.id
+          ? {
+            ...p,
+            quantity: Math.min(
+              p.quantity + 1,
+              p.quantityOnHand
+            )
+          }
+          : p
+      );
+
+      return {
+        items: updated,
+        activeId: existed.id
+      };
+    }
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      productId: product.productId,
+      productName: product.productName,
+      unitPrice: product.unitPrice,
+      quantity: 1,
+      quantityOnHand: product.quantityOnHand
+    };
 
     return {
-      items: updated,
-      activeId: existed.id
+      items: [...items, newItem],
+      activeId: newItem.id
     };
-  }
-
-  const newItem = {
-    id: crypto.randomUUID(),
-    productId: product.productId,
-    productName: product.productName,
-    unitPrice: product.unitPrice,
-    quantity: 1
   };
 
-  return {
-    items: [...items, newItem],
-    activeId: newItem.id
-  };
-};
+  const increase = (items, id) => {
+    let changed = false;
 
-  const increase = (items, id) =>
-    items.map(item =>
-      item.id === id
-        ? { ...item, quantity: item.quantity + 1 }
-        : item
-    );
+    const updated = items.map(item => {
+      if (item.id !== id) return item;
+
+      const newQty = Math.min(item.quantity + 1, item.quantityOnHand);
+
+      if (newQty !== item.quantity) {
+        changed = true;
+        return { ...item, quantity: newQty };
+      }
+
+      return item;
+    });
+
+    return changed ? updated : items;
+  };
 
   const decrease = (items, id) =>
     items.map(item =>

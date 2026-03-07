@@ -15,10 +15,6 @@ const OrderItem = ({
   const lineTotal = (item.unitPrice || 0) * item.quantity;
 
   const qtyRef = useRef(null);
-
-  /* ================================
-     AUTO FOCUS KHI VỪA ADD
-  ================================= */
   useEffect(() => {
     if (activeItemId === item.id && qtyRef.current) {
       requestAnimationFrame(() => {
@@ -28,16 +24,19 @@ const OrderItem = ({
     }
   }, [activeItemId, focusSignal]);
 
-  /* ================================
-     CHANGE QUANTITY
-  ================================= */
   const handleChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
-    const number = value === "" ? 1 : Number(value);
+    let number = value === "" ? 1 : Number(value);
 
-    if (number >= 1) {
-      onChangeQty(item.id, number);
+    if (number > item.quantityOnHand) {
+      number = item.quantityOnHand;
     }
+
+    if (number < 1) {
+      number = 1;
+    }
+
+    onChangeQty(item.id, number);
   };
 
   return (
@@ -85,6 +84,7 @@ const OrderItem = ({
           <button
             className="btn btn-light btn-sm border-0"
             onClick={() => increase(item.id)}
+            disabled={item.quantity >= item.quantityOnHand}
           >
             <i className="bi bi-plus"></i>
           </button>
