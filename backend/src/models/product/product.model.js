@@ -284,8 +284,10 @@ exports.getProductWithBarcode = async (barcode) => {
                 id,
                 name,
                 baseUnit,
-                salePrice
-            FROM Products
+                salePrice,
+                quantityOnHand
+            FROM Products p
+            JOIN InventoryStocks i ON p.id = i.productId
             WHERE barcode = @barcode
         `);
     return result.recordset[0] || null;

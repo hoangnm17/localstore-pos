@@ -278,9 +278,10 @@ const getInvoiceDetail = async (id) => {
     const items = await pool.request()
         .input("invoiceId", sql.Int, id)
         .query(`
-      SELECT ii.id, ii.productId, ii.quantity, ii.unitPrice, ii.lineTotal, p.name
+      SELECT ii.id, ii.productId, ii.quantity, ii.unitPrice, ii.lineTotal, p.name, ist.quantityOnHand, ist.minThreshold
       FROM InvoiceItems ii
       JOIN Products p ON p.id = ii.productId
+	    JOIN InventoryStocks ist ON p.id = ist.productId
       WHERE ii.invoiceId = @invoiceId
     `);
 
