@@ -85,252 +85,365 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="container py-3">
+    <div className="container py-4 invoice-page">
+
       {/* HEADER */}
-      <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-        <div className="d-flex align-items-center gap-3">
-          <div
-            className="d-flex align-items-center justify-content-center rounded-4"
-            style={{
-              width: 44,
-              height: 44,
-              background: "rgba(13,110,253,0.10)",
-            }}
-          >
-            <i className="bi bi-receipt fs-4 text-primary" />
+      <div className="invoice-header">
+
+        <div className="header-left">
+
+          <div className="header-icon">
+            <i className="bi bi-receipt"></i>
           </div>
 
           <div>
-            <h4 className="m-0">Danh sách hóa đơn</h4>
+            <h4 className="m-0 fw-bold">Danh sách hóa đơn</h4>
             <div className="text-muted small">
               Quản lý • Lọc trạng thái • Xem nhanh chi tiết
             </div>
           </div>
+
         </div>
 
-        <div className="d-flex align-items-center gap-2">
+        <div className="header-right">
+
           <span className="text-muted small">Tổng</span>
-          <span className="badge bg-primary-subtle text-primary border">
+
+          <span className="badge invoice-count">
             {pagination.totalItems} hóa đơn
           </span>
+
         </div>
+
       </div>
 
-      {/* FILTER BAR */}
-      <div className="card border-0 shadow-sm mb-3 overflow-hidden">
-        <div
-          className="card-body"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(13,110,253,0.06), rgba(25,135,84,0.04))",
-          }}
-        >
-          <div className="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
-            {/* STATUS PILLS */}
-            <div className="d-flex flex-wrap gap-2">
+      {/* FILTER */}
+      <div className="invoice-filter">
+
+        <div className="status-filter">
+
+          {Object.values(STATUS).map((s) => {
+
+            const label = {
+              ALL: "Tất cả",
+              UNPAID: "Chưa thanh toán",
+              PAID: "Đã thanh toán",
+              CANCELLED: "Đã hủy"
+            }[s];
+
+            const icon = {
+              ALL: "bi-grid",
+              UNPAID: "bi-hourglass-split",
+              PAID: "bi-check-circle",
+              CANCELLED: "bi-x-circle"
+            }[s];
+
+            const color = {
+              ALL: "primary",
+              UNPAID: "warning",
+              PAID: "success",
+              CANCELLED: "secondary"
+            }[s];
+
+            return (
               <button
-                className={`btn btn-sm rounded-pill ${
-                  status === STATUS.ALL ? "btn-primary" : "btn-outline-primary"
-                }`}
-                onClick={() => setStatusAndReset(STATUS.ALL)}
+                key={s}
+                className={`status-pill ${status === s ? `active ${color}` : ""
+                  }`}
+                onClick={() => setStatusAndReset(s)}
               >
-                <i className="bi bi-grid me-1" />
-                Tất cả
+                <i className={`bi ${icon} me-1`} />
+                {label}
               </button>
+            );
+          })}
 
-              <button
-                className={`btn btn-sm rounded-pill ${
-                  status === STATUS.UNPAID ? "btn-warning" : "btn-outline-warning"
-                }`}
-                onClick={() => setStatusAndReset(STATUS.UNPAID)}
-              >
-                <i className="bi bi-hourglass-split me-1" />
-                Chưa thanh toán
-              </button>
-
-              <button
-                className={`btn btn-sm rounded-pill ${
-                  status === STATUS.PAID ? "btn-success" : "btn-outline-success"
-                }`}
-                onClick={() => setStatusAndReset(STATUS.PAID)}
-              >
-                <i className="bi bi-check-circle me-1" />
-                Đã thanh toán
-              </button>
-
-              <button
-                className={`btn btn-sm rounded-pill ${
-                  status === STATUS.CANCELLED ? "btn-secondary" : "btn-outline-secondary"
-                }`}
-                onClick={() => setStatusAndReset(STATUS.CANCELLED)}
-              >
-                <i className="bi bi-x-circle me-1" />
-                Đã hủy
-              </button>
-            </div>
-
-            {/* SEARCH */}
-            <div className="ms-lg-auto" style={{ minWidth: 280, maxWidth: 420, width: "100%" }}>
-              <div className="input-group input-group-sm shadow-sm">
-                <span className="input-group-text bg-white border-0">
-                  <i className="bi bi-search text-muted" />
-                </span>
-
-                <input
-                  className="form-control border-0"
-                  placeholder="Tìm mã hóa đơn / khách hàng..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                />
-
-                {search?.trim() && (
-                  <button
-                    className="btn btn-outline-secondary border-0"
-                    onClick={() => {
-                      setSearch("");
-                      setPage(1);
-                    }}
-                    title="Xóa"
-                  >
-                    <i className="bi bi-x-lg" />
-                  </button>
-                )}
-              </div>
-
-              <div className="text-muted small mt-1">
-                Gợi ý: nhập <b>INV2026…</b> hoặc tên khách (nếu có)
-              </div>
-            </div>
-          </div>
         </div>
+
+        {/* SEARCH */}
+
+        <div className="invoice-search">
+
+          <i className="bi bi-search search-icon"></i>
+
+          <input
+            placeholder="Tìm mã hóa đơn / khách hàng..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+
+          {search && (
+            <button
+              className="clear-btn"
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+              }}
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
+
+        </div>
+
       </div>
 
       {/* TABLE */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0 align-middle">
-              <thead className="table-light">
+
+      <div className="invoice-table-card">
+
+        <div className="table-responsive">
+
+          <table className="table align-middle mb-0 invoice-table">
+
+            <thead>
+              <tr>
+                <th>Mã</th>
+                <th>Thời gian</th>
+                <th>Khách</th>
+                <th>Quầy / NV</th>
+                <th className="text-end">Thanh toán</th>
+                <th>Trạng thái</th>
+                <th className="text-end">Hành động</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {loading && (
                 <tr>
-                  <th className="ps-3">Mã</th>
-                  <th>Thời gian</th>
-                  <th>Khách</th>
-                  <th>Quầy / NV</th>
-                  <th className="text-end">Thanh toán</th>
-                  <th>Trạng thái</th>
-                  <th className="text-end pe-3">Hành động</th>
+                  <td colSpan={7} className="text-center py-5">
+                    <div className="spinner-border spinner-border-sm" />
+                  </td>
                 </tr>
-              </thead>
+              )}
 
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={7} className="text-center py-5">
-                      <div className="d-inline-flex align-items-center gap-2 text-muted">
-                        <div className="spinner-border spinner-border-sm" role="status" />
-                        Đang tải dữ liệu...
-                      </div>
-                    </td>
-                  </tr>
-                )}
+              {!loading && rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-5 text-muted">
+                    <i className="bi bi-inbox fs-3 d-block mb-2"></i>
+                    Không có hóa đơn phù hợp
+                  </td>
+                </tr>
+              )}
 
-                {!loading && rows.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="text-center py-5 text-muted">
-                      <i className="bi bi-inbox fs-3 d-block mb-2" />
-                      Không có hóa đơn phù hợp
-                    </td>
-                  </tr>
-                )}
+              {!loading &&
+                rows.map((inv) => {
 
-                {!loading &&
-                  rows.map((inv) => {
-                    const isUnpaid = inv.status === "UNPAID";
-                    const meta = getStatusMeta(inv.status);
+                  const isUnpaid = inv.status === "UNPAID";
+                  const meta = getStatusMeta(inv.status);
 
-                    return (
-                      <tr key={inv.id}>
-                        <td className="ps-3">
-                          <div className="fw-semibold">{inv.invoiceCode}</div>
-                          <div className="text-muted small">ID: {inv.id}</div>
-                        </td>
+                  return (
+                    <tr key={inv.id}>
 
-                        <td>
-                          <div className="fw-semibold">
-                            {new Date(inv.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className="text-muted small">
-                            {new Date(inv.createdAt).toLocaleTimeString()}
-                          </div>
-                        </td>
+                      <td>
+                        <div className="invoice-code">
+                          {inv.invoiceCode}
+                        </div>
 
-                        <td className="fw-semibold">
-                          {inv.customerName || "Khách lẻ"}
-                        </td>
+                        <small className="text-muted">
+                          ID: {inv.id}
+                        </small>
+                      </td>
 
-                        <td>
-                          <div className="fw-semibold">{inv.counterName || "-"}</div>
-                          <small className="text-muted">{inv.staffName || "-"}</small>
-                        </td>
+                      <td>
+                        <div>
+                          {new Date(inv.createdAt).toLocaleDateString()}
+                        </div>
 
-                        <td className="text-end">
-                          <div className="fw-bold">
-                            {formatCurrency(inv.finalAmount || 0)}
-                          </div>
-                        </td>
+                        <small className="text-muted">
+                          {new Date(inv.createdAt).toLocaleTimeString()}
+                        </small>
+                      </td>
 
-                        <td>
-                          <span className={`badge ${meta.className}`}>
-                            <i className={`bi ${meta.icon} me-1`} />
-                            {meta.text}
-                          </span>
-                        </td>
+                      <td className="fw-semibold">
+                        {inv.customerName || "Khách lẻ"}
+                      </td>
 
-                        <td className="text-end pe-3">
-                          <div className="d-inline-flex gap-2">
-                            {isUnpaid && (
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => goCheckout(inv.id)}
-                              >
-                                <i className="bi bi-cash-coin me-1" />
-                                Thanh toán
-                              </button>
-                            )}
+                      <td>
+                        <div>{inv.counterName || "-"}</div>
+                        <small className="text-muted">
+                          {inv.staffName || "-"}
+                        </small>
+                      </td>
 
+                      <td className="text-end fw-bold">
+                        {formatCurrency(inv.finalAmount || 0)}
+                      </td>
+
+                      <td>
+                        <span className={`badge ${meta.className}`}>
+                          <i className={`bi ${meta.icon} me-1`} />
+                          {meta.text}
+                        </span>
+                      </td>
+
+                      <td className="text-end">
+
+                        <div className="action-buttons">
+
+                          {isUnpaid && (
                             <button
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => setDetailId(inv.id)}
+                              className="btn btn-sm btn-primary"
+                              onClick={() => goCheckout(inv.id)}
                             >
-                              <i className="bi bi-eye me-1" />
-                              Chi tiết
+                              <i className="bi bi-cash-coin me-1"></i>
+                              Thanh toán
                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
+                          )}
+
+                          <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => setDetailId(inv.id)}
+                          >
+                            <i className="bi bi-eye me-1"></i>
+                            Chi tiết
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+                  );
+                })}
+
+            </tbody>
+
+          </table>
+
         </div>
 
-        <div className="card-footer bg-white border-0">
+        <div className="invoice-pagination">
           <Pagination
             currentPage={pagination.page}
             totalPages={pagination.totalPages}
             onPageChange={(newPage) => setPage(newPage)}
           />
         </div>
+
       </div>
 
-      {/* MODAL DETAIL */}
       {detailId && (
-        <InvoiceDetailModal invoiceId={detailId} onClose={() => setDetailId(null)} />
+        <InvoiceDetailModal
+          invoiceId={detailId}
+          onClose={() => setDetailId(null)}
+        />
       )}
+
+      <style>{`
+
+.invoice-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.header-left{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.header-icon{
+width:42px;
+height:42px;
+background:#eef4ff;
+border-radius:10px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:20px;
+color:#0d6efd;
+}
+
+.invoice-count{
+background:#e8f1ff;
+color:#0d6efd;
+padding:6px 12px;
+}
+
+.invoice-filter{
+display:flex;
+gap:16px;
+align-items:center;
+flex-wrap:wrap;
+margin-bottom:16px;
+}
+
+.status-pill{
+border:1px solid #ddd;
+background:white;
+border-radius:20px;
+padding:6px 14px;
+font-size:14px;
+}
+
+.status-pill.active.primary{background:#0d6efd;color:white}
+.status-pill.active.warning{background:#ffc107;color:black}
+.status-pill.active.success{background:#198754;color:white}
+.status-pill.active.secondary{background:#6c757d;color:white}
+
+.invoice-search{
+position:relative;
+margin-left:auto;
+}
+
+.invoice-search input{
+padding:6px 34px;
+border:1px solid #ddd;
+border-radius:20px;
+}
+
+.search-icon{
+position:absolute;
+left:10px;
+top:50%;
+transform:translateY(-50%);
+color:#888;
+}
+
+.clear-btn{
+position:absolute;
+right:8px;
+top:50%;
+transform:translateY(-50%);
+border:none;
+background:none;
+}
+
+.invoice-table-card{
+background:white;
+border-radius:12px;
+box-shadow:0 6px 16px rgba(0,0,0,0.05);
+overflow:hidden;
+}
+
+.invoice-table tbody tr:hover{
+background:#fafafa;
+}
+
+.invoice-code{
+font-weight:600;
+}
+
+.invoice-pagination{
+padding:12px;
+border-top:1px solid #eee;
+}
+
+.action-buttons{
+display:flex;
+gap:8px;
+justify-content:flex-end;
+}
+
+`}</style>
+
     </div>
   );
 }

@@ -122,34 +122,47 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
 
   return (
     <BaseModal onClose={onClose} maxWidth="920px">
-      <div className="card shadow border-0 overflow-hidden">
+      <div className="invoice-modal">
 
         {/* HEADER */}
-        <div className="card-header bg-light d-flex justify-content-between align-items-start">
+        <div className="invoice-header">
+
           <div>
-            <h5 className="mb-1">Chi tiết hóa đơn</h5>
+            <h5 className="mb-1 fw-bold">Chi tiết hóa đơn</h5>
+
             {inv && (
-              <div className="small text-muted">
-                <strong>{inv.invoiceCode}</strong>
+              <div className="invoice-meta">
+
+                <span className="invoice-code">{inv.invoiceCode}</span>
+
                 {inv.createdAt && (
-                  <> • {new Date(inv.createdAt).toLocaleString()}</>
+                  <span className="invoice-time">
+                    {new Date(inv.createdAt).toLocaleString()}
+                  </span>
                 )}
+
               </div>
             )}
           </div>
 
           {inv?.status && (
-            <span className={`badge ${meta.className}`}>
+            <span className={`badge status-badge ${meta.className}`}>
               <i className={`bi ${meta.icon} me-1`} />
               {meta.text}
             </span>
           )}
+
         </div>
 
         {/* BODY */}
-        <div className="card-body">
 
-          {loading && <div>Đang tải...</div>}
+        <div className="invoice-body">
+
+          {loading && (
+            <div className="loading-box">
+              <div className="spinner-border text-primary" />
+            </div>
+          )}
 
           {!loading && errMsg && (
             <div className="alert alert-danger">{errMsg}</div>
@@ -157,41 +170,68 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
 
           {!loading && inv && (
             <>
-              {/* ITEMS */}
-              <div className="table-responsive border rounded mb-3">
-                <table className="table table-sm mb-0 align-middle">
-                  <thead className="table-light">
+              {/* PRODUCT TABLE */}
+
+              <div className="invoice-table">
+
+                <table className="table align-middle mb-0">
+
+                  <thead>
                     <tr>
-                      <th>Tên</th>
+                      <th>Sản phẩm</th>
                       <th className="text-end">Đơn giá</th>
                       <th className="text-center">SL</th>
                       <th className="text-end">Thành tiền</th>
                     </tr>
                   </thead>
+
                   <tbody>
+
                     {inv.items.map((it) => (
                       <tr key={it.id}>
-                        <td>{it.name}</td>
-                        <td className="text-end">{formatCurrency(it.unitPrice)}</td>
-                        <td className="text-center">{it.quantity}</td>
+
+                        <td className="fw-semibold">{it.name}</td>
+
                         <td className="text-end">
+                          {formatCurrency(it.unitPrice)}
+                        </td>
+
+                        <td className="text-center">
+                          <span className="qty-badge">
+                            {it.quantity}
+                          </span>
+                        </td>
+
+                        <td className="text-end fw-semibold">
                           {formatCurrency(it.lineTotal)}
                         </td>
+
                       </tr>
                     ))}
+
                   </tbody>
+
                 </table>
+
               </div>
 
-              <div className="text-end fw-bold mb-3">
-                Tổng thanh toán: {formatCurrency(inv.finalAmount)}
+              {/* TOTAL */}
+
+              <div className="invoice-total">
+
+                <span>Tổng thanh toán</span>
+
+                <strong>{formatCurrency(inv.finalAmount)}</strong>
+
               </div>
 
               {/* RETURN SECTION */}
-              {showReturnSection && inv.status === "PAID" && (
-                <div className="border-top pt-3 mt-3">
 
-                  <h6 className="text-danger mb-3">
+              {showReturnSection && inv.status === "PAID" && (
+
+                <div className="return-section">
+
+                  <h6 className="return-title">
                     <i className="bi bi-arrow-counterclockwise me-2" />
                     Tạo đơn hoàn
                   </h6>
@@ -200,35 +240,44 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                     <div className="alert alert-danger">{returnError}</div>
                   )}
 
-                  <div className="table-responsive border rounded mb-3">
-                    <table className="table table-sm mb-0 align-middle">
-                      <thead className="table-light">
+                  <div className="invoice-table">
+
+                    <table className="table align-middle mb-0">
+
+                      <thead>
                         <tr>
-                          <th>Tên</th>
+                          <th>Sản phẩm</th>
                           <th className="text-end">Đơn giá</th>
                           <th className="text-center">SL hoàn</th>
                           <th className="text-end">Tiền hoàn</th>
                         </tr>
                       </thead>
+
                       <tbody>
+
                         {inv.items.map((it) => {
+
                           const max = it.quantity;
                           const qty = returnQtyMap[it.id] || 0;
                           const refund = qty * it.unitPrice;
 
                           return (
                             <tr key={it.id}>
+
                               <td>{it.name}</td>
+
                               <td className="text-end">
                                 {formatCurrency(it.unitPrice)}
                               </td>
-                              <td className="text-center" style={{ width: 100 }}>
+
+                              <td className="text-center">
+
                                 <input
                                   type="number"
                                   min={0}
                                   max={max}
-                                  className="form-control form-control-sm text-center"
                                   value={qty}
+                                  className="form-control return-input"
                                   onChange={(e) =>
                                     setReturnQtyMap((prev) => ({
                                       ...prev,
@@ -239,50 +288,69 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                                     }))
                                   }
                                 />
+
                               </td>
-                              <td className="text-end text-danger">
+
+                              <td className="text-end text-danger fw-semibold">
                                 {formatCurrency(refund)}
                               </td>
+
                             </tr>
                           );
                         })}
+
                       </tbody>
+
                     </table>
+
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label fw-semibold">Lý do hoàn</label>
+                  <div className="mt-3">
+
+                    <label className="form-label fw-semibold">
+                      Lý do hoàn
+                    </label>
+
                     <textarea
                       className="form-control"
                       rows={3}
                       value={returnReason}
                       onChange={(e) => setReturnReason(e.target.value)}
                     />
+
                   </div>
 
-                  <div className="text-end mb-3">
-                    <strong className="text-danger">
-                      Tổng tiền hoàn: {formatCurrency(totalRefund)}
-                    </strong>
+                  <div className="refund-total">
+
+                    Tổng tiền hoàn: {formatCurrency(totalRefund)}
+
                   </div>
 
                   <div className="text-end">
+
                     <button
                       className="btn btn-danger"
                       disabled={returnSubmitting}
                       onClick={handleCreateReturn}
                     >
-                      {returnSubmitting ? "Đang tạo..." : "Xác nhận tạo đơn hoàn"}
+                      {returnSubmitting
+                        ? "Đang tạo..."
+                        : "Xác nhận tạo đơn hoàn"}
                     </button>
+
                   </div>
+
                 </div>
               )}
+
             </>
           )}
+
         </div>
 
         {/* FOOTER */}
-        <div className="card-footer bg-white d-flex justify-content-end gap-2">
+
+        <div className="invoice-footer">
 
           {inv?.status === "PAID" && (
             <button
@@ -304,7 +372,114 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
           <button className="btn btn-outline-secondary" onClick={onClose}>
             Đóng
           </button>
+
         </div>
+
+        <style>{`
+
+.invoice-modal{
+ background:white;
+ border-radius:14px;
+ overflow:hidden;
+ box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.invoice-header{
+ padding:18px 22px;
+ border-bottom:1px solid #eee;
+ display:flex;
+ justify-content:space-between;
+ align-items:flex-start;
+ background:#fafafa;
+}
+
+.invoice-meta{
+ font-size:13px;
+ color:#777;
+ display:flex;
+ gap:10px;
+}
+
+.invoice-code{
+ font-weight:600;
+}
+
+.status-badge{
+ font-size:13px;
+ padding:6px 10px;
+}
+
+.invoice-body{
+ padding:22px;
+}
+
+.invoice-table{
+ border:1px solid #eee;
+ border-radius:10px;
+ overflow:hidden;
+ margin-bottom:18px;
+}
+
+.invoice-table thead{
+ background:#f8f9fa;
+ font-size:14px;
+}
+
+.qty-badge{
+ background:#f1f3f5;
+ padding:3px 8px;
+ border-radius:6px;
+ font-weight:600;
+}
+
+.invoice-total{
+ display:flex;
+ justify-content:flex-end;
+ gap:20px;
+ font-size:16px;
+ font-weight:600;
+ margin-bottom:12px;
+}
+
+.return-section{
+ border-top:1px solid #eee;
+ margin-top:20px;
+ padding-top:18px;
+}
+
+.return-title{
+ color:#dc3545;
+ font-weight:600;
+ margin-bottom:12px;
+}
+
+.return-input{
+ width:80px;
+ text-align:center;
+}
+
+.refund-total{
+ text-align:right;
+ font-weight:700;
+ color:#dc3545;
+ margin:12px 0;
+}
+
+.invoice-footer{
+ padding:16px 22px;
+ border-top:1px solid #eee;
+ display:flex;
+ justify-content:flex-end;
+ gap:10px;
+}
+
+.loading-box{
+ text-align:center;
+ padding:40px;
+}
+
+`}</style>
+
       </div>
     </BaseModal>
   );
