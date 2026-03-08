@@ -34,13 +34,13 @@ router.post("/purchase-orders/request", protect(PERMISSIONS.CREATE_PURCHASE_ORDE
 // UPDATE PO STATUS
 router.patch("/purchase-orders/status/:id", protect(PERMISSIONS.UPDATE_PURCHASE_ORDER), purchaseOrderController.updateStatus);
 
-router.patch("/purchase-orders/receive/:id", protect(PERMISSIONS.RECEIVE_PURCHASE_ORDER), purchaseOrderController.receive);
+router.patch("/purchase-orders/receive/:id", protect(PERMISSIONS.RECEIVE_PURCHASE_ORDER), purchaseOrderController.receiveOrder);
 
-// // GET LIST PURCHASE ORDERS
-router.get("/purchase-orders/list", protect(PERMISSIONS.VIEW_PURCHASE_ORDER), purchaseOrderController.getList);
+// GET LIST PURCHASE ORDERS
+router.get("/purchase-orders/list", protect(PERMISSIONS.VIEW_PURCHASE_ORDER), purchaseOrderController.getPurchaseOrders);
 
-// // GET PURCHASE ORDER DETAIL
-router.get("/purchase-orders/detail/:id", protect(PERMISSIONS.VIEW_PURCHASE_ORDER), purchaseOrderController.getDetail);
+// GET PURCHASE ORDER DETAIL
+router.get("/purchase-orders/detail/:id", protect(PERMISSIONS.VIEW_PURCHASE_ORDER), purchaseOrderController.getPurchaseOrderDetail);  
 
 // GET SUPPLIER LIST
 router.get("/suppliers/list", supplierController.getSupplierList);
@@ -48,8 +48,8 @@ router.get("/suppliers/list", supplierController.getSupplierList);
 // GET SUPPLIER DETAIL
 router.get("/suppliers/:id", supplierController.getSupplierDetail);
 
-// GET MONTHLY REPORT
-router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), purchaseOrderController.getMonthlyReport);
+// // GET MONTHLY REPORT
+// router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), purchaseOrderController.getMonthlyReport);
 
 // GET PRODUCTS BY SUPPLIER
 router.get("/suppliers/:id/products", supplierController.getSupplierProducts);

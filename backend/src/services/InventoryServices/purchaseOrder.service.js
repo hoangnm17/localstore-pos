@@ -1,125 +1,234 @@
 const purchaseOrderModel = require("../../models/purchaseOrder.model");
+const staffModel = require("../../models/staff.model");
 
-const CREATE_PO_ROLES = ["manager", "warehouse_staff"];
-const MANAGER = "manager";
-const WAREHOUSE = "warehouse_staff";
+// exports.getMonthlyReport = async ({
+//     month,
+//     year,
+//     supplierId
+// }) => {
 
-/* ==============================
-   CREATE PURCHASE ORDER
-============================== */
-exports.createPurchaseOrder = async (data, user) => {
+//     if (month < 1 || month > 12) {
+//         throw new Error("INVALID_MONTH");
+//     }
 
+//     return await purchaseOrderModel.getMonthlyReport({
+//         month,
+//         year,
+//         supplierId
+//     });
+// };
+
+const createPurchaseOrder = async (user, note, items) => {
     if (!user.permissions.includes("CREATE_PURCHASE_ORDER")) {
         throw new Error("PERMISSION_DENIED");
     }
 
-    if (!data.supplierId) {
-        throw new Error("SUPPLIER_REQUIRED");
+    const staff = await staffModel.getStaffByUserId(user.id);
+
+    if (!staff) {
+        throw new Error("Staff khong ton tai");
     }
 
-    if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-        throw new Error("ITEMS_REQUIRED");
+    const supplierGroups = {};
+
+    for (const item of items) {
+
+        if (!supplierGroups[item.supplierId]) {
+            supplierGroups[item.supplierId] = [];
+        }
+
+        supplierGroups[item.supplierId].push(item);
     }
 
-    for (const item of data.items) {
-    if (!item.productId || !item.quantityOrdered || item.quantityOrdered <= 0) {
-        throw new Error("INVALID_ITEM_DATA");
-    }
-}
+    const createdOrders = [];
 
-    return await purchaseOrderModel.createPurchaseOrderWithItems({
-        supplierId: data.supplierId,
-        note: data.note || null,
-        createdBy: user.id,
-        items: data.items
-    });
+    for (const supplierId in supplierGroups) {
+
+        const orderItems = supplierGroups[supplierId];
+
+        const po = await purchaseOrderModel.createPurchaseOrder(
+            staff.id,
+            supplierId,
+            note
+        );
+
+        const poId = po.id;
+
+        let totalAmount = 0;
+
+        for (const item of orderItems) {
+
+            const priceData = await purchaseOrderModel.getSupplierPrice(
+                supplierId,
+                item.productUnitId
+            );
+
+            if (!priceData) {
+                throw new Error("Khong tim thay gia nha cung cap");
+            }
+
+            const costPrice = priceData.price;
+
+            const itemTotal = item.quantity * costPrice;
+
+            totalAmount += itemTotal;
+
+            await purchaseOrderModel.createPurchaseOrderItem(
+                poId,
+                item.productUnitId,
+                item.quantity,
+                costPrice
+            );
+        }
+
+        await purchaseOrderModel.updatePurchaseOrderTotal(
+            poId,
+            totalAmount
+        );
+
+        createdOrders.push(poId);
+    }
+
+    return createdOrders;
 };
 
-/* ==============================
-   UPDATE STATUS
-============================== */
-exports.updateStatus = async (poId, newStatus, currentUser) => {
+const updateStatus = async (poId, newStatus, currentUser) => {
 
-    const hasUpdatePermission = currentUser.permissions.includes("UPDATE_PURCHASE_ORDER");
-    const hasReceivePermission = currentUser.permissions.includes("RECEIVE_PURCHASE_ORDER");
+    const { permissions, id: userId } = currentUser;
 
-    const userId = currentUser.id;
+    const staff = await staffModel.getStaffByUserId(currentUser.id);
 
+    const hasUpdatePermission = permissions.includes("UPDATE_PURCHASE_ORDER");
+    const po = await purchaseOrderModel.getPurchaseOrderById(poId);
+
+    if (!po) {
+        throw new Error("PO_NOT_FOUND");
+    }
     const validStatuses = [
         "Approved",
         "Rejected",
         "WaitingForDelivery",
-        "CannotDeliver",
-        "Received"
+        "CannotDeliver"
     ];
 
     if (!validStatuses.includes(newStatus)) {
         throw new Error("INVALID_TRANSITION");
     }
 
-    if (hasUpdatePermission) {
-
-        // Nếu là Received thì gọi hàm receive riêng
-        if (newStatus === "Received") {
-            return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
-        }
-
-        return await purchaseOrderModel.updateStatus(poId, newStatus, userId);
+    if (!hasUpdatePermission) {
+        throw new Error("PERMISSION_DENIED");
     }
 
-    if (hasReceivePermission) {
-
-        if (newStatus !== "Received") {
-            throw new Error("PERMISSION_DENIED");
-        }
-
-        return await purchaseOrderModel.receivePurchaseOrder(poId, userId);
-    }
-
-    throw new Error("PERMISSION_DENIED");
+    return await purchaseOrderModel.updateStatus(
+        poId,
+        newStatus,
+        staff.id
+    );
 };
 
-exports.getDetail = async (poId) => {
 
-    const po = await purchaseOrderModel.getDetailById(poId);
 
-    if (!po) {
+const receiveOrder = async (poId, items, currentUser) => {
+
+    const { permissions, id: userId } = currentUser;
+
+    const staff = await staffModel.getStaffByUserId(userId);
+
+    const hasReceivePermission =
+        permissions.includes("RECEIVE_PURCHASE_ORDER");
+
+    if (!hasReceivePermission) {
+        throw new Error("PERMISSION_DENIED");
+    }
+
+    const poItems = await purchaseOrderModel.getPurchaseOrderItems(poId);
+
+    if (!poItems.length) {
+        throw new Error("PO_ITEMS_NOT_FOUND");
+    }
+
+    let allReceived = true;
+
+    for (const item of items) {
+
+        const poItem = poItems.find(
+            i => i.productUnitId === item.productUnitId
+        );
+
+        if (!poItem) {
+            throw new Error("INVALID_PRODUCT");
+        }
+
+        const totalReceived =
+            poItem.receivedQuantity + item.receivedQuantity;
+
+        if (totalReceived > poItem.quantity) {
+            throw new Error("RECEIVED_EXCEEDS_ORDER");
+        }
+
+        if (totalReceived < poItem.quantity) {
+            allReceived = false;
+        }
+
+    }
+
+    const status = allReceived
+        ? "Received"
+        : "PartiallyReceived";
+
+    return await purchaseOrderModel.receiveOrder(
+        poId,
+        items,
+        status,
+        staff.id
+    );
+
+};
+
+const getPurchaseOrders = async (page, limit, filters) => {
+
+    const offset = (page - 1) * limit;
+
+    const data = await purchaseOrderModel.getPurchaseOrders(
+        offset,
+        limit,
+        filters
+    );
+
+    const total = await purchaseOrderModel.countPurchaseOrders(filters);
+
+    return {
+        data,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+
+};
+
+const getPurchaseOrderDetail = async (poId) => {
+
+    const order = await purchaseOrderModel.getPurchaseOrderById(poId);
+
+    if (!order) {
         throw new Error("PO_NOT_FOUND");
     }
 
-    return po;
+    const items = await purchaseOrderModel.getPurchaseOrderItems(poId);
+
+    order.items = items;
+
+    return order;
+
 };
 
-exports.getList = async (query) => {
-
-    const page = parseInt(query.page) || 1;
-    const pageSize = 15;
-
-    return await purchaseOrderModel.getList({
-        page,
-        pageSize,
-        from: query.from,
-        to: query.to,
-        status: query.status
-    });
-};
-
-/* ==============================
-   PO MONTHLY REPORT
-============================== */
-exports.getMonthlyReport = async ({
-    month,
-    year,
-    supplierId
-}) => {
-
-    if (month < 1 || month > 12) {
-        throw new Error("INVALID_MONTH");
-    }
-
-    return await purchaseOrderModel.getMonthlyReport({
-        month,
-        year,
-        supplierId
-    });
+module.exports = {
+    createPurchaseOrder,
+    updateStatus,
+    receiveOrder,
+    getPurchaseOrders,
+    getPurchaseOrderDetail
 };
