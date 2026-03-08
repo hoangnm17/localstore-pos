@@ -18,6 +18,12 @@ const productStockService = {
       productId,
       quantity
     });
+  },
+
+  updateMinThreshold(productId, minThreshold) {
+    return api.put(`/inventory/${productId}/min-threshold`, {
+      minThreshold
+    });
   }
 };
 

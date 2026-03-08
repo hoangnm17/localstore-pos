@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
+import UpdateMinThresholdModal from "../InventoryModal/UpdateMinThreshold";
 
 function ProductStock() {
   const user = JSON.parse(localStorage.getItem("user"));
-  const canUpdateStock = user?.features?.includes("UPDATE_STOCK");
+  const canUpdateLowStock = user?.features?.includes("EDIT_LOWSTOCK");
 
   const { categoryId } = useParams();
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ function ProductStock() {
 
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [newQuantity, setNewQuantity] = useState("");
+  const [newMinThreshold, setNewMinThreshold] = useState("");
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
 
@@ -84,72 +85,80 @@ function ProductStock() {
   };
 
   const handleUpdateStock = (product) => {
+    if (!canUpdateLowStock) {
+      alert("Bạn không có quyền cập nhật ngưỡng tồn kho tối thiểu.");
+      return;
+    }
     setSelectedProduct(product);
-    setNewQuantity(product.quantityOnHand.toString());
+    setNewMinThreshold((product.minThreshold ?? 0).toString());
     setError("");
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setNewQuantity("");
+    setNewMinThreshold("");
     setError("");
     setSelectedProduct(null);
   };
 
   const handleSaveStock = async () => {
-    const trimmedValue = newQuantity.trim();
+    const trimmedValue = newMinThreshold.trim();
     setError("");
 
     if (!trimmedValue) {
-      setError("Vui lòng nhập số lượng tồn kho");
+      setError("Vui lòng nhập ngưỡng tồn kho tối thiểu");
       return;
     }
 
-    const qty = parseFloat(trimmedValue);
-
-    if (isNaN(qty)) {
-      setError("Số lượng phải là một con số hợp lệ");
+    if (!/^\d*\.?\d*$/.test(trimmedValue)) {
+      setError("Chỉ được nhập số");
       return;
     }
 
-    if (qty < 0) {
-      setError("Số lượng tồn kho không được âm");
+    const min = parseFloat(trimmedValue);
+
+    if (isNaN(min)) {
+      setError("Giá trị không hợp lệ");
+      return;
+    }
+
+    if (min < 0) {
+      setError("Ngưỡng không được âm");
       return;
     }
 
     const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
 
-    if (!allowDecimal && !Number.isInteger(qty)) {
-      setError("Sản phẩm này chỉ chấp nhận số lượng nguyên (không thập phân)");
+    if (!allowDecimal && !Number.isInteger(min)) {
+      setError("Sản phẩm này chỉ chấp nhận số nguyên");
       return;
     }
 
     if (!selectedProduct) {
-      setError("Không tìm thấy sản phẩm để cập nhật");
+      setError("Không tìm thấy sản phẩm");
       return;
     }
 
     setUpdating(true);
 
     try {
-      const res = await productStockService.updateStock(
+      const res = await productStockService.updateMinThreshold(
         selectedProduct.productId,
-        qty
+        min
       );
 
       const response = res?.data;
 
       if (!response?.success) {
-        setError(response?.message || "Cập nhật tồn kho thất bại");
+        setError(response?.message || "Cập nhật thất bại");
         return;
       }
 
       handleCloseModal();
       loadProducts();
-
     } catch (err) {
-      setError("Cập nhật tồn kho thất bại. Vui lòng thử lại sau.");
+      setError("Cập nhật thất bại. Vui lòng thử lại.");
     } finally {
       setUpdating(false);
     }
@@ -173,6 +182,8 @@ function ProductStock() {
       jumpToPage();
     }
   };
+
+
 
   return (
     <div className="container-fluid py-4 py-md-5">
@@ -225,7 +236,8 @@ function ProductStock() {
                   <th className="py-3 text-center">Mã</th>
                   <th className="py-3 text-center">Tồn kho</th>
                   <th className="py-3 text-center">Trạng thái</th>
-                  {canUpdateStock && <th className="py-3 text-center">Hành động</th>}
+                  {canUpdateLowStock && <th className="py-3 text-center">Ngưỡng tồn kho thấp</th>}
+                  {canUpdateLowStock && <th className="py-3 text-center">Hành động</th>}
                 </tr>
               </thead>
 
@@ -251,7 +263,7 @@ function ProductStock() {
                       <td className="text-center py-4">
                         <div className="placeholder placeholder-glow col-7 bg-secondary-subtle rounded py-3"></div>
                       </td>
-                      {canUpdateStock && (
+                      {canUpdateLowStock && (
                         <td className="text-center py-4">
                           <div className="placeholder placeholder-glow col-8 bg-secondary-subtle rounded py-3"></div>
                         </td>
@@ -260,7 +272,7 @@ function ProductStock() {
                   ))
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-5 py-md-6 text-muted fst-italic">
+                    <td colSpan="7" className="text-center py-5 py-md-6 text-muted fst-italic">
                       <i className="bi bi-inbox fs-2 d-block mb-3 opacity-50"></i>
                       Không tìm thấy sản phẩm nào trong danh mục này
                     </td>
@@ -284,7 +296,7 @@ function ProductStock() {
                         <td className="py-4 fw-medium">{p.productName}</td>
                         <td className="text-center py-4 text-muted small">{p.productCode}</td>
                         <td className="text-center py-4 fw-bold fs-5">
-                          {p.quantityOnHand.toLocaleString()}
+                          {(p.quantityOnHand ?? 0).toLocaleString()}
                         </td>
                         <td className="text-center py-4">
                           <span
@@ -296,14 +308,17 @@ function ProductStock() {
                             {status}
                           </span>
                         </td>
+                        {canUpdateLowStock && (<td className="text-center py-4 fw-bold fs-5">
+                          {(p.minThreshold ?? 0).toLocaleString()}
+                        </td>)}
                         <td className="text-center py-4">
-                          {canUpdateStock && (
+                          {canUpdateLowStock && (
                             <button
                               className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mx-auto px-4 py-2"
                               onClick={() => handleUpdateStock(p)}
                             >
                               <i className="bi bi-pencil-square"></i>
-                              Cập nhật
+                              Cập nhật 
                             </button>
                           )}
                         </td>
@@ -363,73 +378,30 @@ function ProductStock() {
         )}
 
         {/* MODAL */}
-        {showModal && (
-          <div
-            className="modal fade show d-block"
-            tabIndex="-1"
-            style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
-          >
-            <div className="modal-dialog modal-dialog-centered modal-md">
-              <div className="modal-content rounded-4 shadow-xl border-0">
-                <div className="modal-header border-0 pb-2">
-                  <h5 className="modal-title fw-bold">Cập nhật tồn kho sản phẩm</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={handleCloseModal}
-                    disabled={updating}
-                  ></button>
-                </div>
+        <UpdateMinThresholdModal
+          show={showModal}
+          product={selectedProduct}
+          updating={updating}
+          onClose={handleCloseModal}
+          onSave={async (min) => {
+            setUpdating(true);
+            try {
+              const res = await productStockService.updateMinThreshold(
+                selectedProduct.productId,
+                min
+              );
 
-                <div className="modal-body px-4 pb-4">
-                  <p className="fw-medium mb-1 fs-5">{selectedProduct?.productName}</p>
-                  <p className="text-muted small mb-4">Mã: {selectedProduct?.productCode}</p>
+              if (!res?.data?.success) {
+                return;
+              }
 
-                  <label htmlFor="newQty" className="form-label fw-medium small mb-2">
-                    Số lượng tồn kho mới
-                  </label>
-                  <input
-                    id="newQty"
-                    type="number"
-                    className="form-control form-control-lg"
-                    min="0"
-                    value={newQuantity}
-                    onChange={(e) => setNewQuantity(e.target.value)}
-                    disabled={updating}
-                  />
-
-                  {error && <div className="alert alert-danger mt-3 py-2 small">{error}</div>}
-                </div>
-
-                <div className="modal-footer border-0 pt-1 px-4 pb-4">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary px-4"
-                    onClick={handleCloseModal}
-                    disabled={updating}
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary px-5"
-                    disabled={updating}
-                    onClick={handleSaveStock}
-                  >
-                    {updating ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Đang lưu...
-                      </>
-                    ) : (
-                      "Lưu thay đổi"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+              handleCloseModal();
+              loadProducts();
+            } finally {
+              setUpdating(false);
+            }
+          }}
+        />
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ const Sidebar = () => {
         { title: 'Bán Hàng', icon: 'bi-cart-plus-fill', path: '/sales' },
         {
             title: 'Đơn Hàng', icon: 'bi-receipt', id: 'orders',
-            children: [{ title: 'Danh sách đơn', path: '/orders' }]
+            children: [{ title: 'Danh sách đơn', path: '/invoices' }]
         },
         {
             title: 'Kho Hàng', icon: 'bi-box-seam-fill', path: '/inventory/menu',
@@ -41,7 +41,12 @@ const Sidebar = () => {
                 { title: 'Thời khóa biểu', path: '/schedule' }
             ]
         },
-        { title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports' },
+        {
+            title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', path: '/reports',
+            children: [
+                { title: 'Báo cáo lương', path: '/salary' }
+            ]
+        },
 
     ];
 

@@ -1,7 +1,6 @@
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { COUNTER_ID } = require('../config/pos.config');
 
 module.exports.login = async (email, password) => {
     const user = await userModel.findByEmail(email);
@@ -25,7 +24,6 @@ module.exports.login = async (email, password) => {
     const token = jwt.sign(
         {
             userId: user.id,
-            counterId: COUNTER_ID,
         },
 
         process.env.JWT_SECRET,

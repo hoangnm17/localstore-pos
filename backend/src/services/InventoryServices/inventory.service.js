@@ -92,13 +92,36 @@ const deductStock = async (transaction, items) => {
         if (stock.quantity < item.quantity) {
             throw new Error(`Insufficient stock for product ${item.productId}`);
         }
+        console.log(item);
+        console.log(stock)
 
-        await productModel.updateStock(
+        await productModel.detuctStock(
             transaction,
             item.productId,
             stock.quantityOnHand - item.quantity
         );
     }
+};
+
+const updateMinThreshold = async (productId, minThreshold) => {
+    if (!productId) {
+        throw new Error("ProductId is required");
+    }
+
+    if (minThreshold == null || minThreshold < 0) {
+        throw new Error("Min threshold must be >= 0");
+    }
+
+    const updatedStock = await productModel.updateMinThreshold(
+        productId,
+        minThreshold
+    );
+
+    if (!updatedStock) {
+        throw new Error("Inventory stock not found");
+    }
+
+    return updatedStock;
 };
 
 module.exports = {
@@ -107,5 +130,6 @@ module.exports = {
     getProductStockByCategory,
     getProductsBySupplier,
     updateProductStock,
-    getProductBasicInfo
+    getProductBasicInfo,
+    updateMinThreshold
 }

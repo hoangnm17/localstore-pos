@@ -16,6 +16,7 @@ module.exports.getWeeklySchedule = async (req, res) => {
                 staffMap[row.staffId] = {
                     staffId: row.staffId,
                     fullName: row.fullName,
+                    roleName: row.roleName,
                     totalHours: 0,
                     schedules: {}
                 };
