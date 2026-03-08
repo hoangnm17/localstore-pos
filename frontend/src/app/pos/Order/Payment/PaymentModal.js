@@ -11,8 +11,9 @@ export default function PaymentModal({
   orderId,
   total = 0,
   customer = null,
-  onClose = () => {},
-  onConfirm = () => {}
+  onClose = () => { },
+  onConfirm = () => { },
+  onBankPaid = () => { },
 }) {
   const safeTotal = useMemo(() => Number(total) || 0, [total]);
 
@@ -26,7 +27,7 @@ export default function PaymentModal({
         voucherId: null,
         promotionId: null,
         totalDiscount: 0,
-        finalAmount: safeTotal
+        finalAmount: safeTotal,
       }
     );
   }, [discount, safeTotal]);
@@ -42,17 +43,17 @@ export default function PaymentModal({
 
   const disabledPay = safeTotal <= 0;
 
-  const handleConfirm = useCallback(
+  const handleConfirmCash = useCallback(
     (payload = {}) => {
       onConfirm({
         orderId,
         ...payload,
-        method,
+        method: "CASH",
         amount: finalAmount,
-        discount: safeDiscount
+        discount: safeDiscount,
       });
     },
-    [onConfirm, orderId, method, finalAmount, safeDiscount]
+    [onConfirm, orderId, finalAmount, safeDiscount]
   );
 
   return (
@@ -61,16 +62,13 @@ export default function PaymentModal({
         className="bg-white rounded-4 shadow overflow-hidden"
         style={{ width: "980px", maxWidth: "95vw" }}
       >
-        {/* HEADER */}
         <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
           <h6 className="fw-bold mb-0">Thanh toán</h6>
           <button className="btn-close" onClick={onClose} />
         </div>
 
-        {/* BODY */}
         <div className="p-4">
           <div className="row g-4">
-            {/* LEFT */}
             <div className="col-md-6">
               <OrderDiscount
                 subtotal={safeTotal}
@@ -79,7 +77,6 @@ export default function PaymentModal({
               />
             </div>
 
-            {/* RIGHT */}
             <div className="col-md-6">
               <div className="mb-3 p-3 border rounded-3 bg-light text-center">
                 <div className="small text-muted mb-1">Tổng cần thanh toán</div>
@@ -87,7 +84,6 @@ export default function PaymentModal({
                   {formatCurrency(finalAmount)}
                 </div>
 
-                {/* optional breakdown */}
                 {safeDiscount.totalDiscount > 0 && (
                   <div className="small text-muted mt-1">
                     Giảm: -{formatCurrency(safeDiscount.totalDiscount)}
@@ -108,11 +104,16 @@ export default function PaymentModal({
               ) : (
                 <>
                   {method === "CASH" && (
-                    <CashPayment total={finalAmount} onConfirm={handleConfirm} />
+                    <CashPayment total={finalAmount} onConfirm={handleConfirmCash} />
                   )}
 
                   {method === "BANK" && (
-                    <BankPayment total={finalAmount} onConfirm={handleConfirm} />
+                    <BankPayment
+                      invoiceId={orderId}
+                      amount={finalAmount}
+                      discount={safeDiscount}
+                      onPaid={onBankPaid}
+                    />
                   )}
                 </>
               )}
