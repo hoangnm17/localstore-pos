@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   invoiceCreate,
-  invoiceUpdate,
+  payCash,
   invoiceGetDrafts,
   invoiceGetDetail,
-  invoiceUpdateCustomer
+  invoiceUpdateCustomer,
+  invoiceCancel,
+  invoiceUpdateItems
 } from "../../services/Invoices/invoice.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 
@@ -203,7 +205,7 @@ export const useInvoiceTabs = () => {
             )
           );
 
-          await invoiceUpdate(invoiceId, { items: newItems });
+          await invoiceUpdateItems(invoiceId, { items: newItems });
 
         } catch (err) {
           console.error("Auto save failed:", err);
@@ -257,59 +259,58 @@ export const useInvoiceTabs = () => {
   const pay = async (paymentInfo) => {
     if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
 
-    const paidInvoiceId = activeInvoice.id;
+    const invoiceId = activeInvoice.id;
 
     try {
-      clearAutoSave(paidInvoiceId);
-      console.log(paymentInfo);
+      clearAutoSave(invoiceId);
 
-      const res = await invoiceUpdate(paidInvoiceId, {
-        status: "PAID",
-        payment: paymentInfo
-      });
+      let res;
 
-      // bắt paid từ nhiều kiểu response khác nhau
-      const paid =
-        res?.paid ??
-        res?.data?.paid ??
-        res?.data?.data?.paid ??
-        res?.success ??
-        res?.data?.success ??
-        res?.data?.data?.success;
+      switch (paymentInfo.method) {
+        case "CASH":
+          res = await payCash(invoiceId, { payment: paymentInfo });
+          break;
 
-      // nếu backend trả pending thì xử lý riêng
-      if (res?.pending || res?.data?.pending) {
-        showNotification("Đang chờ....!", "error");
-        return res;
+        case "BANK":
+          return { pending: true };
+        default:
+          throw new Error("Unsupported payment method");
       }
-      //  nếu update ok (paid/success) thì cập nhật UI
-      if (!paid) {
-        showNotification("Thanh toán thất bại!", "success");
+
+      const data = res?.data?.data || res?.data || res;
+
+      if (!data?.paid) {
+        showNotification("Thanh toán thất bại!", "error");
         return res;
       }
 
       showNotification("Thanh toán thành công!", "success");
+
       let nextActiveId = null;
 
-      setInvoices(prev => {
-        const remaining = prev.filter(inv => inv.id !== paidInvoiceId);
+      setInvoices((prev) => {
+        const remaining = prev.filter((inv) => inv.id !== invoiceId);
 
-        const nextUnpaid = [...remaining].reverse().find(inv => inv.status === "UNPAID");
+        const nextUnpaid = [...remaining]
+          .reverse()
+          .find((inv) => inv.status === "UNPAID");
+
         if (nextUnpaid) {
           nextActiveId = nextUnpaid.id;
           return remaining;
         }
 
-        const local = createLocalInvoice(); // items: []
+        const local = createLocalInvoice();
         nextActiveId = local.id;
         return [...remaining, local];
       });
 
       if (nextActiveId) setActiveInvoiceId(nextActiveId);
 
-      return res;
+      return data;
     } catch (err) {
       console.error("Payment failed:", err);
+      showNotification("Thanh toán thất bại!", "error");
       throw err;
     }
   };
@@ -331,7 +332,7 @@ export const useInvoiceTabs = () => {
 
     if (shouldCancel && invoice.status === "UNPAID") {
       try {
-        await invoiceUpdate(id, { status: "CANCELLED" });
+        await invoiceCancel(id);
       } catch (err) {
         console.error("Cancel invoice failed:", err);
         return;
