@@ -22,16 +22,20 @@ export default function CategoryPage() {
         setEditId(id);
         setOpen(true);
     }
+    const rootCategories = categories.filter(c => !c.parentId);
 
     // Filter by search
-    const filtered = categories.filter(c =>
+    const filteredRoots = rootCategories.filter(c =>
         c.name?.toLowerCase().includes(search.toLowerCase())
     );
 
     // Paginate top-level categories
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-    const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.ceil(filteredRoots.length / PAGE_SIZE);
 
+    const paginated = filteredRoots.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+    );
     return (
         <div className="container-fluid py-3">
             {/* Header */}

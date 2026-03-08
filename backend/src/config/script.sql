@@ -179,7 +179,6 @@ CREATE TABLE [Products] (
     [categoryId] INT,
     [baseUnit] NVARCHAR(20) NOT NULL,
     [allowDecimalQuantity] BIT DEFAULT 0,
-    [costPrice] DECIMAL(15, 2) DEFAULT 0,
     [salePrice] DECIMAL(15, 2) DEFAULT 0,
     [isCombo] BIT DEFAULT 0,
     [status] VARCHAR(20) DEFAULT 'Selling',
