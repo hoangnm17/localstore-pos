@@ -169,27 +169,34 @@ CREATE TABLE [Categories] (
 );
 GO
 
+-- 17. Suppliers
+CREATE TABLE [Suppliers] (
+    [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [name] NVARCHAR(255) NOT NULL,
+    [contactInfo] NVARCHAR(255),
+    [address] NVARCHAR(255)
+);
+GO
+
 -- 12. Products
 CREATE TABLE [Products] (
     [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
     [code] VARCHAR(50) NOT NULL UNIQUE,
-    [barcode] VARCHAR(50) UNIQUE,
     [imageUrl] NVARCHAR(500) NULL,
     [name] NVARCHAR(200) NOT NULL,
     [categoryId] INT,
     [baseUnit] NVARCHAR(20) NOT NULL,
     [allowDecimalQuantity] BIT DEFAULT 0,
-    [salePrice] DECIMAL(15, 2) DEFAULT 0,
     [isCombo] BIT DEFAULT 0,
     [status] VARCHAR(20) DEFAULT 'Selling',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     [updatedAt] DATETIME2 DEFAULT GETDATE(),
-    [supplierId] INT NULL,
     
-    CONSTRAINT [FK_Product_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
-    CONSTRAINT [FK_Product_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
-    CONSTRAINT [CK_Product_Status] CHECK ([status] IN ('Selling', 'StopSelling', 'Suspended'))
+    CONSTRAINT [FK_Products_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id])
 );
+GO
+
+CREATE INDEX [IX_Products_Name] ON [Products]([name]);
 GO
 
 -- 13. ProductUnits
@@ -199,39 +206,93 @@ CREATE TABLE [ProductUnits] (
     [unitName] NVARCHAR(20) NOT NULL,
     [unitType] VARCHAR(20) NOT NULL DEFAULT 'PIECE',
     [conversionFactor] DECIMAL(10,3) NOT NULL,
-    [price] DECIMAL(15, 2) NOT NULL,
-    [barcode] VARCHAR(50) UNIQUE,
+    [salePrice] DECIMAL(15, 2) NOT NULL,
+    [barcode] VARCHAR(50) NULL,
     
-    CONSTRAINT [FK_Unit_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_ProductUnit_Type] CHECK (unitType IN ('PIECE', 'WEIGHT'))
+    CONSTRAINT [FK_ProductUnits_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
+    CONSTRAINT [UQ_ProductUnits_Product_UnitName] UNIQUE ([productId], [unitName]),
+    CONSTRAINT [UQ_ProductUnits_ProductId_Id] UNIQUE ([productId], [id]),
+    CONSTRAINT [CK_ProductUnits_UnitType] CHECK ([unitType] IN ('PIECE', 'WEIGHT')),
+    CONSTRAINT [CK_ProductUnits_ConversionFactor] CHECK ([conversionFactor] > 0),
+    CONSTRAINT [CK_ProductUnits_SalePrice] CHECK ([salePrice] >= 0)
 );
 GO
 
+-- Mỗi sản phẩm chỉ có tối đa 1 base unit (conversionFactor = 1)
+CREATE UNIQUE INDEX [UX_ProductUnits_OneBaseUnit]
+ON [ProductUnits]([productId])
+WHERE [conversionFactor] = 1;
+GO
 
+-- Barcode không bắt buộc nhưng nếu có thì phải unique
+CREATE UNIQUE INDEX [UX_ProductUnits_Barcode_NotNull]
+ON [ProductUnits]([barcode])
+WHERE [barcode] IS NOT NULL;
+GO
+
+CREATE INDEX [IX_ProductUnits_ProductId]
+ON [ProductUnits]([productId]);
+GO
+
+CREATE TABLE [ProductSuppliers] (
+    [productId] BIGINT NOT NULL,
+    [supplierId] INT NOT NULL,
+    [status] VARCHAR(20) DEFAULT 'active',
+    PRIMARY KEY ([productId], [supplierId]),
+    CONSTRAINT [FK_PS_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]),
+    CONSTRAINT [FK_PS_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id])
+);
+GO
+
+CREATE TABLE [SupplierProductPrices] (
+    [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [productId] BIGINT NOT NULL,
+    [supplierId] INT NOT NULL,
+    [unitId] INT NOT NULL,
+    [price] DECIMAL(15,2) NOT NULL,
+    [effectiveFrom] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [createdAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [createdBy] BIGINT NULL,
+
+    CONSTRAINT [FK_SPP_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]),
+    CONSTRAINT [FK_SPP_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
+    CONSTRAINT [FK_SPP_ProductUnit] FOREIGN KEY ([unitId]) REFERENCES [ProductUnits]([id]),
+    CONSTRAINT [FK_SPP_Staff] FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id])
+);
+GO
+
+CREATE INDEX [IX_SPP_Product_Supplier_Unit_EffectiveFrom]
+ON [SupplierProductPrices] ([productId], [supplierId], [unitId], [effectiveFrom] DESC);
+GO
 
 -- 14. ProductCombos
 CREATE TABLE [ProductCombos] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [parentProductId] BIGINT NOT NULL,
     [childProductId] BIGINT NOT NULL,
-    [quantity] INT DEFAULT 1,
+    [quantity] DECIMAL(15,3) NOT NULL DEFAULT 1,
     
     CONSTRAINT [FK_Combo_Parent] FOREIGN KEY ([parentProductId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Combo_Child] FOREIGN KEY ([childProductId]) REFERENCES [Products]([id])
+    CONSTRAINT [FK_Combo_Child] FOREIGN KEY ([childProductId]) REFERENCES [Products]([id]),
+    CONSTRAINT [CK_ProductCombos_Quantity] CHECK ([quantity] > 0),
+    CONSTRAINT [CK_ProductCombos_ParentChild] CHECK ([parentProductId] <> [childProductId]),
+    CONSTRAINT [UQ_ProductCombos_Parent_Child] UNIQUE ([parentProductId], [childProductId])
 );
 GO
 
--- 15. ProductPriceHistories
-CREATE TABLE [ProductPriceHistories] (
+-- 15. ProductSalePriceHistories
+CREATE TABLE [ProductSalePriceHistories] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [productId] BIGINT NOT NULL,
-    [oldPrice] DECIMAL(15, 2),
-    [newPrice] DECIMAL(15, 2),
-    [changedBy] BIGINT, 
-    [changedAt] DATETIME2 DEFAULT GETDATE(),
+    [productUnitId] INT NOT NULL,
+    [oldSalePrice] DECIMAL(15, 2),
+    [newSalePrice] DECIMAL(15, 2),
+    [changedBy] BIGINT NULL, 
+    [changedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     
-    CONSTRAINT [FK_History_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_History_Staff] FOREIGN KEY ([changedBy]) REFERENCES [Staff]([id])
+    CONSTRAINT [FK_ProductSalePriceHistories_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_ProductSalePriceHistories_ProductUnit]FOREIGN KEY ([productId], [productUnitId])REFERENCES [ProductUnits]([productId], [id]),
+    CONSTRAINT [FK_ProductSalePriceHistories_Staff] FOREIGN KEY ([changedBy]) REFERENCES [Staff]([id])
 );
 GO
 
@@ -239,13 +300,16 @@ GO
 CREATE TABLE [LabelPrintQueue] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [productId] BIGINT NOT NULL,
+    [productUnitId] INT NOT NULL,
     [barcode] VARCHAR(50) NOT NULL,
     [quantity] INT DEFAULT 1,
     [status] VARCHAR(20) DEFAULT 'Pending',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     
     CONSTRAINT [FK_Queue_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_Queue_Status] CHECK ([status] IN ('Pending', 'Printed', 'Cancelled'))
+    CONSTRAINT [FK_LabelPrintQueue_ProductUnit]FOREIGN KEY ([productId], [productUnitId]) REFERENCES [ProductUnits]([productId], [id]),
+    CONSTRAINT [CK_Queue_Status] CHECK ([status] IN ('Pending', 'Printed', 'Cancelled')),
+    CONSTRAINT [CK_LabelPrintQueue_Quantity] CHECK ([quantity] > 0)
 );
 GO
 
@@ -253,14 +317,6 @@ GO
 -- MODULE 3: SUPPLY CHAIN & INVENTORY (FIXED VERSION)
 -- ================================================================
 
--- 17. Suppliers
-CREATE TABLE [Suppliers] (
-    [id] INT IDENTITY(1,1) PRIMARY KEY,
-    [name] NVARCHAR(255) NOT NULL,
-    [contactInfo] NVARCHAR(255),
-    [address] NVARCHAR(255)
-);
-GO
 
 
 -- 18. InventoryStocks
@@ -634,6 +690,43 @@ BEGIN
     SET [updatedAt] = GETDATE()
     FROM [Customers] t
     INNER JOIN inserted i ON t.id = i.id
+END
+GO
+
+CREATE TRIGGER [TR_SupplierProductPrices_Validate]
+ON [SupplierProductPrices]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- unitId phải thuộc đúng productId
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN [ProductUnits] pu ON pu.[id] = i.[unitId]
+        WHERE pu.[productId] <> i.[productId]
+    )
+    BEGIN
+        RAISERROR (N'unitId trong SupplierProductPrices phải thuộc đúng productId.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- productId + supplierId phải tồn tại trong ProductSuppliers
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN [ProductSuppliers] ps
+            ON ps.[productId] = i.[productId]
+           AND ps.[supplierId] = i.[supplierId]
+        WHERE ps.[productId] IS NULL
+    )
+    BEGIN
+        RAISERROR (N'Phải khai báo ProductSuppliers trước khi thêm SupplierProductPrices.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
 END
 GO
 -- END OF SCRIPT
