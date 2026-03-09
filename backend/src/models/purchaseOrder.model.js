@@ -250,17 +250,12 @@ const updateStatus = async (poId, status, userId) => {
 };
 
 const receiveOrder = async (poId, items, status, userId) => {
-
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
-
     try {
-
         await transaction.begin();
-
         for (const item of items) {
-
-            // 1️⃣ Lấy conversionFactor
+            // 1️⃣ Lấy productId + conversionFactor
             const unitResult = await new sql.Request(transaction)
                 .input("productUnitId", sql.Int, item.productUnitId)
                 .query(`
@@ -268,17 +263,13 @@ const receiveOrder = async (poId, items, status, userId) => {
                     FROM ProductUnits
                     WHERE id = @productUnitId
                 `);
-
             if (unitResult.recordset.length === 0) {
                 throw new Error("UNIT_NOT_FOUND");
             }
-
             const unit = unitResult.recordset[0];
+            const baseQuantity = item.receivedQuantity * unit.conversionFactor;
 
-            const baseQuantity =
-                item.receivedQuantity * unit.conversionFactor;
-
-            // 2️⃣ Update receivedQuantity trong PO items
+            // 2️⃣ Update receivedQuantity (KHÔNG update total vì là computed column)
             await new sql.Request(transaction)
                 .input("receivedQuantity", sql.Decimal(15, 3), item.receivedQuantity)
                 .input("poId", sql.Int, poId)
@@ -290,7 +281,7 @@ const receiveOrder = async (poId, items, status, userId) => {
                     AND productUnitId = @productUnitId
                 `);
 
-            // 3️⃣ Update tồn kho (MERGE để tránh missing record)
+            // 3️⃣ Update tồn kho
             await new sql.Request(transaction)
                 .input("productId", sql.BigInt, unit.productId)
                 .input("quantity", sql.Decimal(15,3), baseQuantity)
@@ -304,10 +295,21 @@ const receiveOrder = async (poId, items, status, userId) => {
                         INSERT (productId, quantityOnHand)
                         VALUES (@productId, @quantity);
                 `);
-
         }
+        // 4️⃣ Tính lại totalAmount của PO theo số lượng đã nhận
+        await new sql.Request(transaction)
+            .input("poId", sql.Int, poId)
+            .query(`
+                UPDATE PurchaseOrders
+                SET totalAmount = (
+                    SELECT SUM(receivedQuantity * costPrice)
+                    FROM PurchaseOrderItems
+                    WHERE poId = @poId
+                )
+                WHERE id = @poId
+            `);
 
-        // 4️⃣ Update status PO
+        // 5️⃣ Update status PO
         await new sql.Request(transaction)
             .input("status", sql.NVarChar, status)
             .input("userId", sql.BigInt, userId)
@@ -385,30 +387,39 @@ const getPurchaseOrders = async (offset, limit, filters) => {
     const pool = await connectDB();
 
     let query = `
-        SELECT *
-        FROM PurchaseOrders
+        SELECT 
+            po.*,
+            s.name AS supplierName,
+            u1.fullName AS createdByName,
+            u2.fullName AS processByName,
+            u3.fullName AS receivedByName
+        FROM PurchaseOrders po
+        LEFT JOIN Suppliers s ON po.supplierId = s.id
+        LEFT JOIN Staff u1 ON po.createdBy = u1.id
+        LEFT JOIN Staff u2 ON po.processBy = u2.id
+        LEFT JOIN Staff u3 ON po.receivedBy = u3.id
         WHERE 1=1
     `;
 
     const request = pool.request();
 
     if (filters.status) {
-        query += " AND status = @status";
+        query += " AND po.status = @status";
         request.input("status", sql.VarChar, filters.status);
     }
 
     if (filters.fromDate) {
-        query += " AND createdAt >= @fromDate";
+        query += " AND po.createdAt >= @fromDate";
         request.input("fromDate", sql.DateTime2, filters.fromDate);
     }
 
     if (filters.toDate) {
-        query += " AND createdAt <= @toDate";
+        query += " AND po.createdAt <= @toDate";
         request.input("toDate", sql.DateTime2, filters.toDate);
     }
 
     query += `
-        ORDER BY createdAt DESC
+        ORDER BY po.createdAt DESC
         OFFSET @offset ROWS
         FETCH NEXT @limit ROWS ONLY
     `;
@@ -419,7 +430,6 @@ const getPurchaseOrders = async (offset, limit, filters) => {
     const result = await request.query(query);
 
     return result.recordset;
-
 };
 
 const countPurchaseOrders = async (filters) => {

@@ -30,20 +30,18 @@ function createPurchaseOrder(data) {
  * UPDATE PURCHASE ORDER STATUS
  * PATCH /inventory/purchase-orders/status/:id
  */
-function updatePurchaseOrderStatus(id, newStatus) {
+function updatePurchaseOrderStatus(id, status) {
   return api.patch(
     `/inventory/purchase-orders/status/${id}`,
-    { newStatus }
+    { status }
   );
 }
 
 /**
  * WAREHOUSE - RECEIVE PURCHASE ORDER
  */
-function receivePurchaseOrder(id) {
-  return api.patch(
-    `/inventory/purchase-orders/receive/${id}`
-  );
+function receivePurchaseOrder(id, payload) {
+  return api.patch(`/inventory/purchase-orders/receive/${id}`, payload);
 }
 
 /**
