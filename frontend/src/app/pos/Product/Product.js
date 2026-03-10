@@ -7,6 +7,7 @@ import { getProducts } from "services/Product/product.service";
 import ScanBarcode from "components/pos/ScanBarcode";
 import { getProductWithBarcode } from "services/Product/product.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
+import { getSocket } from "utils/socket";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
@@ -16,14 +17,48 @@ export default function Product({ addItem }) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showScan, setShowScan] = useState(false);
+
+  const socket = getSocket();
+  useEffect(() => {
+
+    const handleInventoryUpdate = (data) => {
+
+      if (!data?.items) return;
+
+      setProducts((prev) =>
+        prev.map((p) => {
+
+          const found = data.items.find(
+            (i) => String(i.productId) === String(p.id)
+          );
+          
+          if (!found) return p;
+
+          return {
+            ...p,
+            stockQuantity: found.stock
+          };
+
+        })
+      );
+
+    };
+
+    socket.on("inventory:update", handleInventoryUpdate);
+
+    return () => {
+      socket.off("inventory:update", handleInventoryUpdate);
+    };
+
+  }, []);
+
+  /* ================= SCAN HOTKEY ================= */
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -43,11 +78,15 @@ export default function Product({ addItem }) {
     };
   }, []);
 
+  /* ================= BARCODE SCAN ================= */
+
   const handleBarcode = async (barcode) => {
     try {
       const res = await getProductWithBarcode(barcode);
+
       if (res?.success) {
         const product = res.data;
+
         if (product.quantityOnHand > 0) {
           addItem({
             productId: product.id,
@@ -55,16 +94,25 @@ export default function Product({ addItem }) {
             unitPrice: product.salePrice,
           });
         } else {
-          showNotification(res?.message || "Sản phẩm hết hàng!", "error")
+          showNotification(
+            res?.message || "Sản phẩm hết hàng!",
+            "error"
+          );
         }
+
       } else {
-        showNotification(res?.message || "Sản phẩm không tồn tại!", "error")
+        showNotification(
+          res?.message || "Sản phẩm không tồn tại!",
+          "error"
+        );
       }
 
     } catch (err) {
       console.error("Scan error:", err);
     }
   };
+
+  /* ================= FETCH CATEGORY ================= */
 
   useEffect(() => {
     fetchCategories();
@@ -81,6 +129,8 @@ export default function Product({ addItem }) {
     }
   };
 
+  /* ================= FETCH PRODUCTS ================= */
+
   useEffect(() => {
     fetchProductList();
   }, [currentPage, search, selectedCategory]);
@@ -89,18 +139,18 @@ export default function Product({ addItem }) {
     setLoading(true);
 
     try {
+
       const res = await getProducts({
         page: currentPage,
         limit: PAGE_CONFIG.ITEMS_PER_PAGE,
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
-
-
       if (res.data.success) {
         setProducts(res.data.data || []);
         setTotalPages(res.data.totalPages || 1);
       }
+
     } catch (err) {
       console.error("Fetch products error:", err);
     } finally {
@@ -111,6 +161,8 @@ export default function Product({ addItem }) {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedCategory]);
+
+  /* ================= UI ================= */
 
   return (
     <div className="container-fluid py-4 bg-light min-vh-100">
@@ -146,16 +198,19 @@ export default function Product({ addItem }) {
                 <ProductList
                   products={products}
                   onSelect={(product) => {
+
                     if (product.stockQuantity === 0) return;
-                    
+
                     addItem({
                       productId: product.id,
                       productName: product.name,
                       unitPrice: product.salePrice,
                       quantityOnHand: product.stockQuantity,
                     });
+
                   }}
                 />
+
                 {showScan && (
                   <ScanBarcode
                     open={showScan}
@@ -178,6 +233,7 @@ export default function Product({ addItem }) {
                     }}
                   />
                 </div>
+
               </>
             ) : (
               <div className="text-center py-5">
@@ -190,20 +246,6 @@ export default function Product({ addItem }) {
           </div>
         </div>
       </div>
-
-      <style>{`
-        .bg-light { background-color: #f8f9fa !important; }
-        .rounded-4 { border-radius: 1.25rem !important; }
-        .card { 
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-          border: none !important; 
-          border-radius: 1rem !important; 
-        }
-        .card:hover { 
-          transform: translateY(-8px); 
-          box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important; 
-        }
-      `}</style>
     </div>
   );
 }
