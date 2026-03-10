@@ -62,7 +62,13 @@ export default function SalesHome() {
   const handleSelectCustomer = async (customer) => {
     if (!activeInvoice) return;
 
-    await updateInvoiceCustomer(activeInvoice.id, customer);
+    if (activeInvoice.customer?.id === customer?.id) return;
+
+    try {
+      await updateInvoiceCustomer(activeInvoice.id, customer);
+    } catch (error) {
+      console.error("Lỗi cập nhật khách hàng:", error);
+    }
   };
 
   const total = calculateTotal(activeInvoice?.items || []);
