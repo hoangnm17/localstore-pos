@@ -39,14 +39,14 @@ module.exports.createStaff = async (req, res) => {
     try {
         const { fullName, email, phoneNumber, roleId, salaryType, baseSalary, isActive, password, createdAt } = req.body;
 
+        const checkName = await staffModel.getStaffByFullName(fullName);
+        if (checkName) return res.status(400).json({ success: false, message: "Họ tên này đã tồn tại trong hệ thống!" });
+
         const checkUser = await staffModel.getUserByUsername(email);
         if (checkUser) return res.status(400).json({ success: false, message: "Email/Tên đăng nhập này đã tồn tại!" });
 
         const checkPhone = await staffModel.getStaffByPhone(phoneNumber);
         if (checkPhone) return res.status(400).json({ success: false, message: "Số điện thoại này đã được nhân viên khác sử dụng!" });
-
-        const checkName = await staffModel.getStaffByFullName(fullName);
-        if (checkName) return res.status(400).json({ success: false, message: "Họ tên này đã tồn tại trong hệ thống!" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -71,8 +71,15 @@ module.exports.getDetail = async (req, res) => {
 
 module.exports.updateStaff = async (req, res) => {
     try {
-        const { id } = req.body;
+        const { id, phoneNumber, fullName } = req.body;
+        const checkName = await staffModel.getStaffByFullName(fullName);
+        if (checkName) return res.status(400).json({ success: false, message: "Họ tên này đã tồn tại trong hệ thống!" });
+
+        const checkPhone = await staffModel.getStaffByPhone(phoneNumber);
+        if (checkPhone) return res.status(400).json({ success: false, message: "Số điện thoại này đã được nhân viên khác sử dụng!" });
         await staffModel.update(id, req.body);
         res.json({ success: true, message: "Cập nhật thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 };
