@@ -30,6 +30,16 @@ const productStockService = {
     return api.get(`/inventory/products/search`, {
       params: { keyword }
   });
+  },
+
+  getLowStockProducts() {
+    return api.get(`/inventory/products/low-stock`);
+  },
+
+  searchProductUnits(keyword) {
+    return api.get(`/inventory/product-units/search`, {
+      params: { keyword }
+    });
   }
 };
 

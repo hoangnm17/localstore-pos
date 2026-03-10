@@ -54,13 +54,18 @@ function getMonthlyPOReport(params = {}) {
   });
 }
 
+function getSuppliersByProductUnit(productUnitId) {
+  return api.get(`/inventory/product-units/${productUnitId}/suppliers`);
+}
+
 const purchaseOrderService = {
   getPurchaseOrders,
   getPurchaseOrderDetail,
   createPurchaseOrder,
   updatePurchaseOrderStatus,
   receivePurchaseOrder,
-  getMonthlyPOReport
+  getMonthlyPOReport,
+  getSuppliersByProductUnit
 };
 
 export default purchaseOrderService;
