@@ -201,6 +201,66 @@ const updateMinThreshold = async (productId, minThreshold) => {
     return result.recordset[0];
 };
 
+const getLowStockProductUnits = async () => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request().query(`
+        SELECT
+            pu.id AS productUnitId,
+            pu.unitName,
+            pu.conversionFactor,
+
+            p.id AS productId,
+            p.name AS productName,
+
+            ISNULL(i.quantityOnHand,0) AS stockQuantity,
+            i.minThreshold
+
+        FROM ProductUnits pu
+
+        JOIN Products p
+            ON p.id = pu.productId
+
+        LEFT JOIN InventoryStocks i
+            ON i.productId = p.id
+
+        WHERE ISNULL(i.quantityOnHand,0) <= i.minThreshold
+
+        ORDER BY stockQuantity ASC
+    `);
+
+    return result.recordset;
+
+};
+
+const searchProductUnits = async (keyword) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("keyword", sql.NVarChar, `%${keyword}%`)
+        .query(`
+            SELECT
+                pu.id AS productUnitId,
+                pu.unitName,
+
+                p.id AS productId,
+                p.name AS productName
+
+            FROM ProductUnits pu
+
+            JOIN Products p
+                ON p.id = pu.productId
+
+            WHERE p.name LIKE @keyword
+
+            ORDER BY p.name
+        `);
+
+    return result.recordset;
+};
+
 module.exports = {
     getStockByProductId,
     updateStock,
@@ -212,4 +272,6 @@ module.exports = {
     getProductsBySupplier,
     updateMinThreshold,
     searchProducts,
+    getLowStockProductUnits,
+    searchProductUnits
 }

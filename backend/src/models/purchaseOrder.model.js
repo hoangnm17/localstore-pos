@@ -242,7 +242,11 @@ const updateStatus = async (poId, status, userId) => {
             UPDATE PurchaseOrders
             SET
                 status = @status,
-                processBy = @userId
+                processBy = @userId,
+                totalAmount = CASE 
+                    WHEN @status IN ('Rejected','CannotDeliver') THEN 0
+                    ELSE totalAmount
+                END
             WHERE id = @poId
         `);
 
@@ -481,6 +485,54 @@ const countPurchaseOrders = async (filters) => {
 
 
 
+const getSuppliersByProductUnit = async (productUnitId) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("productUnitId", sql.Int, productUnitId)
+        .query(`
+            SELECT
+                s.id AS supplierId,
+                s.name AS supplierName,
+
+                pu.id AS productUnitId,
+                p.name AS productName,
+                pu.unitName,
+
+                spp.price,
+                spp.createdAt
+
+            FROM ProductUnits pu
+
+            JOIN Products p
+                ON p.id = pu.productId
+
+            JOIN ProductSuppliers ps
+                ON ps.productId = pu.productId
+                AND ps.status = 'active'
+
+            JOIN Suppliers s
+                ON s.id = ps.supplierId
+
+            JOIN SupplierProductPrices spp
+                ON spp.id = (
+                    SELECT TOP 1 id
+                    FROM SupplierProductPrices
+                    WHERE productId = pu.productId
+                      AND supplierId = s.id
+                      AND unitId = pu.id
+                    ORDER BY createdAt DESC
+                )
+
+            WHERE pu.id = @productUnitId
+
+            ORDER BY spp.price ASC
+        `);
+
+    return result.recordset;
+};
+
 module.exports = {
     createPurchaseOrder,
     createPurchaseOrderItem,
@@ -491,5 +543,6 @@ module.exports = {
     receiveOrder,
     getPurchaseOrderById,
     getPurchaseOrders,
-    countPurchaseOrders
+    countPurchaseOrders,
+    getSuppliersByProductUnit
 };

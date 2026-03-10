@@ -173,10 +173,40 @@ const getPurchaseOrderDetail = async (req, res) => {
 
 };
 
+const getSuppliersByProductUnit = async (req, res) => {
+
+    try {
+
+        const { productUnitId } = req.params;
+
+        const result = await purchaseOrderService.getSuppliersByProductUnit(
+            productUnitId,
+            req.user
+        );
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
+
+
 module.exports = {
     createPurchaseOrder,
     updateStatus,
     receiveOrder,
     getPurchaseOrders,
-    getPurchaseOrderDetail
+    getPurchaseOrderDetail,
+    getSuppliersByProductUnit
 };

@@ -296,6 +296,52 @@ const searchProducts = async (req, res) => {
   }
 };
 
+const getLowStockProducts = async (req, res) => {
+
+    try {
+
+        const result = await inventoryService.getLowStockProducts(req.user);
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
+const searchProductUnits = async (req, res) => {
+
+    try {
+
+        const { keyword } = req.query;
+
+        const result = await inventoryService.searchProductUnits(keyword);
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
 module.exports = {
     getCategoryStock,
     getProductStockByCategory,
@@ -305,5 +351,7 @@ module.exports = {
     getProblematicReports,
     updateProblematicStatus,
     updateMinThreshold,
-    searchProducts
+    searchProducts,
+    getLowStockProducts,
+    searchProductUnits
 }

@@ -134,6 +134,26 @@ const searchProducts = async (keyword) => {
   return products;
 };
 
+const getLowStockProducts = async (currentUser) => {
+
+    if (!currentUser.permissions.includes("CREATE_PURCHASE_ORDER")) {
+        throw new Error("PERMISSION_DENIED");
+    }
+
+    return await productModel.getLowStockProductUnits();
+
+};
+
+const searchProductUnits = async (keyword) => {
+
+    if (!keyword) {
+        return [];
+    }
+
+    return await productModel.searchProductUnits(keyword);
+};
+
+
 module.exports = {
     deductStock,
     getCategoryStock,
@@ -142,5 +162,7 @@ module.exports = {
     updateProductStock,
     getProductBasicInfo,
     updateMinThreshold,
-    searchProducts
+    searchProducts,
+    getLowStockProducts,
+    searchProductUnits
 }

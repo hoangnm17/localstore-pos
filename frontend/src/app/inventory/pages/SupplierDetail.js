@@ -141,8 +141,8 @@ function SupplierDetail() {
                     <th>Code</th>
                     <th>Đơn vị</th>
                     <th>Giá nhập</th>
-                    <th>Giá bán</th>
-                    <th>Giá bán lẻ theo sản phẩm</th>
+                    {/* <th>Giá bán</th>
+                    <th>Giá bán lẻ theo sản phẩm</th> */}
                     <th>Trạng thái</th>
                     {canUpdateProduct && <th>Chỉnh sửa</th>}
                   </tr>
@@ -171,8 +171,8 @@ function SupplierDetail() {
                       <td>{p.code}</td>
                       <td>{p.unitName}</td>
                       <td>{p.supplyPrice?.toLocaleString()} đ</td>
-                      <td>{p.salePrice?.toLocaleString()} đ</td>
-                      <td>{p.price?.toLocaleString()} đ <span>/{p.baseUnit}</span></td>
+                      {/* <td>{p.salePrice?.toLocaleString()} đ</td>
+                      <td>{p.price?.toLocaleString()} đ <span>/{p.baseUnit}</span></td> */}
 
                       <td>
                         <span

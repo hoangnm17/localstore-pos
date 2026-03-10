@@ -224,10 +224,28 @@ const getPurchaseOrderDetail = async (poId) => {
 
 };
 
+const getSuppliersByProductUnit = async (productUnitId, currentUser) => {
+
+    if (!currentUser.permissions.includes("CREATE_PURCHASE_ORDER")) {
+        throw new Error("PERMISSION_DENIED");
+    }
+
+    if (!productUnitId) {
+        throw new Error("PRODUCT_UNIT_ID_REQUIRED");
+    }
+
+    const suppliers = await purchaseOrderModel.getSuppliersByProductUnit(productUnitId);
+
+    return suppliers;
+};
+
+
+
 module.exports = {
     createPurchaseOrder,
     updateStatus,
     receiveOrder,
     getPurchaseOrders,
-    getPurchaseOrderDetail
+    getPurchaseOrderDetail,
+    getSuppliersByProductUnit
 };

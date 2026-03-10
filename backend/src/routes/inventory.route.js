@@ -93,4 +93,13 @@ router.get("/products/:productId/units", supplierController.getProductUnits);
 // GET price history detail
 router.get("/suppliers/:id/products/:productId/price-history", supplierController.getPriceHistoryDetail);
 
+//GET low stock products
+router.get("/products/low-stock", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), inventoryController.getLowStockProducts);
+
+// GET suppliers by product unit
+router.get("/product-units/:productUnitId/suppliers", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), purchaseOrderController.getSuppliersByProductUnit);
+
+// SEARCH product units
+router.get("/product-units/search", inventoryController.searchProductUnits);
+
 module.exports = router;
