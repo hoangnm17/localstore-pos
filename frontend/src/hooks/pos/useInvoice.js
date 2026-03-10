@@ -228,27 +228,51 @@ export const useInvoiceTabs = () => {
 
   const updateInvoiceCustomer = async (invoiceId, customer) => {
     const id = String(invoiceId);
+    const invoice = invoices.find(i => String(i.id) === id);
+    if (!invoice) return;
 
     try {
-      // nếu invoice đã có trên DB thì update DB
-      const invoice = invoices.find(i => String(i.id) === id);
+      if (invoice.status === "LOCAL") {
+        setInvoices(prev => prev.map(inv =>
+          inv.id === id ? { ...inv, isSaving: true } : inv
+        ));
 
-      if (invoice && invoice.status !== "LOCAL") {
+        const res = await invoiceCreate({
+          items: invoice.items,
+          customerId: customer?.id ?? null
+        });
+
+        const newDbId = res?.data?.id;
+        if (newDbId) {
+          setInvoices(prev => prev.map(inv =>
+            inv.id === id ? {
+              ...inv,
+              id: newDbId,
+              status: "UNPAID",
+              customer,
+              isSaving: false,
+              itemsLoaded: true
+            } : inv
+          ));
+          setActiveInvoiceId(newDbId);
+        }
+        return;
+      }
+
+      if (invoice.status !== "LOCAL") {
         await invoiceUpdateCustomer(id, {
           customerId: customer?.id ?? null
         });
+
+        setInvoices(prev => prev.map(inv =>
+          String(inv.id) === id ? { ...inv, customer } : inv
+        ));
       }
-
-      setInvoices(prev =>
-        prev.map(inv =>
-          String(inv.id) === id
-            ? { ...inv, customer }   // lưu full object
-            : inv
-        )
-      );
-
     } catch (err) {
       console.error("Update customer failed:", err);
+      setInvoices(prev => prev.map(inv =>
+        inv.id === id ? { ...inv, isSaving: false } : inv
+      ));
     }
   };
 
@@ -278,9 +302,9 @@ export const useInvoiceTabs = () => {
       }
 
       const data = res?.data?.data || res?.data || res;
-
+      
       if (!data?.paid) {
-        showNotification("Thanh toán thất bại!", "error");
+        showNotification(res || "Thanh toán thất bại!", "error");
         return res;
       }
 
