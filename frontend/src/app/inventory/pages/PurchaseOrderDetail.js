@@ -89,7 +89,7 @@ const PurchaseOrderDetail = () => {
     }
 
     const itemsToSend = po.items.map(item => ({
-      productUnitId: item.productUnitId,
+      poiId: item.id,
       receivedQuantity: receiveQuantities[item.id] || 0
     }));
 
@@ -154,10 +154,10 @@ const PurchaseOrderDetail = () => {
   const formatDate = (dateStr) =>
     dateStr
       ? new Date(dateStr).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "—";
 
   const getQuantitySummary = (items) => {

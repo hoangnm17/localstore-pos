@@ -152,11 +152,11 @@ const receiveOrder = async (poId, items, currentUser) => {
     for (const item of items) {
 
         const poItem = poItems.find(
-            i => i.productUnitId === item.productUnitId
+            i => i.id === item.poiId
         );
 
         if (!poItem) {
-            throw new Error("INVALID_PRODUCT");
+            throw new Error("INVALID_PO_ITEM");
         }
 
         const totalReceived =
@@ -184,7 +184,6 @@ const receiveOrder = async (poId, items, currentUser) => {
     );
 
 };
-
 const getPurchaseOrders = async (page, limit, filters) => {
 
     const offset = (page - 1) * limit;

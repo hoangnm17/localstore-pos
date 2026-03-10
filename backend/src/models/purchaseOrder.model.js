@@ -250,38 +250,50 @@ const updateStatus = async (poId, status, userId) => {
 };
 
 const receiveOrder = async (poId, items, status, userId) => {
+
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
-    try {
-        await transaction.begin();
-        for (const item of items) {
-            // 1️⃣ Lấy productId + conversionFactor
-            const unitResult = await new sql.Request(transaction)
-                .input("productUnitId", sql.Int, item.productUnitId)
-                .query(`
-                    SELECT productId, conversionFactor
-                    FROM ProductUnits
-                    WHERE id = @productUnitId
-                `);
-            if (unitResult.recordset.length === 0) {
-                throw new Error("UNIT_NOT_FOUND");
-            }
-            const unit = unitResult.recordset[0];
-            const baseQuantity = item.receivedQuantity * unit.conversionFactor;
 
-            // 2️⃣ Update receivedQuantity (KHÔNG update total vì là computed column)
+    try {
+
+        await transaction.begin();
+
+        for (const item of items) {
+
+            // 1️⃣ Lấy productUnit + productId
+            const unitResult = await new sql.Request(transaction)
+                .input("poiId", sql.Int, item.poiId)
+                .query(`
+                    SELECT 
+                        poi.productUnitId,
+                        pu.productId,
+                        pu.conversionFactor
+                    FROM PurchaseOrderItems poi
+                    JOIN ProductUnits pu 
+                        ON poi.productUnitId = pu.id
+                    WHERE poi.id = @poiId
+                `);
+
+            if (unitResult.recordset.length === 0) {
+                throw new Error("PO_ITEM_NOT_FOUND");
+            }
+
+            const unit = unitResult.recordset[0];
+
+            const baseQuantity =
+                item.receivedQuantity * unit.conversionFactor;
+
+            // 2️⃣ update received quantity
             await new sql.Request(transaction)
-                .input("receivedQuantity", sql.Decimal(15, 3), item.receivedQuantity)
-                .input("poId", sql.Int, poId)
-                .input("productUnitId", sql.Int, item.productUnitId)
+                .input("receivedQuantity", sql.Decimal(15,3), item.receivedQuantity)
+                .input("poiId", sql.Int, item.poiId)
                 .query(`
                     UPDATE PurchaseOrderItems
                     SET receivedQuantity = receivedQuantity + @receivedQuantity
-                    WHERE poId = @poId
-                    AND productUnitId = @productUnitId
+                    WHERE id = @poiId
                 `);
 
-            // 3️⃣ Update tồn kho
+            // 3️⃣ update inventory
             await new sql.Request(transaction)
                 .input("productId", sql.BigInt, unit.productId)
                 .input("quantity", sql.Decimal(15,3), baseQuantity)
@@ -295,8 +307,10 @@ const receiveOrder = async (poId, items, status, userId) => {
                         INSERT (productId, quantityOnHand)
                         VALUES (@productId, @quantity);
                 `);
+
         }
-        // 4️⃣ Tính lại totalAmount của PO theo số lượng đã nhận
+
+        // 4️⃣ update total amount
         await new sql.Request(transaction)
             .input("poId", sql.Int, poId)
             .query(`
@@ -309,7 +323,7 @@ const receiveOrder = async (poId, items, status, userId) => {
                 WHERE id = @poId
             `);
 
-        // 5️⃣ Update status PO
+        // 5️⃣ update status
         await new sql.Request(transaction)
             .input("status", sql.NVarChar, status)
             .input("userId", sql.BigInt, userId)

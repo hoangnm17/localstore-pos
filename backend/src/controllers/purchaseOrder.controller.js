@@ -93,7 +93,6 @@ const receiveOrder = async (req, res) => {
 
         const { id } = req.params;
         const { items } = req.body;
-
         const currentUser = req.user;
 
         const result = await purchaseOrderService.receiveOrder(

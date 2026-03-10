@@ -21,8 +21,7 @@ const PurchaseOrderActions = ({
       await onReload();
     } catch (err) {
       alert(
-        `Cập nhật trạng thái thất bại: ${
-          err?.response?.data?.message || err.message || "Lỗi không xác định"
+        `Cập nhật trạng thái thất bại: ${err?.response?.data?.message || err.message || "Lỗi không xác định"
         }`
       );
     } finally {
@@ -40,7 +39,7 @@ const PurchaseOrderActions = ({
       const items = po.items.map(item => {
         const remaining = (item.quantity || 0) - (item.receivedQuantity || 0);
         return {
-          productUnitId: item.productUnitId,
+          poiId: item.id,
           receivedQuantity: remaining > 0 ? remaining : 0
         };
       }).filter(i => i.receivedQuantity > 0);
