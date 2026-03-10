@@ -7,7 +7,6 @@ const StaffToggleModal = ({ staff, onClose, onSuccess }) => {
     const { showNotification } = useNotification();
 
     const isActive = staff?.isActive === 'active';
-
     const handleConfirm = async () => {
         if (isUpdating) return;
         setIsUpdating(true);
