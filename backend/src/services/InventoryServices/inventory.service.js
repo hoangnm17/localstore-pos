@@ -76,10 +76,9 @@ const getProductBasicInfo = async (productId) => {
 
 const deductStock = async (transaction, items) => {
 
-
+    const updatedStocks = [];
 
     for (const item of items) {
-
         const stock = await productModel.getStockByProductId(
             transaction,
             item.productId
@@ -89,16 +88,25 @@ const deductStock = async (transaction, items) => {
             throw new Error(`Stock not found for product ${item.productId}`);
         }
 
-        if (stock.quantity < item.quantity) {
+        if (stock.quantityOnHand < item.quantity) {
             throw new Error(`Insufficient stock for product ${item.productId}`);
         }
+
+        const newStock = stock.quantityOnHand - item.quantity;
 
         await productModel.detuctStock(
             transaction,
             item.productId,
-            stock.quantityOnHand - item.quantity
+            newStock
         );
+
+        updatedStocks.push({
+            productId: item.productId,
+            stock: newStock
+        });
     }
+
+    return updatedStocks;
 };
 
 const updateMinThreshold = async (productId, minThreshold) => {

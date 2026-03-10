@@ -9,6 +9,7 @@ const customerModel = require("../models/customer.model");
 const voucherModel = require("../models/voucher.model");
 const promotionModel = require("../models/promotion.model")
 const customerPointLogService = require("./customerPointLog.service")
+const socketService = require("./socket.service");
 
 const POINT_EXCHANGE = 100;
 const EARN_POINT_EXCHANGE = 10000;
@@ -445,7 +446,12 @@ const payCash = async (id, { payment }) => {
 
         /* ================= STOCK ================= */
 
-        await inventoryService.deductStock(transaction, invoiceItems);
+        const updatedStocks = await inventoryService.deductStock(
+            transaction,
+            invoiceItems
+        );
+
+        socketService.emitInventoryUpdate(updatedStocks);
 
         /* ================= COMPLETE ================= */
 
@@ -458,6 +464,8 @@ const payCash = async (id, { payment }) => {
         };
 
     });
+
+
 
 };
 

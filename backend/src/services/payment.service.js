@@ -7,6 +7,7 @@ const voucherModel = require("../models/voucher.model");
 const customerPointLogService = require("./customerPointLog.service");
 const sseService = require("./sse.service");
 const invoiceService = require("./invoice.service")
+const socketService = require("./socket.service");
 
 const EARN_POINT_EXCHANGE = 10000;
 
@@ -30,7 +31,7 @@ const runInTransaction = async (callback) => {
 const getBankConfig = () => {
   return {
     bankCode: process.env.BANK_CODE || "BIDV",
-    accountNumber: process.env.BANK_ACCOUNT || "4880697179",
+    accountNumber: process.env.BANK_ACCOUNT || "96247HNM17",
     accountName: process.env.ACCOUNT_NAME || "NGUYEN MINH HOANG",
     template: process.env.SEPAY_QR_TEMPLATE || "compact2",
   };
@@ -346,10 +347,12 @@ const confirmPayment = async (payload) => {
 
     /* ================= DEDUCT STOCK ================= */
 
-    await inventoryService.deductStock(
+    const updatedStocks = await inventoryService.deductStock(
       transaction,
       invoiceItems
     );
+
+    socketService.emitInventoryUpdate(updatedStocks);
 
     /* ================= UPDATE INVOICE ================= */
 
