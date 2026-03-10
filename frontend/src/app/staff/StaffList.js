@@ -19,7 +19,7 @@ const StaffList = () => {
     const [sortOrder, setSortOrder] = useState('asc');
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const itemsPerPage = 5;
 
     const [modalType, setModalType] = useState(null);
     const [selectedStaff, setSelectedStaff] = useState(null);
