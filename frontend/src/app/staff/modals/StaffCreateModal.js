@@ -11,15 +11,9 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     const { showNotification } = useNotification();
 
     const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        phoneNumber: '',
-        roleId: '',
-        salaryType: 'hourly',
-        baseSalary: 0,
-        isActive: 'active',
-        employmentStatus: 'working',
-        password: '',
+        username: '', fullName: '', email: '', phoneNumber: '',
+        roleId: '', salaryType: 'hourly', baseSalary: 0,
+        isActive: 'active', password: '',
         createdAt: new Date().toISOString().split('T')[0]
     });
 
@@ -29,9 +23,10 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     };
 
     const validateForm = () => {
-        const nameRegex = /^[\p{L}]+([\s\p{L}]+)*$/u;
-        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-        const phoneRegex = /^0[35789][0-9]{8}$/;
+        const nameRegex    = /^[\p{L}]+([\s\p{L}]+)*$/u;
+        const emailRegex   = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        const phoneRegex   = /^0[35789][0-9]{8}$/;
+        const usernameRegex = /^[a-zA-Z0-9_]{4,30}$/;
 
         const name = formData.fullName.trim();
         if (!name) return 'Họ tên không được để trống!';
@@ -39,7 +34,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         if (!nameRegex.test(name)) return 'Họ tên chỉ được chứa chữ cái và khoảng trắng!';
 
         const email = formData.email.trim();
-        if (!email) return 'Email không được để trống!';
+        if (!email) return 'Email liên lạc không được để trống!';
         if (!emailRegex.test(email)) return 'Email không đúng định dạng! (VD: abc@gmail.com)';
 
         const phone = formData.phoneNumber.trim();
@@ -53,8 +48,12 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         if (isNaN(salary) || salary < 0) return 'Lương cơ bản không được âm!';
         if (salary > 100_000_000) return 'Lương cơ bản không hợp lệ (tối đa 100 triệu)!';
 
-        if (!formData.password || formData.password.length < 6)
-            return 'Mật khẩu phải từ 6 ký tự trở lên!';
+        const un = formData.username.trim();
+        if (!un) return 'Tên đăng nhập không được để trống!';
+        if (!usernameRegex.test(un)) return 'Tên đăng nhập 4-30 ký tự, chỉ gồm a-z, 0-9, dấu _!';
+
+        if (!formData.password || formData.password.length < 6) return 'Mật khẩu phải từ 6 ký tự trở lên!';
+
         return null;
     };
     const handleSubmit = async (e) => {
@@ -70,38 +69,24 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                 onSuccess();
                 return;
             }
-            const errMsg = res.message ?? res.data?.message ?? 'Đã có lỗi xảy ra!';
-            setErrorMsg(errMsg);
-        } catch (err) {
+            setErrorMsg(res.message ?? res.data?.message ?? 'Đã có lỗi xảy ra!');
+        } catch {
             setErrorMsg('Không thể kết nối tới server!');
         } finally {
             setLoading(false);
         }
     };
-    const sectionStyle = {
-        background: '#f8faff', borderRadius: '12px',
-        padding: '20px', border: '1px solid #e0eaff'
-    };
-    const rightSectionStyle = {
-        background: '#f0fdf4', borderRadius: '12px',
-        padding: '20px', border: '1px solid #bbf7d0'
-    };
+
+    const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
+    const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0' };
+
     return (
-        <BaseModal onClose={onClose} maxWidth="900px" disableClose={loading}>
-            <div style={{
-                background: '#fff', borderRadius: '20px',
-                overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.15)'
-            }}>
-                <div style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    padding: '24px 32px', color: '#fff'
-                }}>
+        <BaseModal onClose={onClose} maxWidth="920px" disableClose={loading}>
+            <div style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.15)' }}>
+                <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '24px 32px', color: '#fff' }}>
                     <div className="d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 className="fw-bold m-0">
-                                <i className="bi bi-person-plus-fill me-2" />
-                                Thêm Nhân Viên Mới
-                            </h5>
+                            <h5 className="fw-bold m-0"><i className="bi bi-person-plus-fill me-2" />Thêm Nhân Viên Mới</h5>
                             <small className="opacity-75">Điền đầy đủ thông tin bên dưới</small>
                         </div>
                         <button onClick={onClose} disabled={loading}
@@ -110,16 +95,14 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                         </button>
                     </div>
                 </div>
-                {errorMsg && (
-                    <div style={{ padding: '16px 32px 0 32px' }}>
-                        <AlertMessage type="danger" message={errorMsg} />
-                    </div>
-                )}
+
+                {errorMsg && <div style={{ padding: '16px 32px 0 32px' }}><AlertMessage type="danger" message={errorMsg} /></div>}
+
                 <form onSubmit={handleSubmit}>
                     <div style={{ padding: '24px 32px 32px 32px', maxHeight: '65vh', overflowY: 'auto' }}>
                         <div className="row g-4">
                             <div className="col-md-6">
-                                <div style={sectionStyle}>
+                                <div style={leftStyle}>
                                     <h6 className="fw-bold text-primary mb-3">
                                         <i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân
                                     </h6>
@@ -129,7 +112,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                             placeholder="Nguyễn Văn A" onChange={handleChange} />
                                     </div>
                                     <div className="mb-3">
-                                        <label className="small fw-bold">Email <span className="text-danger">*</span></label>
+                                        <label className="small fw-bold">Email liên lạc <span className="text-danger">*</span></label>
                                         <input type="email" name="email" className="form-control"
                                             placeholder="abc@gmail.com" onChange={handleChange} />
                                     </div>
@@ -146,7 +129,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div style={rightSectionStyle}>
+                                <div style={rightStyle}>
                                     <h6 className="fw-bold text-success mb-3">
                                         <i className="bi bi-briefcase-fill me-2" />Hệ Thống & Lương
                                     </h6>
@@ -155,9 +138,9 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
                                             <select name="roleId" className="form-select" onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
-                                                <option value="1">Quản lý</option>
-                                                <option value="2">Thu Ngân</option>
-                                                <option value="3">Thủ Kho</option>
+                                                <option value="1">Manager</option>
+                                                <option value="2">Cashier</option>
+                                                <option value="3">Warehouse</option>
                                             </select>
                                         </div>
                                         <div className="col-6 mb-3">
@@ -183,15 +166,19 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                         </div>
                                     </div>
                                     <div className="mb-3">
+                                        <label className="small fw-bold">
+                                            Tên đăng nhập <span className="text-danger">*</span>
+                                        </label>
+                                        <input type="text" name="username" className="form-control"
+                                            placeholder="VD: nhanvien01" onChange={handleChange} />
+                                        <small className="text-muted">4-30 ký tự, chỉ a-z, 0-9, dấu _ </small>
+                                    </div>
+                                    <div className="mb-3">
                                         <label className="small fw-bold">Mật khẩu <span className="text-danger">*</span></label>
                                         <div className="input-group">
-                                            <input
-                                                type={showPassword ? 'text' : 'password'}
-                                                name="password"
-                                                className="form-control"
-                                                placeholder="Tối thiểu 6 ký tự"
-                                                onChange={handleChange}
-                                            />
+                                            <input type={showPassword ? 'text' : 'password'}
+                                                name="password" className="form-control"
+                                                placeholder="Tối thiểu 6 ký tự" onChange={handleChange} />
                                             <button className="btn btn-outline-secondary" type="button"
                                                 onClick={() => setShowPassword(!showPassword)}>
                                                 <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`} />
@@ -202,23 +189,11 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                             </div>
                         </div>
                     </div>
-                    <div style={{
-                        padding: '20px 32px', borderTop: '1px solid #f0f0f0',
-                        background: '#fafafa', display: 'flex',
-                        justifyContent: 'flex-end', gap: '12px'
-                    }}>
-                        <button type="button"
-                            className="btn btn-light border px-4 fw-bold"
-                            style={{ borderRadius: '12px' }}
-                            onClick={onClose} disabled={loading}>
-                            Hủy
-                        </button>
-                        <button type="submit"
-                            className="btn text-white px-4 fw-bold"
-                            style={{
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                border: 'none', borderRadius: '12px'
-                            }}
+                    <div style={{ padding: '20px 32px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <button type="button" className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }}
+                            onClick={onClose} disabled={loading}>Hủy</button>
+                        <button type="submit" className="btn text-white px-4 fw-bold"
+                            style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', borderRadius: '12px' }}
                             disabled={loading}>
                             {loading
                                 ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</>
