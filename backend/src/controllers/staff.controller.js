@@ -104,17 +104,6 @@ module.exports.updateStaff = async (req, res) => {
         } = req.body;
 
         const staffId = parseInt(id);
-        // const checkUser = await staffModel.getUserByUsername(username);
-        // if (checkUser) return res.status(400).json({ success: false, message: "Tên đăng nhập này đã tồn tại!" });
-        // if (email) {
-        //     const checkEmail = await staffModel.getStaffByEmail(email);
-        //     if (checkEmail) return res.status(400).json({ success: false, message: "Email liên lạc này đã được nhân viên khác sử dụng!" });
-        // }
-        // const checkPhone = await staffModel.getStaffByPhone(phoneNumber);
-        // if (checkPhone) return res.status(400).json({ success: false, message: "Số điện thoại này đã được nhân viên khác sử dụng!" });
-
-        const checkName = await staffModel.getStaffByFullName(fullName);
-        if (checkName) return res.status(400).json({ success: false, message: "Họ tên này đã tồn tại trong hệ thống!" });
         await staffModel.update(staffId, {
             fullName, email: email || '', phoneNumber,
             username, roleId,
