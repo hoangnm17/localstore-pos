@@ -20,14 +20,14 @@ module.exports.getShiftById = async (req, res) => {
   try {
     const { id } = req.params;
     const shift = await shiftService.getShiftById(id);
-    
+
     if (!shift) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy ca làm việc!"
       });
     }
-    
+
     return res.status(200).json({
       success: true,
       data: shift
@@ -42,26 +42,35 @@ module.exports.getShiftById = async (req, res) => {
 
 module.exports.createShift = async (req, res) => {
   try {
-    const { name, startTime, endTime } = req.body;
-    
-    const newId = await shiftService.createShift({ name, startTime, endTime });
+    const { name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline } = req.body;
+
+    const newId = await shiftService.createShift({
+      name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline
+    });
 
     return res.status(201).json({
       success: true,
       message: "Tạo ca làm việc thành công!",
-      data: { id: newId, name, startTime, endTime }
+      data: { id: newId, name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline }
     });
   } catch (err) {
     console.error(err);
-    
-    // Xử lý các lỗi từ service
-    if (err.message.includes("tồn tại") || err.message.includes("trùng")) {
+
+    if (
+      err.message.includes("tồn tại") ||
+      err.message.includes("trùng") ||
+      err.message.includes("giới hạn") ||
+      err.message.includes("deadline") ||
+      err.message.includes("Giờ") ||
+      err.message.includes("kết ca") ||
+      err.message.includes("logout")
+    ) {
       return res.status(400).json({
         success: false,
         message: err.message
       });
     }
-    
+
     return res.status(500).json({
       success: false,
       message: "Lỗi hệ thống: " + err.message
@@ -72,9 +81,11 @@ module.exports.createShift = async (req, res) => {
 module.exports.updateShift = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, startTime, endTime } = req.body;
+    const { name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline } = req.body;
 
-    await shiftService.updateShift(id, { name, startTime, endTime });
+    await shiftService.updateShift(id, {
+      name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline
+    });
 
     return res.status(200).json({
       success: true,
@@ -82,21 +93,29 @@ module.exports.updateShift = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    
+
     if (err.message.includes("Không tìm thấy")) {
       return res.status(404).json({
         success: false,
         message: err.message
       });
     }
-    
-    if (err.message.includes("tồn tại") || err.message.includes("trùng")) {
+
+    if (
+      err.message.includes("tồn tại") ||
+      err.message.includes("trùng") ||
+      err.message.includes("giới hạn") ||
+      err.message.includes("deadline") ||
+      err.message.includes("Giờ") ||
+      err.message.includes("kết ca") ||
+      err.message.includes("logout")
+    ) {
       return res.status(400).json({
         success: false,
         message: err.message
       });
     }
-    
+
     return res.status(500).json({
       success: false,
       message: "Lỗi hệ thống: " + err.message
@@ -112,25 +131,25 @@ module.exports.deleteShift = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Xóa ca làm việc thành công!"
+      message: "Vô hiệu hóa ca làm việc thành công!"
     });
   } catch (err) {
     console.error(err);
-    
+
     if (err.message.includes("Không tìm thấy")) {
       return res.status(404).json({
         success: false,
         message: err.message
       });
     }
-    
-    if (err.message.includes("đã được phân công")) {
+
+    if (err.message.includes("lịch phân công") || err.message.includes("đã được phân công")) {
       return res.status(400).json({
         success: false,
         message: err.message
       });
     }
-    
+
     return res.status(500).json({
       success: false,
       message: "Lỗi hệ thống: " + err.message
