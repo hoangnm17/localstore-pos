@@ -137,17 +137,6 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
               />
 
               {selectedProduct && (
-                <div className="mt-2 text-muted">
-                  Giá bán:{" "}
-                  <strong>
-                    {selectedProduct.salePrice
-                      ? selectedProduct.salePrice.toLocaleString()
-                      : 0} đ
-                  </strong>
-                </div>
-              )}
-
-              {selectedProduct && (
                 <>
                   <label className="form-label mt-3">Đơn vị</label>
 

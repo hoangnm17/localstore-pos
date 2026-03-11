@@ -1,116 +1,5 @@
 const { sql, connectDB } = require("../config/database.js");
 
-// exports.getMonthlyReport = async ({
-//     month,
-//     year,
-//     supplierId
-// }) => {
-
-//     const pool = await connectDB();
-
-//     let whereClause = `
-//         WHERE po.status = 'Received'
-//         AND MONTH(po.createdAt) = @month
-//         AND YEAR(po.createdAt) = @year
-//     `;
-
-//     const summaryRequest = pool.request()
-//         .input("month", sql.Int, month)
-//         .input("year", sql.Int, year);
-
-//     if (supplierId) {
-//         whereClause += " AND po.supplierId = @supplierId";
-//         summaryRequest.input("supplierId", sql.Int, supplierId);
-//     }
-
-//     /* ================= SUMMARY ================= */
-//     const summaryResult = await summaryRequest.query(`
-//         SELECT 
-//             COUNT(DISTINCT po.id) AS totalPO,
-//             ISNULL(SUM(poi.quantityOrdered),0) AS totalQuantity,
-//             COUNT(DISTINCT po.supplierId) AS totalSuppliers,
-//             COUNT(DISTINCT poi.productId) AS totalProducts,
-//             ISNULL(SUM(poi.lineTotal),0) AS totalAmount,
-//             ISNULL(AVG(po.totalAmount),0) AS avgPOValue
-//         FROM PurchaseOrders po
-//         JOIN PurchaseOrderItems poi ON po.id = poi.poId
-//         ${whereClause}
-//     `);
-
-//     /* ================= SUPPLIER STATS ================= */
-//     const supplierResult = await pool.request()
-//         .input("month", sql.Int, month)
-//         .input("year", sql.Int, year)
-//         .input("supplierId", sql.Int, supplierId || null)
-//         .query(`
-//             SELECT 
-//                 s.id,
-//                 s.name,
-//                 COUNT(DISTINCT po.id) AS totalPO,
-//                 SUM(poi.quantityOrdered) AS totalQuantity,
-//                 SUM(poi.lineTotal) AS totalAmount
-//             FROM PurchaseOrders po
-//             JOIN Suppliers s ON po.supplierId = s.id
-//             JOIN PurchaseOrderItems poi ON po.id = poi.poId
-//             WHERE po.status = 'Received'
-//             AND MONTH(po.createdAt) = @month
-//             AND YEAR(po.createdAt) = @year
-//             ${supplierId ? "AND po.supplierId = @supplierId" : ""}
-//             GROUP BY s.id, s.name
-//             ORDER BY totalAmount DESC
-//         `);
-
-//     /* ================= DAILY STATS ================= */
-//     const dailyResult = await pool.request()
-//         .input("month", sql.Int, month)
-//         .input("year", sql.Int, year)
-//         .input("supplierId", sql.Int, supplierId || null)
-//         .query(`
-//             SELECT 
-//                 DAY(po.createdAt) AS day,
-//                 SUM(poi.quantityOrdered) AS totalQuantity,
-//                 SUM(poi.lineTotal) AS totalAmount
-//             FROM PurchaseOrders po
-//             JOIN PurchaseOrderItems poi ON po.id = poi.poId
-//             WHERE po.status = 'Received'
-//             AND MONTH(po.createdAt) = @month
-//             AND YEAR(po.createdAt) = @year
-//             ${supplierId ? "AND po.supplierId = @supplierId" : ""}
-//             GROUP BY DAY(po.createdAt)
-//             ORDER BY day
-//         `);
-
-//     /* ================= TOP PRODUCTS ================= */
-//     const topProductsResult = await pool.request()
-//         .input("month", sql.Int, month)
-//         .input("year", sql.Int, year)
-//         .input("supplierId", sql.Int, supplierId || null)
-//         .query(`
-//             SELECT TOP 5
-//                 p.id,
-//                 p.name,
-//                 SUM(poi.quantityOrdered) AS totalQuantity,
-//                 SUM(poi.lineTotal) AS totalAmount
-//             FROM PurchaseOrders po
-//             JOIN PurchaseOrderItems poi ON po.id = poi.poId
-//             JOIN Products p ON poi.productId = p.id
-//             WHERE po.status = 'Received'
-//             AND MONTH(po.createdAt) = @month
-//             AND YEAR(po.createdAt) = @year
-//             ${supplierId ? "AND po.supplierId = @supplierId" : ""}
-//             GROUP BY p.id, p.name
-//             ORDER BY totalAmount DESC
-//         `);
-
-//     return {
-//         filter: { month, year, supplierId },
-//         summary: summaryResult.recordset[0] || {},
-//         supplierStats: supplierResult.recordset || [],
-//         dailyStats: dailyResult.recordset || [],
-//         topProducts: topProductsResult.recordset || []
-//     };
-// };
-
 const createPurchaseOrder = async (createdBy, supplierId, note) => {
 
     const pool = await connectDB();
@@ -264,7 +153,7 @@ const receiveOrder = async (poId, items, status, userId) => {
 
         for (const item of items) {
 
-            // 1️⃣ Lấy productUnit + productId
+            //Lấy productUnit + productId
             const unitResult = await new sql.Request(transaction)
                 .input("poiId", sql.Int, item.poiId)
                 .query(`
@@ -287,7 +176,7 @@ const receiveOrder = async (poId, items, status, userId) => {
             const baseQuantity =
                 item.receivedQuantity * unit.conversionFactor;
 
-            // 2️⃣ update received quantity
+            //update received quantity
             await new sql.Request(transaction)
                 .input("receivedQuantity", sql.Decimal(15,3), item.receivedQuantity)
                 .input("poiId", sql.Int, item.poiId)
@@ -297,7 +186,7 @@ const receiveOrder = async (poId, items, status, userId) => {
                     WHERE id = @poiId
                 `);
 
-            // 3️⃣ update inventory
+            // update inventory
             await new sql.Request(transaction)
                 .input("productId", sql.BigInt, unit.productId)
                 .input("quantity", sql.Decimal(15,3), baseQuantity)
@@ -314,7 +203,7 @@ const receiveOrder = async (poId, items, status, userId) => {
 
         }
 
-        // 4️⃣ update total amount
+        // update total amount
         await new sql.Request(transaction)
             .input("poId", sql.Int, poId)
             .query(`
@@ -327,7 +216,7 @@ const receiveOrder = async (poId, items, status, userId) => {
                 WHERE id = @poId
             `);
 
-        // 5️⃣ update status
+        // update status
         await new sql.Request(transaction)
             .input("status", sql.NVarChar, status)
             .input("userId", sql.BigInt, userId)
@@ -482,8 +371,6 @@ const countPurchaseOrders = async (filters) => {
     return result.recordset[0].total;
 
 };
-
-
 
 const getSuppliersByProductUnit = async (productUnitId) => {
 

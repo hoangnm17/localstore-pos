@@ -59,13 +59,11 @@ const getProductsBySupplier = async (supplierId) => {
                 p.id,
                 p.name,
                 p.code,
-                pu.price as salePrice,
                 p.imageUrl,
                 spp.price as supplyPrice,
                 ps.status,
                 pu.unitName,
-                p.baseUnit,
-                p.salePrice as price
+                p.baseUnit
             FROM ProductSuppliers ps
             INNER JOIN Products p ON ps.productId = p.id
 
@@ -114,8 +112,7 @@ const getProductsNotInSupplier = async (supplierId, search) => {
             p.id,
             p.name,
             p.code,
-            p.barcode,
-            p.salePrice
+            p.barcode
         FROM Products p
         ${whereClause}
         ORDER BY p.name ASC

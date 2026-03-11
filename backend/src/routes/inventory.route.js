@@ -4,6 +4,7 @@ const inventoryController = require("../controllers/inventory.controller");
 const purchaseOrderController = require("../controllers/purchaseOrder.controller");
 const supplierController = require("../controllers/supplier.controller");
 const adjustController = require("../controllers/adjust.controller");
+const poReportController = require("../controllers/poReport.controller");
 const { protect } = require("../middlewares/helperPermission.middleware");
 const PERMISSIONS = require("../constants/permissions");
 
@@ -49,7 +50,7 @@ router.get("/suppliers/list", supplierController.getSupplierList);
 router.get("/suppliers/:id", supplierController.getSupplierDetail);
 
 // // GET MONTHLY REPORT
-// router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), purchaseOrderController.getMonthlyReport);
+router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), poReportController.getMonthlyReport);
 
 // GET PRODUCTS BY SUPPLIER
 router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
