@@ -31,8 +31,7 @@ const Sidebar = () => {
         { title: 'Khuyến Mãi', icon: 'bi-ticket-perforated-fill', path: '/crm' },
         {
             title: 'Nhân Sự', icon: 'bi-people-fill', id: 'staff',
-            children: [{ title: 'Danh sách nhân viên', path: '/staff' },
-            { title: 'Tạo mới nhân viên', path: '/staff/create' }]
+            children: [{ title: 'Danh sách nhân viên', path: '/staff' }]
         },
         {
             title: 'Quản lý ca', icon: 'bi-clock-fill', id: 'shifts',
