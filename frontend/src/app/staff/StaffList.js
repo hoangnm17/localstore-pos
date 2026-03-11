@@ -89,7 +89,7 @@ const StaffList = () => {
             <div className="flex-grow-1 p-4">
                 {/* HEADER STATS */}
                 <div style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(135deg, #728bfd 0%, #3062d5 100%)',
                     borderRadius: '20px', padding: '28px 32px', marginBottom: '24px', color: '#fff'
                 }}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
