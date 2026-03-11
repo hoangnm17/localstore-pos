@@ -69,7 +69,7 @@ module.exports.create = async (data) => {
                 VALUES (@r, @u, @ph, @ia, @ca)
             `);
 
-        const newserId = userRes.recordset[0].id;
+        const newUserId = userRes.recordset[0].id;
         await request
             .input('uid',sql.Int,newUserId)
             .input('fn',sql.NVarChar,data.fullName)
@@ -146,7 +146,7 @@ module.exports.update = async (id, data) => {
             .input('ia',sql.VarChar,data.isActive || 'active')
             .input('un',sql.VarChar,data.username)
             .query(`
-                UPDATE Users SET = @r,isActive= @ia,username= @un ${passwordUpdateSQL}WHERE id = @uid
+                UPDATE Users SET roleId = @r,isActive= @ia,username= @un ${passwordUpdateSQL} WHERE id = @uid
             `);
         await transaction.commit();
         return true;
