@@ -38,13 +38,22 @@ module.exports.getWeeklySchedule = async (startDate, endDate) => {
 // Phân công ca
 module.exports.assignShift = async (staffId, shiftId, workDate) => {
     const pool = await connectDB();
+    const shiftInfo = await pool.request()
+        .input('shiftId', sql.Int, shiftId)
+        .query(`SELECT name, startTime, endTime FROM Shifts WHERE id = @shiftId`);
+    const shift = shiftInfo.recordset[0];
     await pool.request()
         .input('staffId', sql.BigInt, staffId)
-        .input('shiftId', sql.Int, shiftId || null) 
+        .input('shiftId', sql.Int, shiftId || null)
         .input('workDate', sql.Date, workDate)
+        .input('snapStart', sql.Time, shift ? shift.startTime : null)
+        .input('snapEnd', sql.Time, shift ? shift.endTime : null)
+        .input('snapName', sql.NVarChar(50), shift ? shift.name : null)
         .query(`
-            INSERT INTO WorkSchedules (staffId, shiftId, workDate, status)
-            VALUES (@staffId, @shiftId, @workDate, 'assigned')
+            INSERT INTO WorkSchedules 
+              (staffId, shiftId, workDate, status, snapshotStartTime, snapshotEndTime, snapshotShiftName)
+            VALUES 
+              (@staffId, @shiftId, @workDate, 'assigned', @snapStart, @snapEnd, @snapName)
         `);
     return true;
 };
