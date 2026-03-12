@@ -3,7 +3,7 @@ import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
-import { getProducts } from "services/Product/product.service";
+import { getAllProducts } from "services/Product/product.service";
 import ScanBarcode from "components/pos/ScanBarcode";
 import { getProductWithBarcode } from "services/Product/product.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
@@ -24,9 +24,8 @@ export default function Product({ addItem }) {
   const [totalPages, setTotalPages] = useState(1);
   const [showScan, setShowScan] = useState(false);
 
-  const socket = getSocket();
   useEffect(() => {
-
+    const socket = getSocket();
     const handleInventoryUpdate = (data) => {
 
       if (!data?.items) return;
@@ -37,7 +36,7 @@ export default function Product({ addItem }) {
           const found = data.items.find(
             (i) => String(i.productId) === String(p.id)
           );
-          
+
           if (!found) return p;
 
           return {
@@ -58,7 +57,6 @@ export default function Product({ addItem }) {
 
   }, []);
 
-  /* ================= SCAN HOTKEY ================= */
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -78,41 +76,52 @@ export default function Product({ addItem }) {
     };
   }, []);
 
-  /* ================= BARCODE SCAN ================= */
+
+  const handleAddItem = (product, unit) => {
+    if (unit.stock <= 0) {
+      showNotification(`Sản phẩm [${unit?.unitName || 'Đơn vị'}] đã hết hàng!`, "error");
+      return;
+    }
+
+    addItem({
+      productId: product.id,
+      unitId: unit.unitId,
+      productName: product.name,
+      unitName: unit.unitName,
+      unitPrice: unit.price,
+      quantityOnHand: unit.stock,
+      factor: unit.factor,
+      unitType: unit.unitType,
+    });
+
+    showNotification(`Đã thêm ${product.name} - (${unit.unitName})`, "success");
+  };
 
   const handleBarcode = async (barcode) => {
     try {
-      const res = await getProductWithBarcode(barcode);
+      const res = await getAllProducts({
+        search: barcode,
+        page: 1,
+        limit: 1 
+      });
 
-      if (res?.success) {
-        const product = res.data;
+      if (res?.success && res.data.length > 0) {
+        const product = res.data[0];
+        const matchedUnit = product.units?.find(u => u.barcode === barcode);
 
-        if (product.quantityOnHand > 0) {
-          addItem({
-            productId: product.id,
-            productName: product.name,
-            unitPrice: product.salePrice,
-          });
+        if (matchedUnit) {
+          handleAddItem(product, matchedUnit);
         } else {
-          showNotification(
-            res?.message || "Sản phẩm hết hàng!",
-            "error"
-          );
+          handleAddItem(product, product.units[0]);
         }
-
       } else {
-        showNotification(
-          res?.message || "Sản phẩm không tồn tại!",
-          "error"
-        );
+        showNotification("Sản phẩm không tồn tại hoặc hết hàng!", "error");
       }
-
     } catch (err) {
       console.error("Scan error:", err);
+      showNotification("Lỗi khi quét mã vạch", "error");
     }
   };
-
-  /* ================= FETCH CATEGORY ================= */
 
   useEffect(() => {
     fetchCategories();
@@ -129,7 +138,6 @@ export default function Product({ addItem }) {
     }
   };
 
-  /* ================= FETCH PRODUCTS ================= */
 
   useEffect(() => {
     fetchProductList();
@@ -140,15 +148,15 @@ export default function Product({ addItem }) {
 
     try {
 
-      const res = await getProducts({
+      const res = await getAllProducts({
         page: currentPage,
         limit: PAGE_CONFIG.ITEMS_PER_PAGE,
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
-      if (res.data.success) {
-        setProducts(res.data.data || []);
-        setTotalPages(res.data.totalPages || 1);
+      if (res.success) {
+        setProducts(res.data || []);
+        setTotalPages(res.totalPages || 1);
       }
 
     } catch (err) {
@@ -161,8 +169,6 @@ export default function Product({ addItem }) {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedCategory]);
-
-  /* ================= UI ================= */
 
   return (
     <div className="container-fluid py-4 bg-light min-vh-100">
@@ -178,7 +184,7 @@ export default function Product({ addItem }) {
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
-                addItem={addItem}
+                addItem={handleBarcode}
               />
             </div>
 
@@ -197,17 +203,8 @@ export default function Product({ addItem }) {
               <>
                 <ProductList
                   products={products}
-                  onSelect={(product) => {
-
-                    if (product.stockQuantity === 0) return;
-
-                    addItem({
-                      productId: product.id,
-                      productName: product.name,
-                      unitPrice: product.salePrice,
-                      quantityOnHand: product.stockQuantity,
-                    });
-
+                  onSelect={(product, selectedUnit) => {
+                    handleAddItem(product, selectedUnit)
                   }}
                 />
 

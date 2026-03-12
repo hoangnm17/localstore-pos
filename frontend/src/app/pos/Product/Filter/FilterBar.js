@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import useDebounce from "hooks/common/useDebounce";
-import { getProductWithBarcode } from "services/Product/product.service";
+import { getAllProducts, getProductWithBarcode } from "services/Product/product.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 
 const ITEMS_PER_PAGE = 4;
@@ -20,26 +20,7 @@ export default function FilterBar({
   const debouncedKeyword = useDebounce(displayKeyword, 500);
 
   const handleAddItem = async (keyword) => {
-    try {
-      const res = await getProductWithBarcode(keyword);
-      if (res?.success) {
-        const product = res.data;
-        if (product.quantityOnHand > 0) {
-          addItem({
-            productId: product.id,
-            productName: product.name,
-            unitPrice: product.salePrice,
-          });
-        } else {
-          showNotification(res?.message || "Sản phẩm hết hàng!", "error");
-        }
-
-      } else {
-        showNotification(res?.message || "Sản phẩm không tồn tại!", "error");
-      }
-    } catch (err) {
-      console.error("Scan error:", err);
-    }
+    addItem(keyword);
   };
 
   useEffect(() => {
@@ -129,8 +110,8 @@ export default function FilterBar({
           {/* ALL */}
           <button
             className={`btn rounded-pill px-4 fw-semibold ${!selectedCategory
-                ? "btn-primary shadow-sm"
-                : "btn-light border text-secondary"
+              ? "btn-primary shadow-sm"
+              : "btn-light border text-secondary"
               }`}
             style={{
               transition: "all .2s",
@@ -147,8 +128,8 @@ export default function FilterBar({
               <button
                 key={cat.id}
                 className={`btn rounded-pill px-4 fw-semibold ${isActive
-                    ? "btn-primary shadow-sm"
-                    : "btn-light border text-secondary"
+                  ? "btn-primary shadow-sm"
+                  : "btn-light border text-secondary"
                   }`}
                 style={{
                   transition: "all .2s",
