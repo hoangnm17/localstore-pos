@@ -65,10 +65,7 @@ module.exports.createShift = async (req, res) => {
       err.message.includes("kết ca") ||
       err.message.includes("logout")
     ) {
-      return res.status(400).json({
-        success: false,
-        message: err.message
-      });
+      return res.status(400).json({ success: false, message: err.message });
     }
 
     return res.status(500).json({
@@ -95,10 +92,7 @@ module.exports.updateShift = async (req, res) => {
     console.error(err);
 
     if (err.message.includes("Không tìm thấy")) {
-      return res.status(404).json({
-        success: false,
-        message: err.message
-      });
+      return res.status(404).json({ success: false, message: err.message });
     }
 
     if (
@@ -108,12 +102,10 @@ module.exports.updateShift = async (req, res) => {
       err.message.includes("deadline") ||
       err.message.includes("Giờ") ||
       err.message.includes("kết ca") ||
-      err.message.includes("logout")
+      err.message.includes("logout") ||
+      err.message.includes("ngừng sử dụng")
     ) {
-      return res.status(400).json({
-        success: false,
-        message: err.message
-      });
+      return res.status(400).json({ success: false, message: err.message });
     }
 
     return res.status(500).json({
@@ -123,31 +115,26 @@ module.exports.updateShift = async (req, res) => {
   }
 };
 
-module.exports.deleteShift = async (req, res) => {
+module.exports.toggleShift = async (req, res) => {
   try {
     const { id } = req.params;
+    const result = await shiftService.toggleShift(id);
 
-    await shiftService.deleteShift(id);
-
+    const statusLabel = result.newActive === 1 ? "kích hoạt" : "ngừng sử dụng";
     return res.status(200).json({
       success: true,
-      message: "Vô hiệu hóa ca làm việc thành công!"
+      message: `Đã ${statusLabel} ca làm việc thành công!`,
+      data: { isActive: result.newActive }
     });
   } catch (err) {
     console.error(err);
 
     if (err.message.includes("Không tìm thấy")) {
-      return res.status(404).json({
-        success: false,
-        message: err.message
-      });
+      return res.status(404).json({ success: false, message: err.message });
     }
 
-    if (err.message.includes("lịch phân công") || err.message.includes("đã được phân công")) {
-      return res.status(400).json({
-        success: false,
-        message: err.message
-      });
+    if (err.message.includes("lịch phân công")) {
+      return res.status(400).json({ success: false, message: err.message });
     }
 
     return res.status(500).json({
