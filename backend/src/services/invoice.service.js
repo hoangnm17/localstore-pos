@@ -64,7 +64,7 @@ const validateItems = (items) => {
         throw new Error("Items must be array");
 
     for (const item of items) {
-        if (!item?.productId || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+        if (!item?.productId || item.quantity <= 0) {
             throw new Error("Invalid item format");
         }
     }
@@ -78,12 +78,8 @@ const getAllInvoice = async ({ page, pageSize, status } = {}) => {
     });
 };
 
-const createInvoice = async ({ items, staffId, counterId }) => {
+const createInvoice = async ({ items, staffId, counterId, customerId }) => {
     if (!staffId) throw new Error("Invalid staff");
-
-    if (!Array.isArray(items) || items.length === 0) {
-        throw new Error("Invoice must have items");
-    }
 
     validateItems(items);
 
@@ -94,6 +90,7 @@ const createInvoice = async ({ items, staffId, counterId }) => {
             staffId,
             invoiceCode,
             counterId,
+            customerId,
         });
 
         invoiceCode = generateInvoiceCode(invoiceId);
@@ -102,11 +99,12 @@ const createInvoice = async ({ items, staffId, counterId }) => {
         let totalAmount = 0;
 
         for (const item of items) {
-            const product = await invoiceModel.getProductById(transaction, item.productId);
+            const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
             const unitPrice = product.salePrice;
             const lineTotal = unitPrice * item.quantity;
+            const baseQuantity = item.quantity * product.conversionFactor;
 
             totalAmount += lineTotal;
 
@@ -117,6 +115,9 @@ const createInvoice = async ({ items, staffId, counterId }) => {
                 quantity: item.quantity,
                 unitPrice,
                 lineTotal,
+                productUnitId: item.productUnitId,
+                unitName: product.unitName,
+                baseQuantity,
             });
         }
 
@@ -261,24 +262,24 @@ const updateInvoiceItems = async (id, { items }) => {
 
         for (const item of items) {
 
-            const product =
-                await invoiceModel.getProductById(transaction, item.productId);
-
-            if (!product)
-                throw new Error(`Product ${item.productId} not found`);
+            const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
+            if (!product) throw new Error(`Product ${item.productId} not found`);
 
             const unitPrice = product.salePrice;
             const lineTotal = unitPrice * item.quantity;
+            const baseQuantity = item.quantity * product.conversionFactor;
 
             totalAmount += lineTotal;
-
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId: id,
                 productId: item.productId,
                 productName: product.name,
                 quantity: item.quantity,
                 unitPrice,
-                lineTotal
+                lineTotal,
+                productUnitId: item.productUnitId,
+                unitName: product.unitName,
+                baseQuantity,
             });
 
         }
@@ -321,8 +322,7 @@ const payCash = async (id, { payment }) => {
         if (payment?.method !== "CASH")
             throw new Error("Invalid payment method");
 
-        const invoiceItems =
-            await invoiceModel.getInvoiceItems(transaction, id);
+        const invoiceItems = await invoiceModel.getInvoiceItems(transaction, id);
 
         if (!invoiceItems.length)
             throw new Error("Cannot pay empty invoice");

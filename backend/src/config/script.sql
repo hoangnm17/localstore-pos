@@ -1,18 +1,11 @@
-﻿USE [master];
+﻿﻿USE [master];
 GO
 
--- 1. TẠO DATABASE
-IF EXISTS (SELECT name FROM sys.databases WHERE name = N'LocalStorePOS')
-BEGIN
-    ALTER DATABASE [RetailPOS_DB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE [RetailPOS_DB];
-END
+
+CREATE DATABASE [LocalStorePOS_Final];
 GO
 
-CREATE DATABASE [LocalStorePOS];
-GO
-
-USE [LocalStorePOS];
+USE [LocalStorePOS_Final];
 GO
 
 -- ================================================================
@@ -169,28 +162,34 @@ CREATE TABLE [Categories] (
 );
 GO
 
+-- 17. Suppliers
+CREATE TABLE [Suppliers] (
+    [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [name] NVARCHAR(255) NOT NULL,
+    [contactInfo] NVARCHAR(255),
+    [address] NVARCHAR(255)
+);
+GO
+
 -- 12. Products
 CREATE TABLE [Products] (
     [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
     [code] VARCHAR(50) NOT NULL UNIQUE,
-    [barcode] VARCHAR(50) UNIQUE,
     [imageUrl] NVARCHAR(500) NULL,
     [name] NVARCHAR(200) NOT NULL,
     [categoryId] INT,
     [baseUnit] NVARCHAR(20) NOT NULL,
     [allowDecimalQuantity] BIT DEFAULT 0,
-    [costPrice] DECIMAL(15, 2) DEFAULT 0,
-    [salePrice] DECIMAL(15, 2) DEFAULT 0,
     [isCombo] BIT DEFAULT 0,
     [status] VARCHAR(20) DEFAULT 'Selling',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     [updatedAt] DATETIME2 DEFAULT GETDATE(),
-    [supplierId] INT NULL,
     
-    CONSTRAINT [FK_Product_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
-    CONSTRAINT [FK_Product_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
-    CONSTRAINT [CK_Product_Status] CHECK ([status] IN ('Selling', 'StopSelling', 'Suspended'))
+    CONSTRAINT [FK_Products_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id])
 );
+GO
+
+CREATE INDEX [IX_Products_Name] ON [Products]([name]);
 GO
 
 -- 13. ProductUnits
@@ -200,39 +199,93 @@ CREATE TABLE [ProductUnits] (
     [unitName] NVARCHAR(20) NOT NULL,
     [unitType] VARCHAR(20) NOT NULL DEFAULT 'PIECE',
     [conversionFactor] DECIMAL(10,3) NOT NULL,
-    [price] DECIMAL(15, 2) NOT NULL,
-    [barcode] VARCHAR(50) UNIQUE,
+    [salePrice] DECIMAL(15, 2) NOT NULL,
+    [barcode] VARCHAR(50) NULL,
     
-    CONSTRAINT [FK_Unit_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_ProductUnit_Type] CHECK (unitType IN ('PIECE', 'WEIGHT'))
+    CONSTRAINT [FK_ProductUnits_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
+    CONSTRAINT [UQ_ProductUnits_Product_UnitName] UNIQUE ([productId], [unitName]),
+    CONSTRAINT [UQ_ProductUnits_ProductId_Id] UNIQUE ([productId], [id]),
+    CONSTRAINT [CK_ProductUnits_UnitType] CHECK ([unitType] IN ('PIECE', 'WEIGHT')),
+    CONSTRAINT [CK_ProductUnits_ConversionFactor] CHECK ([conversionFactor] > 0),
+    CONSTRAINT [CK_ProductUnits_SalePrice] CHECK ([salePrice] >= 0)
 );
 GO
 
+-- Mỗi sản phẩm chỉ có tối đa 1 base unit (conversionFactor = 1)
+CREATE UNIQUE INDEX [UX_ProductUnits_OneBaseUnit]
+ON [ProductUnits]([productId])
+WHERE [conversionFactor] = 1;
+GO
 
+-- Barcode không bắt buộc nhưng nếu có thì phải unique
+CREATE UNIQUE INDEX [UX_ProductUnits_Barcode_NotNull]
+ON [ProductUnits]([barcode])
+WHERE [barcode] IS NOT NULL;
+GO
+
+CREATE INDEX [IX_ProductUnits_ProductId]
+ON [ProductUnits]([productId]);
+GO
+
+CREATE TABLE [ProductSuppliers] (
+    [productId] BIGINT NOT NULL,
+    [supplierId] INT NOT NULL,
+    [status] VARCHAR(20) DEFAULT 'active',
+    PRIMARY KEY ([productId], [supplierId]),
+    CONSTRAINT [FK_PS_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]),
+    CONSTRAINT [FK_PS_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id])
+);
+GO
+
+CREATE TABLE [SupplierProductPrices] (
+    [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [productId] BIGINT NOT NULL,
+    [supplierId] INT NOT NULL,
+    [unitId] INT NOT NULL,
+    [price] DECIMAL(15,2) NOT NULL,
+    [effectiveFrom] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [createdAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [createdBy] BIGINT NULL,
+
+    CONSTRAINT [FK_SPP_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]),
+    CONSTRAINT [FK_SPP_Supplier] FOREIGN KEY ([supplierId]) REFERENCES [Suppliers]([id]),
+    CONSTRAINT [FK_SPP_ProductUnit] FOREIGN KEY ([unitId]) REFERENCES [ProductUnits]([id]),
+    CONSTRAINT [FK_SPP_Staff] FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id])
+);
+GO
+
+CREATE INDEX [IX_SPP_Product_Supplier_Unit_EffectiveFrom]
+ON [SupplierProductPrices] ([productId], [supplierId], [unitId], [effectiveFrom] DESC);
+GO
 
 -- 14. ProductCombos
 CREATE TABLE [ProductCombos] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [parentProductId] BIGINT NOT NULL,
     [childProductId] BIGINT NOT NULL,
-    [quantity] INT DEFAULT 1,
+    [quantity] DECIMAL(15,3) NOT NULL DEFAULT 1,
     
     CONSTRAINT [FK_Combo_Parent] FOREIGN KEY ([parentProductId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Combo_Child] FOREIGN KEY ([childProductId]) REFERENCES [Products]([id])
+    CONSTRAINT [FK_Combo_Child] FOREIGN KEY ([childProductId]) REFERENCES [Products]([id]),
+    CONSTRAINT [CK_ProductCombos_Quantity] CHECK ([quantity] > 0),
+    CONSTRAINT [CK_ProductCombos_ParentChild] CHECK ([parentProductId] <> [childProductId]),
+    CONSTRAINT [UQ_ProductCombos_Parent_Child] UNIQUE ([parentProductId], [childProductId])
 );
 GO
 
--- 15. ProductPriceHistories
-CREATE TABLE [ProductPriceHistories] (
+-- 15. ProductSalePriceHistories
+CREATE TABLE [ProductSalePriceHistories] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [productId] BIGINT NOT NULL,
-    [oldPrice] DECIMAL(15, 2),
-    [newPrice] DECIMAL(15, 2),
-    [changedBy] BIGINT, 
-    [changedAt] DATETIME2 DEFAULT GETDATE(),
+    [productUnitId] INT NOT NULL,
+    [oldSalePrice] DECIMAL(15, 2),
+    [newSalePrice] DECIMAL(15, 2),
+    [changedBy] BIGINT NULL, 
+    [changedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     
-    CONSTRAINT [FK_History_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_History_Staff] FOREIGN KEY ([changedBy]) REFERENCES [Staff]([id])
+    CONSTRAINT [FK_ProductSalePriceHistories_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_ProductSalePriceHistories_ProductUnit]FOREIGN KEY ([productId], [productUnitId])REFERENCES [ProductUnits]([productId], [id]),
+    CONSTRAINT [FK_ProductSalePriceHistories_Staff] FOREIGN KEY ([changedBy]) REFERENCES [Staff]([id])
 );
 GO
 
@@ -240,13 +293,16 @@ GO
 CREATE TABLE [LabelPrintQueue] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [productId] BIGINT NOT NULL,
+    [productUnitId] INT NOT NULL,
     [barcode] VARCHAR(50) NOT NULL,
     [quantity] INT DEFAULT 1,
     [status] VARCHAR(20) DEFAULT 'Pending',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     
     CONSTRAINT [FK_Queue_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_Queue_Status] CHECK ([status] IN ('Pending', 'Printed', 'Cancelled'))
+    CONSTRAINT [FK_LabelPrintQueue_ProductUnit]FOREIGN KEY ([productId], [productUnitId]) REFERENCES [ProductUnits]([productId], [id]),
+    CONSTRAINT [CK_Queue_Status] CHECK ([status] IN ('Pending', 'Printed', 'Cancelled')),
+    CONSTRAINT [CK_LabelPrintQueue_Quantity] CHECK ([quantity] > 0)
 );
 GO
 
@@ -254,14 +310,6 @@ GO
 -- MODULE 3: SUPPLY CHAIN & INVENTORY (FIXED VERSION)
 -- ================================================================
 
--- 17. Suppliers
-CREATE TABLE [Suppliers] (
-    [id] INT IDENTITY(1,1) PRIMARY KEY,
-    [name] NVARCHAR(255) NOT NULL,
-    [contactInfo] NVARCHAR(255),
-    [address] NVARCHAR(255)
-);
-GO
 
 
 -- 18. InventoryStocks
@@ -493,24 +541,39 @@ CREATE TABLE [Invoices] (
     CONSTRAINT [FK_Invoice_Customer] FOREIGN KEY ([customerId]) REFERENCES [Customers]([id]),
     CONSTRAINT [FK_Invoice_Promotion] FOREIGN KEY ([promotionId]) REFERENCES [Promotions]([id]),
     CONSTRAINT [FK_Invoice_Voucher] FOREIGN KEY ([voucherId]) REFERENCES [Vouchers]([id]),
-    CONSTRAINT [CK_Invoice_Status] CHECK ([status] IN ('UNPAID', 'PAID', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED'))
+    CONSTRAINT [CK_Invoice_Status] CHECK ([status] IN ('UNPAID', 'PAID', 'CANCELLED', 'REFUNDED'))
 );
 GO
 
 -- 29. InvoiceItems
-CREATE TABLE [InvoiceItems] (
-    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [invoiceId] BIGINT NOT NULL,
-    [productId] BIGINT NOT NULL,
-    [productName] NVARCHAR(255) NOT NULL,
-    [unitPrice] DECIMAL(15,2) NOT NULL,
-    [quantity] INT NOT NULL,
-    [lineTotal] DECIMAL(15,2) NOT NULL,
-    
-    CONSTRAINT [FK_InvItem_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_InvItem_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id])
+CREATE TABLE InvoiceItems (
+    id BIGINT IDENTITY PRIMARY KEY,
+
+    invoiceId BIGINT NOT NULL,
+
+    productId BIGINT NOT NULL,
+    productUnitId INT NOT NULL,
+
+    productName NVARCHAR(255) NOT NULL,
+    unitName NVARCHAR(20) NOT NULL,
+
+    unitPrice DECIMAL(15,2) NOT NULL,
+
+    quantity DECIMAL(15,3) NOT NULL,
+
+    baseQuantity DECIMAL(15,3) NOT NULL,
+
+    lineTotal DECIMAL(15,2) NOT NULL,
+
+    CONSTRAINT FK_InvoiceItems_Invoice
+        FOREIGN KEY (invoiceId) REFERENCES Invoices(id) ON DELETE CASCADE,
+
+    CONSTRAINT FK_InvoiceItems_Product
+        FOREIGN KEY (productId) REFERENCES Products(id),
+
+    CONSTRAINT FK_InvoiceItems_ProductUnit
+        FOREIGN KEY (productUnitId) REFERENCES ProductUnits(id)
 );
-GO
 
 -- 30. Payments
 CREATE TABLE [Payments] (
@@ -522,59 +585,86 @@ CREATE TABLE [Payments] (
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     
     CONSTRAINT [FK_Payment_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_Payment_Method] CHECK ([paymentMethod] IN ('CASH', 'QR_VNPAY', 'BANK_TRANSFER')),
+    CONSTRAINT [CK_Payment_Method] CHECK ([paymentMethod] IN ('CASH', 'BANK_TRANSFER')),
     CONSTRAINT [CK_Payment_Status] CHECK ([status] IN ('PENDING', 'SUCCESS', 'FAILED'))
 );
 GO
 
--- 31. VnPayTransactions
-CREATE TABLE [VnPayTransactions] (
-    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [invoiceId] BIGINT NOT NULL UNIQUE,
-    [txnRef] VARCHAR(100),
-    [responseCode] VARCHAR(10),
-    [payUrl] NVARCHAR(MAX),
-    [status] VARCHAR(20),
-    [createdAt] DATETIME2 DEFAULT GETDATE(),
-    
-    CONSTRAINT [FK_VnPay_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]) ON DELETE CASCADE,
-    CONSTRAINT [CK_VnPay_Status] CHECK ([status] IN ('INIT', 'SUCCESS', 'FAILED'))
-);
-GO
+-- 31. SePayTransactions (ĐÃ MỞ KHÓA & CHUẨN HÓA) 
+CREATE TABLE [SePayTransactions] ( 
+[id] BIGINT IDENTITY(1,1) PRIMARY KEY, 
+[invoiceId] BIGINT NOT NULL UNIQUE, 
+[sepayId] BIGINT, -- ID giao dịch từ hệ thống SePay 
+[transactionContent] NVARCHAR(255), -- Nội dung chuyển khoản để đối soát 
+[amountIn] DECIMAL(18, 2), -- Số tiền thực nhận vào ngân hàng 
+[bankAccountNumber] VARCHAR(50), [transactionDate] DATETIME2, 
+[status] VARCHAR(20) DEFAULT 'PENDING', 
+[createdAt] DATETIME2 DEFAULT GETDATE(), 
+[confirmedAt] DATETIME2, 
+CONSTRAINT [FK_SePay_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]) ON DELETE CASCADE, 
+CONSTRAINT [CK_SePay_Status] CHECK ([status] IN ('PENDING', 'SUCCESS', 'EXPIRED')) );
 
--- 32. Returns
+-- 32. Returns (Đã fix lỗi cú pháp và bổ sung liên kết)
 CREATE TABLE [Returns] (
     [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
     [invoiceId] BIGINT NOT NULL,
     [counterId] BIGINT NOT NULL,
-    [staffId] BIGINT NOT NULL,
+    [staffId] BIGINT NOT NULL, -- Nhân viên tạo phiếu trả
     
     [returnType] VARCHAR(20) NOT NULL,
     [refundMethod] VARCHAR(20) NOT NULL,
     [totalRefundAmount] DECIMAL(15,2) NOT NULL,
     [reason] NVARCHAR(MAX),
+    
+    [status] VARCHAR(20) DEFAULT 'Pending', -- Đã sửa: Thêm kiểu dữ liệu
+    [approveBy] BIGINT NULL,               -- Đã sửa: Thêm kiểu dữ liệu và cho phép NULL
+    
     [createdAt] DATETIME2 DEFAULT GETDATE(),
     
+    -- Constraints
     CONSTRAINT [FK_Returns_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]),
     CONSTRAINT [FK_Returns_Counter] FOREIGN KEY ([counterId]) REFERENCES [Counters]([id]),
     CONSTRAINT [FK_Returns_Staff] FOREIGN KEY ([staffId]) REFERENCES [Staff]([id]),
+    CONSTRAINT [FK_Returns_ApproveBy] FOREIGN KEY ([approveBy]) REFERENCES [Staff]([id]),
+    
     CONSTRAINT [CK_Return_Type] CHECK ([returnType] IN ('REFUND', 'EXCHANGE')),
-    CONSTRAINT [CK_Refund_Method] CHECK ([refundMethod] IN ('CASH', 'QR_VNPAY'))
+    CONSTRAINT [CK_Refund_Method] CHECK ([refundMethod] IN ('CASH', 'QR_VNPAY')),
+    CONSTRAINT [CK_Return_Status] CHECK ([status] IN ('Pending', 'Approve', 'Reject'))
 );
 GO
 
+
 -- 33. ReturnItems
-CREATE TABLE [ReturnItems] (
-    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [returnId] BIGINT NOT NULL,
-    [invoiceItemId] BIGINT NOT NULL,
-    [productId] BIGINT NOT NULL,
-    [quantity] INT NOT NULL,
-    [refundAmount] DECIMAL(15,2) NOT NULL,
-    
-    CONSTRAINT [FK_RItem_Return] FOREIGN KEY ([returnId]) REFERENCES [Returns]([id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_RItem_InvItem] FOREIGN KEY ([invoiceItemId]) REFERENCES [InvoiceItems]([id]),
-    CONSTRAINT [FK_RItem_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id])
+CREATE TABLE ReturnItems (
+    id BIGINT IDENTITY PRIMARY KEY,
+
+    returnId BIGINT NOT NULL,
+
+    invoiceItemId BIGINT NOT NULL,
+
+    productId BIGINT NOT NULL,
+    productUnitId INT NOT NULL,
+
+    productName NVARCHAR(255) NOT NULL,
+    unitName NVARCHAR(20) NOT NULL,
+
+    quantity DECIMAL(15,3) NOT NULL,
+
+    baseQuantity DECIMAL(15,3) NOT NULL,
+
+    refundAmount DECIMAL(15,2) NOT NULL,
+
+    CONSTRAINT FK_RItem_Return
+        FOREIGN KEY (returnId) REFERENCES Returns(id) ON DELETE CASCADE,
+
+    CONSTRAINT FK_RItem_InvItem
+        FOREIGN KEY (invoiceItemId) REFERENCES InvoiceItems(id),
+
+    CONSTRAINT FK_RItem_Product
+        FOREIGN KEY (productId) REFERENCES Products(id),
+
+    CONSTRAINT FK_RItem_ProductUnit
+        FOREIGN KEY (productUnitId) REFERENCES ProductUnits(id)
 );
 GO
 
@@ -610,6 +700,16 @@ CREATE TABLE [CustomerVoucherUsage] (
 );
 GO
 
+ALTER TABLE Invoices
+ADD CONSTRAINT DF_Invoices_TotalAmount
+DEFAULT 0
+FOR TotalAmount;
+
+ALTER TABLE Invoices
+ADD CONSTRAINT DF_Invoices_FinalAmount
+DEFAULT 0
+FOR FinalAmount;
+
 -- ================================================================
 -- TRIGGERS (Tự động cập nhật updatedAt)
 -- ================================================================
@@ -635,6 +735,43 @@ BEGIN
     SET [updatedAt] = GETDATE()
     FROM [Customers] t
     INNER JOIN inserted i ON t.id = i.id
+END
+GO
+
+CREATE TRIGGER [TR_SupplierProductPrices_Validate]
+ON [SupplierProductPrices]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- unitId phải thuộc đúng productId
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN [ProductUnits] pu ON pu.[id] = i.[unitId]
+        WHERE pu.[productId] <> i.[productId]
+    )
+    BEGIN
+        RAISERROR (N'unitId trong SupplierProductPrices phải thuộc đúng productId.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- productId + supplierId phải tồn tại trong ProductSuppliers
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN [ProductSuppliers] ps
+            ON ps.[productId] = i.[productId]
+           AND ps.[supplierId] = i.[supplierId]
+        WHERE ps.[productId] IS NULL
+    )
+    BEGIN
+        RAISERROR (N'Phải khai báo ProductSuppliers trước khi thêm SupplierProductPrices.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
 END
 GO
 -- END OF SCRIPT

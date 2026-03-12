@@ -92,26 +92,50 @@ const getInvoiceList = async ({
    TRANSACTION FUNCTIONS
 ===================================================== */
 
-const insertInvoice = async (transaction, { staffId, invoiceCode, counterId }) => {
-    const result = await new sql.Request(transaction)
-        .input("status", sql.VarChar, "UNPAID")
-        .input("counterId", sql.Int, counterId)
-        .input("staffId", sql.Int, staffId)
-        .input("invoiceCode", sql.VarChar, invoiceCode)
-        .query(`
-      INSERT INTO Invoices (invoiceCode, staffId, counterId, status, createdAt)
+const insertInvoice = async (
+  transaction,
+  { staffId, invoiceCode, counterId, customerId = null }
+) => {
+  const result = await new sql.Request(transaction)
+    .input("invoiceCode", sql.VarChar(50), invoiceCode)
+    .input("staffId", sql.BigInt, staffId)
+    .input("counterId", sql.BigInt, counterId)
+    .input("customerId", sql.BigInt, customerId)
+    .input("status", sql.VarChar(20), "UNPAID")
+    .input("totalAmount", sql.Decimal(15, 2), 0)
+    .input("finalAmount", sql.Decimal(15, 2), 0)
+    .query(`
+      INSERT INTO Invoices (
+        invoiceCode,
+        staffId,
+        counterId,
+        customerId,
+        totalAmount,
+        finalAmount,
+        status,
+        createdAt
+      )
       OUTPUT INSERTED.id
-      VALUES (@invoiceCode, @staffId, @counterId, @status, GETDATE())
+      VALUES (
+        @invoiceCode,
+        @staffId,
+        @counterId,
+        @customerId,
+        @totalAmount,
+        @finalAmount,
+        @status,
+        GETDATE()
+      )
     `);
 
-    return result.recordset[0].id;
+  return result.recordset[0].id;
 };
 
 const updateInvoiceCode = async (transaction, invoiceId, invoiceCode) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("invoiceCode", sql.VarChar, invoiceCode)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .input("invoiceCode", sql.VarChar, invoiceCode)
+    .query(`
             UPDATE Invoices
             SET invoiceCode = @invoiceCode
             WHERE id = @invoiceId
@@ -119,25 +143,25 @@ const updateInvoiceCode = async (transaction, invoiceId, invoiceCode) => {
 };
 
 const updateInvoiceDiscount = async (
-    transaction,
-    invoiceId,
-    promotionId,
-    promotionDiscount = 0,
-    voucherId,
-    voucherDiscount = 0,
-    usedPoints = 0,
-    pointDiscount = 0,
+  transaction,
+  invoiceId,
+  promotionId,
+  promotionDiscount = 0,
+  voucherId,
+  voucherDiscount = 0,
+  usedPoints = 0,
+  pointDiscount = 0,
 ) => {
 
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("promotionId", sql.Int, promotionId || null)
-        .input("promotionDiscount", sql.Decimal(10, 2), promotionDiscount || 0)
-        .input("voucherId", sql.Int, voucherId || null)
-        .input("voucherDiscount", sql.Decimal(10, 2), voucherDiscount || 0)
-        .input("usedPoints", sql.Int, usedPoints || 0)
-        .input("pointDiscount", sql.Decimal(10, 2), pointDiscount || 0)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .input("promotionId", sql.Int, promotionId || null)
+    .input("promotionDiscount", sql.Decimal(10, 2), promotionDiscount || 0)
+    .input("voucherId", sql.Int, voucherId || null)
+    .input("voucherDiscount", sql.Decimal(10, 2), voucherDiscount || 0)
+    .input("usedPoints", sql.Int, usedPoints || 0)
+    .input("pointDiscount", sql.Decimal(10, 2), pointDiscount || 0)
+    .query(`
             UPDATE Invoices
             SET
                 promotionId = @promotionId,
@@ -151,24 +175,24 @@ const updateInvoiceDiscount = async (
 };
 
 const getInvoiceById = async (transaction, id) => {
-    const result = await new sql.Request(transaction)
-        .input("id", sql.Int, id)
-        .query(`
+  const result = await new sql.Request(transaction)
+    .input("id", sql.Int, id)
+    .query(`
       SELECT id, customerId, status, totalAmount, finalAmount
       FROM Invoices WITH (UPDLOCK, ROWLOCK)
       WHERE id = @id
       AND status NOT IN ('PAID', 'CANCELLED')
     `);
 
-    return result.recordset[0] || null;
+  return result.recordset[0] || null;
 };
 
 const updateAmounts = async (transaction, invoiceId, { totalAmount, finalAmount }) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
-        .input("finalAmount", sql.Decimal(18, 2), finalAmount)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+    .input("finalAmount", sql.Decimal(18, 2), finalAmount)
+    .query(`
       UPDATE Invoices
       SET totalAmount = @totalAmount,
           finalAmount = @finalAmount
@@ -177,10 +201,10 @@ const updateAmounts = async (transaction, invoiceId, { totalAmount, finalAmount 
 };
 
 const updateStatus = async (transaction, invoiceId, status) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("status", sql.VarChar, status)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .input("status", sql.VarChar, status)
+    .query(`
       UPDATE Invoices
       SET status = @status
       WHERE id = @invoiceId
@@ -188,58 +212,100 @@ const updateStatus = async (transaction, invoiceId, status) => {
 };
 
 const deleteInvoiceItems = async (transaction, invoiceId) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .query(`
       DELETE FROM InvoiceItems
       WHERE invoiceId = @invoiceId
     `);
 };
 
 const insertInvoiceItem = async (
-    transaction,
-    { invoiceId, productId, productName, quantity, unitPrice, lineTotal }
+  transaction,
+  {
+    invoiceId,
+    productId,
+    productUnitId,
+    productName,
+    unitName,
+    quantity,
+    baseQuantity,
+    unitPrice,
+    lineTotal
+  }
 ) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .input("productId", sql.Int, productId)
-        .input("productName", sql.NVarChar, productName)
-        .input("quantity", sql.Int, quantity)
-        .input("unitPrice", sql.Decimal(18, 2), unitPrice)
-        .input("lineTotal", sql.Decimal(18, 2), lineTotal)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.BigInt, invoiceId)
+    .input("productId", sql.BigInt, productId)
+    .input("productUnitId", sql.Int, productUnitId)
+    .input("productName", sql.NVarChar(255), productName)
+    .input("unitName", sql.NVarChar(20), unitName)
+    .input("quantity", sql.Decimal(15, 3), quantity)
+    .input("baseQuantity", sql.Decimal(15, 3), baseQuantity)
+    .input("unitPrice", sql.Decimal(15, 2), unitPrice)
+    .input("lineTotal", sql.Decimal(15, 2), lineTotal)
+    .query(`
       INSERT INTO InvoiceItems
-      (invoiceId, productId, productName, quantity, unitPrice, lineTotal)
+      (
+        invoiceId,
+        productId,
+        productUnitId,
+        productName,
+        unitName,
+        quantity,
+        baseQuantity,
+        unitPrice,
+        lineTotal
+      )
       VALUES
-      (@invoiceId, @productId, @productName, @quantity, @unitPrice, @lineTotal)
+      (
+        @invoiceId,
+        @productId,
+        @productUnitId,
+        @productName,
+        @unitName,
+        @quantity,
+        @baseQuantity,
+        @unitPrice,
+        @lineTotal
+      )
     `);
 };
 
-const getProductById = async (transaction, productId) => {
-    const result = await new sql.Request(transaction)
-        .input("id", sql.Int, productId)
-        .query(`
+const getProductById = async (transaction, productId, productUnitId) => {
+  const result = await new sql.Request(transaction)
+    .input("productId", sql.BigInt, productId)
+    .input("productUnitId", sql.Int, productUnitId)
+    .query(`
       SELECT 
-        id,
-        name,
-        salePrice
-      FROM Products
-      WHERE id = @id AND status = 'Selling'
+        p.id,
+        p.name,
+        pu.id AS productUnitId,
+        pu.unitName,
+        pu.salePrice,
+        pu.conversionFactor
+      FROM Products p
+      JOIN ProductUnits pu 
+        ON p.id = pu.productId
+      WHERE 
+        p.id = @productId
+        AND pu.id = @productUnitId
+        AND p.status = 'Selling'
     `);
 
-    return result.recordset[0] || null;
+  return result.recordset[0] || null;
 };
 
 const insertPayment = async (
-    transaction,
-    { invoiceId, paymentMethod, amount, status }
+  transaction,
+  { invoiceId, paymentMethod, amount, status }
 ) => {
-    await new sql.Request(transaction)
-        .input("invoiceId", sql.BigInt, invoiceId)
-        .input("paymentMethod", sql.VarChar, paymentMethod)
-        .input("amount", sql.Decimal(15, 2), amount)
-        .input("status", sql.VarChar, status)
-        .query(`
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.BigInt, invoiceId)
+    .input("paymentMethod", sql.VarChar, paymentMethod)
+    .input("amount", sql.Decimal(15, 2), amount)
+    .input("status", sql.VarChar, status)
+    .query(`
       INSERT INTO Payments (invoiceId, paymentMethod, amount, status)
       VALUES (@invoiceId, @paymentMethod, @amount, @status)
     `);
@@ -250,71 +316,80 @@ const insertPayment = async (
 ===================================================== */
 
 const getDraftInvoices = async (counterId) => {
-    const pool = await connectDB();
+  const pool = await connectDB();
 
-    const result = await pool.request().query(`
+  const result = await pool.request().query(`
     SELECT id, invoiceCode, createdAt, finalAmount, status
     FROM Invoices
     WHERE status = 'UNPAID'
     ORDER BY createdAt ASC
   `);
 
-    return result.recordset;
+  return result.recordset;
 };
 
 const getInvoiceDetail = async (id) => {
-    const pool = await connectDB();
+  const pool = await connectDB();
 
-    const invoice = await pool.request()
-        .input("id", sql.Int, id)
-        .query(`
+  const invoice = await pool.request()
+    .input("id", sql.Int, id)
+    .query(`
       SELECT id, invoiceCode, createdAt, finalAmount, status
       FROM Invoices
       WHERE id = @id
     `);
 
-    if (!invoice.recordset[0]) return null;
+  if (!invoice.recordset[0]) return null;
 
-    const items = await pool.request()
-        .input("invoiceId", sql.Int, id)
-        .query(`
-      SELECT ii.id, ii.productId, ii.quantity, ii.unitPrice, ii.lineTotal, p.name, ist.quantityOnHand, ist.minThreshold
+  const items = await pool.request()
+    .input("invoiceId", sql.Int, id)
+    .query(`
+      SELECT 
+        ii.id, 
+        ii.productId, 
+        ii.quantity, 
+        ii.unitPrice, 
+        ii.lineTotal, 
+        ii.productUnitId,
+        ii.unitName,
+        ii.baseQuantity,
+        p.name, 
+        ist.quantityOnHand, 
+        ist.minThreshold
       FROM InvoiceItems ii
       JOIN Products p ON p.id = ii.productId
 	    JOIN InventoryStocks ist ON p.id = ist.productId
       WHERE ii.invoiceId = @invoiceId
     `);
 
-    return {
-        ...invoice.recordset[0],
-        items: items.recordset,
-    };
+  return {
+    ...invoice.recordset[0],
+    items: items.recordset,
+  };
 };
 
-// invoice.model.js
-
 const getInvoiceItems = async (transaction, invoiceId) => {
-    const result = await new sql.Request(transaction)
-        .input("invoiceId", sql.Int, invoiceId)
-        .query(`
-      SELECT productId, quantity
-      FROM InvoiceItems
+  const result = await new sql.Request(transaction)
+    .input("invoiceId", sql.Int, invoiceId)
+    .query(`
+      SELECT productId, quantity, baseQuantity
+      FROM InvoiceItems iv
       WHERE invoiceId = @invoiceId
     `);
 
-    return result.recordset;
+  return result.recordset;
 };
 
 const getPaymentByInvoiceId = async (transaction, invoiceId) => {
-    const result = await new sql.Request(transaction)
-        .input("invoiceId", sql.BigInt, invoiceId)
-        .query(`
+  const result = await new sql.Request(transaction)
+    .input("invoiceId", sql.BigInt, invoiceId)
+    .query(`
       SELECT TOP 1 *
       FROM Payments
       WHERE invoiceId = @invoiceId
     `);
 
-    return result.recordset[0];
+  return result.recordset[0];
 };
 
 const getCustomerById = (transaction, customerId) => {
@@ -344,21 +419,21 @@ const updateCustomer = (transaction, invoiceId, customerId) => {
 ===================================================== */
 
 module.exports = {
-    getInvoiceList,
-    insertInvoice,
-    updateInvoiceCode,
-    getInvoiceById,
-    updateAmounts,
-    updateStatus,
-    deleteInvoiceItems,
-    insertInvoiceItem,
-    getProductById,
-    insertPayment,
-    getInvoiceItems,
-    getDraftInvoices,
-    getInvoiceDetail,
-    getPaymentByInvoiceId,
-    getCustomerById,
-    updateCustomer,
-    updateInvoiceDiscount,
+  getInvoiceList,
+  insertInvoice,
+  updateInvoiceCode,
+  getInvoiceById,
+  updateAmounts,
+  updateStatus,
+  deleteInvoiceItems,
+  insertInvoiceItem,
+  getProductById,
+  insertPayment,
+  getInvoiceItems,
+  getDraftInvoices,
+  getInvoiceDetail,
+  getPaymentByInvoiceId,
+  getCustomerById,
+  updateCustomer,
+  updateInvoiceDiscount,
 };
