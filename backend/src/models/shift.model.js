@@ -19,8 +19,7 @@ module.exports.getAllShifts = async () => {
       CONVERT(VARCHAR(5), checkOutDeadline, 108) as checkOutDeadline,
       isActive
     FROM Shifts
-    WHERE isActive = 1
-    ORDER BY startTime ASC
+    ORDER BY isActive DESC, startTime ASC
   `);
   return result.recordset;
 };
@@ -84,29 +83,44 @@ module.exports.updateShift = async (id, data) => {
   return true;
 };
 
-// SOFT DELETE: kiểm tra tương lai rồi set isActive = 0
-module.exports.deleteShift = async (id) => {
+module.exports.toggleShift = async (id) => {
   const pool = await connectDB();
-  const futureCheck = await pool.request()
-    .input('shiftId', sql.Int, id)
-    .input('today', sql.Date, new Date())
-    .query(`
-      SELECT COUNT(*) as count 
-      FROM WorkSchedules 
-      WHERE shiftId = @shiftId AND workDate >= @today
-    `);
+  const current = await pool.request()
+    .input('id', sql.Int, id)
+    .query(`SELECT isActive FROM Shifts WHERE id = @id`);
 
-  const count = futureCheck.recordset[0].count;
-  if (count > 0) {
-    throw new Error(
-      `Ca này còn ${count} lịch phân công trong tương lai. Hãy xóa các lịch đó trước!`
-    );
+  if (!current.recordset[0]) {
+    throw new Error("Không tìm thấy ca làm việc!");
   }
 
+  const currentActive = current.recordset[0].isActive;
+
+  // Nếu đang active → sắp deactivate → kiểm tra lịch tương lai
+  if (currentActive === 1) {
+    const futureCheck = await pool.request()
+      .input('shiftId', sql.Int, id)
+      .input('today', sql.Date, new Date())
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM WorkSchedules 
+        WHERE shiftId = @shiftId AND workDate >= @today
+      `);
+
+    const count = futureCheck.recordset[0].count;
+    if (count > 0) {
+      throw new Error(
+        `Ca này còn ${count} lịch phân công trong tương lai. Hãy xóa các lịch đó trước khi ngừng sử dụng!`
+      );
+    }
+  }
+
+  const newActive = currentActive === 1 ? 0 : 1;
   await pool.request()
     .input('id', sql.Int, id)
-    .query(`UPDATE Shifts SET isActive = 0 WHERE id = @id`);
-  return true;
+    .input('isActive', sql.Bit, newActive)
+    .query(`UPDATE Shifts SET isActive = @isActive WHERE id = @id`);
+
+  return { newActive };
 };
 
 module.exports.checkDuplicateName = async (name, excludeId = null) => {
