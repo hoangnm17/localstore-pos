@@ -33,14 +33,33 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    if (status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      return Promise.resolve({
-        success: false,
-        message: "Phiên đăng nhập đã hết hạn",
-        status: 401,
-      });
+    // if (status === 401) {
+    //   localStorage.removeItem("token");
+    //   localStorage.removeItem("user");
+    //   return Promise.resolve({
+    //     success: false,
+    //     message: "Phiên đăng nhập đã hết hạn",
+    //     status: 401,
+    //   });
+    // }
+     if (status === 401) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        return Promise.resolve({
+          success: false,
+          message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+          status: 401,
+        });
+      } else {
+        return Promise.resolve({
+          success: false,
+          message: data?.message || "Tên đăng nhập hoặc mật khẩu không đúng!",
+          status: 401,
+          data,
+        });
+      }
     }
 
     if (status === 403) {

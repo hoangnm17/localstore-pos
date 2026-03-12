@@ -1,16 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
-
-const ProtectedRoute = ({ requiredFeatures = [] }) => {
+const ProtectedRoute = ({ requiredFeatures = [], requiredRoles = [], redirectTo = "/Error" }) => {
   const token = localStorage.getItem("token");
   const userString = localStorage.getItem("user");
 
   if (!token || !userString) {
     return <Navigate to="/login" replace />;
-  }
-
-  // 🟢 Không có yêu cầu quyền cụ thể → CHỈ CẦN TOKEN là đủ
-  if (!requiredFeatures || requiredFeatures.length === 0) {
-    return <Outlet />;
   }
 
   let currentUser;
@@ -20,14 +14,19 @@ const ProtectedRoute = ({ requiredFeatures = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const myFeatures = currentUser.features || [];
+  if (requiredRoles.length > 0) {
+    const userRole = currentUser.roleName;
+    if (!requiredRoles.includes(userRole)) {
+      return <Navigate to={redirectTo} replace />;
+    }
+  }
 
-  const hasPermission = requiredFeatures.some((f) =>
-    myFeatures.includes(f)
-  );
-
-  if (!hasPermission) {
-    return <Navigate to="/403" replace />;
+  if (requiredFeatures.length > 0) {
+    const myFeatures = currentUser.features || [];
+    const hasPermission = requiredFeatures.some((f) => myFeatures.includes(f));
+    if (!hasPermission) {
+      return <Navigate to={redirectTo} replace />;
+    }
   }
 
   return <Outlet />;
