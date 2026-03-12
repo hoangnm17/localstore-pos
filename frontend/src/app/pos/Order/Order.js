@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
@@ -19,8 +19,14 @@ export default function Order({
   activeItemId,
   onChangeQty,
   focusSignal,
+  openPaymentSignal,
 }) {
   const [showPayment, setShowPayment] = useState(false);
+
+  useEffect(() => {
+    if (!orderItems.length) return;
+    setShowPayment(true);
+  }, [openPaymentSignal]);
 
   const handleConfirmPayment = async ({ method, amount, discount }) => {
     try {

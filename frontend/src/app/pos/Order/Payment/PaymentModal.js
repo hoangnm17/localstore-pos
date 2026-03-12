@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import BaseModal from "components/common/BaseModal";
 import { formatCurrency } from "utils/formatters";
-
 import PaymentMethodSelector from "./PaymentModal/PaymentMethodSelector";
 import CashPayment from "./PaymentModal/CashPayment";
 import BankPayment from "./PaymentModal/BankPayment";
 import OrderDiscount from "../Discount/OrderDiscount";
+import useHotkeys from "hooks/pos/useHotKeys";
 
 export default function PaymentModal({
   orderId,
@@ -15,8 +15,13 @@ export default function PaymentModal({
   onConfirm = () => { },
   onBankPaid = () => { },
 }) {
-  const safeTotal = useMemo(() => Number(total) || 0, [total]);
 
+  useHotkeys({
+    "Alt+c": () => setMethod("CASH"),
+    "Alt+b": () => setMethod("BANK"),
+  });
+
+  const safeTotal = useMemo(() => Number(total) || 0, [total]);
   const [method, setMethod] = useState("CASH");
   const [discount, setDiscount] = useState(null);
 
@@ -110,7 +115,7 @@ export default function PaymentModal({
                   {method === "BANK" && (
                     <BankPayment
                       invoiceId={orderId}
-                      amount={finalAmount}
+                      total={finalAmount}
                       discount={safeDiscount}
                       onPaid={onBankPaid}
                     />

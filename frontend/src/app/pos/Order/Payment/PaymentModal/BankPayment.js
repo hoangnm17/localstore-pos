@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { createBankPayment } from "services/Payment/payment.service";
 
 export default function BankPayment({
-  total,
   invoiceId,
+  total,
   discount,
   onPaid = () => {},
 }) {

@@ -3,6 +3,7 @@ import Product from "./Product/Product";
 import { useState } from "react"
 import { useInvoiceTabs } from "hooks/pos/useInvoice";
 import { useOrderItems } from "hooks/pos/useOrderItems";
+import useHotkeys from "hooks/pos/useHotKeys";
 
 export default function SalesHome() {
   const {
@@ -26,6 +27,7 @@ export default function SalesHome() {
     calculateTotalQuantity,
   } = useOrderItems();
 
+  const [openPaymentSignal, setOpenPaymentSignal] = useState(0);
   const [activeItemId, setActiveItemId] = useState(null);
   const [focusSignal, setFocusSignal] = useState(0);
 
@@ -93,6 +95,12 @@ export default function SalesHome() {
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
+  useHotkeys({
+    Enter : () => setOpenPaymentSignal((s) => s + 1),
+    F3: () => setFocusSignal(prev => prev + 1),
+    F4: () => createInvoiceTab(),
+    Escape: () => setActiveItemId(null)
+  });
 
   if (!activeInvoice) {
     return (
@@ -175,6 +183,7 @@ export default function SalesHome() {
             activeItemId={activeItemId}
             onChangeQty={handleChangeQty}
             focusSignal={focusSignal}
+            openPaymentSignal={openPaymentSignal}
           />
         </div>
 
