@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import useCategories from '../hooks/useCategories';
-import useCategoryForm from '../hooks/useCategoryForm';
+import useCategories from '../../../hooks/category/useCategories';
+import useCategoryForm from '../../../hooks/category/useCategoryForm';
 import CategoryModal from '../ui/CategoryModal';
 import Pagination from '../../../components/Pagination/Pagination';
 export default function CategoryPage() {

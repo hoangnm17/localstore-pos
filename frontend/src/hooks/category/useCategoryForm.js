@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import categoryService from '../../../services/categoryService';
+import categoryService from '../../services/categoryService';
 
 export default function useCategoryForm(editId) {
     const [form, setForm] = useState({
