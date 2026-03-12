@@ -30,11 +30,15 @@ export const useOrderItems = () => {
       id: crypto.randomUUID(),
       productId: product.productId,
       productName: product.productName,
+      productUnitId: product.unitId,
       unitPrice: product.unitPrice,
+      unitName: product.unitName,
       quantity: 1,
-      quantityOnHand: product.quantityOnHand
+      quantityOnHand: product.quantityOnHand,
+      factor: product.factor,
+      unitType: product.unitType,
     };
-
+    
     return {
       items: [...items, newItem],
       activeId: newItem.id
