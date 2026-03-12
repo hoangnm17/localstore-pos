@@ -93,15 +93,15 @@ exports.getProducts = async (filters) => {
             (@status IS NULL OR p.status = @status)
             AND (
                 @search = N''
-                OR p.name LIKE @searchLike
-                OR p.code LIKE @searchLike
+                OR p.name COLLATE Latin1_General_CI_AI LIKE @searchLike
+                OR p.code COLLATE Latin1_General_CI_AI LIKE @searchLike
                 OR EXISTS (
                     SELECT 1
                     FROM ProductUnits pu
                     WHERE pu.productId = p.id
                       AND (
-                          pu.barcode LIKE @searchLike
-                          OR pu.unitName LIKE @searchLike
+                          pu.barcode COLLATE Latin1_General_CI_AI LIKE @searchLike
+                          OR pu.unitName COLLATE Latin1_General_CI_AI LIKE @searchLike
                       )
                 )
             )
@@ -146,15 +146,15 @@ exports.countProducts = async (filters) => {
             (@status IS NULL OR p.status = @status)
             AND (
                 @search = N''
-                OR p.name LIKE @searchLike
-                OR p.code LIKE @searchLike
+                OR p.name COLLATE Latin1_General_CI_AI LIKE @searchLike
+                OR p.code COLLATE Latin1_General_CI_AI LIKE @searchLike
                 OR EXISTS (
                     SELECT 1
                     FROM ProductUnits pu
                     WHERE pu.productId = p.id
                       AND (
-                          pu.barcode LIKE @searchLike
-                          OR pu.unitName LIKE @searchLike
+                          pu.barcode COLLATE Latin1_General_CI_AI LIKE @searchLike
+                          OR pu.unitName COLLATE Latin1_General_CI_AI LIKE @searchLike
                       )
                 )
             )

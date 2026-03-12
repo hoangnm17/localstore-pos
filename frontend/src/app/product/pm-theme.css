@@ -1,0 +1,265 @@
+/* ════════════════════════════════════════════════════════
+   pm-theme.css  —  Shared theme: Product & Category pages
+   Màu chủ đạo: xanh dương (#1890ff) + trắng
+   Font: Inter (Google Fonts)
+   ════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Design Tokens ───────────────────────────────────── */
+:root {
+    --pm-blue: #1890ff;
+    --pm-blue-light: #e6f4ff;
+    --pm-blue-dark: #096dd9;
+    --pm-blue-hover: #40a9ff;
+    --pm-white: #ffffff;
+    --pm-bg: #f4f6fa;
+    --pm-border: #d9e8f9;
+    --pm-text: #1e2a38;
+    --pm-text-muted: #7a8a9e;
+    --pm-radius: 10px;
+    --pm-shadow: 0 2px 12px rgba(24, 144, 255, .1);
+    --pm-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Global font for pm pages ──────────────────────────── */
+.pm-page,
+.pm-page * {
+    font-family: var(--pm-font);
+    box-sizing: border-box;
+}
+
+/* ── Page wrapper ──────────────────────────────────────── */
+.pm-page {
+    background: var(--pm-bg);
+    min-height: 100%;
+    padding: 24px;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.pm-card {
+    background: var(--pm-white);
+    border-radius: var(--pm-radius);
+    box-shadow: var(--pm-shadow);
+    border: none;
+}
+
+.pm-card .card-body {
+    padding: 20px 24px;
+}
+
+/* ── Page Title ────────────────────────────────────────── */
+.pm-page-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--pm-text);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.2px;
+}
+
+/* ── Primary Button (override Bootstrap) ──────────────── */
+.pm-page .btn-primary,
+.pm-modal .btn-primary {
+    background: var(--pm-blue);
+    border-color: var(--pm-blue);
+    font-weight: 600;
+    border-radius: 8px;
+    transition: background .2s, border-color .2s, box-shadow .2s;
+}
+
+.pm-page .btn-primary:hover,
+.pm-modal .btn-primary:hover {
+    background: var(--pm-blue-dark);
+    border-color: var(--pm-blue-dark);
+    box-shadow: 0 2px 8px rgba(24, 144, 255, .35);
+}
+
+.pm-page .btn-primary:focus,
+.pm-modal .btn-primary:focus {
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, .25);
+}
+
+/* ── Outline Primary ───────────────────────────────────── */
+.pm-page .btn-outline-primary,
+.pm-modal .btn-outline-primary {
+    color: var(--pm-blue);
+    border-color: var(--pm-blue);
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.pm-page .btn-outline-primary:hover,
+.pm-modal .btn-outline-primary:hover {
+    background: var(--pm-blue);
+    border-color: var(--pm-blue);
+}
+
+/* ── Action Bar (bulk actions bar) ────────────────────── */
+.pm-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--pm-blue-light);
+    border: 1px solid var(--pm-border);
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.pm-action-bar .fw-semibold {
+    color: var(--pm-blue-dark);
+}
+
+/* ── Table ─────────────────────────────────────────────── */
+.pm-page .table,
+.pm-modal .table {
+    font-size: 0.875rem;
+    color: var(--pm-text);
+    border-color: #e3ecf7;
+}
+
+.pm-thead th {
+    background: var(--pm-blue) !important;
+    color: var(--pm-white) !important;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border: none !important;
+    padding: 12px 10px;
+    white-space: nowrap;
+}
+
+.pm-page .table-hover tbody tr:hover {
+    background: var(--pm-blue-light);
+}
+
+.pm-page .table tbody tr {
+    border-color: #eaf2ff;
+    transition: background .15s;
+}
+
+/* ── Badges override ───────────────────────────────────── */
+.pm-page .badge.bg-primary,
+.pm-modal .badge.bg-primary {
+    background: var(--pm-blue) !important;
+}
+
+/* ── Form controls ─────────────────────────────────────── */
+.pm-page .form-control:focus,
+.pm-page .form-select:focus,
+.pm-modal .form-control:focus,
+.pm-modal .form-select:focus {
+    border-color: var(--pm-blue);
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, .15);
+}
+
+.pm-page .input-group-text {
+    background: var(--pm-blue-light);
+    border-color: #c8dff8;
+    color: var(--pm-blue);
+}
+
+/* ── Search input ──────────────────────────────────────── */
+.pm-search-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--pm-white);
+    border: 1px solid #c8dff8;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.pm-search-wrap:focus-within {
+    border-color: var(--pm-blue);
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, .15);
+}
+
+.pm-search-wrap .pm-search-icon {
+    padding: 0 12px;
+    color: var(--pm-blue);
+    font-size: 0.9rem;
+    background: var(--pm-blue-light);
+}
+
+.pm-search-wrap input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    color: var(--pm-text);
+}
+
+/* ── Pagination ────────────────────────────────────────── */
+.pm-page .page-link {
+    color: var(--pm-blue);
+    border-color: #d9e8f9;
+}
+
+.pm-page .page-item.active .page-link {
+    background: var(--pm-blue);
+    border-color: var(--pm-blue);
+}
+
+/* ── Modal shell ───────────────────────────────────────── */
+.pm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 21, 41, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    padding: 20px;
+}
+
+.pm-modal-box {
+    background: var(--pm-white);
+    border-radius: 12px;
+    width: 460px;
+    max-width: 100%;
+    box-shadow: 0 8px 40px rgba(0, 21, 41, 0.25);
+    overflow: hidden;
+}
+
+.pm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--pm-blue);
+    color: var(--pm-white);
+}
+
+.pm-modal-header strong {
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: var(--pm-font);
+}
+
+.pm-modal-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, .85);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background .2s;
+}
+
+.pm-modal-close-btn:hover {
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
+}
+
+.pm-modal-body {
+    padding: 20px;
+    font-family: var(--pm-font);
+}

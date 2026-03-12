@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import categoryService from '../../services/categoryService';
 
-export default function useCategoryForm(editId) {
+export default function useCategoryForm(editId, { showNotification } = {}) {
     const [form, setForm] = useState({
         name: '',
         parentId: null,
@@ -25,7 +25,7 @@ export default function useCategoryForm(editId) {
 
     async function submit() {
         if (!form.name.trim()) {
-            alert('Tên danh mục bắt buộc');
+            if (showNotification) showNotification('Tên danh mục không được để trống.', 'warning');
             return;
         }
 

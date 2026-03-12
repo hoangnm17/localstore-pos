@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import categoryService from '../../services/categoryService';
-export default function useCategories() {
+
+export default function useCategories({ showNotification, onConfirm }) {
     const [categories, setCategories] = useState([]);
 
     async function load() {
@@ -13,10 +14,21 @@ export default function useCategories() {
         }
     }
 
-    async function remove(id) {
-        if (!window.confirm('Xóa category này?')) return;
-        await categoryService.deleteCategory(id);
-        load();
+    async function doDelete(id) {
+        try {
+            await categoryService.deleteCategory(id);
+            showNotification('Xóa danh mục thành công.', 'success');
+            load();
+        } catch (err) {
+            showNotification(err.response?.data?.message || 'Xóa danh mục thất bại.', 'error');
+        }
+    }
+
+    function remove(id) {
+        onConfirm({
+            message: 'Bạn có chắc muốn xóa danh mục này không?',
+            onOk: () => doDelete(id)
+        });
     }
 
     useEffect(() => {

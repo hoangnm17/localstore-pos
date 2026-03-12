@@ -1,46 +1,27 @@
 import React from 'react';
 import CategoryForm from './CategoryForm';
 
-const h = React.createElement;
-
 export default function CategoryModal(props) {
     if (!props.open) return null;
 
-    return h(
-        'div',
-        { style: overlay },
-        h(
-            'div',
-            { style: modal },
-            h(
-                'div',
-                { style: header },
-                h('strong', null, props.isEdit ? 'Sửa danh mục' : 'Thêm danh mục'),
-                h('button', { onClick: props.onClose }, '✖')
-            ),
-            h(CategoryForm, props)
-        )
+    return (
+        <div className="pm-modal-overlay">
+            <div className="pm-modal-box">
+                <div className="pm-modal-header">
+                    <strong>{props.isEdit ? 'Sửa danh mục' : 'Thêm danh mục mới'}</strong>
+                    <button
+                        type="button"
+                        className="pm-modal-close-btn"
+                        onClick={props.onClose}
+                        title="Đóng"
+                    >
+                        <i className="bi bi-x-lg" />
+                    </button>
+                </div>
+                <div className="pm-modal-body pm-modal">
+                    <CategoryForm {...props} />
+                </div>
+            </div>
+        </div>
     );
 }
-
-const overlay = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,.4)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center'
-};
-
-const modal = {
-    background: '#fff',
-    padding: 20,
-    width: 420,
-    borderRadius: 6
-};
-
-const header = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: 12
-};

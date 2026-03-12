@@ -1,7 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getComboItems, getProduct } from '../../services/Product/product.service';
 
-function useProductDetail() {
+function useProductDetail({ showNotification }) {
+    const showNotificationRef = useRef(showNotification);
+    useEffect(() => { showNotificationRef.current = showNotification; }, [showNotification]);
+
     const [detailState, setDetailState] = useState({
         open: false,
         product: null,
@@ -40,9 +43,9 @@ function useProductDetail() {
                 comboItems: [],
                 loading: false
             });
-            alert(error.response?.data?.message || 'Không tải được chi tiết sản phẩm.');
+            showNotificationRef.current(error.response?.data?.message || 'Không tải được chi tiết sản phẩm.', 'error');
         }
-    }, []);
+    }, []); // showNotification qua ref — không cần trong deps
 
     const refreshDetailModal = useCallback(async (productId) => {
         if (!productId) return;

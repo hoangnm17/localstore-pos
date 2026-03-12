@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getAllPriceHistory } from '../../services/Product/product.service';
 
-function useProductPriceHistory() {
+function useProductPriceHistory({ showNotification }) {
     const [priceHistoryState, setPriceHistoryState] = useState({
         open: false,
         product: null,
@@ -36,7 +36,7 @@ function useProductPriceHistory() {
                 }
             });
         } catch (error) {
-            alert(error.response?.data?.message || 'Không tải được lịch sử giá.');
+            showNotification(error.response?.data?.message || 'Không tải được lịch sử giá.', 'error');
             setPriceHistoryState({
                 open: false,
                 product: null,

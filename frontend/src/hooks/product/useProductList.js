@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getProducts, stopSellingProduct } from '../../services/Product/product.service';
 
-function useProductList() {
+function useProductList({ showNotification, onConfirm }) {
+    const showNotificationRef = useRef(showNotification);
+    const onConfirmRef = useRef(onConfirm);
+    useEffect(() => { showNotificationRef.current = showNotification; }, [showNotification]);
+    useEffect(() => { onConfirmRef.current = onConfirm; }, [onConfirm]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [bulkLoading, setBulkLoading] = useState(false);
@@ -41,7 +45,7 @@ function useProductList() {
             });
             setSelectedIds([]);
         } catch (error) {
-            alert(error.response?.data?.message || 'Không tải được danh sách sản phẩm.');
+            showNotificationRef.current(error.response?.data?.message || 'Không tải được danh sách sản phẩm.', 'error');
             setProducts([]);
             setPagination({
                 total: 0,
@@ -50,7 +54,7 @@ function useProductList() {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters]); // showNotification qua ref — không cần trong deps
 
     useEffect(() => {
         loadProducts();
@@ -94,16 +98,7 @@ function useProductList() {
         });
     };
 
-    const handleBulkStopSelling = async () => {
-        if (!selectedIds.length) {
-            alert('Vui lòng chọn ít nhất 1 sản phẩm.');
-            return;
-        }
-
-        if (!window.confirm(`Bạn có chắc muốn ngừng bán ${selectedIds.length} sản phẩm đã chọn không?`)) {
-            return;
-        }
-
+    const _doBulkStopSelling = async () => {
         try {
             setBulkLoading(true);
 
@@ -117,28 +112,37 @@ function useProductList() {
             await loadProducts();
 
             if (failedCount > 0) {
-                alert(`Đã ngừng bán ${successCount} sản phẩm, thất bại ${failedCount} sản phẩm.`);
+                showNotificationRef.current(`Đã ngừng bán ${successCount} sản phẩm, thất bại ${failedCount} sản phẩm.`, 'warning');
             } else {
-                alert(`Đã ngừng bán ${successCount} sản phẩm.`);
+                showNotificationRef.current(`Đã ngừng bán ${successCount} sản phẩm.`, 'success');
             }
         } catch (error) {
-            alert('Thao tác hàng loạt thất bại.');
+            showNotificationRef.current('Thao tác hàng loạt thất bại.', 'error');
         } finally {
             setBulkLoading(false);
         }
     };
 
+    const handleBulkStopSelling = async () => {
+        if (!selectedIds.length) {
+            showNotificationRef.current('Vui lòng chọn ít nhất 1 sản phẩm.', 'warning');
+            return;
+        }
+        onConfirmRef.current({
+            message: `Bạn có chắc muốn ngừng bán ${selectedIds.length} sản phẩm đã chọn không?`,
+            onOk: _doBulkStopSelling
+        });
+    };
+
     const handleBulkSoftDelete = async () => {
         if (!selectedIds.length) {
-            alert('Vui lòng chọn ít nhất 1 sản phẩm.');
+            showNotificationRef.current('Vui lòng chọn ít nhất 1 sản phẩm.', 'warning');
             return;
         }
-
-        if (!window.confirm('xóa mềm / ngừng bán. Bạn có chắc muốn tiếp tục không?')) {
-            return;
-        }
-
-        await handleBulkStopSelling();
+        onConfirmRef.current({
+            message: 'Bạn có chắc muốn ngừng bán / xóa các sản phẩm đã chọn không?',
+            onOk: _doBulkStopSelling
+        });
     };
 
     return {

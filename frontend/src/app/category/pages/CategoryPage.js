@@ -3,15 +3,25 @@ import useCategories from '../../../hooks/category/useCategories';
 import useCategoryForm from '../../../hooks/category/useCategoryForm';
 import CategoryModal from '../ui/CategoryModal';
 import Pagination from '../../../components/Pagination/Pagination';
+import '../../product/pm-theme.css';
+import { useNotification } from '../../../components/global/Notification/NotificationContext';
 export default function CategoryPage() {
-    const { categories, reload, deleteCategory } = useCategories();
+    const { showNotification } = useNotification();
+
+    // ── Confirm dialog state ────────────────────────────
+    const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
+    const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
+    const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
+    const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
+
+    const { categories, reload, deleteCategory } = useCategories({ showNotification, onConfirm });
     const [editId, setEditId] = useState(null);
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 10;
 
-    const form = useCategoryForm(editId);
+    const form = useCategoryForm(editId, { showNotification });
 
     function openCreate() {
         setEditId(null);
@@ -37,10 +47,10 @@ export default function CategoryPage() {
         currentPage * PAGE_SIZE
     );
     return (
-        <div className="container-fluid py-3">
+        <div className="pm-page">
             {/* Header */}
             <div className="d-flex align-items-center justify-content-between mb-3">
-                <h5 className="mb-0 fw-bold">Danh mục sản phẩm</h5>
+                <h5 className="pm-page-title mb-0">Danh mục sản phẩm</h5>
             </div>
 
             {/* Toolbar */}
@@ -57,15 +67,16 @@ export default function CategoryPage() {
                         onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                     />
                 </div>
-                <button className="btn btn-outline-secondary" onClick={openCreate}>
+                <button className="btn btn-primary" onClick={openCreate}>
+                    <i className="bi bi-plus-circle me-2" />
                     Tạo danh mục mới
                 </button>
             </div>
 
             {/* Table */}
             <div className="table-responsive">
-                <table className="table table-bordered align-middle">
-                    <thead className="table-primary text-center">
+                <table className="table table-hover table-bordered align-middle">
+                    <thead className="pm-thead text-center">
                         <tr>
                             <th style={{ width: 48 }}>#</th>
                             <th className="text-start">Tên danh mục</th>
@@ -111,8 +122,35 @@ export default function CategoryPage() {
                 isEdit={!!editId}
                 editId={editId}
                 onClose={() => setOpen(false)}
-                onDone={() => { setOpen(false); reload(); }}
+                onDone={() => {
+                    setOpen(false);
+                    reload();
+                    showNotification(editId ? 'Cập nhật danh mục thành công.' : 'Tạo danh mục thành công.', 'success');
+                }}
             />
+
+            {/* ── Confirm Dialog ── */}
+            {confirmState.open && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,21,41,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
+                }}>
+                    <div style={{
+                        background: '#fff', borderRadius: 12, padding: '28px 32px',
+                        minWidth: 340, maxWidth: 480, boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                            <i className="bi bi-exclamation-triangle-fill" style={{ color: '#faad14', fontSize: '1.5rem' }} />
+                            <strong style={{ fontSize: '1rem' }}>Xác nhận</strong>
+                        </div>
+                        <p style={{ margin: '0 0 24px', color: '#334155' }}>{confirmState.message}</p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                            <button className="btn btn-light" onClick={handleConfirmCancel}>Hủy</button>
+                            <button className="btn btn-danger" onClick={handleConfirmOk}>Xác nhận xóa</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

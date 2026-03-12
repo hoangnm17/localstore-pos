@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import './pm-theme.css';
+import { useNotification } from '../../components/global/Notification/NotificationContext';
 import ProductFormModal from './ProductModal/ProductFormModal';
 import ProductDetailModal from './ProductModal/ProductDetailModal';
 import ProductUnitModal from './ProductModal/ProductUnitModal';
@@ -29,6 +31,12 @@ function formatQuantity(value, allowDecimalQuantity) {
 }
 
 function ProductList() {
+    const { showNotification } = useNotification();
+    const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
+    const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
+    const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
+    const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
+
     const { categories } = useProductCategories();
 
     const {
@@ -49,7 +57,7 @@ function ProductList() {
         handleCheckOne,
         handleBulkStopSelling,
         handleBulkSoftDelete
-    } = useProductList();
+    } = useProductList({ showNotification, onConfirm });
 
     const {
         productFormState,
@@ -76,13 +84,13 @@ function ProductList() {
         openDetailModal,
         refreshDetailModal,
         closeDetailModal
-    } = useProductDetail();
+    } = useProductDetail({ showNotification });
 
     const {
         priceHistoryState,
         openPriceHistoryModal,
         closePriceHistoryModal
-    } = useProductPriceHistory();
+    } = useProductPriceHistory({ showNotification });
 
     const {
         submitLoading,
@@ -109,17 +117,17 @@ function ProductList() {
         detailState,
         loadProducts,
         openDetailModal,
-        refreshDetailModal
+        refreshDetailModal,
+
+        showNotification,
+        onConfirm
     });
 
     return (
-        <div className="container-fluid py-4">
+        <div className="pm-page">
             <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1">Quản lý sản phẩm</h2>
-                    <p className="text-muted mb-0">
-                        Dành cho manager quản lý sản phẩm, unit phụ, combo và lịch sử giá.
-                    </p>
+                    <h2 className="pm-page-title">Quản lý sản phẩm</h2>
                 </div>
 
                 <div className="d-flex flex-wrap gap-2">
@@ -134,7 +142,7 @@ function ProductList() {
                 </div>
             </div>
 
-            <div className="card border-0 shadow-sm">
+            <div className="pm-card card">
                 <div className="card-body">
                     <div className="row g-3 align-items-end mb-3">
                         <div className="col-12 col-lg-5">
@@ -217,7 +225,7 @@ function ProductList() {
 
                         <div className="col-6 col-md-2">
                             <div className="d-grid">
-                                <button type="button" className="btn btn-dark" onClick={handleApplySearch}>
+                                <button type="button" className="btn btn-primary" onClick={handleApplySearch}>
                                     <i className="bi bi-funnel me-2" />
                                     Lọc
                                 </button>
@@ -225,7 +233,7 @@ function ProductList() {
                         </div>
                     </div>
 
-                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 bg-light rounded mb-3">
+                    <div className="pm-action-bar">
                         <div className="fw-semibold">
                             <i className="bi bi-check2-square me-2" />
                             Đã chọn: {selectedIds.length} sản phẩm
@@ -260,8 +268,8 @@ function ProductList() {
                     </div>
 
                     <div className="table-responsive">
-                        <table className="table table-hover align-middle">
-                            <thead className="table-light">
+                        <table className="table table-hover align-middle table-bordered">
+                            <thead className="pm-thead">
                                 <tr>
                                     <th style={{ width: 50 }}>
                                         <input
@@ -514,6 +522,29 @@ function ProductList() {
                 onClose={closeComboModal}
                 onSubmit={handleAddComboItem}
             />
+
+            {/* ── Confirm Dialog ── */}
+            {confirmState.open && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,21,41,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
+                }}>
+                    <div style={{
+                        background: '#fff', borderRadius: 12, padding: '28px 32px',
+                        minWidth: 340, maxWidth: 480, boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                            <i className="bi bi-exclamation-triangle-fill" style={{ color: '#faad14', fontSize: '1.5rem' }} />
+                            <strong style={{ fontSize: '1rem' }}>Xác nhận</strong>
+                        </div>
+                        <p style={{ margin: '0 0 24px', color: '#334155' }}>{confirmState.message}</p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                            <button className="btn btn-light" onClick={handleConfirmCancel}>Hủy</button>
+                            <button className="btn btn-primary" onClick={handleConfirmOk}>Xác nhận</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

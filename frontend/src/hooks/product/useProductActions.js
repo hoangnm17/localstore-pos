@@ -69,7 +69,10 @@ function useProductActions({
     detailState,
     loadProducts,
     openDetailModal,
-    refreshDetailModal
+    refreshDetailModal,
+
+    showNotification,
+    onConfirm
 }) {
     const [submitLoading, setSubmitLoading] = useState(false);
 
@@ -81,7 +84,7 @@ function useProductActions({
             const product = response.data?.data;
 
             if (!product) {
-                alert('Không tìm thấy sản phẩm.');
+                showNotification('Không tìm thấy sản phẩm.', 'error');
                 return;
             }
 
@@ -105,7 +108,7 @@ function useProductActions({
                 }
             });
         } catch (error) {
-            alert(error.response?.data?.message || 'Không tải được thông tin sản phẩm.');
+            showNotification(error.response?.data?.message || 'Không tải được thông tin sản phẩm.', 'error');
         } finally {
             setSubmitLoading(false);
         }
@@ -150,7 +153,7 @@ function useProductActions({
                     await openDetailModal(createdProductId);
                 }
 
-                alert('Tạo sản phẩm thành công.');
+                showNotification('Tạo sản phẩm thành công.', 'success');
                 return;
             }
 
@@ -170,20 +173,20 @@ function useProductActions({
                 await refreshDetailModal(editingProductId);
             }
 
-            alert('Cập nhật sản phẩm thành công.');
+            showNotification('Cập nhật sản phẩm thành công.', 'success');
         } catch (error) {
             if (createdProductId && payload?.isCombo) {
                 await loadProducts();
                 await openDetailModal(createdProductId);
-
-                alert(
-                    'Đã tạo sản phẩm combo nhưng lưu thành phần combo bị lỗi. Vui lòng kiểm tra lại trong popup chi tiết sản phẩm.'
+                showNotification(
+                    'Đã tạo sản phẩm combo nhưng lưu thành phần combo bị lỗi. Vui lòng kiểm tra lại trong popup chi tiết sản phẩm.',
+                    'warning'
                 );
                 closeProductFormModal();
                 return;
             }
 
-            alert(error.response?.data?.message || 'Lưu sản phẩm thất bại.');
+            showNotification(error.response?.data?.message || 'Lưu sản phẩm thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
@@ -206,9 +209,9 @@ function useProductActions({
                 await refreshDetailModal(product.id);
             }
 
-            alert('Cập nhật trạng thái thành công.');
+            showNotification('Cập nhật trạng thái thành công.', 'success');
         } catch (error) {
-            alert(error.response?.data?.message || 'Cập nhật trạng thái thất bại.');
+            showNotification(error.response?.data?.message || 'Cập nhật trạng thái thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
@@ -220,10 +223,10 @@ function useProductActions({
 
             if (unitModalState.mode === 'create') {
                 await createProductUnit(payload);
-                alert('Tạo đơn vị tính thành công.');
+                showNotification('Tạo đơn vị tính thành công.', 'success');
             } else {
                 await updateProductUnit(unitModalState.unit.id, payload);
-                alert('Cập nhật đơn vị tính thành công.');
+                showNotification('Cập nhật đơn vị tính thành công.', 'success');
             }
 
             const productId = unitModalState.product?.id;
@@ -235,28 +238,29 @@ function useProductActions({
                 await refreshDetailModal(productId);
             }
         } catch (error) {
-            alert(error.response?.data?.message || 'Lưu đơn vị tính thất bại.');
+            showNotification(error.response?.data?.message || 'Lưu đơn vị tính thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
     };
 
     const handleDeleteUnit = async (unit) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa đơn vị tính "${unit.unitName}" không?`)) {
-            return;
-        }
-
-        try {
-            setSubmitLoading(true);
-            await deleteProductUnit(unit.id);
-            await loadProducts();
-            await refreshDetailModal(detailState.product?.id);
-            alert('Xóa đơn vị tính thành công.');
-        } catch (error) {
-            alert(error.response?.data?.message || 'Xóa đơn vị tính thất bại.');
-        } finally {
-            setSubmitLoading(false);
-        }
+        onConfirm({
+            message: `Bạn có chắc muốn xóa đơn vị tính "${unit.unitName}" không?`,
+            onOk: async () => {
+                try {
+                    setSubmitLoading(true);
+                    await deleteProductUnit(unit.id);
+                    await loadProducts();
+                    await refreshDetailModal(detailState.product?.id);
+                    showNotification('Xóa đơn vị tính thành công.', 'success');
+                } catch (error) {
+                    showNotification(error.response?.data?.message || 'Xóa đơn vị tính thất bại.', 'error');
+                } finally {
+                    setSubmitLoading(false);
+                }
+            }
+        });
     };
 
     const handleAddComboItem = async (payload) => {
@@ -270,34 +274,35 @@ function useProductActions({
             await loadProducts();
             await refreshDetailModal(productId);
 
-            alert('Thêm thành phần combo thành công.');
+            showNotification('Thêm thành phần combo thành công.', 'success');
         } catch (error) {
-            alert(error.response?.data?.message || 'Thêm thành phần combo thất bại.');
+            showNotification(error.response?.data?.message || 'Thêm thành phần combo thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
     };
 
     const handleRemoveComboItem = async (comboItemId) => {
-        if (!window.confirm('Bạn có chắc muốn xóa thành phần combo này không?')) {
-            return;
-        }
+        onConfirm({
+            message: 'Bạn có chắc muốn xóa thành phần combo này không?',
+            onOk: async () => {
+                try {
+                    setSubmitLoading(true);
 
-        try {
-            setSubmitLoading(true);
+                    const productId = detailState.product?.id;
+                    await removeComboItem(productId, comboItemId);
 
-            const productId = detailState.product?.id;
-            await removeComboItem(productId, comboItemId);
+                    await loadProducts();
+                    await refreshDetailModal(productId);
 
-            await loadProducts();
-            await refreshDetailModal(productId);
-
-            alert('Đã xóa thành phần combo.');
-        } catch (error) {
-            alert(error.response?.data?.message || 'Xóa thành phần combo thất bại.');
-        } finally {
-            setSubmitLoading(false);
-        }
+                    showNotification('Đã xóa thành phần combo.', 'success');
+                } catch (error) {
+                    showNotification(error.response?.data?.message || 'Xóa thành phần combo thất bại.', 'error');
+                } finally {
+                    setSubmitLoading(false);
+                }
+            }
+        });
     };
 
     return {

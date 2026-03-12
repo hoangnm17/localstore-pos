@@ -25,24 +25,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      return Promise.resolve({
-        success: false,
-        message: "Không thể kết nối tới server",
-      });
+      return Promise.reject(
+        Object.assign(new Error("Không thể kết nối tới server"), { response: null })
+      );
     }
 
     const { status, data } = error.response;
 
-    // if (status === 401) {
-    //   localStorage.removeItem("token");
-    //   localStorage.removeItem("user");
-    //   return Promise.resolve({
-    //     success: false,
-    //     message: "Phiên đăng nhập đã hết hạn",
-    //     status: 401,
-    //   });
-    // }
-     if (status === 401) {
+    // 401: xử lý đặc biệt cho auth flows
+    if (status === 401) {
       const token = localStorage.getItem("token");
       if (token) {
         localStorage.removeItem("token");
@@ -62,6 +53,7 @@ api.interceptors.response.use(
       }
     }
 
+    // 403: resolve để UI hiển thị quyền truy cập
     if (status === 403) {
       return Promise.resolve({
         success: false,
@@ -70,19 +62,8 @@ api.interceptors.response.use(
       });
     }
 
-    if (status >= 500) {
-      return Promise.resolve({
-        success: false,
-        message: "Lỗi hệ thống, vui lòng thử lại sau",
-        status,
-      });
-    }
-
-    return Promise.resolve({
-      success: false,
-      message: data?.message || "Có lỗi xảy ra",
-      status,
-    });
+    // 4xx và 5xx còn lại: REJECT để catch block trong hooks nhận lỗi đúng cách
+    return Promise.reject(error);
   }
 );
 
