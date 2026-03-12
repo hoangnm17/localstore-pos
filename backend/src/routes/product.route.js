@@ -5,6 +5,7 @@ const comboController = require('../controllers/productCombo.controller');
 const { protect } = require('../middlewares/protect.middleware');
 const PERMISSIONS = require('../constants/permissions');
 
+router.get('/pos', productController.getAllProducts);
 router.get('/', protect(PERMISSIONS.VIEW_PRODUCT), productController.getProducts);
 router.get('/:id', protect(PERMISSIONS.VIEW_PRODUCT), productController.getProductById);
 router.post('/', protect(PERMISSIONS.CREATE_PRODUCT), productController.createProduct);

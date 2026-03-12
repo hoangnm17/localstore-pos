@@ -292,3 +292,68 @@ exports.getProductWithBarcode = async (barcode) => {
         `);
     return result.recordset[0] || null;
 };
+
+exports.getAllProducts = async (filters) => {
+    const { search, page, pageSize, categoryId, status } = filters;
+    const offset = (page - 1) * pageSize;
+
+    const query = `
+        ${categoryId ? `
+        WITH CategoryTree AS (
+            SELECT id FROM Categories WHERE id = @categoryId
+            UNION ALL
+            SELECT c.id
+            FROM Categories c
+            JOIN CategoryTree ct ON c.parentId = ct.id
+        )` : ``}
+
+        SELECT 
+            p.[id], 
+            p.[name], 
+            p.[code],
+            p.[imageUrl],
+            p.[categoryId],
+            ISNULL(s.[quantityOnHand], 0) AS [stock],
+            s.[minThreshold],
+
+            pu.[id] AS [unitId], 
+            pu.[unitName],
+            pu.[conversionFactor] AS [factor],
+            pu.[barcode], 
+            pu.[salePrice] AS [price],
+            pu.[unitType]
+        FROM (
+            SELECT [id], [name], [code], [categoryId], [imageUrl]
+            FROM [Products]
+            WHERE [status] = @status
+            AND (
+                @search IS NULL
+                OR [name] LIKE N'%' + @search + '%'
+                OR [code] LIKE '%' + @search + '%'
+                OR [id] IN (
+                    SELECT [productId]
+                    FROM [ProductUnits]
+                    WHERE [barcode] = @search
+                )
+            )
+            ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+            ORDER BY [id]
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+        ) AS p
+        LEFT JOIN [InventoryStocks] s 
+            ON p.[id] = s.[productId]
+        LEFT JOIN [ProductUnits] pu 
+            ON p.[id] = pu.[productId]
+        ORDER BY p.[id], pu.[conversionFactor]
+    `;
+
+    const request = new sql.Request();
+    request.input('search', sql.NVarChar, search || null);
+    request.input('categoryId', sql.Int, categoryId || null);
+    request.input('status', sql.VarChar, status || 'Selling');
+    request.input('offset', sql.Int, offset);
+    request.input('pageSize', sql.Int, pageSize);
+
+    const result = await request.query(query);
+    return result.recordset;
+};

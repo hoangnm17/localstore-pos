@@ -96,3 +96,33 @@ exports.getProductWithBarcode = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+exports.getAllProducts = async (req, res) => {
+    try {
+
+        const filters = {
+            page: Number(req.query.page) || 1,
+            pageSize: Number(req.query.limit) || 20,
+            search: req.query.search || null,
+            status: req.query.status || 'Selling',
+            categoryId: req.query.categoryId
+                ? Number(req.query.categoryId)
+                : null
+        };
+
+        const data = await productService.getAllProducts(filters);
+
+        res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};
