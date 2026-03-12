@@ -17,6 +17,7 @@ const OrderItemList = ({ orderItems, increase, decrease, remove, activeItemId, o
         >
           <tr>
             <th className="text-start">Sản phẩm</th>
+            <th className="text-center">Đơn vị</th>
             <th className="text-end">Giá</th>
             <th className="text-center">Số lượng</th>
             <th className="text-end">Thành tiền</th>
