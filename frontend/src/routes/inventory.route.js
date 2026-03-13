@@ -2,6 +2,7 @@ import { Route } from "react-router-dom";
 import CategoryStock from "../app/inventory/pages/CategoryStock";
 import ProductStock from "../app/inventory/pages/ProductStock";
 import MainLayout from "../layouts/MainLayout";
+import ManagerLayout from '../layouts/ManagerLayout';
 import InventoryMenu from "../app/inventory/pages/InventoryMenu";
 import ProblematicReport from "../app/inventory/pages/ProblematicReport";
 import PurchaseOrderList from "../app/inventory/pages/PurchaseOrderList";
