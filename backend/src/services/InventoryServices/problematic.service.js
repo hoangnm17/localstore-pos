@@ -1,7 +1,7 @@
 const reportModel = require("../../models/problematic.model.js");
 const staffModel = require("../../models/staff.model.js");
 
-exports.createReport = async (data, user) => {
+const createReport = async (data, user) => {
 
     if (!user.permissions.includes("CREATE_PROBLEMATIC")) {
     throw new Error("PERMISSION_DENIED");
@@ -28,7 +28,7 @@ exports.createReport = async (data, user) => {
     });
 };
 
-exports.getReports = async ({ userId, roleId, filters }) => {
+const getReports = async ({ userId, roleId, filters }) => {
 
     const isManager = roleId === 1; 
 
@@ -39,28 +39,24 @@ exports.getReports = async ({ userId, roleId, filters }) => {
     });
 };
 
-exports.updateStatus = async ({ reportId, status, roleId, updatedBy }) => {
+const updateStatus = async ({ reportId, status, roleId, updatedBy }) => {
 
-    // 🔥 Chỉ manager được update
     if (roleId !== 1) {
         throw new Error("PERMISSION_DENIED");
     }
 
-    // 🔥 Chỉ cho 2 trạng thái
     const validStatus = ["OPEN", "PROCESSED"];
 
     if (!validStatus.includes(status)) {
         throw new Error("INVALID_STATUS");
     }
 
-    // 🔥 Lấy report hiện tại
     const existingReport = await reportModel.getById(reportId);
 
     if (!existingReport) {
         throw new Error("REPORT_NOT_FOUND");
     }
 
-    // 🔥 Không cho update nếu đã processed
     if (existingReport.status === "PROCESSED") {
         throw new Error("REPORT_ALREADY_PROCESSED");
     }
@@ -70,4 +66,10 @@ exports.updateStatus = async ({ reportId, status, roleId, updatedBy }) => {
         status,
         updatedBy
     });
+};
+
+module.exports = {
+    createReport,
+    getReports,
+    updateStatus
 };

@@ -124,6 +124,36 @@ const updateMinThreshold = async (productId, minThreshold) => {
     return updatedStock;
 };
 
+const searchProducts = async (keyword) => {
+  if (!keyword || keyword.trim().length < 2) {
+    return [];
+  }
+
+  const products = await productModel.searchProducts(keyword.trim());
+
+  return products;
+};
+
+const getLowStockProducts = async (currentUser) => {
+
+    if (!currentUser.permissions.includes("CREATE_PURCHASE_ORDER")) {
+        throw new Error("PERMISSION_DENIED");
+    }
+
+    return await productModel.getLowStockProductUnits();
+
+};
+
+const searchProductUnits = async (keyword) => {
+
+    if (!keyword) {
+        return [];
+    }
+
+    return await productModel.searchProductUnits(keyword);
+};
+
+
 module.exports = {
     deductStock,
     getCategoryStock,
@@ -131,5 +161,8 @@ module.exports = {
     getProductsBySupplier,
     updateProductStock,
     getProductBasicInfo,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts,
+    getLowStockProducts,
+    searchProductUnits
 }

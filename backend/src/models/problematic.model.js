@@ -1,6 +1,6 @@
 const { sql, connectDB } = require("../config/database.js");
 
-exports.create = async ({ title, issueDescription, reportedBy }) => {
+const create = async ({ title, issueDescription, reportedBy }) => {
     const pool = await connectDB();
 
     return pool.request()
@@ -13,7 +13,7 @@ exports.create = async ({ title, issueDescription, reportedBy }) => {
         `);
 };
 
-exports.getReports = async ({ userId, isManager, filters }) => {
+const getReports = async ({ userId, isManager, filters }) => {
     const pool = await connectDB();
 
     let query = `
@@ -24,19 +24,19 @@ exports.getReports = async ({ userId, isManager, filters }) => {
 
     const request = pool.request();
 
-    // 🔹 Warehouse chỉ xem của mình
+    //Warehouse chỉ xem của mình
     if (!isManager) {
         query += " AND reportedBy = @userId";
         request.input("userId", sql.BigInt, userId);
     }
 
-    // 🔹 Filter status
+    //Filter status
     if (filters.status && filters.status !== "ALL") {
         query += " AND status = @status";
         request.input("status", sql.NVarChar, filters.status);
     }
 
-    // 🔹 Filter ngày tạo (FROM)
+    //Filter ngày tạo (FROM)
     if (filters.createdFrom) {
         query += " AND createdAt >= @createdFrom";
         request.input(
@@ -46,7 +46,7 @@ exports.getReports = async ({ userId, isManager, filters }) => {
         );
     }
 
-    // 🔹 Filter ngày tạo (TO) — set 23:59:59
+    //Filter ngày tạo (TO) — set 23:59:59
     if (filters.createdTo) {
         const endDate = new Date(filters.createdTo);
         endDate.setHours(23, 59, 59, 999);
@@ -61,7 +61,7 @@ exports.getReports = async ({ userId, isManager, filters }) => {
 
     return result.recordset;
 };
-exports.getById = async (reportId) => {
+const getById = async (reportId) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -75,7 +75,7 @@ exports.getById = async (reportId) => {
     return result.recordset[0];
 };
 
-exports.updateStatus = async ({ reportId, status, updatedBy }) => {
+const updateStatus = async ({ reportId, status, updatedBy }) => {
     const pool = await connectDB();
 
     const result = await pool.request()
@@ -93,4 +93,11 @@ exports.updateStatus = async ({ reportId, status, updatedBy }) => {
         `);
 
     return result.recordset[0];
+};
+
+module.exports = {
+    create,
+    getReports,
+    getById,
+    updateStatus
 };

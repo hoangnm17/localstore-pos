@@ -20,7 +20,8 @@ const getProductsByCategory = async (
                 p.name AS productName,
                 p.code AS productCode,
                 p.imageUrl,
-                p.allowDecimalQuantity,   -- thêm trường này để frontend biết
+                p.allowDecimalQuantity,
+                p.baseUnit,
                 s.quantityOnHand,
                 s.minThreshold,
                 CASE
@@ -56,12 +57,11 @@ const countProductsByCategory = async (categoryId, search) => {
     return result.recordset[0].total;
 };
 
-const updateStock = async (productId, quantity) => {
-    const pool = await connectDB();
+const updateStock = async (transaction, productId, quantity) => {
 
-    const result = await pool.request()
+    const result = await new sql.Request(transaction)
         .input("productId", sql.BigInt, productId)
-        .input("quantity", sql.Decimal(15, 3), quantity)   // ← Đổi từ sql.Int → sql.Decimal(15,3)
+        .input("quantity", sql.Decimal(15, 3), quantity)
         .query(`
             UPDATE InventoryStocks
             SET quantityOnHand = @quantity
@@ -130,6 +130,34 @@ const countProductsBySupplier = async (supplierId, search) => {
     return result.recordset[0].total;
 };
 
+const searchProducts = async (keyword) => {
+  const pool = await sql.connect();
+
+  const result = await pool.request()
+    .input("keyword", sql.NVarChar, `%${keyword}%`)
+    .query(`
+      SELECT TOP 20
+          p.id,
+          p.code,
+          p.name,
+          p.baseUnit,
+          p.allowDecimalQuantity,
+          ISNULL(s.quantityOnHand, 0) AS quantityOnHand
+      FROM Products p
+      LEFT JOIN InventoryStocks s 
+          ON p.id = s.productId
+      WHERE 
+          p.status = 'Selling'
+          AND (
+              p.name LIKE @keyword
+              OR p.code LIKE @keyword
+          )
+      ORDER BY p.name ASC
+    `);
+
+  return result.recordset;
+};
+
 const getStockByProductId = async (transaction, productId) => {
   const result = await new sql.Request(transaction)
     .input("productId", sql.Int, productId)
@@ -171,6 +199,66 @@ const updateMinThreshold = async (productId, minThreshold) => {
     return result.recordset[0];
 };
 
+const getLowStockProductUnits = async () => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request().query(`
+        SELECT
+            pu.id AS productUnitId,
+            pu.unitName,
+            pu.conversionFactor,
+
+            p.id AS productId,
+            p.name AS productName,
+
+            ISNULL(i.quantityOnHand,0) AS stockQuantity,
+            i.minThreshold
+
+        FROM ProductUnits pu
+
+        JOIN Products p
+            ON p.id = pu.productId
+
+        LEFT JOIN InventoryStocks i
+            ON i.productId = p.id
+
+        WHERE ISNULL(i.quantityOnHand,0) <= i.minThreshold
+
+        ORDER BY stockQuantity ASC
+    `);
+
+    return result.recordset;
+
+};
+
+const searchProductUnits = async (keyword) => {
+
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("keyword", sql.NVarChar, `%${keyword}%`)
+        .query(`
+            SELECT
+                pu.id AS productUnitId,
+                pu.unitName,
+
+                p.id AS productId,
+                p.name AS productName
+
+            FROM ProductUnits pu
+
+            JOIN Products p
+                ON p.id = pu.productId
+
+            WHERE p.name LIKE @keyword
+
+            ORDER BY p.name
+        `);
+
+    return result.recordset;
+};
+
 module.exports = {
     getStockByProductId,
     updateStock,
@@ -180,5 +268,8 @@ module.exports = {
     getProductBasicInfo,
     countProductsBySupplier,
     getProductsBySupplier,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts,
+    getLowStockProductUnits,
+    searchProductUnits
 }

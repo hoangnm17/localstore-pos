@@ -8,42 +8,77 @@ function UpdateProductModal({
   onClose,
   onSuccess
 }) {
+
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState("ACTIVE");
+  const [productUnitId, setProductUnitId] = useState("");
+  const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (product) {
-      setPrice(product.supplyPrice || "");
-      setStatus(product.status || "ACTIVE");
-    }
+    if (!product) return;
+
+    setPrice(product.supplyPrice || "");
+    setStatus(product.status || "ACTIVE");
+
+    fetchUnits();
   }, [product]);
+
+  const fetchUnits = async () => {
+    try {
+
+      const res = await supplierService.getProductUnits(product.id);
+
+      if (res?.data?.success) {
+        setUnits(res.data.data);
+
+        if (res.data.data.length > 0) {
+          setProductUnitId(res.data.data[0].id);
+        }
+      }
+
+    } catch (err) {
+      console.error("Fetch units error:", err);
+    }
+  };
 
   if (!show || !product) return null;
 
   const handleUpdate = async () => {
-    if (!price) return;
 
-    try {
-      setLoading(true);
+  try {
 
-      await supplierService.updateProductOfSupplier(
-        supplierId,
-        product.id,
-        {
-          supplyPrice: Number(price),
-          status
-        }
-      );
+    setLoading(true);
 
-      onSuccess();
-      onClose();
-    } catch (err) {
-      console.error("Update error:", err);
-    } finally {
-      setLoading(false);
+    const data = {
+      status
+    };
+
+    // chỉ gửi price khi có thay đổi
+    if (price && Number(price) !== Number(product.supplyPrice)) {
+      data.price = Number(price);
+      data.productUnitId = Number(productUnitId);
     }
-  };
+
+    await supplierService.updateProductOfSupplier(
+      supplierId,
+      product.id,
+      data
+    );
+
+    onSuccess();
+    onClose();
+
+  } catch (err) {
+
+    console.error("Update error:", err);
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
 
   return (
     <>
@@ -63,6 +98,21 @@ function UpdateProductModal({
             </div>
 
             <div className="modal-body">
+
+              <div className="mb-3">
+                <label className="form-label">Đơn vị</label>
+                <select
+                  className="form-select"
+                  value={productUnitId}
+                  onChange={(e) => setProductUnitId(e.target.value)}
+                >
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.unitName}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="mb-3">
                 <label className="form-label">Giá nhập</label>
@@ -89,6 +139,7 @@ function UpdateProductModal({
             </div>
 
             <div className="modal-footer">
+
               <button
                 className="btn btn-secondary"
                 onClick={onClose}
@@ -103,13 +154,13 @@ function UpdateProductModal({
               >
                 {loading ? "Đang lưu..." : "Lưu"}
               </button>
+
             </div>
 
           </div>
         </div>
       </div>
 
-      {/* Nền tối */}
       <div className="modal-backdrop fade show"></div>
     </>
   );

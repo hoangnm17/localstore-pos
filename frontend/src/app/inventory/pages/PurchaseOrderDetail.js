@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
-import supplierService from "../../../services/Inventory/supplierService"; // ← import service nhà cung cấp
+import supplierService from "../../../services/Inventory/supplierService";
 import PurchaseOrderActions from "../InventoryModal/PurchaseOrderAction";
 import SupplierDetailModal from "../InventoryModal/SupplierDetailModal";
 
 const PurchaseOrderDetail = () => {
   const user = JSON.parse(localStorage.getItem("user"));
-  console.log("USER:", user);
-  console.log("FEATURES:", user?.features);
   const canUpdatePO = user?.features?.includes("UPDATE_PURCHASE_ORDER");
   const canReceivePO = user?.features?.includes("RECEIVE_PURCHASE_ORDER");
 
@@ -23,6 +21,9 @@ const PurchaseOrderDetail = () => {
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [supplierDetail, setSupplierDetail] = useState(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
+
+  // State cho số lượng nhận lần này (chỉ dùng khi WaitingForDelivery)
+  const [receiveQuantities, setReceiveQuantities] = useState({});
 
   const fetchDetail = async () => {
     try {
@@ -50,9 +51,62 @@ const PurchaseOrderDetail = () => {
   };
 
   const handleSupplierClick = () => {
-    if (po?.supplier?.id) {
-      fetchSupplierDetail(po.supplier.id);
+    if (po?.supplierId) {
+      fetchSupplierDetail(po.supplierId);
       setShowSupplierModal(true);
+    }
+  };
+
+  // Khởi tạo receiveQuantities chỉ khi cần (WaitingForDelivery)
+  useEffect(() => {
+    if (po?.status === "WaitingForDelivery" && po?.items && Array.isArray(po.items)) {
+      const initial = {};
+      po.items.forEach(item => {
+        const remaining = (item.quantity || 0) - (item.receivedQuantity || 0);
+        initial[item.id] = remaining > 0 ? remaining : 0;
+      });
+      setReceiveQuantities(initial);
+    }
+  }, [po]);
+
+  // Xử lý thay đổi SL nhận lần này
+  const handleReceiveQtyChange = (itemId, value) => {
+    const num = value === "" ? 0 : Number(value);
+    const item = po?.items?.find(i => i.id === itemId);
+    if (!item) return;
+
+    const max = item.quantity - (item.receivedQuantity || 0);
+    const valid = Math.max(0, Math.min(num, max));
+
+    setReceiveQuantities(prev => ({ ...prev, [itemId]: valid }));
+  };
+
+  // Gửi nhận hàng từ trang chi tiết
+  const handleReceiveFromDetail = async () => {
+    if (!po?.items || !Array.isArray(po.items)) {
+      alert("Lỗi dữ liệu: Không có sản phẩm trong đơn hàng.");
+      return;
+    }
+
+    const itemsToSend = po.items.map(item => ({
+      poiId: item.id,
+      receivedQuantity: receiveQuantities[item.id] || 0
+    }));
+
+    const total = itemsToSend.reduce((sum, i) => sum + i.receivedQuantity, 0);
+    if (total === 0) {
+      alert("Vui lòng nhập số lượng nhận cho ít nhất một sản phẩm.");
+      return;
+    }
+
+    if (!window.confirm(`Xác nhận nhận ${total} đơn vị?`)) return;
+
+    try {
+      await purchaseOrderService.receivePurchaseOrder(po.id, { items: itemsToSend });
+      fetchDetail();
+      alert("Nhận hàng thành công!");
+    } catch (err) {
+      alert(`Nhận hàng thất bại: ${err?.response?.data?.message || err.message || "Lỗi không xác định"}`);
     }
   };
 
@@ -109,8 +163,8 @@ const PurchaseOrderDetail = () => {
   const getQuantitySummary = (items) => {
     if (!items?.length) return "0";
     const unitMap = items.reduce((acc, item) => {
-      const unit = item.baseUnit || "khác";
-      acc[unit] = (acc[unit] || 0) + (item.quantityOrdered || 0);
+      const unit = item.unitName || "khác";
+      acc[unit] = (acc[unit] || 0) + (item.quantity || 0);
       return acc;
     }, {});
     return Object.entries(unitMap)
@@ -121,6 +175,7 @@ const PurchaseOrderDetail = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       Received: { color: "info", text: "Đã nhận hàng" },
+      PartiallyReceived: { color: "primary", text: "Nhận một phần" },
       Approved: { color: "success", text: "Đã duyệt" },
       Pending: { color: "warning", text: "Chờ duyệt" },
       Cancelled: { color: "danger", text: "Đã hủy" },
@@ -141,6 +196,9 @@ const PurchaseOrderDetail = () => {
     );
   };
 
+  // Quyết định có hiển thị cột "SL nhận lần này" hay không
+  const canReceive = po.status === "WaitingForDelivery" && (canReceivePO || canUpdatePO);
+
   return (
     <div className="container-fluid py-4 px-3 px-md-5 bg-light min-vh-100">
       <div className="card shadow-xl border-0 rounded-4 overflow-hidden">
@@ -154,7 +212,7 @@ const PurchaseOrderDetail = () => {
           <div className="d-flex align-items-center gap-3">
             <button
               className="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm"
-              onClick={() => navigate("/inventory/purchase-orders")}
+              onClick={() => navigate(-1)}
             >
               <i className="bi bi-arrow-left me-2"></i>
               Quay lại
@@ -195,17 +253,14 @@ const PurchaseOrderDetail = () => {
 
             <div className="col-md-3 col-sm-6">
               <div
-                className="card bg-info text-white shadow border-0 rounded-4 h-100 position-relative overflow-hidden transition-all"
+                className="card bg-info text-white shadow border-0 rounded-4 h-100 position-relative overflow-hidden"
                 onClick={handleSupplierClick}
                 style={{
-                  cursor: po?.supplier?.id ? "pointer" : "default",
+                  cursor: po?.supplierId ? "pointer" : "default",
                   transition: "all 0.25s ease",
                 }}
-              // Hover effect bằng CSS class (thêm vào file CSS hoặc inline)
-              // Bạn có thể thêm class hover:shadow-2xl hover:scale-[1.03] hover:bg-info-dark (tùy chỉnh)
               >
-                {/* Overlay khi hover (tùy chọn - làm nổi bật hơn) */}
-                {po?.supplier?.id && (
+                {po?.supplierId && (
                   <div
                     className="position-absolute top-0 end-0 p-2 opacity-0 transition-opacity"
                     style={{ transition: "opacity 0.3s ease" }}
@@ -218,11 +273,10 @@ const PurchaseOrderDetail = () => {
                   <i className="bi bi-building fs-1 mb-3"></i>
                   <h6 className="mb-2 opacity-90 fw-semibold">Nhà cung cấp</h6>
                   <h5 className="fw-bold mb-1 text-truncate">
-                    {po.supplier?.name || "—"}
+                    {po.supplierName || "—"}
                   </h5>
 
-                  {/* Hint click - chỉ hiển thị nếu có supplier */}
-                  {po?.supplier?.id ? (
+                  {po?.supplierId ? (
                     <small className="opacity-85 mt-2">
                       <i className="bi bi-info-circle me-1"></i>
                       Nhấn để xem chi tiết
@@ -281,16 +335,16 @@ const PurchaseOrderDetail = () => {
                   </h5>
                   <dl className="row g-3 mb-0">
                     <dt className="col-sm-5 fw-semibold text-muted">Người tạo:</dt>
-                    <dd className="col-sm-7">{po.workflow?.createdBy?.name || "—"}</dd>
+                    <dd className="col-sm-7">{po.createdByName || "—"}</dd>
 
                     <dt className="col-sm-5 fw-semibold text-muted">Người xử lý:</dt>
                     <dd className="col-sm-7">
-                      {po.workflow?.processedBy?.name || "Chưa xử lý"}
+                      {po.processByName || "Chưa xử lý"}
                     </dd>
 
                     <dt className="col-sm-5 fw-semibold text-muted">Người nhận:</dt>
                     <dd className="col-sm-7">
-                      {po.workflow?.receivedBy?.name || "Chưa nhận hàng"}
+                      {po.receivedByName || "Chưa nhận hàng"}
                     </dd>
                   </dl>
                 </div>
@@ -341,38 +395,66 @@ const PurchaseOrderDetail = () => {
                     <tr>
                       <th scope="col" className="ps-4">Mã - Tên sản phẩm</th>
                       <th scope="col" className="text-center">Đơn vị</th>
-                      <th scope="col" className="text-center">Tồn kho trước nhập</th>
                       <th scope="col" className="text-center">Đơn giá</th>
                       <th scope="col" className="text-center">SL đặt</th>
                       <th scope="col" className="text-center">Thành tiền</th>
+                      <th scope="col" className="text-center">Đã nhận</th>
+                      {canReceive && (
+                        <th scope="col" className="text-center">SL nhận lần này</th>
+                      )}
+                      <th scope="col" className="text-center">Giá phải trả</th>
                     </tr>
                   </thead>
                   <tbody>
                     {po.items?.length > 0 ? (
-                      po.items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="ps-4 fw-medium">
-                            <div className="text-truncate" style={{ maxWidth: "220px" }}>
-                              {item.code}
-                            </div>
-                            <small className="text-muted text-truncate" style={{ maxWidth: "220px", display: "block" }}>
-                              {item.productName}
-                            </small>
-                          </td>
-                          <td className="text-center">{item.baseUnit || "—"}</td>
-                          <td className="text-center">{item.quantityBeforeOrdered ?? "—"}</td>
-                          <td className="text-center">{formatCurrency(item.costPrice)}</td>
-                          <td className="text-center fw-bold text-primary">
-                            {item.quantityOrdered} {item.baseUnit || ""}
-                          </td>
-                          <td className="text-center fw-bold text-success">
-                            {formatCurrency(item.lineTotal)}
-                          </td>
-                        </tr>
-                      ))
+                      po.items.map((item) => {
+                        const remaining = (item.quantity || 0) - (item.receivedQuantity || 0);
+                        const thisReceive = receiveQuantities[item.id] ?? remaining;
+
+                        return (
+                          <tr key={item.id}>
+                            <td className="ps-4 fw-medium">
+                              <div className="text-truncate" style={{ maxWidth: "220px" }}>
+                                {item.productId || "—"}
+                              </div>
+                              <small className="text-muted text-truncate" style={{ maxWidth: "220px", display: "block" }}>
+                                {item.productName || "—"}
+                              </small>
+                            </td>
+                            <td className="text-center">{item.unitName || "—"}</td>
+                            <td className="text-center">{formatCurrency(item.costPrice)}</td>
+                            <td className="text-center fw-bold text-primary">
+                              {item.quantity || 0} {item.unitName || ""}
+                            </td>
+                            <td className="text-center fw-bold text-success">
+                              {formatCurrency((item.quantity || 0) * (item.costPrice || 0))}
+                            </td>
+                            <td className="text-center fw-bold">
+                              {item.receivedQuantity ?? "—"} / {item.quantity || 0}
+                            </td>
+                            {canReceive && (
+                              <td className="text-center">
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm text-center mx-auto"
+                                  style={{ width: "100px" }}
+                                  min={0}
+                                  max={remaining}
+                                  value={thisReceive}
+                                  onChange={(e) => handleReceiveQtyChange(item.id, e.target.value)}
+                                  disabled={remaining <= 0}
+                                />
+                              </td>
+                            )}
+                            <td className="text-center fw-bold text-success">
+                              {formatCurrency((item.receivedQuantity || 0) * (item.costPrice || 0))}
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="6" className="text-center py-5 text-muted fst-italic">
+                        <td colSpan={canReceive ? 7 : 6} className="text-center py-5 text-muted fst-italic">
                           Không có sản phẩm trong đơn hàng
                         </td>
                       </tr>
@@ -380,7 +462,7 @@ const PurchaseOrderDetail = () => {
                   </tbody>
                   <tfoot className="table-light fw-bold">
                     <tr>
-                      <td colSpan="5" className="text-end pe-4">Tổng cộng:</td>
+                      <td colSpan={canReceive ? 7 : 6} className="text-end pe-4">Tổng cộng:</td>
                       <td className="text-center text-success fs-5">
                         {formatCurrency(po.totalAmount)}
                       </td>
@@ -398,12 +480,22 @@ const PurchaseOrderDetail = () => {
             <div className="text-muted">
               Đơn #{po.id} • Tạo lúc {formatDate(po.createdAt)}
             </div>
-            <PurchaseOrderActions
-              po={po}
-              onReload={fetchDetail}
-              canUpdatePO={canUpdatePO}
-              canReceivePO={canReceivePO}
-            />
+            <div className="d-flex gap-3 align-items-center">
+              <PurchaseOrderActions
+                po={po}
+                onReload={fetchDetail}
+                canUpdatePO={canUpdatePO}
+                canReceivePO={canReceivePO}
+              />
+              {canReceive && (
+                <button
+                  className="btn btn-warning rounded-pill px-5 fw-bold"
+                  onClick={handleReceiveFromDetail}
+                >
+                  Nhận hàng
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -4,10 +4,16 @@ import supplierService from "../../../services/Inventory/supplierService";
 
 function AddProductModal({ show, onClose, supplierId, onSuccess }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [options, setOptions] = useState([]);
+  const [productOptions, setProductOptions] = useState([]);
+
+  const [unitOptions, setUnitOptions] = useState([]);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+
   const [search, setSearch] = useState("");
   const [supplyPrice, setSupplyPrice] = useState("");
+
   const [loading, setLoading] = useState(false);
+  const [loadingUnits, setLoadingUnits] = useState(false);
 
   useEffect(() => {
     if (!show || !supplierId) return;
@@ -23,23 +29,60 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
           const mapped = res.data.data.map((p) => ({
             value: p.id,
             label: `${p.name} (${p.barcode || p.code})`,
-            salePrice: p.salePrice // ✅ lưu giá bán
+            salePrice: p.salePrice
           }));
-          setOptions(mapped);
+          setProductOptions(mapped);
         } else {
-          setOptions([]);
+          setProductOptions([]);
         }
       } catch (err) {
-        console.error("Fetch error:", err);
-        setOptions([]);
+        console.error(err);
+        setProductOptions([]);
       }
     };
 
     fetchProducts();
   }, [show, supplierId, search]);
 
+  useEffect(() => {
+    if (!selectedProduct) {
+      setUnitOptions([]);
+      setSelectedUnit(null);
+      return;
+    }
+
+    const fetchUnits = async () => {
+      try {
+        setLoadingUnits(true);
+
+        const res = await supplierService.getProductUnits(
+          selectedProduct.value
+        );
+
+        if (res?.data?.success) {
+          const mapped = res.data.data.map((u) => ({
+            value: u.id,
+            label: `${u.unitName} (x${u.conversionFactor})`,
+            price: u.price
+          }));
+
+          setUnitOptions(mapped);
+        } else {
+          setUnitOptions([]);
+        }
+      } catch (err) {
+        console.error(err);
+        setUnitOptions([]);
+      } finally {
+        setLoadingUnits(false);
+      }
+    };
+
+    fetchUnits();
+  }, [selectedProduct]);
+
   const handleAdd = async () => {
-    if (!selectedProduct || !supplyPrice) return;
+    if (!selectedProduct || !selectedUnit || !supplyPrice) return;
 
     try {
       setLoading(true);
@@ -48,19 +91,20 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
         supplierId,
         {
           productId: Number(selectedProduct.value),
-          supplyPrice: Number(supplyPrice)
+          productUnitId: Number(selectedUnit.value),
+          price: Number(supplyPrice)
         }
       );
 
       onSuccess();
       onClose();
 
-      // reset form
       setSelectedProduct(null);
+      setSelectedUnit(null);
       setSupplyPrice("");
       setSearch("");
     } catch (err) {
-      console.error("Add error:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -70,45 +114,45 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
 
   return (
     <>
-      <div className="modal fade show d-block" tabIndex="-1">
+      <div className="modal fade show d-block">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content rounded-4 shadow">
 
             <div className="modal-header">
               <h5 className="modal-title">Thêm sản phẩm</h5>
-              <button
-                className="btn-close"
-                onClick={onClose}
-              ></button>
+              <button className="btn-close" onClick={onClose}></button>
             </div>
 
             <div className="modal-body">
+
               <label className="form-label">Chọn sản phẩm</label>
 
               <Select
-                options={options}
+                options={productOptions}
                 value={selectedProduct}
                 onChange={setSelectedProduct}
                 onInputChange={(value) => setSearch(value)}
                 isClearable
                 placeholder="Tìm theo tên hoặc barcode..."
-                isLoading={loading}
               />
 
-              {/* ✅ HIỂN THỊ GIÁ BÁN */}
               {selectedProduct && (
-                <div className="mt-2 text-muted">
-                  Giá bán:{" "}
-                  <strong>
-                    {selectedProduct.salePrice
-                      ? selectedProduct.salePrice.toLocaleString()
-                      : 0} đ
-                  </strong>
-                </div>
+                <>
+                  <label className="form-label mt-3">Đơn vị</label>
+
+                  <Select
+                    options={unitOptions}
+                    value={selectedUnit}
+                    onChange={setSelectedUnit}
+                    placeholder="Chọn đơn vị..."
+                    isLoading={loadingUnits}
+                  />
+                </>
               )}
 
               <div className="mt-3">
                 <label className="form-label">Giá nhập</label>
+
                 <input
                   type="number"
                   className="form-control"
@@ -117,9 +161,11 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
                   placeholder="Nhập giá nhập..."
                 />
               </div>
+
             </div>
 
             <div className="modal-footer">
+
               <button
                 className="btn btn-secondary"
                 onClick={onClose}
@@ -130,17 +176,22 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
               <button
                 className="btn btn-primary"
                 onClick={handleAdd}
-                disabled={!selectedProduct || !supplyPrice || loading}
+                disabled={
+                  !selectedProduct ||
+                  !selectedUnit ||
+                  !supplyPrice ||
+                  loading
+                }
               >
                 {loading ? "Đang thêm..." : "Thêm"}
               </button>
+
             </div>
 
           </div>
         </div>
       </div>
 
-      {/* Backdrop nền tối */}
       <div className="modal-backdrop fade show"></div>
     </>
   );
