@@ -320,7 +320,7 @@ const PurchaseOrderCreate = () => {
                             </td>
                             <td className="text-center">
                               <div className="d-flex align-items-center justify-content-center gap-2">
-                                <button
+                                <button type="button"
                                   className="btn btn-sm btn-outline-secondary rounded-circle"
                                   onClick={() => updateQuantity(item.productUnitId, -1)}
                                   disabled={item.quantity <= 1}
@@ -328,7 +328,7 @@ const PurchaseOrderCreate = () => {
                                   -
                                 </button>
                                 <span className="fw-bold px-3">{item.quantity}</span>
-                                <button
+                                <button type="button"
                                   className="btn btn-sm btn-outline-secondary rounded-circle"
                                   onClick={() => updateQuantity(item.productUnitId, 1)}
                                 >
@@ -384,139 +384,274 @@ const PurchaseOrderCreate = () => {
 
       {/* Modal */}
       {showAddModal && (
-        <div className="modal fade show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.6)" }}>
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content rounded-4 border-0 shadow-xl overflow-hidden">
-              <div className="modal-header bg-gradient-primary text-white py-4">
-                <h5 className="modal-title fw-bold d-flex align-items-center">
-                  <i className="bi bi-cart-plus me-3 fs-4"></i>
-                  Thêm sản phẩm mới
-                </h5>
+        <div
+          className="modal fade show"
+          tabIndex="-1"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.65)" }}
+          aria-modal="true"
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-sm-down">
+            <div
+              className="modal-content border-0 shadow-xl rounded-4 overflow-hidden"
+              style={{ maxWidth: "960px", width: "95%", borderRadius: "1.25rem" }}
+            >
+              {/* Header */}
+              <div
+                className="modal-header text-white py-3 py-md-4 px-4 px-md-5 border-0"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                }}
+              >
+                <div className="d-flex align-items-center flex-grow-1">
+                  <h5 className="modal-title fw-bold mb-0 d-flex align-items-center fs-5 fs-md-4">
+                    <i className="bi bi-cart-plus-fill me-2 me-md-3 fs-4"></i>
+                    Thêm sản phẩm vào đơn
+                  </h5>
+
+                  {/* Progress steps */}
+                  <div className="ms-auto d-none d-md-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center">
+                      <div
+                        className={`rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold ${step === 1 ? "bg-white text-primary" : "bg-white-50 text-white"}`}
+                        style={{ width: 36, height: 36, fontSize: "1.1rem" }}
+                      >
+                        1
+                      </div>
+                      <span className="text-white fw-medium">Chọn sản phẩm</span>
+                    </div>
+                    <div className="vr bg-white opacity-50" style={{ height: 24 }}></div>
+                    <div className="d-flex align-items-center">
+                      <div
+                        className={`rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold ${step === 2 ? "bg-white text-primary" : "bg-white-50 text-white"}`}
+                        style={{ width: 36, height: 36, fontSize: "1.1rem" }}
+                      >
+                        2
+                      </div>
+                      <span className="text-white fw-medium">Nhà cung cấp & SL</span>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close btn-close-white ms-3 ms-md-4"
                   onClick={() => {
                     setShowAddModal(false);
                     setStep(1);
                     setSearchKeyword("");
+                    setProductOptions([]);
                   }}
                 ></button>
               </div>
 
-              <div className="modal-body p-4 p-md-5 bg-light">
+              {/* Body - scrollable */}
+              <div
+                className="modal-body p-4 p-md-5"
+                style={{
+                  background: "linear-gradient(to bottom, #f8fafc, #f1f5f9)",
+                  maxHeight: "calc(90vh - 140px)",
+                  overflowY: "auto",
+                }}
+              >
                 {step === 1 ? (
-                  <>
-                    <div className="mb-4">
-                      <label className="form-label fw-bold fs-5">Tìm kiếm sản phẩm</label>
+                  <div className="container-fluid">
+                    <div className="text-center mb-4">
+                      <h6 className="fw-bold text-primary fs-5 mb-1">Bước 1: Tìm sản phẩm cần nhập</h6>
+                      <p className="text-muted mb-0">Nhập tên hoặc mã sản phẩm để tìm kiếm</p>
+                    </div>
+
+                    <div className="mb-4 position-relative">
                       <input
                         type="text"
-                        className="form-control form-control-lg rounded-pill shadow-sm"
-                        placeholder="Nhập tên hoặc mã sản phẩm..."
+                        className="form-control form-control-lg rounded-pill ps-5 shadow border-0"
+                        placeholder="Tìm kiếm sản phẩm (tên, mã...)"
                         value={searchKeyword}
-                        onChange={e => setSearchKeyword(e.target.value)}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
                         autoFocus
+                        style={{ backgroundColor: "#ffffff" }}
                       />
+                      <i className="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-4 text-muted"></i>
                     </div>
 
                     {loadingModal ? (
                       <div className="text-center py-5">
-                        <div className="spinner-border text-primary" />
+                        <div className="spinner-border text-primary" style={{ width: "3rem", height: "3rem" }} role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
                       </div>
                     ) : searchKeyword.trim() && productOptions.length === 0 ? (
-                      <div className="alert alert-warning rounded-3 text-center py-4">
-                        Không tìm thấy sản phẩm phù hợp.
+                      <div className="alert alert-warning border-warning rounded-3 text-center py-4 shadow-sm">
+                        <i className="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                        Không tìm thấy sản phẩm nào phù hợp
                       </div>
                     ) : productOptions.length > 0 ? (
-                      <div className="list-group rounded-3 shadow-sm" style={{ maxHeight: "350px", overflowY: "auto" }}>
-                        {productOptions.map(opt => (
+                      <div className="list-group rounded-3 shadow border-0 overflow-hidden">
+                        {productOptions.map((opt) => (
                           <button
                             key={opt.value}
-                            className="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-4 py-3 border-bottom"
+                            type="button"
+                            className="list-group-item list-group-item-action px-4 py-3 d-flex justify-content-between align-items-center border-bottom hover-lift"
                             onClick={() => handleSelectProduct(opt)}
+                            style={{ transition: "all 0.2s" }}
                           >
                             <div>
-                              <div className="fw-bold fs-5">{opt.productName}</div>
-                              <small className="text-muted">Đơn vị: {opt.unitName}</small>
+                              <div className="fw-bold fs-5 text-dark">{opt.productName}</div>
+                              <small className="text-muted d-block">Đơn vị: {opt.unitName}</small>
                             </div>
-                            <i className="bi bi-chevron-right text-muted fs-4"></i>
+                            <i className="bi bi-chevron-right text-primary fs-4"></i>
                           </button>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-5 text-muted">
-                        Nhập từ khóa để tìm kiếm sản phẩm...
+                        <i className="bi bi-search fs-1 mb-3 d-block"></i>
+                        Nhập từ khóa để bắt đầu tìm kiếm sản phẩm
                       </div>
                     )}
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <div className="alert alert-info rounded-3 mb-4 py-3">
-                      <strong className="d-block mb-2">Sản phẩm đã chọn:</strong>
-                      {selectedProductUnit?.label}
+                  <div className="container-fluid">
+                    <div className="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                      <div className="card-body">
+                        <h6 className="fw-bold text-primary mb-2">Sản phẩm đã chọn</h6>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <h5 className="mb-0 fw-bold">{selectedProductUnit?.productName}</h5>
+                            <small className="text-muted">Đơn vị: {selectedProductUnit?.unitName}</small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary rounded-pill"
+                            onClick={() => setStep(1)}
+                          >
+                            <i className="bi bi-arrow-left me-1"></i>Chọn lại
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
-                    <label className="form-label fw-bold mb-2">Nhà cung cấp</label>
-                    {loadingModal ? (
-                      <div className="text-center py-3"><div className="spinner-border spinner-border-sm" /></div>
-                    ) : suppliers.length === 0 ? (
-                      <div className="alert alert-warning">Không có nhà cung cấp nào</div>
-                    ) : (
-                      <Select
-                        options={suppliers.map(s => ({
-                          value: s.supplierId,
-                          label: `${s.supplierName} - ${s.price?.toLocaleString("vi-VN") || "0"} ₫`,
-                          price: s.price || 0,
-                        }))}
-                        value={selectedSupplier}
-                        onChange={setSelectedSupplier}
-                        placeholder="Chọn nhà cung cấp tốt nhất..."
-                        className="mb-4"
-                      />
-                    )}
+                    <div className="mb-4">
+                      <label className="form-label fw-bold fs-5 text-dark mb-3">
+                        <i className="bi bi-building me-2"></i>Chọn nhà cung cấp
+                      </label>
 
-                    <label className="form-label fw-bold mb-2">Số lượng nhập</label>
-                    <div className="input-group input-group-lg mb-4 rounded-pill overflow-hidden shadow-sm">
-                      <button className="btn btn-outline-secondary" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-                      <input
-                        type="text"
-                        className="form-control text-center fw-bold"
-                        value={quantity}
-                        onChange={e => {
-                          const val = e.target.value.replace(/[^0-9]/g, "");
-                          setQuantity(val ? Number(val) : 1);
-                        }}
-                      />
-                      <button className="btn btn-outline-secondary" onClick={() => setQuantity(q => q + 1)}>+</button>
+                      {loadingModal ? (
+                        <div className="text-center py-4">
+                          <div className="spinner-border text-primary" role="status"></div>
+                        </div>
+                      ) : suppliers.length === 0 ? (
+                        <div className="alert alert-danger rounded-3 text-center py-4">
+                          Không tìm thấy nhà cung cấp nào cho sản phẩm này
+                        </div>
+                      ) : (
+                        <Select
+                          options={suppliers.map((s) => ({
+                            value: s.supplierId,
+                            label: `${s.supplierName} — ${s.price?.toLocaleString("vi-VN") || "0"} ₫`,
+                            price: s.price || 0,
+                          }))}
+                          value={selectedSupplier}
+                          onChange={setSelectedSupplier}
+                          placeholder="Chọn nhà cung cấp tốt nhất..."
+                          classNamePrefix="react-select"
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderRadius: "50rem",
+                              padding: "0.375rem 0.75rem",
+                              borderColor: "#ced4da",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              borderRadius: "1rem",
+                              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                            }),
+                          }}
+                        />
+                      )}
                     </div>
 
-                    {selectedSupplier?.price && (
-                      <div className="text-end bg-white p-3 rounded-3 shadow-sm border">
-                        <small className="text-muted">Thành tiền tạm tính</small>
-                        <h4 className="fw-bold text-success mb-0">
-                          {(selectedSupplier.price * quantity).toLocaleString("vi-VN")} ₫
-                        </h4>
+                    <div className="mb-4">
+                      <label className="form-label fw-bold fs-5 text-dark mb-3">
+                        <i className="bi me-2"></i>Số lượng nhập
+                      </label>
+                      <div className="input-group input-group-lg rounded-pill shadow-sm overflow-hidden">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary px-4"
+                          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                          disabled={quantity <= 1}
+                        >
+                          <i className="bi bi-dash-lg"></i>
+                        </button>
+                        <input
+                          type="text"
+                          className="form-control text-center fw-bold border-0 bg-white"
+                          value={quantity}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            setQuantity(val ? Number(val) : 1);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary px-4"
+                          onClick={() => setQuantity((q) => q + 1)}
+                        >
+                          <i className="bi bi-plus-lg"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectedSupplier?.price && quantity > 0 && (
+                      <div className="card border-primary border-2 rounded-3 shadow bg-white">
+                        <div className="card-body text-center py-4">
+                          <small className="text-muted d-block mb-1">Tạm tính thành tiền</small>
+                          <h3 className="fw-bold text-success mb-0">
+                            {(selectedSupplier.price * quantity).toLocaleString("vi-VN")} ₫
+                          </h3>
+                        </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div className="modal-footer bg-white border-0 px-5 py-4">
-                {step === 2 && (
-                  <button className="btn btn-outline-secondary rounded-pill px-4" onClick={() => setStep(1)}>
-                    <i className="bi bi-arrow-left me-2"></i>Chọn lại sản phẩm
-                  </button>
-                )}
-                <button className="btn btn-outline-secondary rounded-pill px-4" onClick={() => setShowAddModal(false)}>
+              {/* Footer */}
+              <div className="modal-footer bg-white border-0 px-4 px-md-5 py-3 py-md-4 d-flex justify-content-between flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-lg rounded-pill px-5 fw-medium shadow-sm"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setStep(1);
+                  }}
+                >
                   Hủy
                 </button>
-                {step === 2 && (
+
+                {step === 1 ? (
                   <button
-                    className="btn btn-primary rounded-pill px-5 fw-bold shadow"
+                    type="button"
+                    className="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow"
+                    disabled={productOptions.length === 0 || loadingModal}
+                    onClick={() => {
+                      if (productOptions.length > 0) setStep(2);
+                    }}
+                  >
+                    Tiếp tục <i className="bi bi-arrow-right ms-2"></i>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-success btn-lg rounded-pill px-5 fw-bold shadow-lg"
                     onClick={handleAddItem}
                     disabled={!selectedSupplier || quantity < 1 || loadingModal}
                   >
-                    Thêm vào đơn
+                    <i className="bi bi-cart-check-fill me-2"></i>
+                    Thêm vào đơn hàng
                   </button>
                 )}
               </div>
