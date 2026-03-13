@@ -20,7 +20,7 @@ const getProductsByCategory = async (
                 p.name AS productName,
                 p.code AS productCode,
                 p.imageUrl,
-                p.allowDecimalQuantity,   -- thêm trường này để frontend biết
+                p.allowDecimalQuantity,
                 p.baseUnit,
                 s.quantityOnHand,
                 s.minThreshold,
@@ -139,10 +139,8 @@ const searchProducts = async (keyword) => {
       SELECT TOP 20
           p.id,
           p.code,
-          p.barcode,
           p.name,
           p.baseUnit,
-          p.salePrice,
           p.allowDecimalQuantity,
           ISNULL(s.quantityOnHand, 0) AS quantityOnHand
       FROM Products p
