@@ -8,6 +8,6 @@ router.get("/", protect(PERMISSIONS.VIEW_SHIFT), shiftController.getAllShifts);
 router.get("/:id", protect(PERMISSIONS.VIEW_SHIFT), shiftController.getShiftById);
 router.post("/", protect(PERMISSIONS.CREATE_SHIFT), shiftController.createShift);
 router.put("/:id", protect(PERMISSIONS.UPDATE_SHIFT), shiftController.updateShift);
-router.delete("/:id", protect(PERMISSIONS.DELETE_SHIFT), shiftController.deleteShift);
+router.patch("/:id/toggle", protect(PERMISSIONS.UPDATE_SHIFT), shiftController.toggleShift);
 
 module.exports = router;

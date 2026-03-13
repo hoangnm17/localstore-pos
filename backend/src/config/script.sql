@@ -675,5 +675,18 @@ BEGIN
     INNER JOIN inserted i ON t.id = i.id
 END
 GO
+-- ===========================================
+-- THAY ĐỒI CẤU TRÚC BẢNG SHIFTS & WORKSCHEDULES
+-- ===========================================
+ALTER TABLE [Shifts]
+ADD [checkInStart] TIME NULL,
+    [checkInEnd]   TIME NULL,
+    [checkOutDeadline] TIME NULL;
+    [isActive] BIT NOT NULL DEFAULT 1;
+ALTER TABLE [WorkSchedules]
+ADD [snapshotStartTime] TIME NULL,
+    [snapshotEndTime]   TIME NULL,
+    [snapshotShiftName] NVARCHAR(50) NULL;
+
 -- END OF SCRIPT
 

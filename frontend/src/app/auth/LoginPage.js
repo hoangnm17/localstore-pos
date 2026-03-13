@@ -3,13 +3,13 @@ import { useNavigate, Link } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
 
 function LoginPage() {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const redirectByRole = (role) => {
-    const normalizedRole = role.trim().toLowerCase();
     switch (role) {
       case 'Manager':
         navigate("/dashboard");
@@ -23,46 +23,37 @@ function LoginPage() {
       default:
         navigate("/sales");
     }
-  }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      localStorage.clear();
-    }
+    if (token) { localStorage.clear(); }
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) {
+    if (!form.username || !form.password) {
       setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
-
     try {
       setLoading(true);
       setError("");
       localStorage.clear();
-      
-      const response = await loginAPI(form);
 
+      const response = await loginAPI(form);
       const serverData = response.data ?? response;
 
       if (serverData.success) {
         const { token, user } = serverData.data;
-
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-
-        const role = user.roleName;
-        console.log("Đăng nhập thành công với Role:", role);
         redirectByRole(user.roleName);
       } else {
         setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
-      console.error("Lỗi Login:", err);
-      setError(err.response?.data?.message || "Sai email hoặc mật khẩu");
+      setError(err.response?.data?.message || "Sai tên đăng nhập hoặc mật khẩu");
     } finally {
       setLoading(false);
     }
@@ -73,77 +64,66 @@ function LoginPage() {
       className="d-flex align-items-center justify-content-center min-vh-100"
       style={{
         backgroundImage: `url("/store.jpg")`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        position: "relative"
+        backgroundSize: "cover", backgroundPosition: "center",
+        backgroundRepeat: "no-repeat", position: "relative"
       }}
     >
       <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.1)" }}></div>
-
       <div
         className="card border-0 p-4 text-center"
         style={{
-          maxWidth: "450px",
-          width: "90%",
-          borderRadius: "20px",
+          maxWidth: "450px", width: "90%", borderRadius: "20px",
           backgroundColor: "rgba(255, 255, 255, 0.75)",
-          backdropFilter: "blur(0px)",
-          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
-          zIndex: 1
+          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)", zIndex: 1
         }}
       >
         <div className="card-body px-4">
           <h1 className="fw-bold mb-5 text-dark" style={{ fontFamily: "serif", fontSize: "50px" }}>
             LocalStore POS
           </h1>
-          <h5 className="fw-bolder text-secondary ">Đăng nhập hệ thống quản lý</h5>
+          <h5 className="fw-bolder text-secondary">Đăng nhập hệ thống quản lý</h5>
 
           {error && <div className="alert alert-danger py-2 small">{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
               <input
-                type="email"
+                type="text"
                 className="form-control py-3 border-0 shadow-sm"
-                placeholder="Email của bạn"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="Tên đăng nhập "
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
                 style={{ borderRadius: "8px", outline: "none" }}
               />
             </div>
-
-            <div className="mb-2">
+            <div className="mb-2 position-relative">
               <input
-                type="password"
-                className="form-control py-3 border-0 shadow-sm"
+                type={showPassword ? "text" : "password"}
+                className="form-control py-3 border-0 shadow-sm pe-5"
                 placeholder="Mật khẩu"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 style={{ borderRadius: "8px", outline: "none" }}
               />
-            </div>
-
-            <div className="d-flex justify-content-end mb-4">
-              <Link
-                to="/forgot-password"
-                className="text-decoration-none fw-bold text-dark"
-                style={{ fontSize: "0.9rem", textShadow: "0px 0px 1px rgba(255,255,255,0.8)" }}
+              <button
+                type="button"
+                className="btn position-absolute top-50 end-0 translate-middle-y pe-3"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ background: "transparent", border: "none", zIndex: 10 }}
               >
+                <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"} text-secondary fs-5`}></i>
+              </button>
+            </div>
+            <div className="d-flex justify-content-end mb-4">
+              <Link to="/forgot-password" className="text-decoration-none fw-bold text-dark" style={{ fontSize: "0.9rem" }}>
                 Quên mật khẩu?
               </Link>
             </div>
-
             <button
               type="submit"
               className="btn btn-primary w-100 py-3 fw-bold shadow-sm"
               disabled={loading}
-              style={{
-                borderRadius: "12px",
-                backgroundColor: "#5eaaff",
-                border: "none",
-                fontSize: "1.1rem"
-              }}
+              style={{ borderRadius: "12px", backgroundColor: "#5eaaff", border: "none", fontSize: "1.1rem" }}
             >
               {loading ? "Đang xử lý..." : "Đăng nhập"}
             </button>
