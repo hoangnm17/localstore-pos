@@ -405,8 +405,6 @@ function ProductList() {
                                                             </button>
                                                         </li>
 
-                                                        <li><hr className="dropdown-divider" /></li>
-
                                                         <li>
                                                             <button
                                                                 type="button"

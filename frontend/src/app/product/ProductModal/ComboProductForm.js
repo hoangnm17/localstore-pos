@@ -5,18 +5,6 @@ function formatMoney(value) {
     return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 }
 
-/**
- * Form dành riêng cho sản phẩm combo.
- * Props:
- *   form, handleChange, categories, isEdit
- *   comboRows, comboLoading, comboRetailTotal, comboPriceDifference
- *   searchKeyword, setSearchKeyword, searchingProducts, searchResults
- *   selectedChildProduct, childUnits, loadingChildUnits, selectedChildUnitId, setSelectedChildUnitId
- *   childQuantity, setChildQuantity, childQuantityStep, childLineTotal, childBaseQuantity
- *   selectedChildUnit
- *   onSearchChildProducts, onSelectChildProduct, onIncreaseQty, onDecreaseQty
- *   onAddComboRow, onRemoveComboRow
- */
 export default function ComboProductForm({
     form,
     handleChange,

@@ -55,16 +55,6 @@ function Header() {
             </div>
 
             <div className="top-header__right">
-                <div className="top-header__search">
-                    <i className="bi bi-search"></i>
-                    <input type="text" placeholder="Tìm kiếm..." />
-                </div>
-
-                <button className="top-header__icon-btn" title="Thông báo">
-                    <i className="bi bi-bell"></i>
-                    <span className="top-header__badge">3</span>
-                </button>
-
                 <div className="top-header__user">
                     <div className="top-header__avatar">
                         <i className="bi bi-person-fill"></i>
