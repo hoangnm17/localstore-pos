@@ -13,8 +13,7 @@ import dashboardRoute from "./dashboard.route";
 import shiftRoute from "./shift.route";
 import scheduleRoute from "./schedule.route";
 import salaryRoute from "./salary.route";
-
-// Trang 403
+import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
 
 const AppRoutes = () => {
@@ -38,6 +37,9 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         {salesRoute}
         {InvocieRoutes}
+      </Route>
+      <Route element={<ProtectedRoute requiredRoles={['Cashier']} />}>
+        {cashierRoute}
       </Route>
       <Route path="/Error" element={<Forbidden />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
