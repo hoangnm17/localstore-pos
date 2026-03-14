@@ -1,5 +1,8 @@
 import api from "../axiosInstance";
 
-export const createPayment = (data) => {
-  return api.post("/payment/create", data)
-}
+export const createBankPayment = (invoiceId, payload = {}) => {
+  return api.post("/payment/create-qr", {
+    invoiceId,
+    ...payload,
+  });
+};

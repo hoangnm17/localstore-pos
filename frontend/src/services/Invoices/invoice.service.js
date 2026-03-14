@@ -10,8 +10,23 @@ export const invoiceCreate = async (data) => {
   return res.data;
 };
 
-export const invoiceUpdate = async (id, data) => {
-  const res = await api.patch(`/invoices/${id}`, data);
+export const invoiceUpdateItems = async (id, data) => {
+  const res = await api.patch(`/invoices/${id}/items`, data);
+  return res.data;
+};
+
+export const payCash = async (id, data) => {
+  const res = await api.post(`/invoices/${id}/pay-cash`, data);
+  return res.data;
+};
+
+export const payBank = async (id, data) => {
+  const res = await api.post(`/invoices/${id}/pay-bank`, data);
+  return res.data;
+};
+
+export const invoiceCancel = async (id) => {
+  const res = await api.post(`/invoices/${id}/cancel`);
   return res.data;
 };
 

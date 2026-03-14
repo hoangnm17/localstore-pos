@@ -1,14 +1,36 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
+const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
 const inventoryService = require("./InventoryServices/inventory.service");
 const paymentModel = require("../models/payment.model")
 const createVnpayUtil = require("../utils/vnpay.mockup");
+const customerModel = require("../models/customer.model");
+const voucherModel = require("../models/voucher.model");
+const promotionModel = require("../models/promotion.model")
+const customerPointLogService = require("./customerPointLog.service")
+const socketService = require("./socket.service");
+const { log } = require("console");
 
-const vnpayUtil = createVnpayUtil({
-    secretKey: "MOCK_SECRET",
-});
+const POINT_EXCHANGE = 100;
+const EARN_POINT_EXCHANGE = 10000;
 
+const getEditableInvoice = async (transaction, id) => {
+
+    const invoice = await invoiceModel.getInvoiceById(
+        transaction,
+        id,
+        { forUpdate: true }
+    );
+
+    if (!invoice)
+        throw new Error("Invoice not found");
+
+    if (["PAID", "CANCELLED"].includes(invoice.status))
+        throw new Error("Cannot update this invoice");
+
+    return invoice;
+};
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -38,29 +60,29 @@ const generateInvoiceCode = (invoiceId) => {
 };
 
 const validateItems = (items) => {
-    if (!Array.isArray(items)) return;
+
+    if (!Array.isArray(items))
+        throw new Error("Items must be array");
 
     for (const item of items) {
-        if (!item?.productId || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+        if (!item?.productId || item.quantity <= 0) {
             throw new Error("Invalid item format");
         }
     }
 };
 
-const getAllInvoice = async ({ page, pageSize, status } = {}) => {
+const getAllInvoice = async ({ page, pageSize, status, invoiceCode } = {}) => {
+    console.log(invoiceCode)
     return invoiceModel.getInvoiceList({
         page,
         pageSize,
-        status
+        status,
+        invoiceCode
     });
 };
 
-const createInvoice = async ({ items, staffId, counterId }) => {
+const createInvoice = async ({ items, staffId, counterId, customerId }) => {
     if (!staffId) throw new Error("Invalid staff");
-
-    if (!Array.isArray(items) || items.length === 0) {
-        throw new Error("Invoice must have items");
-    }
 
     validateItems(items);
 
@@ -71,6 +93,7 @@ const createInvoice = async ({ items, staffId, counterId }) => {
             staffId,
             invoiceCode,
             counterId,
+            customerId,
         });
 
         invoiceCode = generateInvoiceCode(invoiceId);
@@ -79,11 +102,12 @@ const createInvoice = async ({ items, staffId, counterId }) => {
         let totalAmount = 0;
 
         for (const item of items) {
-            const product = await invoiceModel.getProductById(transaction, item.productId);
+            const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
             const unitPrice = product.salePrice;
             const lineTotal = unitPrice * item.quantity;
+            const baseQuantity = item.quantity * product.conversionFactor;
 
             totalAmount += lineTotal;
 
@@ -94,6 +118,9 @@ const createInvoice = async ({ items, staffId, counterId }) => {
                 quantity: item.quantity,
                 unitPrice,
                 lineTotal,
+                productUnitId: item.productUnitId,
+                unitName: product.unitName,
+                baseQuantity,
             });
         }
 
@@ -106,162 +133,343 @@ const createInvoice = async ({ items, staffId, counterId }) => {
     });
 };
 
-const updateInvoice = async (id, { items, status, payment, customerId } = {}) => {
+const validateDiscount = async (customerId, discount, totalAmount) => {
+
+    let totalDiscount = 0;
+
+    let pointDiscount = 0;
+    let voucherDiscount = 0;
+    let promotionDiscount = 0;
+
+    let actualPointUsed = 0;
+
+    /* ===== VOUCHER ===== */
+
+    if (discount?.voucherId) {
+
+        const voucher = await voucherModel.getVoucherById(discount.voucherId);
+
+        if (!voucher)
+            throw new Error("Voucher not found");
+
+        if (voucher.status !== "Active")
+            throw new Error("Voucher is not active");
+
+        if (voucher.currentUsage >= voucher.maxUsage)
+            throw new Error("Voucher usage exceeded");
+
+        if (totalAmount < voucher.minOrderValue)
+            throw new Error("Voucher condition not satisfied");
+
+        if (voucher.type === "Percent") {
+            voucherDiscount = Math.floor(totalAmount * voucher.value / 100);
+        } else {
+            voucherDiscount = voucher.value;
+        }
+
+        voucherDiscount = Math.min(voucherDiscount, totalAmount);
+
+        totalDiscount += voucherDiscount;
+    }
+
+    /* ===== PROMOTION ===== */
+
+    if (discount?.promotionId) {
+
+        const promotion = await promotionModel.getPromotionById(discount.promotionId);
+
+        if (!promotion)
+            throw new Error("Promotion not found");
+
+        if (promotion.status !== "Active")
+            throw new Error("Promotion is not active");
+
+        if (promotion.startDate && new Date() < promotion.startDate)
+            throw new Error("Promotion not started")
+
+        if (promotion.endDate && new Date() > promotion.endDate)
+            throw new Error("Promotion expired")
+
+        if (promotion.type === "Percent") {
+            promotionDiscount = Math.floor(totalAmount * promotion.value / 100);
+        } else {
+            promotionDiscount = promotion.value;
+        }
+
+        const remaining = totalAmount - totalDiscount;
+
+        promotionDiscount = Math.min(promotionDiscount, remaining);
+
+        totalDiscount += promotionDiscount;
+    }
+
+    /* ===== POINT ===== */
+
+    if (discount?.pointUsed > 0) {
+
+        if (!customerId)
+            throw new Error("Customer required to use loyalty points");
+
+        const customer = await customerModel.getCustomerById(customerId);
+
+        if (!customer)
+            throw new Error("Customer not found");
+
+        if (discount.pointUsed > customer.loyaltyPoints)
+            throw new Error("Cannot use loyalty point over current point!");
+
+        const rawPointDiscount =
+            discount.pointUsed * POINT_EXCHANGE;
+
+        const remaining =
+            totalAmount - totalDiscount;
+
+        pointDiscount =
+            Math.min(rawPointDiscount, remaining);
+
+        actualPointUsed =
+            Math.floor(pointDiscount / POINT_EXCHANGE);
+
+        pointDiscount =
+            actualPointUsed * POINT_EXCHANGE;
+
+        totalDiscount += pointDiscount;
+    }
+
+    /* ===== FINAL ===== */
+
+    const finalAmount =
+        Math.max(totalAmount - totalDiscount, 0);
+
+    return {
+        finalAmount,
+        totalDiscount,
+        pointDiscount,
+        voucherDiscount,
+        promotionDiscount,
+        actualPointUsed
+    };
+};
+
+const updateInvoiceItems = async (id, { items }) => {
+
     return runInTransaction(async (transaction) => {
 
-        /* ================= LOAD & LOCK ================= */
+        const invoice = await getEditableInvoice(transaction, id);
 
-        const invoice = await invoiceModel.getInvoiceById(
+        validateItems(items);
+
+        await invoiceModel.deleteInvoiceItems(transaction, id);
+
+        let totalAmount = 0;
+
+        for (const item of items) {
+
+            const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
+            if (!product) throw new Error(`Product ${item.productId} not found`);
+
+            const unitPrice = product.salePrice;
+            const lineTotal = unitPrice * item.quantity;
+            const baseQuantity = item.quantity * product.conversionFactor;
+
+            totalAmount += lineTotal;
+            await invoiceModel.insertInvoiceItem(transaction, {
+                invoiceId: id,
+                productId: item.productId,
+                productName: product.name,
+                quantity: item.quantity,
+                unitPrice,
+                lineTotal,
+                productUnitId: item.productUnitId,
+                unitName: product.unitName,
+                baseQuantity,
+            });
+
+        }
+
+        await invoiceModel.updateAmounts(transaction, id, {
+            totalAmount,
+            finalAmount: totalAmount
+        });
+
+        return { updated: true };
+
+    });
+
+};
+
+const cancelInvoice = async (id) => {
+
+    return runInTransaction(async (transaction) => {
+
+        await getEditableInvoice(transaction, id);
+
+        await invoiceModel.updateStatus(
             transaction,
             id,
-            { forUpdate: true }
+            "CANCELLED"
         );
 
-        if (!invoice) throw new Error("Invoice not found");
+        return { cancelled: true };
 
-        if (["PAID", "CANCELLED"].includes(invoice.status)) {
-            throw new Error("Cannot update this invoice");
-        }
-
-        let totalAmount = invoice.finalAmount || 0;
-
-        /* ================= UPDATE ITEMS ================= */
-
-        if (Array.isArray(items)) {
-
-            validateItems(items);
-
-            await invoiceModel.deleteInvoiceItems(transaction, id);
-
-            totalAmount = 0;
-
-            for (const item of items) {
-
-                const product = await invoiceModel.getProductById(
-                    transaction,
-                    item.productId
-                );
-
-                if (!product)
-                    throw new Error(`Product ${item.productId} not found`);
-
-                const unitPrice = product.salePrice;
-                const lineTotal = unitPrice * item.quantity;
-
-                totalAmount += lineTotal;
-
-                await invoiceModel.insertInvoiceItem(transaction, {
-                    invoiceId: id,
-                    productId: item.productId,
-                    productName: product.name,
-                    quantity: item.quantity,
-                    unitPrice,
-                    lineTotal,
-                });
-            }
-
-            await invoiceModel.updateAmounts(transaction, id, {
-                totalAmount,
-                finalAmount: totalAmount,
-            });
-        }
-
-        /* ================= CANCEL ================= */
-
-        if (status === "CANCELLED") {
-            await invoiceModel.updateStatus(transaction, id, "CANCELLED");
-            return { cancelled: true };
-        }
-
-        /* ================= PAY ================= */
-
-        if (status === "PAID") {
-
-            if (!payment?.method)
-                throw new Error("Invalid payment information");
-
-            const payAmount = Number(payment.amount ?? totalAmount);
-
-            if (!Number.isFinite(payAmount) || payAmount <= 0)
-                throw new Error("Invalid payment amount");
-
-            if (payAmount < totalAmount)
-                throw new Error("Payment amount is not enough");
-
-            const invoiceItems =
-                await invoiceModel.getInvoiceItems(transaction, id);
-
-            if (!invoiceItems.length)
-                throw new Error("Cannot pay empty invoice");
-
-            /* ===== CHECK EXISTING PAYMENT ===== */
-
-            const existingPayment =
-                await invoiceModel.getPaymentByInvoiceId(
-                    transaction,
-                    id
-                );
-
-            /* ================= CASH ================= */
-
-            if (payment.method === "CASH") {
-
-                if (!existingPayment) {
-                    await invoiceModel.insertPayment(transaction, {
-                        invoiceId: id,
-                        paymentMethod: "CASH",
-                        amount: payAmount,
-                        status: "SUCCESS",
-                    });
-                } else {
-                    await paymentModel.updatePaymentStatus(
-                        transaction,
-                        id,
-                        "SUCCESS"
-                    );
-                }
-
-                await inventoryService.deductStock(transaction, invoiceItems);
-
-                await invoiceModel.updateStatus(transaction, id, "PAID");
-
-                return { paid: true };
-            }
-
-            /* ================= QR_VNPAY ================= */
-
-            if (payment.method === "QR_VNPAY") {
-
-                if (!existingPayment) {
-                    await invoiceModel.insertPayment(transaction, {
-                        invoiceId: id,
-                        paymentMethod: "QR_VNPAY",
-                        amount: totalAmount,
-                        status: "PENDING",
-                    });
-                }
-
-                const paymentUrl =
-                    vnpayUtil.generatePayUrl(id, totalAmount);
-
-                return {
-                    pending: true,
-                    paymentUrl
-                };
-            }
-
-            throw new Error("Unsupported payment method");
-        }
-
-        /* ================= OTHER STATUS ================= */
-
-        if (status) {
-            await invoiceModel.updateStatus(transaction, id, status);
-        }
-
-        return { success: true };
     });
+
 };
+
+const payCash = async (id, { payment }) => {
+
+    return runInTransaction(async (transaction) => {
+
+        const invoice = await getEditableInvoice(transaction, id);
+
+        if (payment?.method !== "CASH")
+            throw new Error("Invalid payment method");
+
+        const invoiceItems = await invoiceModel.getInvoiceItems(transaction, id);
+
+        if (!invoiceItems.length)
+            throw new Error("Cannot pay empty invoice");
+
+        let totalAmount = invoice.totalAmount;
+        let finalAmount = totalAmount;
+
+        let totalDiscount = 0;
+        let pointDiscount = 0;
+        let promotionDiscount = 0;
+        let voucherDiscount = 0;
+        let actualPointUsed = 0;
+
+        /* ================= APPLY DISCOUNT ================= */
+
+        if (payment?.discount) {
+
+            const discountResult =
+                await validateDiscount(
+                    invoice.customerId,
+                    payment.discount,
+                    totalAmount
+                );
+
+            totalDiscount = discountResult.totalDiscount;
+            finalAmount = discountResult.finalAmount;
+            pointDiscount = discountResult.pointDiscount;
+            promotionDiscount = discountResult.promotionDiscount;
+            voucherDiscount = discountResult.voucherDiscount;
+            actualPointUsed = discountResult.actualPointUsed;
+        }
+
+        /* ================= VALIDATE PAYMENT AMOUNT ================= */
+
+        const payAmount = Number(payment.amount ?? finalAmount);
+
+        if (!Number.isFinite(payAmount) || payAmount < 0)
+            throw new Error("Invalid payment amount");
+
+        if (payAmount < finalAmount)
+            throw new Error("Payment amount is not enough");
+
+        /* ================= CREATE / UPDATE PAYMENT ================= */
+
+        const existingPayment =
+            await invoiceModel.getPaymentByInvoiceId(transaction, id);
+
+        if (!existingPayment) {
+
+            await invoiceModel.insertPayment(transaction, {
+                invoiceId: id,
+                paymentMethod: "CASH",
+                amount: finalAmount,
+                status: "SUCCESS"
+            });
+
+        } else {
+
+            await paymentModel.updatePaymentStatus(
+                transaction,
+                id,
+                "SUCCESS"
+            );
+
+        }
+
+        /* ================= APPLY DISCOUNT EFFECT ================= */
+
+        if (actualPointUsed > 0 && invoice.customerId) {
+
+            await customerPointLogService.adjustPoints(
+                transaction,
+                invoice.customerId,
+                id,
+                -actualPointUsed,
+                "REDEEM"
+            );
+        }
+
+        if (payment.discount?.voucherId) {
+
+            await voucherModel.increaseUsage(
+                transaction,
+                payment.discount.voucherId
+            );
+        }
+
+        /* ================= EARN POINT ================= */
+
+        const earnedPoints =
+            Math.floor(finalAmount / EARN_POINT_EXCHANGE);
+
+        if (earnedPoints > 0 && invoice.customerId) {
+
+            await customerPointLogService.adjustPoints(
+                transaction,
+                invoice.customerId,
+                id,
+                earnedPoints,
+                "EARN"
+            );
+        }
+
+        /* ================= UPDATE INVOICE ================= */
+
+        await invoiceModel.updateInvoiceDiscount(
+            transaction,
+            id,
+            payment.discount?.promotionId,
+            promotionDiscount,
+            payment.discount?.voucherId,
+            voucherDiscount,
+            actualPointUsed,
+            pointDiscount
+        );
+
+        await invoiceModel.updateAmounts(transaction, id, {
+            totalAmount,
+            finalAmount
+        });
+
+        /* ================= STOCK ================= */
+
+        const updatedStocks = await inventoryService.deductStock(
+            transaction,
+            invoiceItems
+        );
+
+        socketService.emitInventoryUpdate(updatedStocks);
+
+        await invoiceModel.updateStatus(transaction, id, "PAID");
+
+        return {
+            paid: true,
+            finalAmount,
+            totalDiscount
+        };
+
+    });
+
+
+
+};
+
 
 const getDraftInvoices = async () => {
     return invoiceModel.getDraftInvoices();
@@ -275,7 +483,7 @@ const getInvoiceDetail = async (id) => {
 
 const updateInvoiceCustomer = async (
     id,
-    { items, status, payment, customerId } = {}
+    { customerId } = {}
 ) => {
     return runInTransaction(async (transaction) => {
 
@@ -319,8 +527,11 @@ const updateInvoiceCustomer = async (
 module.exports = {
     getAllInvoice,
     createInvoice,
-    updateInvoice,
     getDraftInvoices,
     getInvoiceDetail,
     updateInvoiceCustomer,
+    updateInvoiceItems,
+    payCash,
+    cancelInvoice,
+    validateDiscount,
 };

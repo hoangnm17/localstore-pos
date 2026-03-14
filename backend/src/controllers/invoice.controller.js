@@ -37,28 +37,33 @@ const getAllInvoice = async (req, res) => {
     const {
       page = 1,
       pageSize = 10,
-      status
+      status,
+      invoiceCode // Lấy từ query string (?invoiceCode=INV001)
     } = req.query;
-
+    console.log(req.query);
+    
     // Clean & validate
     const currentPage = Number(page) > 0 ? Number(page) : 1;
     const limit = Number(pageSize) > 0 ? Number(pageSize) : 10;
+    const cleanInvoiceCode = invoiceCode?.trim(); // Xóa khoảng trắng thừa
 
-    // Optional: validate status enum
+    // Validate status enum
     const allowedStatus = ["UNPAID", "PAID", "CANCELLED"];
     const cleanStatus = status?.trim();
 
     if (cleanStatus && !allowedStatus.includes(cleanStatus)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid invoice status"
+        message: "Trạng thái hóa đơn không hợp lệ"
       });
     }
 
+    // Gọi service với đầy đủ các filter
     const result = await invoiceService.getAllInvoice({
       page: currentPage,
       pageSize: limit,
-      status: cleanStatus
+      status: cleanStatus,
+      invoiceCode: cleanInvoiceCode
     });
 
     return res.status(200).json({
@@ -78,7 +83,7 @@ const createInvoice = async (req, res) => {
   try {
     const staffId = req.user?.id;
     const counterId = req.user?.counterId;
-    
+
     if (!staffId) {
       return res.status(401).json({
         success: false,
@@ -87,10 +92,10 @@ const createInvoice = async (req, res) => {
     }
 
     if (!counterId) {
-        return res.status(500).json({
-            success: false,
-            message: "Missing Counter",
-        })
+      return res.status(500).json({
+        success: false,
+        message: "Missing Counter",
+      })
     }
 
     const result = await invoiceService.createInvoice({
@@ -109,13 +114,81 @@ const createInvoice = async (req, res) => {
   }
 };
 
+const payCash = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    const result = await invoiceService.payCash(id, req.body);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+
+  } catch (err) {
+    return handleError(res, err);
+  }
+};
+
+const payBank = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    const result = await invoiceService.payBank(id, req.body);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+
+  } catch (err) {
+    return handleError(res, err);
+  }
+};
+
+const cancelInvoice = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    const result = await invoiceService.cancelInvoice(id);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+
+  } catch (err) {
+    return handleError(res, err);
+  }
+};
+
+const updateInvoiceItems = async (req, res) => {
+  try {
+
+    const id = Number(req.params.id);
+
+    const result = await invoiceService.updateInvoiceItems(
+      id,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result
+    });
+
+  } catch (err) {
+    return handleError(res, err);
+  }
+};
+
 /* =====================================================
    UPDATE INVOICE
 ===================================================== */
 const updateInvoice = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    
+
     if (!id || isNaN(id)) {
       return res.status(400).json({
         success: false,
@@ -206,4 +279,8 @@ module.exports = {
   getDrafts,
   getDetail,
   updateInvoiceCustomer,
+  payBank,
+  payCash,
+  cancelInvoice,
+  updateInvoiceItems,
 };

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function BaseModal({
   children,
   onClose,
-  maxWidth = "500px",
+  maxWidth = "900px",
   zIndex = 2000,
   closeOnOverlay = true,
   disableClose = false,
@@ -40,6 +40,7 @@ export default function BaseModal({
         justifyContent: "center",
         backgroundColor: "rgba(15, 23, 42, 0.6)",
         backdropFilter: "blur(4px)",
+        padding: "20px",
       }}
       onClick={
         closeOnOverlay && !disableClose
@@ -50,8 +51,8 @@ export default function BaseModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "100%",
           maxWidth,
+          width: "fit-content",
         }}
       >
         {children}

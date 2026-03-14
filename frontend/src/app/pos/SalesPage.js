@@ -1,7 +1,10 @@
 import Order from "./Order/Order";
 import Product from "./Product/Product";
+import { useState, useEffect } from "react"
 import { useInvoiceTabs } from "hooks/pos/useInvoice";
 import { useOrderItems } from "hooks/pos/useOrderItems";
+import useHotkeys from "hooks/pos/useHotKeys";
+import useTitle from "hooks/common/useTitle";
 
 export default function SalesHome() {
   const {
@@ -25,12 +28,26 @@ export default function SalesHome() {
     calculateTotalQuantity,
   } = useOrderItems();
 
+  const currentInvIndex = invoices.findIndex(inv => inv.id === activeInvoiceId) + 1;
+  const customerName = activeInvoice?.customer?.name || "Khách lẻ";
+
+  useTitle(
+    activeInvoice
+      ? `HĐ ${currentInvIndex} - ${customerName}`
+      : "Đang tải hóa đơn..."
+  );
+
+  const [openPaymentSignal, setOpenPaymentSignal] = useState(0);
+  const [activeItemId, setActiveItemId] = useState(null);
+  const [focusSignal, setFocusSignal] = useState(0);
 
   const handleAddItem = (product) => {
     if (!activeInvoice) return;
 
-    const newItems = addItem(activeInvoice.items, product);
-    updateInvoiceItems(activeInvoice.id, newItems);
+    const result = addItem(activeInvoice.items, product);
+    updateInvoiceItems(activeInvoice.id, result.items);
+    setActiveItemId(result.activeId);
+    setFocusSignal(prev => prev + 1);
   };
 
   const handleIncrease = (id) => {
@@ -57,7 +74,13 @@ export default function SalesHome() {
   const handleSelectCustomer = async (customer) => {
     if (!activeInvoice) return;
 
-    await updateInvoiceCustomer(activeInvoice.id, customer);
+    if (activeInvoice.customer?.id === customer?.id) return;
+
+    try {
+      await updateInvoiceCustomer(activeInvoice.id, customer);
+    } catch (error) {
+      console.error("Lỗi cập nhật khách hàng:", error);
+    }
   };
 
   const total = calculateTotal(activeInvoice?.items || []);
@@ -65,6 +88,29 @@ export default function SalesHome() {
     activeInvoice?.items || []
   );
 
+  const handleChangeQty = (id, quantity) => {
+    if (!activeInvoice) return;
+
+    const newItems = activeInvoice.items.map(it => {
+      if (it.id !== id) return it;
+
+      const safeQty = Math.max(
+        1,
+        Math.min(quantity, it.quantityOnHand)
+      );
+
+      return { ...it, quantity: safeQty };
+    });
+
+    updateInvoiceItems(activeInvoice.id, newItems);
+  };
+
+  useHotkeys({
+    Enter: () => setOpenPaymentSignal((s) => s + 1),
+    F3: () => setFocusSignal(prev => prev + 1),
+    F4: () => createInvoiceTab(),
+    Escape: () => setActiveItemId(null)
+  });
 
   if (!activeInvoice) {
     return (
@@ -144,6 +190,10 @@ export default function SalesHome() {
             onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
             onPay={pay}
+            activeItemId={activeItemId}
+            onChangeQty={handleChangeQty}
+            focusSignal={focusSignal}
+            openPaymentSignal={openPaymentSignal}
           />
         </div>
 

@@ -70,14 +70,6 @@ api.interceptors.response.use(
       });
     }
 
-    if (status >= 500) {
-      return Promise.resolve({
-        success: false,
-        message: "Lỗi hệ thống, vui lòng thử lại sau",
-        status,
-      });
-    }
-
     return Promise.resolve({
       success: false,
       message: data?.message || "Có lỗi xảy ra",

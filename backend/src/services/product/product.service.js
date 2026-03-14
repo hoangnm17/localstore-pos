@@ -87,3 +87,49 @@ exports.startSellingProduct = async (id) => {
     }
     return true;
 };
+
+exports.getProductWithBarcode = async (barcode) => {
+    const product = await productModel.getProductWithBarcode(barcode);
+    if (!product) {
+        throw new Error('Không có sản phẩm.')
+    }
+    return product;
+}
+
+exports.getAllProducts = async (filters) => {
+    const rawData = await productModel.getAllProducts(filters);
+
+    const productsMap = new Map();
+    
+    rawData.forEach(row => {
+        console.log(row);
+        const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
+        
+        if (!productsMap.has(row.id)) {
+            productsMap.set(row.id, {
+                id: row.id,
+                name: row.name,
+                code: row.code,
+                imageUrl: row.imageUrl,
+                stock: row.stock,
+                categoryId: row.categoryId,
+                units: []
+            });
+        }
+
+        if (row.unitId) {
+            productsMap.get(row.id).units.push({
+                unitId: row.unitId,
+                unitName: row.unitName,
+                factor: row.factor,
+                barcode: row.barcode,
+                price: row.price,
+                stock: row.factor ? Math.floor(row.stock / row.factor) : 0,
+                unitType: row.unitType,
+                lowStock: lowStock,
+            });
+        }
+    });
+
+    return Array.from(productsMap.values());
+};

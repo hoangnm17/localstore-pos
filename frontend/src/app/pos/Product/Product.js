@@ -3,22 +3,124 @@ import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
-import { getProducts } from "services/Product/product.service";
+import { getAllProducts } from "services/Product/product.service";
+import ScanBarcode from "components/pos/ScanBarcode";
+import { useNotification } from "components/global/Notification/NotificationContext";
+import { getSocket } from "utils/socket";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
 };
 
 export default function Product({ addItem }) {
+  const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showScan, setShowScan] = useState(false);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handleInventoryUpdate = (data) => {
+
+      if (!data?.items) return;
+
+      setProducts((prev) =>
+        prev.map((p) => {
+
+          const found = data.items.find(
+            (i) => String(i.productId) === String(p.id)
+          );
+
+          if (!found) return p;
+
+          return {
+            ...p,
+            stock: found.stock
+          };
+
+        })
+      );
+
+    };
+
+    socket.on("inventory:update", handleInventoryUpdate);
+
+    return () => {
+      socket.off("inventory:update", handleInventoryUpdate);
+    };
+
+  }, []);
+
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setShowScan(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+
+  const handleAddItem = (product, unit) => {
+    if (unit.stock <= 0) {
+      showNotification(`Sản phẩm [${unit?.unitName || 'Đơn vị'}] đã hết hàng!`, "error");
+      return;
+    }
+
+    addItem({
+      productId: product.id,
+      unitId: unit.unitId,
+      productName: product.name,
+      unitName: unit.unitName,
+      unitPrice: unit.price,
+      quantityOnHand: unit.stock,
+      factor: unit.factor,
+      unitType: unit.unitType,
+    });
+
+    showNotification(`Đã thêm ${product.name} - (${unit.unitName})`, "success");
+  };
+
+  const handleBarcode = async (barcode) => {
+    try {
+      const res = await getAllProducts({
+        search: barcode,
+        page: 1,
+        limit: 1
+      });
+
+      if (res?.success && res.data.length > 0) {
+        const product = res.data[0];
+        const matchedUnit = product.units?.find(u => u.barcode === barcode);
+
+        if (matchedUnit) {
+          handleAddItem(product, matchedUnit);
+        } else {
+          handleAddItem(product, product.units[0]);
+        }
+      } else {
+        showNotification("Sản phẩm không tồn tại hoặc hết hàng!", "error");
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
+      showNotification("Lỗi khi quét mã vạch", "error");
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -35,27 +137,27 @@ export default function Product({ addItem }) {
     }
   };
 
+
   useEffect(() => {
     fetchProductList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, search, selectedCategory]);
 
   const fetchProductList = async () => {
     setLoading(true);
 
     try {
-      const res = await getProducts({
+
+      const res = await getAllProducts({
         page: currentPage,
         limit: PAGE_CONFIG.ITEMS_PER_PAGE,
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
-
-
-      if (res.data.success) {
-        setProducts(res.data.data || []);
-        setTotalPages(res.data.totalPages || 1);
+      if (res.success) {
+        setProducts(res.data || []);
+        setTotalPages(res.totalPages || 1);
       }
+
     } catch (err) {
       console.error("Fetch products error:", err);
     } finally {
@@ -81,6 +183,7 @@ export default function Product({ addItem }) {
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
+                addItem={handleBarcode}
               />
             </div>
 
@@ -99,16 +202,18 @@ export default function Product({ addItem }) {
               <>
                 <ProductList
                   products={products}
-                  onSelect={(product) => {
-                    if (product.stockQuantity === 0) return;
-
-                    addItem({
-                      productId: product.id,
-                      productName: product.name,
-                      unitPrice: product.salePrice,
-                    });
+                  onSelect={(product, selectedUnit) => {
+                    handleAddItem(product, selectedUnit)
                   }}
                 />
+
+                {showScan && (
+                  <ScanBarcode
+                    open={showScan}
+                    onClose={() => setShowScan(false)}
+                    onDetected={handleBarcode}
+                  />
+                )}
 
                 {/* PAGINATION */}
                 <div className="mt-4 border-top pt-4">
@@ -124,6 +229,7 @@ export default function Product({ addItem }) {
                     }}
                   />
                 </div>
+
               </>
             ) : (
               <div className="text-center py-5">
@@ -136,20 +242,6 @@ export default function Product({ addItem }) {
           </div>
         </div>
       </div>
-
-      <style>{`
-        .bg-light { background-color: #f8f9fa !important; }
-        .rounded-4 { border-radius: 1.25rem !important; }
-        .card { 
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-          border: none !important; 
-          border-radius: 1rem !important; 
-        }
-        .card:hover { 
-          transform: translateY(-8px); 
-          box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important; 
-        }
-      `}</style>
     </div>
   );
 }

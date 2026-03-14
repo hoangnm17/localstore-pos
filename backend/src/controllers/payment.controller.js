@@ -1,57 +1,45 @@
-const invoiceModel = require("../models/invoice.model");
-const invoiceItemModel = require("../models/invoiceItem.model");
-const paymentModel = require("../models/payment.model");
-const vnpayModel = require("../models/vnpay.model");
-const createVnpayUtil = require("../utils/vnpay.mockup");
-const createPaymentService = require("../services/payment.service");
+const paymentService = require("../services/payment.service");
 
-const vnpayUtil = createVnpayUtil({
-    secretKey: "MOCK_SECRET",
-});
-
-const paymentService = createPaymentService({
-    invoiceModel,
-    invoiceItemModel,
-    paymentModel,
-    vnpayModel,
-    vnpayUtil,
-});
-
-const createPayment = async (req, res) => {
+const createQR = async (req, res) => {
   try {
-    const { invoiceId, method, customerPay } = req.body;
+    const { invoiceId } = req.body;
+    const { discount } = req.body;
+    const result = await paymentService.createQR(invoiceId, discount);
 
-    if (!invoiceId) {
-      return res.status(400).json({ message: "invoiceId is required" });
-    }
-
-    const result = await paymentService.createPayment({
-      invoiceId,
-      method,
-      customerPay,
-      staffId: req.user.id, // lấy từ token
+    return res.json({
+      success: true,
+      data: result,
     });
-
-    res.json(result);
-
   } catch (err) {
-    console.error("createPayment error:", err);
-    res.status(400).json({ message: err.message });
+    console.error("createQR error:", err);
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Create QR failed",
+    });
   }
 };
 
+const webhook = async (req, res) => {
+      console.log("DA NHAN HOOK TU API SEPAY")
+    console.log(req.body);
+  try {
+    await paymentService.confirmPayment(req.body);
 
-const vnpayReturn = async (req, res) => {
-    try {
-        const result = await paymentService.handleReturn(req.query);
-        res.json(result);
-    } catch (err) {
-        console.error("vnpayReturn error:", err);
-        res.status(400).json({ message: err.message });
-    }
+    
+    return res.json({
+      success: true,
+      message: "Webhook processed",
+    });
+  } catch (err) {
+    console.error("SePay webhook error:", err);
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Webhook failed",
+    });
+  }
 };
 
 module.exports = {
-    createPayment,
-    vnpayReturn,
+  createQR,
+  webhook,
 };

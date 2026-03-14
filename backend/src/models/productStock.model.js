@@ -159,24 +159,24 @@ const searchProducts = async (keyword) => {
 };
 
 const getStockByProductId = async (transaction, productId) => {
-  const result = await new sql.Request(transaction)
-    .input("productId", sql.Int, productId)
-    .query(`
-      SELECT quantityOnHand
+    const result = await new sql.Request(transaction)
+        .input("productId", sql.BigInt, productId)
+        .query(`
+      SELECT productId, quantityOnHand
       FROM InventoryStocks WITH (UPDLOCK, ROWLOCK)
       WHERE productId = @productId
     `);
 
-  return result.recordset[0] || null;
+    return result.recordset[0] || null;
 };
 
-const detuctStock = async (transaction, productId, quantity) => {
-  await new sql.Request(transaction)
-    .input("productId", sql.Int, productId)
-    .input("quantity", sql.Decimal(15, 3), quantity)
-    .query(`
+const deductStock = async (transaction, productId, quantity) => {
+    await new sql.Request(transaction)
+        .input("productId", sql.BigInt, productId)
+        .input("quantity", sql.Decimal(15, 3), quantity)
+        .query(`
       UPDATE InventoryStocks
-      SET quantityOnHand = @quantity
+      SET quantityOnHand = quantityOnHand - @quantity
       WHERE productId = @productId
     `);
 };
@@ -262,7 +262,7 @@ const searchProductUnits = async (keyword) => {
 module.exports = {
     getStockByProductId,
     updateStock,
-    detuctStock,
+    deductStock,
     getProductsByCategory,
     countProductsByCategory,
     getProductBasicInfo,
