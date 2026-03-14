@@ -3,11 +3,9 @@ const { connectDB } = require("../config/database");
 
 module.exports.getSalaryReport = async (month, year, staffId = null, roleName = null) => {
     const pool = await connectDB();
-
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
     const totalDaysInMonth = new Date(year, month, 0).getDate();
-
 
     let staffFilter = '';
     if (staffId) staffFilter += ' AND s.id = @staffId';
@@ -18,32 +16,26 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
         .input('endDate', sql.Date, endDate)
         .input('month', sql.Int, month)
         .input('year', sql.Int, year);
-
     if (staffId) request.input('staffId', sql.BigInt, staffId);
     if (roleName) request.input('roleName', sql.NVarChar(50), roleName);
 
     const result = await request.query(`
-        SELECT
-            s.id                    AS staffId,
-            s.fullName,
-            s.salaryType,
-            s.baseSalary,
-            r.name                  AS roleName,
-
+        SELECT s.id AS staffId, s.fullName, s.salaryType, s.baseSalary, r.name AS roleName,
             ISNULL(SUM(
                 CASE
                     WHEN s.salaryType = 'hourly' AND ws.shiftId IS NOT NULL
-                    THEN DATEDIFF(MINUTE, sh.startTime, sh.endTime) / 60.0
+                    THEN DATEDIFF(MINUTE,
+                           ISNULL(ws.snapshotStartTime,sh.startTime),
+                           ISNULL(ws.snapshotEndTime,sh.endTime)
+                         ) / 60.0
                     ELSE 0
                 END
-            ), 0)                   AS totalHours,
-
+            ), 0) AS totalHours,
             COUNT(DISTINCT
-                CASE WHEN ws.id IS NOT NULL THEN CAST(ws.workDate AS DATE) END
-            )                       AS workingDays,
-
-            ${totalDaysInMonth}     AS totalDaysInMonth
-
+                CASE WHEN ws.id IS NOT NULL THEN CAST(ws.workDate AS DATE) 
+                END
+            )
+            AS workingDays, ${totalDaysInMonth} AS totalDaysInMonth
         FROM Staff s
         LEFT JOIN Users u  ON s.userId  = u.id
         LEFT JOIN Roles r  ON u.roleId  = r.id
@@ -51,22 +43,16 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
             ON s.id = ws.staffId
             AND ws.workDate BETWEEN @startDate AND @endDate
         LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-        WHERE
-            s.employmentStatus = 'working'
+        WHERE s.employmentStatus = 'working'
             ${staffFilter}
-        GROUP BY
-            s.id, s.fullName, s.salaryType, s.baseSalary, r.name
+        GROUP BY s.id, s.fullName, s.salaryType, s.baseSalary, r.name
         ORDER BY r.name, s.fullName
     `);
 
     return result.recordset.map(row => {
-        let grossSalary = 0;
-        if (row.salaryType === 'hourly') {
-            grossSalary = Number(row.baseSalary) * Number(row.totalHours);
-        } else {
-            grossSalary = Number(row.baseSalary);
-        }
-
+        const grossSalary = row.salaryType === 'hourly'
+            ? Number(row.baseSalary) * Number(row.totalHours)
+            : Number(row.baseSalary);
         return {
             staffId: row.staffId,
             fullName: row.fullName,
@@ -78,11 +64,12 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
             totalDaysInMonth: row.totalDaysInMonth,
             deductions: 0,
             grossSalary,
-            netSalary: grossSalary - 0,
+            netSalary: grossSalary,
             note: '',
         };
     });
 };
+
 
 
 module.exports.getRoleList = async () => {

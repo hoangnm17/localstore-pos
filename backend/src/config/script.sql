@@ -311,6 +311,38 @@ GO
 -- ================================================================
 
 
+-- ProductSuppliers
+CREATE TABLE ProductSuppliers (
+    productId BIGINT NOT NULL,
+    supplierId INT NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    PRIMARY KEY (productId, supplierId),
+    CONSTRAINT FK_PS_Product FOREIGN KEY (productId) REFERENCES Products(id),
+    CONSTRAINT FK_PS_Supplier FOREIGN KEY (supplierId) REFERENCES Suppliers(id)
+);
+GO
+
+CREATE TABLE SupplierProductPrices (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    
+    productId BIGINT NOT NULL,
+    supplierId INT NOT NULL,
+    unitId INT NOT NULL,
+    
+    price DECIMAL(15,2) NOT NULL,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    createdBy INT NULL,
+
+    CONSTRAINT FK_SPP_Product 
+        FOREIGN KEY (productId) REFERENCES Products(id),
+
+    CONSTRAINT FK_SPP_Supplier 
+        FOREIGN KEY (supplierId) REFERENCES Suppliers(id),
+
+    CONSTRAINT FK_SPP_ProductUnit 
+        FOREIGN KEY (unitId) REFERENCES ProductUnits(id)
+);
+GO
 
 -- 18. InventoryStocks
 CREATE TABLE InventoryStocks (
@@ -359,7 +391,7 @@ CREATE TABLE PurchaseOrders (
     CONSTRAINT CK_PO_Status
         CHECK (status IN 
             ('Pending','Approved','Rejected',
-             'WaitingForDelivery','Received','CannotDeliver')
+             'WaitingForDelivery','Received','CannotDeliver','PartiallyReceived')
         )
 );
 GO
@@ -370,24 +402,25 @@ CREATE TABLE PurchaseOrderItems (
     id INT IDENTITY(1,1) PRIMARY KEY,
 
     poId INT NOT NULL,
-    productId BIGINT NOT NULL,
+    productUnitId INT NOT NULL,
 
-    quantityBeforeOrdered DECIMAL(15,3) NOT NULL,
-    quantityOrdered DECIMAL(15,3) NOT NULL,
-
-    baseUnit NVARCHAR(20) NOT NULL,
+    quantity DECIMAL(15,3) NOT NULL,
     costPrice DECIMAL(15,2) NOT NULL,
 
-    lineTotal AS (quantityOrdered * costPrice) PERSISTED,
+    total AS (quantity * costPrice) PERSISTED,
+
+    note NVARCHAR(500),
+
+    receivedQuantity DECIMAL(15,3) DEFAULT 0,
 
     CONSTRAINT FK_POI_PO
-        FOREIGN KEY (poId) 
+        FOREIGN KEY (poId)
         REFERENCES PurchaseOrders(id)
         ON DELETE CASCADE,
 
-    CONSTRAINT FK_POI_Product
-        FOREIGN KEY (productId)
-        REFERENCES Products(id)
+    CONSTRAINT FK_POI_ProductUnit
+        FOREIGN KEY (productUnitId)
+        REFERENCES ProductUnits(id)
 );
 GO
 
@@ -396,12 +429,17 @@ GO
 CREATE TABLE [InventoryAdjustments] (
     [id] INT IDENTITY(1,1) PRIMARY KEY,
     [createdBy] BIGINT NOT NULL,
+    [processedBy] BIGINT NULL,
     [reason] NVARCHAR(50) NOT NULL,
     [status] VARCHAR(20) DEFAULT 'Pending',
     [createdAt] DATETIME2 DEFAULT GETDATE(),
+    [processedAt] DATETIME2 NULL,
 
     CONSTRAINT [FK_Adjustment_Staff]
         FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id]),
+
+    CONSTRAINT [FK_Adjustment_Staff]
+        FOREIGN KEY ([processedBy]) REFERENCES [Staff]([id]),
 
     CONSTRAINT [CK_Adjustment_Status]
         CHECK ([status] IN ('Pending','Approved','Rejected'))
@@ -483,10 +521,12 @@ CREATE TABLE [PromotionProducts] (
     [promotionId] BIGINT NOT NULL,
     [productId] BIGINT NULL,
     [categoryId] INT NULL,
+    [productUnitId] INT NULL, -- Thêm cột này để hỗ trợ giảm giá theo đơn vị cụ thể
     
     CONSTRAINT [FK_PP_Promotion] FOREIGN KEY ([promotionId]) REFERENCES [Promotions]([id]) ON DELETE CASCADE,
     CONSTRAINT [FK_PP_Product] FOREIGN KEY ([productId]) REFERENCES [Products]([id]),
-    CONSTRAINT [FK_PP_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id])
+    CONSTRAINT [FK_PP_Category] FOREIGN KEY ([categoryId]) REFERENCES [Categories]([id]),
+    CONSTRAINT [FK_PP_ProductUnit] FOREIGN KEY ([productUnitId]) REFERENCES [ProductUnits]([id]) -- Thêm khóa ngoại
 );
 GO
 
@@ -774,5 +814,17 @@ BEGIN
     END
 END
 GO
+-- ===========================================
+-- THAY ĐỒI CẤU TRÚC BẢNG SHIFTS & WORKSCHEDULES
+-- ===========================================
+ALTER TABLE [Shifts]
+ADD [checkInStart] TIME NULL,
+    [checkInEnd]   TIME NULL,
+    [checkOutDeadline] TIME NULL;
+    [isActive] BIT NOT NULL DEFAULT 1;
+ALTER TABLE [WorkSchedules]
+ADD [snapshotStartTime] TIME NULL,
+    [snapshotEndTime]   TIME NULL,
+    [snapshotShiftName] NVARCHAR(50) NULL;
 -- END OF SCRIPT
 

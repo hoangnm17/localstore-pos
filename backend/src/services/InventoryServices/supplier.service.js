@@ -49,22 +49,35 @@ const getProductsNotInSupplier = async (supplierId, query) => {
     );
 };
 
-const addProductToSupplier = async (supplierId, body) => {
+const getUnitsByProductId = async (productId) => {
+
+    if (!productId) {
+        throw new Error("ProductId is required");
+    }
+
+    const units = await supplierModel.getUnitsByProductId(productId);
+
+    return units;
+};
+
+const addProductToSupplier = async (supplierId, body, userId) => {
 
     if (!supplierId) {
         throw new Error("SUPPLIER_ID_REQUIRED");
     }
 
-    const { productId, supplyPrice } = body;
+    const { productId, price, productUnitId } = body;
 
-    if (!productId || !supplyPrice) {
-        throw new Error("PRODUCT_ID_AND_PRICE_REQUIRED");
+    if (!productId || !price || !productUnitId) {
+        throw new Error("PRODUCT_UNIT_PRICE_REQUIRED");
     }
 
     await supplierModel.addProductToSupplier(
         supplierId,
         productId,
-        supplyPrice
+        price,
+        productUnitId,
+        userId
     );
 };
 
@@ -86,33 +99,31 @@ const createSupplier = async (body) => {
 const updateProductOfSupplier = async (
     supplierId,
     productId,
-    body
+    body,
+    userId
 ) => {
 
-    if (!supplierId) {
-        throw new Error("SUPPLIER_ID_REQUIRED");
+    const { price, productUnitId, status } = body;
+
+    // update status
+    if (status) {
+        await supplierModel.updateProductSupplierStatus(
+            supplierId,
+            productId,
+            status
+        );
     }
 
-    if (!productId) {
-        throw new Error("PRODUCT_ID_REQUIRED");
+    // chỉ insert khi có price
+    if (price && productUnitId) {
+        await supplierModel.updateProductOfSupplierPrice(
+            supplierId,
+            productId,
+            price,
+            productUnitId,
+            userId
+        );
     }
-
-    const { supplyPrice, status } = body;
-
-    if (supplyPrice == null || !status) {
-        throw new Error("PRICE_AND_STATUS_REQUIRED");
-    }
-
-    if (!["ACTIVE", "INACTIVE"].includes(status)) {
-        throw new Error("INVALID_STATUS");
-    }
-
-    await supplierModel.updateProductOfSupplier(
-        supplierId,
-        productId,
-        supplyPrice,
-        status
-    );
 };
 
 const updateSupplier = async (id, body) => {
@@ -141,6 +152,15 @@ const updateSupplier = async (id, body) => {
     );
 };
 
+const getPriceHistoryDetail = async (supplierId, productId) => {
+
+    return await supplierModel.getPriceHistoryDetail(
+        supplierId,
+        productId
+    );
+
+};
+
 module.exports = {
     getSupplierList,
     getSupplierById,
@@ -149,5 +169,7 @@ module.exports = {
     addProductToSupplier,
     createSupplier,
     updateProductOfSupplier,
-    updateSupplier
+    updateSupplier,
+    getUnitsByProductId,
+    getPriceHistoryDetail
 }

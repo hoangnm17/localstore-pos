@@ -277,6 +277,71 @@ const updateMinThreshold = async (req, res) => {
     }
 };
 
+const searchProducts = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+
+    const products = await inventoryService.searchProducts(keyword);
+
+    return res.status(200).json({
+      success: true,
+      data: products,
+    });
+  } catch (error) {
+    console.error("Search products error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const getLowStockProducts = async (req, res) => {
+
+    try {
+
+        const result = await inventoryService.getLowStockProducts(req.user);
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
+const searchProductUnits = async (req, res) => {
+
+    try {
+
+        const { keyword } = req.query;
+
+        const result = await inventoryService.searchProductUnits(keyword);
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
 module.exports = {
     getCategoryStock,
     getProductStockByCategory,
@@ -285,5 +350,8 @@ module.exports = {
     createProblematicReport,
     getProblematicReports,
     updateProblematicStatus,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts,
+    getLowStockProducts,
+    searchProductUnits
 }
