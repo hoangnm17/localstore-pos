@@ -48,11 +48,6 @@ export default function CategoryPage() {
     );
     return (
         <div className="pm-page">
-            {/* Header */}
-            <div className="d-flex align-items-center justify-content-between mb-3">
-                <h5 className="pm-page-title mb-0">Danh mục sản phẩm</h5>
-            </div>
-
             {/* Toolbar */}
             <div className="d-flex align-items-center justify-content-between mb-3 gap-2">
                 <div className="input-group" style={{ maxWidth: 340 }}>

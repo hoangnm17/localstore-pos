@@ -3,7 +3,7 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
     return (
         <div className="row g-3 mb-4">
             <div className="col-md-6">
-                <label className="form-label fw-semibold">Mã sản phẩm *</label>
+                <label className="form-label fw-semibold">Mã sản phẩm<span className="text-danger">*</span></label>
                 <input
                     className="form-control"
                     value={form.code}
@@ -13,7 +13,7 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             </div>
 
             <div className="col-md-6">
-                <label className="form-label fw-semibold">Tên sản phẩm *</label>
+                <label className="form-label fw-semibold">Tên sản phẩm<span className="text-danger">*</span></label>
                 <input
                     className="form-control"
                     value={form.name}
@@ -50,7 +50,7 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             </div>
 
             <div className="col-md-6">
-                <label className="form-label fw-semibold">Base unit *</label>
+                <label className="form-label fw-semibold">Đơn vị cơ bản<span className="text-danger">*</span></label>
                 <input
                     className="form-control"
                     value={form.baseUnit}
@@ -60,7 +60,7 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             </div>
 
             <div className="col-md-6">
-                <label className="form-label fw-semibold">Barcode base unit</label>
+                <label className="form-label fw-semibold">Barcode đơn vị cơ bản</label>
                 <input
                     className="form-control"
                     value={form.barcode}

@@ -125,11 +125,7 @@ function ProductList() {
 
     return (
         <div className="pm-page">
-            <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-                <div>
-                    <h2 className="pm-page-title">Quản lý sản phẩm</h2>
-                </div>
-
+            <div className="d-flex flex-wrap justify-content-end align-items-start gap-3 mb-4">
                 <div className="d-flex flex-wrap gap-2">
                     <button
                         type="button"
@@ -219,7 +215,6 @@ function ProductList() {
                             >
                                 <option value={10}>10</option>
                                 <option value={20}>20</option>
-                                <option value={50}>50</option>
                             </select>
                         </div>
 
@@ -240,15 +235,6 @@ function ProductList() {
                         </div>
 
                         <div className="d-flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                className="btn btn-warning"
-                                disabled={!selectedIds.length || bulkLoading}
-                                onClick={handleBulkStopSelling}
-                            >
-                                <i className="bi bi-pause-circle me-2" />
-                                Ngừng bán
-                            </button>
 
                             <button
                                 type="button"
@@ -257,7 +243,7 @@ function ProductList() {
                                 onClick={handleBulkSoftDelete}
                             >
                                 <i className="bi bi-trash me-2" />
-                                Xóa
+                                Ngừng bán
                             </button>
 
                             <button type="button" className="btn btn-outline-secondary" onClick={loadProducts}>

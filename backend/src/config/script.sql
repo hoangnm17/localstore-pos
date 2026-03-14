@@ -741,6 +741,7 @@ ALTER TABLE [WorkSchedules]
 ADD [snapshotStartTime] TIME NULL,
     [snapshotEndTime]   TIME NULL,
     [snapshotShiftName] NVARCHAR(50) NULL;
+GO
 
 -- END OF SCRIPT
 

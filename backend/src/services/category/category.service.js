@@ -13,6 +13,8 @@ exports.getCategoryById = async (id) => {
 };
 
 exports.getCategoryList = async (search, page, limit) => {
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
     const offset = (page - 1) * limit;
     const data = await categoryModel.getCategoriesList(search, limit, offset);
     const total = await categoryModel.countCategories(search);
@@ -30,12 +32,26 @@ exports.createCategory = async (name, parentId, imageUrl) => {
     if (!name) {
         throw new Error('Category name is required');
     }
+    if (parentId) {
+        const hasProduct = await categoryModel.hasProduct(parentId);
+
+        if (hasProduct) {
+            throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
+        }
+    }
     return await categoryModel.createCategory(name, parentId, imageUrl);
 };
 
 exports.updateCategory = async (id, name, parentId, imageUrl) => {
     if (!name) {
         throw new Error('Category name is required');
+    }
+    if (parentId) {
+        const hasProduct = await categoryModel.hasProduct(parentId);
+
+        if (hasProduct) {
+            throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
+        }
     }
     const updated = await categoryModel.updateCategory(id, name, parentId, imageUrl);
     if (!updated) {
@@ -53,11 +69,12 @@ exports.deleteCategory = async (id) => {
 };
 
 exports.getCategoryTree = async (search, page, limit) => {
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
     const offset = (page - 1) * limit;
 
     // 1. Lấy ROOT categories
     const roots = await categoryModel.getCategoriesList(search, limit, offset);
-
     const total = await categoryModel.countCategories(search);
 
     // 2. Lấy children
