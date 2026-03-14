@@ -37,28 +37,33 @@ const getAllInvoice = async (req, res) => {
     const {
       page = 1,
       pageSize = 10,
-      status
+      status,
+      invoiceCode // Lấy từ query string (?invoiceCode=INV001)
     } = req.query;
-
+    console.log(req.query);
+    
     // Clean & validate
     const currentPage = Number(page) > 0 ? Number(page) : 1;
     const limit = Number(pageSize) > 0 ? Number(pageSize) : 10;
+    const cleanInvoiceCode = invoiceCode?.trim(); // Xóa khoảng trắng thừa
 
-    // Optional: validate status enum
+    // Validate status enum
     const allowedStatus = ["UNPAID", "PAID", "CANCELLED"];
     const cleanStatus = status?.trim();
 
     if (cleanStatus && !allowedStatus.includes(cleanStatus)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid invoice status"
+        message: "Trạng thái hóa đơn không hợp lệ"
       });
     }
 
+    // Gọi service với đầy đủ các filter
     const result = await invoiceService.getAllInvoice({
       page: currentPage,
       pageSize: limit,
-      status: cleanStatus
+      status: cleanStatus,
+      invoiceCode: cleanInvoiceCode
     });
 
     return res.status(200).json({

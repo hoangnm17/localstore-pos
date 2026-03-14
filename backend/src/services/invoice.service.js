@@ -10,6 +10,7 @@ const voucherModel = require("../models/voucher.model");
 const promotionModel = require("../models/promotion.model")
 const customerPointLogService = require("./customerPointLog.service")
 const socketService = require("./socket.service");
+const { log } = require("console");
 
 const POINT_EXCHANGE = 100;
 const EARN_POINT_EXCHANGE = 10000;
@@ -70,11 +71,13 @@ const validateItems = (items) => {
     }
 };
 
-const getAllInvoice = async ({ page, pageSize, status } = {}) => {
+const getAllInvoice = async ({ page, pageSize, status, invoiceCode } = {}) => {
+    console.log(invoiceCode)
     return invoiceModel.getInvoiceList({
         page,
         pageSize,
-        status
+        status,
+        invoiceCode
     });
 };
 
@@ -452,8 +455,6 @@ const payCash = async (id, { payment }) => {
         );
 
         socketService.emitInventoryUpdate(updatedStocks);
-
-        /* ================= COMPLETE ================= */
 
         await invoiceModel.updateStatus(transaction, id, "PAID");
 

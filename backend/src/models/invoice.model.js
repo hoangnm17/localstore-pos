@@ -8,9 +8,9 @@ const MAX_PAGE_SIZE = 50;
 const getInvoiceList = async ({
   page = 1,
   pageSize = 10,
-  status
+  status,
+  invoiceCode
 }) => {
-
   const pool = await connectDB();
 
   const currentPage = page > 0 ? page : 1;
@@ -20,57 +20,52 @@ const getInvoiceList = async ({
   let whereClause = "WHERE 1=1";
   const request = pool.request();
 
+  // Filter theo Status
   if (status) {
     whereClause += " AND i.status = @status";
     request.input("status", sql.VarChar(20), status);
+  }
+
+  // Filter theo Invoice Code (Tìm kiếm gần đúng với LIKE)
+  if (invoiceCode) {
+    whereClause += " AND i.invoiceCode LIKE @invoiceCode";
+    request.input("invoiceCode", sql.VarChar(50), `%${invoiceCode}%`);
   }
 
   request.input("offset", sql.Int, offset);
   request.input("limit", sql.Int, limit);
 
   /* ================= LIST QUERY ================= */
-
-  const listResult = await request.query(`
+  // Sử dụng chung logic WHERE cho cả 2 query để đảm bảo tính đồng nhất
+  const listQuery = `
     SELECT
       i.id,
       i.invoiceCode,
       i.createdAt,
       i.finalAmount,
       i.status,
-
-      -- Staff
       s.id         AS staffId,
       s.fullName   AS staffName,
-
-      -- Counter
       c.id         AS counterId,
       c.counterName AS counterName,
-
-      -- Customer
       cu.id        AS customerId,
-      cu.name  AS customerName
-
+      cu.name      AS customerName
     FROM Invoices i
     LEFT JOIN Staff s     ON i.staffId = s.id
     LEFT JOIN Counters c  ON i.counterId = c.id
     LEFT JOIN Customers cu ON i.customerId = cu.id
-
     ${whereClause}
-
     ORDER BY i.createdAt DESC
     OFFSET @offset ROWS
     FETCH NEXT @limit ROWS ONLY
-  `);
+  `;
+
+  const listResult = await request.query(listQuery);
 
   /* ================= COUNT QUERY ================= */
-
-  const countRequest = pool.request();
-
-  if (status) {
-    countRequest.input("status", sql.VarChar(20), status);
-  }
-
-  const countResult = await countRequest.query(`
+  // Lưu ý: Request object cũ đã chứa các tham số @status và @invoiceCode
+  // nên ta có thể tái sử dụng hoặc tạo request mới có cùng input.
+  const countResult = await request.query(`
     SELECT COUNT(*) AS total
     FROM Invoices i
     ${whereClause}
@@ -331,17 +326,27 @@ const getDraftInvoices = async (counterId) => {
 const getInvoiceDetail = async (id) => {
   const pool = await connectDB();
 
-  const invoice = await pool.request()
+  // 1. Lấy thông tin chung của hóa đơn (Bổ sung Customer, Staff, Counter)
+  const invoiceResult = await pool.request()
     .input("id", sql.Int, id)
     .query(`
-      SELECT id, invoiceCode, createdAt, finalAmount, status
-      FROM Invoices
-      WHERE id = @id
+      SELECT 
+        i.id, i.invoiceCode, i.createdAt, i.finalAmount, i.status, i.customerId,
+        cu.name AS customerName,
+        s.fullName AS staffName,
+        c.counterName AS counterName
+      FROM Invoices i
+      LEFT JOIN Customers cu ON i.customerId = cu.id
+      LEFT JOIN Staff s ON i.staffId = s.id
+      LEFT JOIN Counters c ON i.counterId = c.id
+      WHERE i.id = @id
     `);
 
-  if (!invoice.recordset[0]) return null;
+  const invoice = invoiceResult.recordset[0];
+  if (!invoice) return null;
 
-  const items = await pool.request()
+  // 2. Lấy danh sách sản phẩm (Bổ sung ProductCode/SKU)
+  const itemsResult = await pool.request()
     .input("invoiceId", sql.Int, id)
     .query(`
       SELECT 
@@ -350,21 +355,17 @@ const getInvoiceDetail = async (id) => {
         ii.quantity, 
         ii.unitPrice, 
         ii.lineTotal, 
-        ii.productUnitId,
         ii.unitName,
-        ii.baseQuantity,
-        p.name, 
-        ist.quantityOnHand, 
-        ist.minThreshold
+        p.name,
+        p.code -- Để hiển thị "Mã: SKU-..." trên Modal
       FROM InvoiceItems ii
       JOIN Products p ON p.id = ii.productId
-	    JOIN InventoryStocks ist ON p.id = ist.productId
       WHERE ii.invoiceId = @invoiceId
     `);
 
   return {
-    ...invoice.recordset[0],
-    items: items.recordset,
+    ...invoice,
+    items: itemsResult.recordset,
   };
 };
 
