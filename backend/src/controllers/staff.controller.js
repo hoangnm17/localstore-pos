@@ -10,7 +10,14 @@ module.exports.getAllStaff = async (req, res) => {
         return res.status(500).json({ success: false, message: "Lỗi hệ thống: " + err.message });
     }
 };
-
+module.exports.getRoles = async (req, res) => {
+    try {
+        const roles = await staffModel.getAllRoles();
+        return res.json({ success: true, data: roles });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
 module.exports.toggleStatus = async (req, res) => {
     try {
         const { id, isActive } = req.body;
