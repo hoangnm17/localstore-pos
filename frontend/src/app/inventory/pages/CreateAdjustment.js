@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
@@ -13,8 +13,8 @@ const CreateAdjustment = () => {
   const [reasonError, setReasonError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // Debounce search
   useEffect(() => {
     const delay = setTimeout(() => {
       if (keyword.trim().length >= 2) {
@@ -32,8 +32,9 @@ const CreateAdjustment = () => {
       setLoading(true);
       const res = await productStockService.searchProduct(value);
       setSearchResults(res.data.data || []);
+      setShowSearchResults(true);
     } catch (err) {
-      console.error("Search error:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -46,334 +47,453 @@ const CreateAdjustment = () => {
       ...adjustmentItems,
       {
         ...product,
-        actualQuantity: product.quantityOnHand.toString(), // lưu dạng string để validate
+        actualLargest: product.systemLargest.toString(),
+        actualRemainder: product.systemRemainder.toString(),
       },
     ]);
 
     setKeyword("");
-    setSearchResults([]);
+    setShowSearchResults(false);
   };
 
-  // Validate input giống hệt UpdateMinThresholdModal
-  const handleQuantityChange = (id, e) => {
-    let val = e.target.value;
+  const handleLargestChange = (id, e) => {
+    let val = e.target.value.replace(/[^0-9]/g, "");
+    if (val === "") val = "0";
 
-    // 1. Chỉ giữ số và tối đa 1 dấu chấm
+    setAdjustmentItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, actualLargest: val } : item))
+    );
+  };
+
+  const handleRemainderChange = (id, e) => {
+  let val = e.target.value;
+
+  const item = adjustmentItems.find((i) => i.id === id);
+  const allowDecimal = item?.allowDecimalQuantity === true;
+
+  if (allowDecimal) {
+    // cho phép số thập phân
     val = val.replace(/[^0-9.]/g, "");
 
-    // 2. Ngăn nhiều hơn 1 dấu chấm
     const parts = val.split(".");
     if (parts.length > 2) {
       val = parts[0] + "." + parts.slice(1).join("");
     }
 
-    // 3. Nếu sản phẩm không cho phép thập phân → loại bỏ dấu chấm
-    const item = adjustmentItems.find((i) => i.id === id);
-    const allowDecimal = item?.allowDecimalQuantity === true; // giả sử backend có field này
+  } else {
+    // chỉ cho số nguyên
+    val = val.replace(/[^0-9]/g, "");
 
-    if (!allowDecimal) {
-      val = val.replace(/\./g, "");
+    const max = item?.largestConversionFactor
+      ? item.largestConversionFactor - 1
+      : 999999;
+
+    if (val !== "" && Number(val) >= max) {
+      val = (max - 1).toString();
     }
+  }
 
-    // Cập nhật giá trị
-    const updated = adjustmentItems.map((item) =>
-      item.id === id ? { ...item, actualQuantity: val } : item
-    );
-    setAdjustmentItems(updated);
-  };
+  if (val === "") val = "0";
+
+  setAdjustmentItems((prev) =>
+    prev.map((item) =>
+      item.id === id ? { ...item, actualRemainder: val } : item
+    )
+  );
+};
 
   const handleRemove = (id) => {
-    setAdjustmentItems(adjustmentItems.filter((i) => i.id !== id));
+    setAdjustmentItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  const calculateDifference = (item) => {
+    const conv = Number(item.largestConversionFactor) || 1;
+    const actual =
+      (Number(item.actualLargest) || 0) * conv +
+      (Number(item.actualRemainder) || 0);
+
+    return actual - (Number(item.quantityOnHand) || 0);
+  };
+
+  const formatSystemQuantity = (item) => {
+    const largest = Number(item.systemLargest) || 0;
+    const remainder = Number(item.systemRemainder) || 0;
+    const unit = item.largestUnitName || item.baseUnit || "Đơn vị";
+
+    if (largest > 0)
+      return `${largest.toLocaleString()} ${unit}${
+        remainder ? ` + ${remainder} lẻ` : ""
+      }`;
+
+    return remainder ? `${remainder} lẻ` : "0";
+  };
+
+  const summary = useMemo(() => {
+    let increase = 0;
+    let decrease = 0;
+
+    adjustmentItems.forEach((item) => {
+      const diff = calculateDifference(item);
+      if (diff > 0) increase++;
+      if (diff < 0) decrease++;
+    });
+
+    return {
+      total: adjustmentItems.length,
+      increase,
+      decrease,
+    };
+  }, [adjustmentItems]);
+
   const handleSubmit = async () => {
-    // Kiểm tra lý do
     const trimmedReason = reason.trim();
-    if (!trimmedReason) {
-      setReasonError("Vui lòng nhập lý do điều chỉnh.");
-      return;
-    }
-    setReasonError("");
 
-    // Kiểm tra danh sách sản phẩm
-    if (adjustmentItems.length === 0) {
-      alert("Vui lòng thêm ít nhất một sản phẩm.");
-      return;
-    }
+    if (!trimmedReason)
+      return setReasonError("Vui lòng nhập lý do điều chỉnh.");
 
-    // Validate tất cả actualQuantity trước khi gửi
-    for (const item of adjustmentItems) {
-      const val = (item.actualQuantity || "").trim();
-
-      if (!val) {
-        alert(`Vui lòng nhập tồn thực tế cho sản phẩm "${item.name}"`);
-        return;
-      }
-
-      if (!/^\d*\.?\d*$/.test(val)) {
-        alert(`Giá trị tồn thực tế của "${item.name}" không hợp lệ`);
-        return;
-      }
-
-      const qty = parseFloat(val);
-
-      if (isNaN(qty)) {
-        alert(`Giá trị tồn thực tế của "${item.name}" không hợp lệ`);
-        return;
-      }
-
-      if (qty < 0) {
-        alert(`Tồn thực tế của "${item.name}" không được âm`);
-        return;
-      }
-
-      const allowDecimal = item?.allowDecimalQuantity === true;
-      if (!allowDecimal && !Number.isInteger(qty)) {
-        alert(`Sản phẩm "${item.name}" chỉ chấp nhận số nguyên`);
-        return;
-      }
-    }
+    if (adjustmentItems.length === 0)
+      return alert("Vui lòng thêm ít nhất một sản phẩm.");
 
     const payload = {
       reason: trimmedReason,
       items: adjustmentItems.map((item) => ({
-        productId: item.id,
-        systemQuantity: Number(item.quantityOnHand),
-        actualQuantity: Number(item.actualQuantity),
+        productId: Number(item.id),
+        actualLargest: Number(item.actualLargest) || 0,
+        actualRemainder: Number(item.actualRemainder) || 0,
       })),
     };
 
     try {
       setSaving(true);
+
       await adjustmentService.createAdjustment(payload);
+
       alert("Tạo phiếu điều chỉnh thành công!");
+
       navigate("/inventory/requests/adjust?status=Pending");
     } catch (err) {
-      console.error("Create adjustment error:", err);
-      alert("Tạo phiếu thất bại. Vui lòng thử lại.");
+      alert(err.response?.data?.message || "Tạo phiếu thất bại.");
     } finally {
       setSaving(false);
     }
   };
 
-  const calculateDifference = (item) => {
-    const actual = Number(item.actualQuantity) || 0;
-    const system = Number(item.quantityOnHand) || 0;
-    return actual - system;
-  };
-
   return (
-    <div className="container-fluid py-4 px-md-5">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3 className="fw-bold text-dark mb-0">
-          Tạo phiếu điều chỉnh tồn kho
-        </h3>
-        <button
-          className="btn btn-outline-secondary d-flex align-items-center gap-2"
-          onClick={() => navigate(-1)}
-        >
-          <i className="bi bi-arrow-left"></i>
-          Quay lại
-        </button>
-      </div>
+    <div className="container-fluid py-4 bg-light min-vh-100">
+      <div className="row justify-content-center">
+        <div className="col-xl-10">
 
-      <div className="row g-4">
-        {/* Cột trái: Tìm kiếm + Lý do */}
-        <div className="col-lg-8">
-          {/* Tìm kiếm sản phẩm */}
-          <div className="card shadow-sm border-0 rounded-3 mb-4">
-            <div className="card-header bg-light py-3">
-              <h5 className="mb-0 fw-semibold d-flex align-items-center gap-2">
-                <i className="bi bi-search text-primary"></i>
-                Tìm kiếm sản phẩm
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="position-relative">
-                <div className="input-group input-group-lg">
-                  <span className="input-group-text bg-white border-end-0">
-                    <i className="bi bi-search text-muted"></i>
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control border-start-0"
-                    placeholder="Tìm theo tên sản phẩm hoặc mã vạch..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                </div>
+          {/* Header */}
 
-                {loading && (
-                  <div className="text-center py-3 text-muted">
-                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                    Đang tìm kiếm...
-                  </div>
-                )}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3 className="fw-bold text-primary d-flex align-items-center gap-2">
+              <i className="bi bi-box-seam"></i>
+              Tạo phiếu điều chỉnh tồn kho
+            </h3>
 
-                {searchResults.length > 0 && (
-                  <div
-                    className="position-absolute w-100 mt-1 bg-white border rounded-3 shadow-lg overflow-auto"
-                    style={{ maxHeight: "320px", zIndex: 1000 }}
-                  >
-                    {searchResults.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-3 border-bottom hover-bg-light cursor-pointer"
-                        onClick={() => handleAddProduct(item)}
-                      >
-                        <div className="fw-medium">{item.name}</div>
-                        <div className="small text-muted">
-                          Mã: {item.code} • Tồn kho: {item.quantityOnHand.toLocaleString()}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={() => navigate(-1)}
+            >
+              <i className="bi bi-arrow-left me-1"></i>
+              Quay lại
+            </button>
           </div>
 
-          {/* Lý do */}
-          <div className="card shadow-sm border-0 rounded-3">
-            <div className="card-header bg-light py-3">
-              <h5 className="mb-0 fw-semibold d-flex align-items-center gap-2">
-                <i className="bi bi-journal-text text-primary"></i>
-                Lý do điều chỉnh
-              </h5>
+          {/* Thông tin phiếu */}
+
+          <div className="card shadow-sm border-0 rounded-4 mb-4">
+            <div className="card-header bg-primary text-white">
+              <i className="bi bi-info-circle me-2"></i>
+              Thông tin phiếu
             </div>
+
             <div className="card-body">
+
+              <label className="form-label fw-semibold">
+                Lý do điều chỉnh <span className="text-danger">*</span>
+              </label>
+
               <textarea
-                className="form-control form-control-lg"
-                rows={4}
-                placeholder="Nhập lý do kiểm kê / điều chỉnh tồn kho..."
+                className="form-control"
+                rows="3"
+                placeholder="Nhập lý do điều chỉnh tồn kho..."
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
-                  if (reasonError) setReasonError("");
+                  setReasonError("");
                 }}
-              ></textarea>
+              />
 
               {reasonError && (
-                <div className="text-danger mt-2 small fw-medium">
-                  {reasonError}
-                </div>
+                <div className="text-danger mt-1">{reasonError}</div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Cột phải: Danh sách sản phẩm + Submit */}
-        <div className="col-lg-4">
-          <div className="card shadow-sm border-0 rounded-3 sticky-top" style={{ top: "20px" }}>
-            <div className="card-header bg-light py-3 d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 fw-semibold">
-                Sản phẩm điều chỉnh ({adjustmentItems.length})
-              </h5>
+          {/* Search */}
+
+          <div className="card shadow-sm border-0 rounded-4 mb-4">
+            <div className="card-header bg-info text-white">
+              <i className="bi bi-search me-2"></i>
+              Tìm sản phẩm
             </div>
 
-            {adjustmentItems.length === 0 ? (
-              <div className="card-body text-center py-5 text-muted">
-                <i className="bi bi-cart-x fs-1 mb-3 d-block"></i>
-                Chưa có sản phẩm nào được thêm
+            <div className="card-body">
+
+              <div className="input-group">
+
+                <span className="input-group-text">
+                  <i className="bi bi-search"></i>
+                </span>
+
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Nhập tên hoặc mã sản phẩm..."
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                />
+
+                {keyword && (
+                  <button
+                    className="btn btn-outline-secondary"
+                    onClick={() => {
+                      setKeyword("");
+                      setSearchResults([]);
+                    }}
+                  >
+                    <i className="bi bi-x"></i>
+                  </button>
+                )}
+
               </div>
-            ) : (
-              <>
-                <div className="table-responsive" style={{ maxHeight: "400px", overflowY: "auto" }}>
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light sticky-top">
-                      <tr>
-                        <th>Sản phẩm</th>
-                        <th className="text-end">Tồn hệ thống</th>
-                        <th className="text-end">Tồn thực tế</th>
-                        <th className="text-end">Chênh lệch</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {adjustmentItems.map((item) => {
-                        const diff = calculateDifference(item);
-                        return (
-                          <tr key={item.id}>
-                            <td>
-                              <div className="fw-medium">{item.name}</div>
-                              <small className="text-muted">Mã: {item.code}</small>
-                            </td>
-                            <td className="text-end">{item.quantityOnHand.toLocaleString()}</td>
-                            <td className="text-end" style={{ minWidth: "140px" }}>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                className="form-control form-control-sm text-end"
-                                value={item.actualQuantity}
-                                onChange={(e) => handleQuantityChange(item.id, e)}
-                                placeholder="0"
-                                onKeyDown={(e) => {
-                                  if (["e", "E", "+", "-"].includes(e.key)) {
-                                    e.preventDefault();
-                                  }
-                                  // Chặn dấu chấm nếu không cho phép thập phân
-                                  if (
-                                    item.allowDecimalQuantity !== true &&
-                                    e.key === "."
-                                  ) {
-                                    e.preventDefault();
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="text-end">
-                              <span
-                                className={`fw-bold ${
-                                  diff > 0
-                                    ? "text-success"
-                                    : diff < 0
-                                    ? "text-danger"
-                                    : "text-muted"
-                                }`}
-                              >
-                                {diff > 0 ? "+" : ""}
-                                {diff.toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="text-center">
-                              <button
-                                className="btn btn-sm btn-outline-danger rounded-circle"
-                                onClick={() => handleRemove(item.id)}
-                                title="Xóa sản phẩm"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+
+              {loading && (
+                <div className="text-center mt-3">
+                  <div className="spinner-border text-primary"></div>
+                </div>
+              )}
+
+              {showSearchResults && searchResults.length > 0 && (
+
+                <div
+                  className="list-group mt-3"
+                  style={{ maxHeight: 300, overflowY: "auto" }}
+                >
+                  {searchResults.map((item) => (
+                    <button
+                      key={item.id}
+                      className="list-group-item list-group-item-action d-flex justify-content-between"
+                      onClick={() => handleAddProduct(item)}
+                    >
+                      <div>
+                        <div className="fw-bold">{item.name}</div>
+                        <small className="text-muted">
+                          Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
+                        </small>
+                      </div>
+
+                      <span className="badge bg-primary">Thêm</span>
+                    </button>
+                  ))}
                 </div>
 
-                <div className="card-footer bg-white border-0 text-end py-3">
-                  <button
-                    className="btn btn-lg btn-success d-flex align-items-center gap-2 mx-auto"
-                    onClick={handleSubmit}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm" role="status"></span>
-                        Đang lưu...
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-check-circle"></i>
-                        Tạo phiếu điều chỉnh
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Bảng sản phẩm */}
+
+          {adjustmentItems.length > 0 && (
+            <div className="card shadow-sm border-0 rounded-4">
+
+              <div className="card-header bg-dark text-white">
+                <i className="bi bi-list-ul me-2"></i>
+                Danh sách sản phẩm kiểm kê
+              </div>
+
+              <div className="table-responsive">
+
+                <table className="table table-hover align-middle mb-0">
+
+                  <thead
+                    className="table-light"
+                    style={{
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
+                    <tr>
+                      <th>Sản phẩm</th>
+                      <th className="text-end">Tồn hệ thống</th>
+                      <th className="text-end">Tồn thực tế</th>
+                      <th className="text-end">Chênh lệch</th>
+                      <th className="text-center">Xóa</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {adjustmentItems.map((item) => {
+
+                      const diff = calculateDifference(item);
+                      const unit = item.largestUnitName || "ĐV";
+
+                      return (
+                        <tr key={item.id}>
+
+                          <td>
+                            <div className="fw-bold">{item.name}</div>
+                            <small className="text-muted">{item.code}</small>
+                          </td>
+
+                          <td className="text-end fw-semibold">
+                            {formatSystemQuantity(item)}
+                          </td>
+
+                          <td>
+
+                            <div className="d-flex gap-2 justify-content-end">
+
+                              <div className="input-group input-group-sm" style={{width:120}}>
+
+                                <input
+                                  type="text"
+                                  className="form-control text-end"
+                                  value={item.actualLargest}
+                                  onChange={(e)=>handleLargestChange(item.id,e)}
+                                />
+
+                                <span className="input-group-text">
+                                  {unit}
+                                </span>
+
+                              </div>
+
+                              <div className="input-group input-group-sm" style={{width:120}}>
+
+                                <input
+                                  type="text"
+                                  className="form-control text-end"
+                                  value={item.actualRemainder}
+                                  onChange={(e)=>handleRemainderChange(item.id,e)}
+                                />
+
+                                <span className="input-group-text">
+                                  lẻ
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+
+                          <td className="text-end">
+
+                            <span
+                              className={`badge ${
+                                diff > 0
+                                  ? "bg-success"
+                                  : diff < 0
+                                  ? "bg-danger"
+                                  : "bg-secondary"
+                              }`}
+                            >
+                              {diff > 0 ? "+" : ""}
+                              {diff}
+                            </span>
+
+                          </td>
+
+                          <td className="text-center">
+
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={()=>handleRemove(item.id)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+
+                          </td>
+
+                        </tr>
+                      );
+
+                    })}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+          )}
+
+          {/* SUMMARY + SUBMIT */}
+
+          {adjustmentItems.length > 0 && (
+
+            <div className="card shadow-sm border-0 rounded-4 mt-4">
+
+              <div className="card-body">
+
+                <div className="row align-items-center">
+
+                  <div className="col-md-8">
+
+                    <div className="d-flex gap-3 flex-wrap">
+
+                      <span className="badge bg-primary fs-6 p-2">
+                        Tổng sản phẩm: {summary.total}
+                      </span>
+
+                      <span className="badge bg-success fs-6 p-2">
+                        Tăng: {summary.increase}
+                      </span>
+
+                      <span className="badge bg-danger fs-6 p-2">
+                        Giảm: {summary.decrease}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  <div className="col-md-4 text-end">
+
+                    <button
+                      className="btn btn-success btn-lg px-4"
+                      disabled={saving}
+                      onClick={handleSubmit}
+                    >
+
+                      {saving ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Đang tạo...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-circle me-2"></i>
+                          Tạo phiếu điều chỉnh
+                        </>
+                      )}
+
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          )}
+
         </div>
       </div>
     </div>
