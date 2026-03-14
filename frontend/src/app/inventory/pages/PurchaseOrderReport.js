@@ -221,7 +221,7 @@ function PurchaseOrderReport() {
           {/* Summary Cards - 3 card mỗi dòng */}
           <div className="row g-4 mb-5">
             <SummaryCard color="primary" icon="bi-receipt-cutoff" title="Tổng đơn nhập" value={report.summary.totalPO} />
-            <SummaryCard color="success" icon="bi-box-seam-fill" title="Tổng số lượng" value={report.summary.totalQuantity} />
+            <SummaryCard color="success" icon="bi-box-seam-fill" title="Tổng số lượng" value={report.summary.totalQuantityReceived} />
             <SummaryCard color="warning" icon="bi-building-fill" title="Nhà cung cấp" value={report.summary.totalSuppliers} />
             <SummaryCard color="info" icon="bi-grid-3x3-gap-fill" title="Sản phẩm riêng biệt" value={report.summary.totalProducts} />
             <SummaryCard color="danger" icon="bi-currency-dollar" title="Tổng giá trị" value={report.summary.totalAmount} isCurrency={true} />
@@ -447,7 +447,7 @@ function PurchaseOrderReport() {
                   <thead className="table-primary">
                     <tr>
                       <th className="text-center">Ngày</th>
-                      <th className="text-center">Số lượng</th>
+                      <th className="text-center">Số lượng đơn nhập</th>
                       <th className="text-end">Giá trị nhập</th>
                     </tr>
                   </thead>
@@ -455,7 +455,7 @@ function PurchaseOrderReport() {
                     {report.dailyStats.map((d) => (
                       <tr key={d.day}>
                         <td className="text-center fw-medium">{d.day}</td>
-                        <td className="text-center">{d.totalQuantity}</td>
+                        <td className="text-center">{d.totalPO}</td>
                         <td className="text-end fw-bold text-success">
                           {formatCurrency(d.totalAmount)}
                         </td>

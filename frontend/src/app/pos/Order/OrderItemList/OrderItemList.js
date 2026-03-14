@@ -1,6 +1,6 @@
 import OrderItem from "app/pos/Order/OrderItemList/OrderItem";
 
-const OrderItemList = ({ orderItems, increase, decrease, remove }) => {
+const OrderItemList = ({ orderItems, increase, decrease, remove, activeItemId, onChangeQty,focusSignal }) => {
   return (
     <div className="bg-white rounded shadow-sm overflow-hidden">
 
@@ -17,6 +17,7 @@ const OrderItemList = ({ orderItems, increase, decrease, remove }) => {
         >
           <tr>
             <th className="text-start">Sản phẩm</th>
+            <th className="text-center">Đơn vị</th>
             <th className="text-end">Giá</th>
             <th className="text-center">Số lượng</th>
             <th className="text-end">Thành tiền</th>
@@ -51,6 +52,9 @@ const OrderItemList = ({ orderItems, increase, decrease, remove }) => {
                 increase={increase}
                 decrease={decrease}
                 remove={remove}
+                activeItemId={activeItemId}
+                onChangeQty={onChangeQty}
+                focusSignal={focusSignal}
               />
             ))
           )}

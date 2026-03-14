@@ -96,6 +96,29 @@ const getProductsNotInSupplier = async (req, res) => {
     }
 };
 
+const getProductUnits = async (req, res) => {
+
+    try {
+        const { productId } = req.params;
+
+        const units = await supplierService.getUnitsByProductId(productId);
+
+        res.json({
+            success: true,
+            data: units
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
 const addProductToSupplier = async (req, res) => {
     try {
 
@@ -103,7 +126,8 @@ const addProductToSupplier = async (req, res) => {
 
         await supplierService.addProductToSupplier(
             parseInt(id),
-            req.body
+            req.body,
+            req.user.id
         );
 
         return res.status(201).json({
@@ -112,14 +136,17 @@ const addProductToSupplier = async (req, res) => {
         });
 
     } catch (err) {
+        console.error(err);
+        if (err.message === "PRODUCT_UNIT_PRICE_REQUIRED")
+            return res.status(400).json({
+                success:false,
+                message:"Product, unit and price are required"
+            });
 
-        if (err.message === "SUPPLIER_ID_REQUIRED")
-            return res.status(400).json({ success: false, message: "Supplier ID is required" });
-
-        if (err.message === "PRODUCT_ID_AND_PRICE_REQUIRED")
-            return res.status(400).json({ success: false, message: "Product ID and supply price are required" });
-
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({
+            success:false,
+            message:"Internal server error"
+        });
     }
 };
 
@@ -158,33 +185,26 @@ const updateProductOfSupplier = async (req, res) => {
         await supplierService.updateProductOfSupplier(
             parseInt(id),
             parseInt(productId),
-            req.body
+            req.body,
+            req.user.id
         );
 
         return res.status(200).json({
             success: true,
-            message: "Product updated successfully"
+            message: "Price updated successfully"
         });
 
     } catch (err) {
 
-        if (err.message === "SUPPLIER_ID_REQUIRED")
-            return res.status(400).json({ success: false, message: "Supplier ID is required" });
-
-        if (err.message === "PRODUCT_ID_REQUIRED")
-            return res.status(400).json({ success: false, message: "Product ID is required" });
-
-        if (err.message === "PRICE_AND_STATUS_REQUIRED")
-            return res.status(400).json({ success: false, message: "Supply price and status are required" });
-
-        if (err.message === "INVALID_STATUS")
-            return res.status(400).json({ success: false, message: "Status must be ACTIVE or INACTIVE" });
-
-        console.error("UPDATE_PRODUCT_ERROR:", err);
+        if (err.message === "PRICE_AND_UNIT_REQUIRED")
+            return res.status(400).json({
+                success:false,
+                message:"Price and unit are required"
+            });
 
         return res.status(500).json({
-            success: false,
-            message: "Internal server error"
+            success:false,
+            message:"Internal server error"
         });
     }
 };
@@ -224,6 +244,33 @@ const updateSupplier = async (req, res) => {
     }
 };
 
+const getPriceHistoryDetail = async (req, res) => {
+
+    try {
+
+        const { id, productId } = req.params;
+
+        const data = await supplierService.getPriceHistoryDetail(
+            parseInt(id),
+            parseInt(productId)
+        );
+
+        return res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (err) {
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+
+    }
+
+};
+
 module.exports = {
     getSupplierList,
     getSupplierDetail,
@@ -232,5 +279,7 @@ module.exports = {
     addProductToSupplier,
     createSupplier,
     updateProductOfSupplier,
-    updateSupplier
+    updateSupplier,
+    getProductUnits,
+    getPriceHistoryDetail
 }

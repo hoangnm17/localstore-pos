@@ -236,6 +236,7 @@ function ProductStock() {
                   <th className="py-3 text-center">Mã</th>
                   <th className="py-3 text-center">Tồn kho</th>
                   <th className="py-3 text-center">Trạng thái</th>
+                  <th className="py-3 text-center">Đơn vị</th>
                   {canUpdateLowStock && <th className="py-3 text-center">Ngưỡng tồn kho thấp</th>}
                   {canUpdateLowStock && <th className="py-3 text-center">Hành động</th>}
                 </tr>
@@ -259,6 +260,9 @@ function ProductStock() {
                       </td>
                       <td className="text-center py-4">
                         <div className="placeholder placeholder-glow col-5 bg-secondary-subtle rounded py-3"></div>
+                      </td>
+                      <td className="text-center py-4">
+                        <div className="placeholder placeholder-glow col-7 bg-secondary-subtle rounded py-3"></div>
                       </td>
                       <td className="text-center py-4">
                         <div className="placeholder placeholder-glow col-7 bg-secondary-subtle rounded py-3"></div>
@@ -308,6 +312,7 @@ function ProductStock() {
                             {status}
                           </span>
                         </td>
+                        <td className="text-center py-4 fw-bold fs-5">{p.baseUnit}</td>
                         {canUpdateLowStock && (<td className="text-center py-4 fw-bold fs-5">
                           {(p.minThreshold ?? 0).toLocaleString()}
                         </td>)}

@@ -86,3 +86,46 @@ exports.startSellingProduct = async (req, res) => {
         res.status(404).json({ success: false, message: err.message });
     }
 };
+
+exports.getProductWithBarcode = async (req, res) => {
+    try {
+        const barcode = req.params.barcode;
+        const product = await productService.getProductWithBarcode(barcode);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.json({ success: true, data: product });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.getAllProducts = async (req, res) => {
+    try {
+
+        const filters = {
+            page: Number(req.query.page) || 1,
+            pageSize: Number(req.query.limit) || 20,
+            search: req.query.search || null,
+            status: req.query.status || 'Selling',
+            categoryId: req.query.categoryId
+                ? Number(req.query.categoryId)
+                : null
+        };
+
+        const data = await productService.getAllProducts(filters);
+
+        res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};

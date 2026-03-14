@@ -526,3 +526,14 @@ exports.startSellingProduct = async (id) => {
         `);
     return result.rowsAffected[0] > 0;
 };
+
+exports.deleteProduct = async (id) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`
+            DELETE FROM Products
+            WHERE id = @id
+        `);
+    return result.rowsAffected[0] > 0;
+};

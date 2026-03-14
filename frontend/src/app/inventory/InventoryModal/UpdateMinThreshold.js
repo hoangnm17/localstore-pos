@@ -22,11 +22,8 @@ function UpdateMinThresholdModal({
     const handleChange = (e) => {
         let val = e.target.value;
 
-        // 1. Chỉ cho phép chữ số và tối đa một dấu chấm thập phân
-        // Loại bỏ mọi thứ KHÔNG phải là số hoặc dấu chấm
         val = val.replace(/[^0-9.]/g, "");
 
-        // 2. Ngăn chặn nhập nhiều hơn một dấu chấm (ví dụ: 1.2.3 -> 1.23)
         const parts = val.split(".");
         if (parts.length > 2) {
             val = parts[0] + "." + parts.slice(1).join("");

@@ -5,5 +5,5 @@ export const isNotEmpty = (value) => {
 export const isValidPhone = (phone) => {
   if (!phone) return false;
 
-  return /^0\d{9,10}$/.test(phone);
+  return /^0\d{9}$/.test(phone);
 };

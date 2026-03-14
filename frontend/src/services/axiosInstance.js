@@ -62,8 +62,11 @@ api.interceptors.response.use(
       });
     }
 
-    // 4xx và 5xx còn lại: REJECT để catch block trong hooks nhận lỗi đúng cách
-    return Promise.reject(error);
+    return Promise.resolve({
+      success: false,
+      message: data?.message || "Có lỗi xảy ra",
+      status,
+    });
   }
 );
 

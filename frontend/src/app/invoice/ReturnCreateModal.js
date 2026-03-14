@@ -45,7 +45,7 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
         if (qty <= 0) return null;
 
         return {
-          invoiceItemId: it.id, 
+          invoiceItemId: it.id,
           productId: it.productId,
           quantity: qty,
           unitPrice: it.unitPrice,
@@ -71,7 +71,7 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
 
     setSubmitting(true);
     try {
-    //   const res = await api.post("/returns", payload).then((r) => r.data);
+      //   const res = await api.post("/returns", payload).then((r) => r.data);
 
       onCreated?.(res);
       onClose?.();
@@ -85,12 +85,19 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
 
   return (
     <BaseModal onClose={onClose} maxWidth="900px" disableClose={submitting}>
-      <div className="card shadow border-0">
-        <div className="card-header bg-white d-flex align-items-start justify-content-between">
+      <div className="return-modal">
+
+        {/* HEADER */}
+        <div className="return-header">
+
           <div>
-            <h5 className="mb-0">Tạo đơn hoàn</h5>
-            <div className="text-muted small mt-1">
-              Hóa đơn: <b className="text-dark">{invoice?.invoiceCode}</b>
+            <h5 className="fw-bold mb-1">Tạo đơn hoàn</h5>
+
+            <div className="text-muted small">
+              Hóa đơn:
+              <span className="invoice-code ms-1">
+                {invoice?.invoiceCode}
+              </span>
             </div>
           </div>
 
@@ -102,58 +109,86 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
             <i className="bi bi-x-lg me-1" />
             Đóng
           </button>
+
         </div>
 
-        <div className="card-body">
-          {errMsg && <div className="alert alert-danger">{errMsg}</div>}
+        {/* BODY */}
+        <div className="return-body">
 
-          <div className="table-responsive border rounded-4 overflow-hidden mb-3">
-            <table className="table table-sm mb-0 align-middle">
-              <thead className="table-light">
+          {errMsg && (
+            <div className="alert alert-danger">{errMsg}</div>
+          )}
+
+          {/* TABLE */}
+          <div className="return-table">
+
+            <table className="table align-middle mb-0">
+
+              <thead>
                 <tr>
-                  <th className="ps-3">Sản phẩm</th>
+                  <th>Sản phẩm</th>
                   <th className="text-end">Đơn giá</th>
-                  <th className="text-center" style={{ width: 140 }}>
+                  <th className="text-center" style={{ width: 150 }}>
                     SL hoàn
                   </th>
-                  <th className="text-end pe-3">Tiền hoàn</th>
+                  <th className="text-end">Tiền hoàn</th>
                 </tr>
               </thead>
+
               <tbody>
+
                 {(invoice?.items || []).map((it) => {
+
                   const max = maxMap[it.id] ?? 0;
                   const qty = qtyMap[it.id] ?? 0;
-                  const refund = (Number(it.unitPrice || 0) * Number(qty || 0)) || 0;
+
+                  const refund =
+                    (Number(it.unitPrice || 0) * Number(qty || 0)) || 0;
 
                   return (
                     <tr key={it.id}>
-                      <td className="ps-3">
-                        <div className="fw-semibold">{it.name}</div>
-                        <div className="text-muted small">
-                          Đã mua: {max} • ProductID: {it.productId}
+
+                      <td>
+
+                        <div className="fw-semibold">
+                          {it.name}
                         </div>
+
+                        <small className="text-muted">
+                          Đã mua: {max}
+                        </small>
+
                       </td>
 
-                      <td className="text-end">{formatCurrency(it.unitPrice || 0)}</td>
+                      <td className="text-end">
+                        {formatCurrency(it.unitPrice || 0)}
+                      </td>
 
                       <td className="text-center">
+
                         <input
                           type="number"
                           min={0}
                           max={max}
-                          className="form-control form-control-sm text-center"
+                          className="form-control qty-input"
                           value={qty}
                           disabled={submitting || max === 0}
                           onChange={(e) => setQty(it.id, e.target.value)}
                         />
-                        <div className="text-muted small mt-1">Tối đa: {max}</div>
+
+                        <div className="text-muted small">
+                          max {max}
+                        </div>
+
                       </td>
 
-                      <td className="text-end pe-3 fw-semibold">
+                      <td className="text-end fw-semibold text-danger">
                         {formatCurrency(refund)}
                       </td>
+
                     </tr>
                   );
+
                 })}
 
                 {(invoice?.items || []).length === 0 && (
@@ -163,43 +198,151 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
                     </td>
                   </tr>
                 )}
+
               </tbody>
+
             </table>
+
           </div>
 
-          <div className="row g-3">
+          {/* FOOT INFO */}
+
+          <div className="row g-3 mt-2">
+
             <div className="col-12 col-md-8">
-              <label className="form-label fw-semibold">Lý do hoàn</label>
+
+              <label className="form-label fw-semibold">
+                Lý do hoàn
+              </label>
+
               <textarea
                 className="form-control"
                 rows={3}
-                placeholder="Ví dụ: Khách đổi ý / Sản phẩm lỗi / Giao nhầm..."
+                placeholder="Ví dụ: Khách đổi ý / Sản phẩm lỗi..."
                 value={reason}
                 disabled={submitting}
                 onChange={(e) => setReason(e.target.value)}
               />
+
             </div>
 
             <div className="col-12 col-md-4">
-              <div className="p-3 border rounded-4 h-100">
-                <div className="text-muted small">Tổng tiền hoàn</div>
-                <div className="fs-3 fw-bold">{formatCurrency(totalRefund)}</div>
-                <div className="text-muted small mt-2">
-                  Lưu ý: số tiền hoàn thực tế phụ thuộc quy tắc của bạn (phí, voucher, ...).
+
+              <div className="refund-summary">
+
+                <div className="text-muted small">
+                  Tổng tiền hoàn
                 </div>
+
+                <div className="refund-amount">
+                  {formatCurrency(totalRefund)}
+                </div>
+
+                <div className="text-muted small mt-1">
+                  Số tiền có thể thay đổi theo quy tắc hoàn
+                </div>
+
               </div>
+
             </div>
+
           </div>
+
         </div>
 
-        <div className="card-footer bg-white d-flex justify-content-end gap-2">
-          <button className="btn btn-outline-secondary" onClick={onClose} disabled={submitting}>
+        {/* FOOTER */}
+
+        <div className="return-footer">
+
+          <button
+            className="btn btn-outline-secondary"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Hủy
           </button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
             {submitting ? "Đang tạo..." : "Tạo đơn hoàn"}
           </button>
+
         </div>
+
+        <style>{`
+
+.return-modal{
+background:white;
+border-radius:14px;
+overflow:hidden;
+box-shadow:0 10px 28px rgba(0,0,0,0.08);
+}
+
+.return-header{
+padding:18px 22px;
+border-bottom:1px solid #eee;
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#fafafa;
+}
+
+.invoice-code{
+font-weight:600;
+color:#0d6efd;
+}
+
+.return-body{
+padding:22px;
+}
+
+.return-table{
+border:1px solid #eee;
+border-radius:10px;
+overflow:hidden;
+margin-bottom:18px;
+}
+
+.return-table thead{
+background:#f8f9fa;
+}
+
+.return-table tbody tr:hover{
+background:#fafafa;
+}
+
+.qty-input{
+width:80px;
+text-align:center;
+margin:auto;
+}
+
+.refund-summary{
+border:1px solid #eee;
+border-radius:12px;
+padding:16px;
+background:#fafafa;
+}
+
+.refund-amount{
+font-size:26px;
+font-weight:700;
+color:#dc3545;
+}
+
+.return-footer{
+padding:16px 22px;
+border-top:1px solid #eee;
+display:flex;
+justify-content:flex-end;
+gap:10px;
+}
+
+`}</style>
+
       </div>
     </BaseModal>
   );

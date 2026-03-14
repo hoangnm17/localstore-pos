@@ -16,7 +16,9 @@ function ProblematicPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  // Filter state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const [filters, setFilters] = useState({
     status: "",
     createdFrom: "",
@@ -25,6 +27,7 @@ function ProblematicPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    setPage(1);
     fetchReports();
   }, [filters]);
 
@@ -85,9 +88,12 @@ function ProblematicPage() {
     }
   };
 
+  const totalPages = Math.ceil(reports.length / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const currentReports = reports.slice(startIndex, startIndex + pageSize);
+
   return (
     <div className="container-fluid py-4 px-md-4">
-      {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div className="d-flex align-items-center gap-3">
           <button
@@ -112,11 +118,9 @@ function ProblematicPage() {
         </button>
       </div>
 
-      {/* Filter Card - Modern & Compact */}
       <div className="card border-0 shadow-lg rounded-4 mb-4 overflow-hidden">
         <div className="card-body p-4">
           <div className="row g-3 align-items-end">
-            {/* Status */}
             <div className="col-12 col-sm-6 col-md-3">
               <label className="form-label fw-semibold text-muted small mb-1">
                 Trạng thái
@@ -134,7 +138,6 @@ function ProblematicPage() {
               </select>
             </div>
 
-            {/* From Date */}
             <div className="col-12 col-sm-6 col-md-3">
               <label className="form-label fw-semibold text-muted small mb-1">
                 Từ ngày
@@ -149,7 +152,6 @@ function ProblematicPage() {
               />
             </div>
 
-            {/* To Date */}
             <div className="col-12 col-sm-6 col-md-3">
               <label className="form-label fw-semibold text-muted small mb-1">
                 Đến ngày
@@ -164,7 +166,6 @@ function ProblematicPage() {
               />
             </div>
 
-            {/* Reset */}
             <div className="col-12 col-sm-6 col-md-3">
               <button
                 className="btn btn-outline-secondary btn-lg w-100 rounded-3 shadow-sm mt-4 mt-md-0"
@@ -184,27 +185,28 @@ function ProblematicPage() {
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
         <div className="card-header bg-gradient-primary text-white py-3">
           <h5 className="mb-0 fw-semibold">Danh sách báo cáo</h5>
         </div>
+
         <div className="card-body p-0">
           <div className="table-responsive">
-            <table className="table table-hover table-striped align-middle mb-0">
+            <table className="table table-hover table-striped mb-0">
               <thead className="table-light">
                 <tr>
-                  <th className="ps-4 py-3 fw-semibold text-uppercase small">Mã</th>
-                  <th className="py-3 fw-semibold text-uppercase small">Tiêu đề</th>
-                  <th className="py-3 fw-semibold text-uppercase small">Trạng thái</th>
-                  <th className="py-3 fw-semibold text-uppercase small">Ngày tạo</th>
-                  <th className="py-3 text-center fw-semibold text-uppercase small">
+                  <th className="ps-4 py-4 fw-semibold text-uppercase small">Mã</th>
+                  <th className="py-4 fw-semibold text-uppercase small">Tiêu đề</th>
+                  <th className="py-4 fw-semibold text-uppercase small">Trạng thái</th>
+                  <th className="py-4 fw-semibold text-uppercase small">Ngày tạo</th>
+                  <th className="py-4 text-center fw-semibold text-uppercase small">
                     Hành động
                   </th>
                 </tr>
               </thead>
+
               <tbody className="text-muted">
-                {reports.length === 0 ? (
+                {currentReports.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="text-center py-5 fs-5 text-secondary">
                       <i className="bi bi-exclamation-circle me-2 fs-4"></i>
@@ -212,21 +214,23 @@ function ProblematicPage() {
                     </td>
                   </tr>
                 ) : (
-                  reports.map((r) => (
-                    <tr key={r.id} className="align-middle">
-                      <td className="ps-4 fw-medium text-dark">{r.id}</td>
-                      <td className="fw-medium">{r.title}</td>
-                      <td>{getStatusBadge(r.status)}</td>
-                      <td>
-                        {new Date(r.createdAt).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                  currentReports.map((r) => (
+                    <tr key={r.id}>
+                      <td className="ps-4 py-3 fw-medium text-dark fs-5 align-middle">
+                        {r.id}
                       </td>
-                      <td className="text-center">
+                      <td className="py-3 fw-medium fs-5 align-middle">
+                        {r.title}
+                      </td>
+                      <td className="py-3 align-middle">
+                        {getStatusBadge(r.status)}
+                      </td>
+                      <td className="py-3 fs-5 align-middle">
+                        {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                      </td>
+                      <td className="text-center py-3 align-middle">
                         <button
-                          className="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm hover-lift"
+                          className="btn btn-outline-primary btn-sm rounded-pill px-4 py-2 shadow-sm"
                           onClick={() => handleViewDetail(r)}
                         >
                           <i className="bi bi-eye me-1"></i> Xem
@@ -238,10 +242,34 @@ function ProblematicPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          <div className="d-flex justify-content-between align-items-center p-3">
+            <div className="text-muted">
+              Trang {page} / {totalPages || 1}
+            </div>
+
+            <div className="btn-group">
+              <button
+                className="btn btn-outline-secondary"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                ← Trước
+              </button>
+
+              <button
+                className="btn btn-outline-secondary"
+                disabled={page === totalPages || totalPages === 0}
+                onClick={() => setPage(page + 1)}
+              >
+                Sau →
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Modals */}
       <ProblematicDetailModal
         show={showDetailModal}
         report={selectedReport}

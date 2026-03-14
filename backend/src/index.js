@@ -3,7 +3,8 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
 const routesApi = require("./routes/index.route")
-
+const { initSocket } = require("./utils/socket");
+const http = require("http");
 const { connectDB } = require("./config/database");
 dotenv.config();
 
@@ -21,6 +22,9 @@ connectDB();
 // API Routes
 routesApi(app);
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Backend running at http://localhost:${PORT}`);
 });

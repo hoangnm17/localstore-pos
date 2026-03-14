@@ -75,10 +75,20 @@ const getProductBasicInfo = async (productId) => {
 };
 
 const deductStock = async (transaction, items) => {
-
-
+    const updatedStocks = [];
 
     for (const item of items) {
+        if (!item.productId) {
+            throw new Error("Invalid productId");
+        }
+        if (item.baseQuantity == null) {
+            throw new Error(`baseQuantity missing for product ${item.productId}`);
+        }
+        const deductQty = Number(item.baseQuantity);
+
+        if (deductQty <= 0) {
+            throw new Error(`Invalid deduct quantity for product ${item.productId}`);
+        }
 
         const stock = await productModel.getStockByProductId(
             transaction,
@@ -89,18 +99,27 @@ const deductStock = async (transaction, items) => {
             throw new Error(`Stock not found for product ${item.productId}`);
         }
 
-        if (stock.quantity < item.quantity) {
+        const currentStock = Number(stock.quantityOnHand || 0);
+
+        if (currentStock < deductQty) {
             throw new Error(`Insufficient stock for product ${item.productId}`);
         }
-        console.log(item);
-        console.log(stock)
 
-        await productModel.detuctStock(
+        await productModel.deductStock(
             transaction,
             item.productId,
-            stock.quantityOnHand - item.quantity
+            deductQty
         );
+
+        updatedStocks.push({
+            productId: item.productId,
+            oldStock: currentStock,
+            deductedQuantity: deductQty,
+            stock: currentStock - deductQty
+        });
     }
+
+    return updatedStocks;
 };
 
 const updateMinThreshold = async (productId, minThreshold) => {
@@ -124,6 +143,36 @@ const updateMinThreshold = async (productId, minThreshold) => {
     return updatedStock;
 };
 
+const searchProducts = async (keyword) => {
+  if (!keyword || keyword.trim().length < 2) {
+    return [];
+  }
+
+  const products = await productModel.searchProducts(keyword.trim());
+
+  return products;
+};
+
+const getLowStockProducts = async (currentUser) => {
+
+    if (!currentUser.permissions.includes("CREATE_PURCHASE_ORDER")) {
+        throw new Error("PERMISSION_DENIED");
+    }
+
+    return await productModel.getLowStockProductUnits();
+
+};
+
+const searchProductUnits = async (keyword) => {
+
+    if (!keyword) {
+        return [];
+    }
+
+    return await productModel.searchProductUnits(keyword);
+};
+
+
 module.exports = {
     deductStock,
     getCategoryStock,
@@ -131,5 +180,8 @@ module.exports = {
     getProductsBySupplier,
     updateProductStock,
     getProductBasicInfo,
-    updateMinThreshold
+    updateMinThreshold,
+    searchProducts,
+    getLowStockProducts,
+    searchProductUnits
 }

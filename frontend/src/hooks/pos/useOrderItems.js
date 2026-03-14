@@ -8,33 +8,61 @@ export const useOrderItems = () => {
     );
 
     if (existed) {
-      return items.map(p =>
+      const updated = items.map(p =>
         p.id === existed.id
-          ? { ...p, quantity: p.quantity + 1 }
+          ? {
+            ...p,
+            quantity: Math.min(
+              p.quantity + 1,
+              p.quantityOnHand
+            )
+          }
           : p
       );
+
+      return {
+        items: updated,
+        activeId: existed.id
+      };
     }
 
-    return [
-      ...items,
-      {
-        id: crypto.randomUUID(),
-        productId: product.productId,
-        productName: product.productName,
-        variantId: product.variantId,
-        variantName: product.variantName,
-        unitPrice: product.unitPrice,
-        quantity: 1
-      }
-    ];
+    const newItem = {
+      id: crypto.randomUUID(),
+      productId: product.productId,
+      productName: product.productName,
+      productUnitId: product.unitId,
+      unitPrice: product.unitPrice,
+      unitName: product.unitName,
+      quantity: 1,
+      quantityOnHand: product.quantityOnHand,
+      factor: product.factor,
+      unitType: product.unitType,
+    };
+    
+    return {
+      items: [...items, newItem],
+      activeId: newItem.id
+    };
   };
 
-  const increase = (items, id) =>
-    items.map(item =>
-      item.id === id
-        ? { ...item, quantity: item.quantity + 1 }
-        : item
-    );
+  const increase = (items, id) => {
+    let changed = false;
+
+    const updated = items.map(item => {
+      if (item.id !== id) return item;
+
+      const newQty = Math.min(item.quantity + 1, item.quantityOnHand);
+
+      if (newQty !== item.quantity) {
+        changed = true;
+        return { ...item, quantity: newQty };
+      }
+
+      return item;
+    });
+
+    return changed ? updated : items;
+  };
 
   const decrease = (items, id) =>
     items.map(item =>
