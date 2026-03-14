@@ -30,7 +30,10 @@ exports.getByProduct = async (req, res) => {
 
 exports.create = async (req, res) => {
     try {
-        const id = await service.create(req.body);
+        const id = await service.create({
+            ...req.body,
+            createdBy: req.user?.staffId || null
+        });
         res.json({ success: true, id });
     } catch (e) {
         res.status(400).json({ success: false, message: e.message });
@@ -39,7 +42,10 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
     try {
-        await service.update(req.params.id, req.body);
+        await service.update(req.params.id, {
+            ...req.body,
+            updatedBy: req.user?.staffId || null
+        });
         res.json({ success: true });
     } catch (e) {
         res.status(400).json({ success: false, message: e.message });

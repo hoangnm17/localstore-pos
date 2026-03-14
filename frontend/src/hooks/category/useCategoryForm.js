@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import categoryService from '../../services/categoryService';
+import categoryService from '../../services/Category/category.service';
 
 export default function useCategoryForm(editId, { showNotification } = {}) {
     const [form, setForm] = useState({

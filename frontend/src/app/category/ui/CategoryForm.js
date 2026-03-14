@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import categoryService from '../../../services/categoryService';
+import categoryService from '../../../services/Category/category.service';
+import { getImageUrl } from 'utils/image';
 
 export default function CategoryForm({ form, change, submit, onDone, editId }) {
     const [categories, setCategories] = useState([]);
-    const [preview, setPreview] = useState(form.imageUrl || null);
+    const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
 
     useEffect(() => {
-        categoryService.fetchCategoryTree('', 1, 100).then(res => {
-            // Flatten tree để hiển thị trong dropdown
+        categoryService.fetchCategoryTree('', 1, 100).then(res => {            // Flatten tree để hiển thị trong dropdown
             const flat = [];
             function flatten(items, level = 0) {
                 items.forEach(item => {
-                    flat.push({ ...item, level });
+                    flat.push({ ...item, level, productCount: item.productCount ?? 0 });
                     if (item.children?.length) flatten(item.children, level + 1);
                 });
             }
@@ -26,19 +26,28 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         onDone();
     }
 
-    function handleFileChange(e) {
+    async function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Tạo preview local
-        const url = URL.createObjectURL(file);
-        setPreview(url);
+        setPreview(URL.createObjectURL(file));
 
-        // Nếu backend có endpoint upload ảnh thì gọi ở đây
-        // Tạm thời lưu tên file hoặc base64
-        const reader = new FileReader();
-        reader.onload = () => change('imageUrl', reader.result);
-        reader.readAsDataURL(file);
+        try {
+            const data = await uploadImage(file);
+            if (data.success) {
+                change('imageUrl', data.imageUrl);
+            } else {
+                alert('Upload thất bại: ' + data.message);
+            }
+        } catch (err) {
+            alert('Lỗi kết nối khi upload ảnh.');
+        }
+    }
+
+    function handleUrlChange(e) {
+        const url = e.target.value;
+        change('imageUrl', url);
+        setPreview(url || null);
     }
 
     function handleRemoveImage() {
@@ -71,12 +80,21 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                 >
                     <option value="">-- Là danh mục gốc --</option>
                     {categories
-                        .filter(c => c.id !== editId) // không chọn chính nó làm cha
-                        .map(c => (
-                            <option key={c.id} value={c.id}>
-                                {'　'.repeat(c.level)}{c.level > 0 ? '└ ' : ''}{c.name}
-                            </option>
-                        ))
+                        .filter(c => c.id !== editId)
+                        .map(c => {
+                            const hasProduct = c.productCount > 0;
+                            const prefix = '　'.repeat(c.level) + (c.level > 0 ? '└ ' : '');
+                            return (
+                                <option
+                                    key={c.id}
+                                    value={c.id}
+                                    disabled={hasProduct}
+                                    style={hasProduct ? { color: '#aaa' } : {}}
+                                >
+                                    {prefix}{c.name}{hasProduct ? ' (đã có sản phẩm)' : ''}
+                                </option>
+                            );
+                        })
                     }
                 </select>
             </div>
@@ -86,12 +104,14 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                 <label className="form-label">
                     Ảnh danh mục <span className="text-muted small">(không bắt buộc)</span>
                 </label>
+
                 {preview && (
                     <div className="mb-2 position-relative d-inline-block">
                         <img
                             src={preview}
                             alt="preview"
                             style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
+                            onError={() => setPreview(null)}  // ✅ thêm onError
                         />
                         <button
                             type="button"
@@ -102,21 +122,21 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                     </div>
                 )}
 
-                {/* Upload file */}
+                <div className="text-muted small mb-1">Chọn file từ máy tính:</div>
                 <input
                     type="file"
-                    className="form-control"
+                    className="form-control mb-2"
                     accept="image/*"
                     onChange={handleFileChange}
                 />
 
-                {/* Hoặc nhập URL */}
+                <div className="text-muted small mb-1">Hoặc nhập URL ảnh:</div>
                 <input
                     type="text"
-                    className="form-control mt-2"
-                    value={form.imageUrl?.startsWith('data:') ? '' : (form.imageUrl || '')}
-                    onChange={e => { change('imageUrl', e.target.value); setPreview(e.target.value || null); }}
-                    placeholder="Hoặc nhập URL ảnh..."
+                    className="form-control"
+                    value={form.imageUrl || ''}
+                    onChange={handleUrlChange}
+                    placeholder="https://example.com/image.jpg"
                 />
             </div>
 

@@ -62,11 +62,7 @@ api.interceptors.response.use(
       });
     }
 
-    return Promise.resolve({
-      success: false,
-      message: data?.message || "Có lỗi xảy ra",
-      status,
-    });
+    return Promise.reject(error);
   }
 );
 

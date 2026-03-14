@@ -53,8 +53,12 @@ function ProductUnitModal({
         }
 
         const salePrice = Number(form.salePrice);
-        if (Number.isNaN(salePrice) || salePrice < 0) {
-            return 'Giá bán không hợp lệ.';
+        if (Number.isNaN(salePrice) || salePrice <= 0) {
+            return 'Giá bán không được để trống và phải lớn hơn 0.';
+        }
+
+        if (salePrice <= Number(product.salePrice)) {
+            return `Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`;
         }
 
         if (!['PIECE', 'WEIGHT'].includes(form.unitType)) {

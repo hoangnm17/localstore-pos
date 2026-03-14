@@ -4,6 +4,7 @@ function toVietnamese(err) {
     const map = {
         'CATEGORY_NOT_FOUND': 'Không tìm thấy danh mục.',
         'CATEGORY_HAS_PRODUCT': 'Không thể xóa danh mục đang có sản phẩm.',
+        'CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD': 'Danh mục cha phải là danh mục chưa có sản phẩm nào.',
         'CIRCULAR_PARENT': 'Không thể đặt danh mục con làm cha của chính nó.',
         'NAME_REQUIRED': 'Tên danh mục không được để trống.',
         'Category not found': 'Không tìm thấy danh mục.',

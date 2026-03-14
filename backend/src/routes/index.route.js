@@ -16,6 +16,7 @@ const shiftRoutes = require("./shift.route");
 const salaryRoutes = require("./salary.route");
 const sseRoutes = require("./event.route")
 const cashierRoutes = require("./cashier.route");
+const uploadRoutes = require("./upload.route");
 
 module.exports = (app) => {
     const version = "/api";
@@ -36,8 +37,8 @@ module.exports = (app) => {
     app.use(version + "/staff", staffRoutes);
     app.use(version + "/shifts", shiftRoutes);
     app.use(version + "/roster", rosterRoutes);
-    app.use(version + "/salary", salaryRoutes); 
+    app.use(version + "/salary", salaryRoutes);
     app.use(version + "/cashier", cashierRoutes);
-
+    app.use(version + "/upload", uploadRoutes);
 };
 

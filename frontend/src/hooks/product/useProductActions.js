@@ -220,25 +220,29 @@ function useProductActions({
     const handleSaveUnit = async (payload) => {
         try {
             setSubmitLoading(true);
+            let response;
 
             if (unitModalState.mode === 'create') {
-                await createProductUnit(payload);
-                showNotification('Tạo đơn vị tính thành công.', 'success');
+                response = await createProductUnit(payload);
             } else {
-                await updateProductUnit(unitModalState.unit.id, payload);
-                showNotification('Cập nhật đơn vị tính thành công.', 'success');
+                response = await updateProductUnit(unitModalState.unit.id, payload);
             }
+            showNotification(
+                unitModalState.mode === 'create'
+                    ? 'Tạo đơn vị tính thành công.'
+                    : 'Cập nhật đơn vị tính thành công.',
+                'success'
+            );
 
             const productId = unitModalState.product?.id;
             closeUnitModal();
-
             await loadProducts();
 
             if (productId) {
                 await refreshDetailModal(productId);
             }
         } catch (error) {
-            showNotification(error.response?.data?.message || 'Lưu đơn vị tính thất bại.', 'error');
+            showNotification(error.response?.data?.message || error.message || 'Lưu đơn vị tính thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }

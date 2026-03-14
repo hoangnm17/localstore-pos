@@ -124,7 +124,7 @@ exports.create = async (data) => {
             .input('unitType', sql.VarChar, data.unitType)
             .input('conversionFactor', sql.Decimal(10, 3), data.conversionFactor)
             .input('salePrice', sql.Decimal(15, 2), data.salePrice)
-            .input('barcode', sql.VarChar, data.barcode || null)
+            .input('barcode', sql.VarChar, data.barcode?.trim() || null)
             .query(`
                 INSERT INTO ProductUnits
                 (productId, unitName, unitType, conversionFactor, salePrice, barcode)
@@ -178,7 +178,7 @@ exports.update = async (id, data) => {
             .input('unitType', sql.VarChar, data.unitType)
             .input('conversionFactor', sql.Decimal(10, 3), data.conversionFactor)
             .input('salePrice', sql.Decimal(15, 2), data.salePrice)
-            .input('barcode', sql.VarChar, data.barcode || null)
+            .input('barcode', sql.VarChar, data.barcode?.trim() || null)
             .query(`
                 UPDATE ProductUnits
                 SET

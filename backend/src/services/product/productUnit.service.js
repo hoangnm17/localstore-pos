@@ -42,19 +42,20 @@ function validatePayload(data) {
     }
 
     const salePrice = Number(data.salePrice);
-    if (Number.isNaN(salePrice) || salePrice < 0) {
-        throw new Error('Giá bán đơn vị tính không hợp lệ.');
+    if (Number.isNaN(salePrice) || salePrice <= 0) {
+        throw new Error('Giá bán không được để trống và phải lớn hơn 0.');
     }
 }
 
 exports.getList = (filters) => productUnitModel.getList(filters);
 
-exports.getByBarcode = (barcode) => productUnitModel.getByBarcode(barcode);
+exports.getByBarcode = (barcode) => productUnitModel.getByBarcode(barcode?.trim());
 
 exports.getByProduct = (productId) => productUnitModel.getByProduct(productId);
 
 exports.create = async (data) => {
     validatePayload(data);
+    data.barcode = data.barcode?.trim() || null;
 
     if (Number(data.conversionFactor) === 1) {
         throw new Error('Base unit phải được quản lý ở API sản phẩm, không tạo ở API đơn vị tính.');
@@ -63,6 +64,10 @@ exports.create = async (data) => {
     const product = await productModel.getProductById(data.productId);
     if (!product) {
         throw new Error('Không tìm thấy sản phẩm.');
+    }
+
+    if (Number(data.salePrice) <= Number(product.salePrice)) {
+        throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
     }
 
     if (data.barcode) {
@@ -87,15 +92,24 @@ exports.update = async (id, data) => {
         throw new Error('Base unit phải được cập nhật ở API sản phẩm.');
     }
 
+    const product = await productModel.getProductById(current.productId);
+    if (!product) {
+        throw new Error('Không tìm thấy sản phẩm.');
+    }
+
     const merged = {
         ...current,
         ...data
     };
-
+    merged.barcode = merged.barcode?.trim() || null;
     validatePayload(merged);
 
     if (Number(merged.conversionFactor) === 1) {
         throw new Error('Không được đổi đơn vị phụ thành base unit.');
+    }
+
+    if (Number(merged.salePrice) <= Number(product.salePrice)) {
+        throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
     }
 
     if (merged.barcode) {

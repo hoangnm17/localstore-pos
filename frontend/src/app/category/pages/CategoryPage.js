@@ -14,13 +14,13 @@ export default function CategoryPage() {
     const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
 
-    const { categories, reload, deleteCategory } = useCategories({ showNotification, onConfirm });
     const [editId, setEditId] = useState(null);
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 10;
 
+    const { categories, pagination, reload, deleteCategory } = useCategories({ showNotification, onConfirm, search, page: currentPage, limit: PAGE_SIZE });
     const form = useCategoryForm(editId, { showNotification });
 
     function openCreate() {
@@ -32,20 +32,7 @@ export default function CategoryPage() {
         setEditId(id);
         setOpen(true);
     }
-    const rootCategories = categories.filter(c => !c.parentId);
 
-    // Filter by search
-    const filteredRoots = rootCategories.filter(c =>
-        c.name?.toLowerCase().includes(search.toLowerCase())
-    );
-
-    // Paginate top-level categories
-    const totalPages = Math.ceil(filteredRoots.length / PAGE_SIZE);
-
-    const paginated = filteredRoots.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-    );
     return (
         <div className="pm-page">
             {/* Toolbar */}
@@ -81,14 +68,14 @@ export default function CategoryPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {paginated.length === 0 ? (
+                        {categories.length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="text-center text-muted py-4">
                                     Không có danh mục nào
                                 </td>
                             </tr>
                         ) : (
-                            paginated.map((item, index) => (
+                            categories.map((item, index) => (
                                 <CategoryTableRow
                                     key={item.id}
                                     item={item}
@@ -106,7 +93,7 @@ export default function CategoryPage() {
             {/* Pagination */}
             <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
+                totalPages={pagination.totalPages}
                 onPageChange={setCurrentPage}
             />
 
