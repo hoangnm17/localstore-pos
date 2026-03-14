@@ -4,6 +4,8 @@ import { invoiceGetList } from "services/Invoices/invoice.service";
 import Pagination from "components/Pagination/Pagination";
 import { formatCurrency } from "utils/formatters";
 import InvoiceDetailModal from "./InvoiceDetailModal";
+import useDebounce from "hooks/common/useDebounce";
+import useTitle from "hooks/common/useTitle";
 
 const STATUS = {
   ALL: "ALL",
@@ -12,68 +14,54 @@ const STATUS = {
   CANCELLED: "CANCELLED",
 };
 
-// Cấu hình màu sắc SaaS hiện đại (Soft-border & Pastel background)
 const STATUS_META = {
-  PAID: { 
-    label: "Đã thanh toán", 
-    bg: "#ecfdf5", 
-    color: "#059669", 
-    border: "#10b98133", 
-    icon: "bi-check-circle-fill" 
-  },
-  UNPAID: { 
-    label: "Chưa thanh toán", 
-    bg: "#fffbeb", 
-    color: "#d97706", 
-    border: "#f59e0b33", 
-    icon: "bi-hourglass-split" 
-  },
-  CANCELLED: { 
-    label: "Đã hủy", 
-    bg: "#fef2f2", 
-    color: "#dc2626", 
-    border: "#ef444433", 
-    icon: "bi-x-circle-fill" 
-  },
-  DEFAULT: { 
-    label: "N/A", 
-    bg: "#f9fafb", 
-    color: "#6b7280", 
-    border: "#e5e7eb", 
-    icon: "bi-info-circle" 
-  }
+  PAID: { label: "Đã thanh toán", bg: "#D1FAE5", color: "#065F46", icon: "bi-check-all" },
+  UNPAID: { label: "Chờ thanh toán", bg: "#FEF3C7", color: "#92400E", icon: "bi-clock-history" },
+  CANCELLED: { label: "Đã hủy bỏ", bg: "#FEE2E2", color: "#991B1B", icon: "bi-trash3" },
+  DEFAULT: { label: "N/A", bg: "#F3F4F6", color: "#374151", icon: "bi-question-circle" }
 };
 
 export default function InvoicesPage() {
   const navigate = useNavigate();
+
+  // --- States ---
   const [status, setStatus] = useState(STATUS.ALL);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [detailId, setDetailId] = useState(null);
-
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    totalItems: 0,
-    totalPages: 1,
+  const [pagination, setPagination] = useState({ 
+    page: 1, 
+    pageSize: 10, 
+    totalItems: 0, 
+    totalPages: 1 
   });
 
+  // Cập nhật tiêu đề trang động theo trạng thái filter
+  useTitle(status === STATUS.ALL ? "Tất cả hóa đơn" : `${STATUS_META[status]?.label}`);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status]);
+
+  // --- Logic ---
   const params = useMemo(() => {
     const p = { page, pageSize: pagination.pageSize };
     if (status !== STATUS.ALL) p.status = status;
-    if (search.trim()) p.q = search.trim();
+    if (debouncedSearch?.trim()) p.invoiceCode = debouncedSearch.trim();
     return p;
-  }, [page, pagination.pageSize, status, search]);
+  }, [page, pagination.pageSize, status, debouncedSearch]);
 
   const fetchInvoices = async () => {
     setLoading(true);
     try {
       const res = await invoiceGetList(params);
       setRows(res?.data || []);
-      setPagination(res?.pagination || { page, pageSize: 10, totalItems: 0, totalPages: 1 });
+      setPagination(res?.pagination || { ...pagination, totalItems: 0 });
     } catch (err) {
+      console.error("Lỗi lấy danh sách hóa đơn:", err);
       setRows([]);
     } finally {
       setLoading(false);
@@ -84,294 +72,224 @@ export default function InvoicesPage() {
     fetchInvoices();
   }, [params]);
 
-  const goCheckout = (id) => navigate(`/sales?invoiceId=${id}`);
+  // Hàm xử lý in lại hóa đơn
+  const handlePrint = (id) => {
+    // Mở trang in trong tab mới với kích thước chuẩn hóa đơn POS
+    const printUrl = `/print/invoice/${id}`;
+    const printWindow = window.open(printUrl, '_blank', 'width=450,height=700');
+    if (printWindow) {
+      printWindow.focus();
+    }
+  };
 
   return (
-    <div className="invoice-modern-wrapper py-4">
-      <div className="container">
-        
+    <div className="invoice-container py-4">
+      <div className="container-fluid px-lg-5">
+
         {/* HEADER SECTION */}
-        <div className="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-          <div>
-            <nav aria-label="breadcrumb">
-              <ol className="breadcrumb mb-1">
-                <li className="breadcrumb-item small text-muted">Hệ thống</li>
-                <li className="breadcrumb-item small text-muted active">Hóa đơn</li>
-              </ol>
-            </nav>
-            <h2 className="fw-bold m-0 h3">Quản lý hóa đơn</h2>
+        <div className="row align-items-center mb-4">
+          <div className="col-md-6">
+            <h4 className="fw-bold text-slate-800 mb-1">Quản lý hóa đơn</h4>
+            <p className="text-muted small mb-0">Tra cứu mã hóa đơn, trạng thái và in lại chứng từ bán hàng.</p>
           </div>
-          <div className="header-stats d-none d-md-flex gap-3">
-            <div className="stat-card">
-              <span className="text-muted small">Tổng hóa đơn</span>
-              <span className="fw-bold d-block">{pagination.totalItems}</span>
+          <div className="col-md-6 text-md-end mt-3 mt-md-0">
+            <button className="btn btn-primary-modern shadow-sm" onClick={() => navigate('/sales')}>
+              <i className="bi bi-cart-plus me-2"></i>Bán hàng (F1)
+            </button>
+          </div>
+        </div>
+
+        {/* TOOLBAR: FILTERS & SEARCH */}
+        <div className="card border-0 shadow-sm mb-4 br-16">
+          <div className="card-body p-3">
+            <div className="row g-3">
+              <div className="col-lg-8 col-md-12">
+                <div className="d-flex gap-2 flex-wrap">
+                  {Object.keys(STATUS).map((key) => (
+                    <button
+                      key={key}
+                      className={`btn-filter ${status === STATUS[key] ? "active" : ""}`}
+                      onClick={() => setStatus(STATUS[key])}
+                    >
+                      {key === 'ALL' ? 'Tất cả' : STATUS_META[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="col-lg-4 col-md-12">
+                <div className="search-box-modern">
+                  <i className="bi bi-search search-icon"></i>
+                  <input
+                    type="text"
+                    className="form-control border-0 bg-transparent shadow-none"
+                    placeholder="Nhập mã hóa đơn cần tìm..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  {search !== debouncedSearch ? (
+                    <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                  ) : search ? (
+                    <i className="bi bi-x-circle-fill clear-btn" onClick={() => setSearch("")}></i>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* SEARCH & FILTER BAR */}
-        <div className="filter-container p-3 mb-4">
-          <div className="row g-3 align-items-center">
-            <div className="col-12 col-lg-7">
-              <div className="status-group-pills">
-                {Object.keys(STATUS).map((key) => (
-                  <button
-                    key={key}
-                    className={`pill-btn ${status === STATUS[key] ? "active" : ""}`}
-                    onClick={() => { setStatus(STATUS[key]); setPage(1); }}
-                  >
-                    {key === 'ALL' ? 'Tất cả' : STATUS_META[key]?.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="col-12 col-lg-5">
-              <div className="modern-search-input">
-                <i className="bi bi-search"></i>
-                <input
-                  type="text"
-                  placeholder="Tìm khách hàng, mã hóa đơn..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                />
-                {search && <i className="bi bi-x-circle-fill clear-icon" onClick={() => setSearch("")}></i>}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* TABLE SECTION */}
-        <div className="table-responsive-wrapper">
-          <table className="table modern-table">
-            <thead>
-              <tr>
-                <th>MÃ HÓA ĐƠN</th>
-                <th>NGÀY TẠO</th>
-                <th>KHÁCH HÀNG</th>
-                <th className="text-end">TỔNG TIỀN</th>
-                <th>TRẠNG THÁI</th>
-                <th className="text-end">HÀNH ĐỘNG</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="6" className="text-center py-5"><div className="spinner-border spinner-border-sm text-primary"></div></td></tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-5 text-muted">Không tìm thấy dữ liệu hóa đơn</td></tr>
-              ) : (
-                rows.map((inv) => {
-                  const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
-                  return (
-                    <tr key={inv.id}>
-                      <td>
-                        <div className="fw-bold text-dark mb-0" style={{fontSize: '0.95rem'}}>{inv.invoiceCode}</div>
-                        <div className="text-muted" style={{fontSize: '0.75rem'}}>ID: {inv.id}</div>
-                      </td>
-                      <td>
-                        <div className="text-dark">{new Date(inv.createdAt).toLocaleDateString('vi-VN')}</div>
-                        <div className="text-muted small">{new Date(inv.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</div>
-                      </td>
-                      <td>
-                        <div className="fw-semibold text-dark">{inv.customerName || "Khách lẻ"}</div>
-                        <div className="text-muted small">{inv.staffName || "Hệ thống"}</div>
-                      </td>
-                      <td className="text-end">
-                        <span className="fw-bold text-dark">{formatCurrency(inv.finalAmount || 0)}</span>
-                      </td>
-                      <td>
-                        <span className="status-badge" style={{ backgroundColor: meta.bg, color: meta.color, borderColor: meta.border }}>
-                          <i className={`bi ${meta.icon} me-1`}></i>
-                          {meta.label}
-                        </span>
-                      </td>
-                      <td className="text-end">
-                        <div className="d-flex justify-content-end gap-2">
-                          {inv.status === "UNPAID" && (
-                            <button className="btn btn-pay-action btn-sm" onClick={() => goCheckout(inv.id)}>Thanh toán</button>
-                          )}
-                          <button className="btn btn-view-action btn-sm" onClick={() => setDetailId(inv.id)}>
-                            <i className="bi bi-eye"></i>
-                          </button>
-                        </div>
-                      </td>
+        {/* DATA TABLE SECTION */}
+        <div className="card border-0 shadow-sm br-16 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table align-middle mb-0">
+              <thead className="bg-light-slate">
+                <tr>
+                  <th className="ps-4 py-3">Mã hóa đơn</th>
+                  <th>Thời gian lập</th>
+                  <th>Khách hàng & NV</th>
+                  <th className="text-end">Tổng tiền</th>
+                  <th className="text-center">Trạng thái</th>
+                  <th className="text-end pe-4">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(pagination.pageSize)].map((_, i) => (
+                    <tr key={i} className="skeleton-row">
+                      <td colSpan="6" className="py-4"><div className="skeleton-line w-100"></div></td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ))
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-5">
+                      <i className="bi bi-search fs-1 d-block mb-2 text-muted opacity-25"></i>
+                      <p className="text-muted">Không tìm thấy hóa đơn nào phù hợp với bộ lọc.</p>
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => {setSearch(""); setStatus(STATUS.ALL)}}>
+                        Xóa tất cả bộ lọc
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((inv) => {
+                    const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
+                    return (
+                      <tr key={inv.id} className="invoice-row">
+                        <td className="ps-4">
+                          <span className="fw-bold text-primary">#{inv.invoiceCode}</span>
+                        </td>
+                        <td>
+                          <div className="small fw-medium text-dark">{new Date(inv.createdAt).toLocaleDateString('vi-VN')}</div>
+                          <div className="text-muted xx-small">{new Date(inv.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </td>
+                        <td>
+                          <div className="fw-semibold text-slate-700">{inv.customerName || "Khách lẻ"}</div>
+                          <div className="text-muted small" style={{fontSize: '0.7rem'}}>NV: {inv.staffName || 'Admin'}</div>
+                        </td>
+                        <td className="text-end fw-bold text-dark">
+                          {formatCurrency(inv.finalAmount)}
+                        </td>
+                        <td className="text-center">
+                          <span className="badge-modern" style={{ backgroundColor: meta.bg, color: meta.color }}>
+                            <i className={`bi ${meta.icon} me-1`}></i>{meta.label}
+                          </span>
+                        </td>
+                        <td className="text-end pe-4">
+                          <div className="d-flex justify-content-end gap-1">
+                            {/* Xem chi tiết */}
+                            <button className="btn-icon-action" title="Xem chi tiết" onClick={() => setDetailId(inv.id)}>
+                              <i className="bi bi-eye-fill"></i>
+                            </button>
 
-        <div className="d-flex justify-content-center mt-4">
-          <Pagination
-            currentPage={pagination.page}
-            totalPages={pagination.totalPages}
-            onPageChange={(p) => setPage(p)}
-          />
+                            {/* In lại hóa đơn */}
+                            <button className="btn-icon-action text-info" title="In lại hóa đơn" onClick={() => handlePrint(inv.id)}>
+                              <i className="bi bi-printer-fill"></i>
+                            </button>
+
+                            {/* Thanh toán nhanh (Nếu chưa trả tiền) */}
+                            {inv.status === 'UNPAID' && (
+                              <button className="btn-icon-action text-success" title="Thanh toán ngay" onClick={() => navigate(`/sales?invoiceId=${inv.id}`)}>
+                                <i className="bi bi-credit-card-fill"></i>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAGINATION FOOTER */}
+          <div className="card-footer bg-white border-top-0 py-3">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <span className="text-muted small">
+                Hiển thị <b>{rows.length}</b> trên <b>{pagination.totalItems}</b> hóa đơn
+              </span>
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={(p) => setPage(p)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Modals */}
       {detailId && <InvoiceDetailModal invoiceId={detailId} onClose={() => setDetailId(null)} />}
 
       <style>{`
-        .invoice-modern-wrapper {
-          background-color: #f8fafc;
-          min-height: 100vh;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        .invoice-container { background: #f8fafc; min-height: 100vh; }
+        .br-16 { border-radius: 16px; }
+        .text-slate-800 { color: #1e293b; }
+        .bg-light-slate { background-color: #f1f5f9; }
+        
+        .btn-primary-modern {
+          background: #4f46e5; color: white; border: none; padding: 10px 24px;
+          border-radius: 12px; font-weight: 600; transition: all 0.2s;
         }
+        .btn-primary-modern:hover { background: #4338ca; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
 
-        /* Filter & Search Bar */
-        .filter-container {
-          background: white;
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-
-        .status-group-pills {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 4px;
-        }
-
-        .pill-btn {
-          padding: 6px 16px;
-          border-radius: 10px;
-          border: 1px solid transparent;
-          background: #f1f5f9;
-          color: #64748b;
-          font-size: 0.875rem;
-          font-weight: 500;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-        }
-
-        .pill-btn.active {
-          background: #6366f1;
-          color: white;
-        }
-
-        .modern-search-input {
-          position: relative;
-          width: 100%;
-        }
-
-        .modern-search-input i.bi-search {
-          position: absolute;
-          left: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-        }
-
-        .modern-search-input input {
-          width: 100%;
-          padding: 10px 40px;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          font-size: 0.9rem;
+        .btn-filter {
+          border: 1px solid #e2e8f0; background: white; padding: 7px 18px;
+          border-radius: 10px; font-size: 0.85rem; color: #64748b; font-weight: 500;
           transition: all 0.2s;
         }
+        .btn-filter.active { background: #4f46e5; color: white; border-color: #4f46e5; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
 
-        .modern-search-input input:focus {
-          outline: none;
-          border-color: #6366f1;
-          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        .search-box-modern {
+          position: relative; display: flex; align-items: center;
+          background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px;
+          transition: all 0.2s;
+        }
+        .search-box-modern:focus-within { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .search-icon { color: #94a3b8; }
+        .clear-btn { color: #cbd5e1; cursor: pointer; transition: color 0.2s; }
+        .clear-btn:hover { color: #ef4444; }
+
+        .badge-modern {
+          padding: 6px 12px; border-radius: 8px; font-size: 0.75rem;
+          font-weight: 600; display: inline-flex; align-items: center;
+          border: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* Table Modernization */
-        .table-responsive-wrapper {
-          overflow-x: auto;
-        }
-
-        .modern-table {
-          border-collapse: separate !important;
-          border-spacing: 0 10px !important;
-          margin-top: -10px;
-        }
-
-        .modern-table thead th {
-          border: none;
-          color: #64748b;
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
-          padding: 10px 20px;
-        }
-
-        .modern-table tbody tr {
-          background-color: white;
-          transition: all 0.2s ease;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        .modern-table tbody tr:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-
-        .modern-table tbody td {
-          border: none;
-          padding: 16px 20px;
-          vertical-align: middle;
-        }
-
-        .modern-table tbody td:first-child { border-radius: 12px 0 0 12px; border-left: 1px solid #f1f5f9; }
-        .modern-table tbody td:last-child { border-radius: 0 12px 12px 0; border-right: 1px solid #f1f5f9; }
-
-        /* Status Badge */
-        .status-badge {
-          padding: 5px 12px;
-          border-radius: 8px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          border: 1px solid;
-          display: inline-flex;
-          align-items: center;
-        }
-
-        /* Buttons Action */
-        .btn-pay-action {
-          background-color: #6366f1;
-          color: white;
-          border-radius: 8px;
-          font-weight: 500;
-          padding: 6px 14px;
-        }
+        .invoice-row { transition: all 0.2s; border-bottom: 1px solid #f1f5f9; }
+        .invoice-row:hover { background-color: #f8fafc; transform: scale(1.002); }
         
-        .btn-view-action {
-          background-color: #f1f5f9;
-          color: #475569;
-          border-radius: 8px;
-          padding: 6px 10px;
+        .btn-icon-action {
+          width: 36px; height: 36px; border-radius: 10px; border: none;
+          background: transparent; color: #64748b; transition: all 0.2s;
+          display: flex; align-items: center; justify-content: center;
         }
-
-        /* Mobile View (Card style) */
-        @media (max-width: 768px) {
-          .modern-table thead { display: none; }
-          .modern-table tbody tr {
-            display: block;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-          }
-          .modern-table tbody td {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            border-bottom: 1px solid #f8fafc;
-          }
-          .modern-table tbody td:last-child { border-bottom: none; }
-          .modern-table tbody td::before {
-            content: attr(data-label);
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #64748b;
-          }
+        .btn-icon-action:hover { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transform: translateY(-1px); }
+        
+        .skeleton-row .skeleton-line {
+          height: 20px; background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+          background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 6px;
         }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .xx-small { font-size: 0.725rem; }
       `}</style>
     </div>
   );

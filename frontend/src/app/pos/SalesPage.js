@@ -1,9 +1,10 @@
 import Order from "./Order/Order";
 import Product from "./Product/Product";
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useInvoiceTabs } from "hooks/pos/useInvoice";
 import { useOrderItems } from "hooks/pos/useOrderItems";
 import useHotkeys from "hooks/pos/useHotKeys";
+import useTitle from "hooks/common/useTitle";
 
 export default function SalesHome() {
   const {
@@ -26,6 +27,15 @@ export default function SalesHome() {
     calculateTotal,
     calculateTotalQuantity,
   } = useOrderItems();
+
+  const currentInvIndex = invoices.findIndex(inv => inv.id === activeInvoiceId) + 1;
+  const customerName = activeInvoice?.customer?.name || "Khách lẻ";
+
+  useTitle(
+    activeInvoice
+      ? `HĐ ${currentInvIndex} - ${customerName}`
+      : "Đang tải hóa đơn..."
+  );
 
   const [openPaymentSignal, setOpenPaymentSignal] = useState(0);
   const [activeItemId, setActiveItemId] = useState(null);
@@ -96,7 +106,7 @@ export default function SalesHome() {
   };
 
   useHotkeys({
-    Enter : () => setOpenPaymentSignal((s) => s + 1),
+    Enter: () => setOpenPaymentSignal((s) => s + 1),
     F3: () => setFocusSignal(prev => prev + 1),
     F4: () => createInvoiceTab(),
     Escape: () => setActiveItemId(null)

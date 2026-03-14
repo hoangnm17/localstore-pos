@@ -29,6 +29,8 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
       setLoading(true);
       try {
         const res = await invoiceGetDetail(invoiceId);
+        console.log(res);
+        
         setInv(res?.data || null);
       } catch (err) {
         setErrMsg("Không thể tải thông tin hóa đơn.");
@@ -124,6 +126,7 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                       <th className="ps-0">SẢN PHẨM</th>
                       <th className="text-center">SL</th>
                       <th className="text-end">ĐƠN GIÁ</th>
+                      <th className="text-center">ĐƠN VỊ</th>
                       <th className="text-end pe-0">THÀNH TIỀN</th>
                     </tr>
                   </thead>
@@ -136,6 +139,7 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                         </td>
                         <td className="text-center"><span className="qty-circle">{it.quantity}</span></td>
                         <td className="text-end text-muted">{formatCurrency(it.unitPrice)}</td>
+                        <td className="text-center">{it.unitName}</td>
                         <td className="text-end fw-bold pe-0">{formatCurrency(it.lineTotal)}</td>
                       </tr>
                     ))}
@@ -165,6 +169,7 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                             <th>Sản phẩm</th>
                             <th className="text-center">Mua</th>
                             <th className="text-center" style={{width: '120px'}}>SL Hoàn</th>
+                            <th className="text-center">Đơn vị</th>
                             <th className="text-end">Tiền hoàn</th>
                           </tr>
                         </thead>
@@ -173,6 +178,7 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
                             <tr key={`ret-${it.id}`}>
                               <td className="small">{it.name}</td>
                               <td className="text-center small">{it.quantity}</td>
+                              <td className="text-center">{it.unitName}</td>
                               <td className="text-center">
                                 <input 
                                   type="number" className="form-control form-control-sm text-center border-danger"

@@ -6,6 +6,7 @@ import CashPayment from "./PaymentModal/CashPayment";
 import BankPayment from "./PaymentModal/BankPayment";
 import OrderDiscount from "../Discount/OrderDiscount";
 import useHotkeys from "hooks/pos/useHotKeys";
+import useTitle from "hooks/common/useTitle";
 
 export default function PaymentModal({
   orderId,
@@ -15,6 +16,8 @@ export default function PaymentModal({
   onConfirm = () => { },
   onBankPaid = () => { },
 }) {
+
+  useTitle("Thanh toán");
 
   useHotkeys({
     "Alt+c": () => setMethod("CASH"),

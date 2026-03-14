@@ -5,7 +5,6 @@ import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
 import { getAllProducts } from "services/Product/product.service";
 import ScanBarcode from "components/pos/ScanBarcode";
-import { getProductWithBarcode } from "services/Product/product.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 import { getSocket } from "utils/socket";
 
@@ -41,7 +40,7 @@ export default function Product({ addItem }) {
 
           return {
             ...p,
-            stockQuantity: found.stock
+            stock: found.stock
           };
 
         })
@@ -102,7 +101,7 @@ export default function Product({ addItem }) {
       const res = await getAllProducts({
         search: barcode,
         page: 1,
-        limit: 1 
+        limit: 1
       });
 
       if (res?.success && res.data.length > 0) {
