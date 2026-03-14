@@ -16,7 +16,11 @@ module.exports.getAllStaff = async () => {
     `);
     return result.recordset;
 };
-
+module.exports.getAllRoles = async () => {
+    const pool = await connectDB();
+    const result = await pool.request().query(`SELECT id, name, description FROM Roles`);
+    return result.recordset;
+};
 module.exports.updateStatus = async (userId, status) => {
     const pool = await connectDB();
     await pool.request()

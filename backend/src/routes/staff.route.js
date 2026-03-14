@@ -15,4 +15,5 @@ router.put("/toggle-status",
     protect(PERMISSIONS.UPDATE_STAFF), staffController.toggleStatus);
 router.put("/resign",
     protect(PERMISSIONS.UPDATE_STAFF), staffController.resignStaff);
+    router.get('/roles', staffController.getRoles);
 module.exports = router;

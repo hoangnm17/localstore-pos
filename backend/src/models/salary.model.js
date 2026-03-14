@@ -3,9 +3,10 @@ const { connectDB } = require("../config/database");
 
 module.exports.getSalaryReport = async (month, year, staffId = null, roleName = null) => {
     const pool = await connectDB();
+    
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
     const totalDaysInMonth = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(totalDaysInMonth).padStart(2, '0')}`;
 
     let staffFilter = '';
     if (staffId) staffFilter += ' AND s.id = @staffId';
@@ -16,33 +17,54 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
         .input('endDate', sql.Date, endDate)
         .input('month', sql.Int, month)
         .input('year', sql.Int, year);
+        
     if (staffId) request.input('staffId', sql.BigInt, staffId);
     if (roleName) request.input('roleName', sql.NVarChar(50), roleName);
-
     const result = await request.query(`
-        SELECT s.id AS staffId, s.fullName, s.salaryType, s.baseSalary, r.name AS roleName,
+        SELECT 
+            s.id AS staffId, s.fullName, s.salaryType, s.baseSalary, r.name AS roleName,
+            
+            -- TÍNH TỔNG GIỜ LÀM: Sử dụng Eff.effStart và Eff.effEnd để đồng bộ logic với bảng lịch
             ISNULL(SUM(
                 CASE
-                    WHEN s.salaryType = 'hourly' AND ws.shiftId IS NOT NULL
-                    THEN DATEDIFF(MINUTE,
-                           ISNULL(ws.snapshotStartTime,sh.startTime),
-                           ISNULL(ws.snapshotEndTime,sh.endTime)
-                         ) / 60.0
+                    WHEN s.salaryType = 'hourly' AND ws.id IS NOT NULL THEN
+                        CASE
+                            -- Xử lý ca qua đêm (Giờ kết thúc < Giờ bắt đầu) -> Cộng 1440 phút (24h)
+                            WHEN Eff.effEnd < Eff.effStart
+                            THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
+                            
+                            -- Ca bình thường trong ngày
+                            ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
+                        END
                     ELSE 0
                 END
             ), 0) AS totalHours,
+            
+            -- Tính số ngày làm việc (Đếm các ngày duy nhất có xếp lịch)
             COUNT(DISTINCT
-                CASE WHEN ws.id IS NOT NULL THEN CAST(ws.workDate AS DATE) 
-                END
-            )
-            AS workingDays, ${totalDaysInMonth} AS totalDaysInMonth
+                CASE WHEN ws.id IS NOT NULL THEN CAST(ws.workDate AS DATE) END
+            ) AS workingDays, 
+            ${totalDaysInMonth} AS totalDaysInMonth
+            
         FROM Staff s
         LEFT JOIN Users u  ON s.userId  = u.id
         LEFT JOIN Roles r  ON u.roleId  = r.id
+        
+        -- LẤY LỊCH LÀM VIỆC
         LEFT JOIN WorkSchedules ws
             ON s.id = ws.staffId
             AND ws.workDate BETWEEN @startDate AND @endDate
+            AND ISNULL(ws.status, '') != 'absent'
+            
         LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+
+
+        CROSS APPLY (
+            SELECT 
+                effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotStartTime IS NOT NULL THEN ws.snapshotStartTime ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
+                effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotEndTime IS NOT NULL THEN ws.snapshotEndTime ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
+        ) AS Eff
+
         WHERE s.employmentStatus = 'working'
             ${staffFilter}
         GROUP BY s.id, s.fullName, s.salaryType, s.baseSalary, r.name
@@ -50,27 +72,29 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
     `);
 
     return result.recordset.map(row => {
+        const totalHours = Number(row.totalHours) || 0;
+        const baseSalary = Number(row.baseSalary) || 0;
+        
         const grossSalary = row.salaryType === 'hourly'
-            ? Number(row.baseSalary) * Number(row.totalHours)
-            : Number(row.baseSalary);
+            ? baseSalary * totalHours
+            : baseSalary; 
+
         return {
             staffId: row.staffId,
             fullName: row.fullName,
             salaryType: row.salaryType,
-            baseSalary: Number(row.baseSalary),
+            baseSalary: baseSalary,
             roleName: row.roleName,
-            totalHours: Number(row.totalHours),
+            totalHours: parseFloat(totalHours.toFixed(2)), 
             workingDays: Number(row.workingDays),
             totalDaysInMonth: row.totalDaysInMonth,
-            deductions: 0,
+            deductions: 0, 
             grossSalary,
-            netSalary: grossSalary,
+            netSalary: grossSalary, 
             note: '',
         };
     });
 };
-
-
 
 module.exports.getRoleList = async () => {
     const pool = await connectDB();
@@ -85,7 +109,6 @@ module.exports.getRoleList = async () => {
     `);
     return result.recordset.map(r => r.roleName);
 };
-
 
 module.exports.getStaffList = async () => {
     const pool = await connectDB();

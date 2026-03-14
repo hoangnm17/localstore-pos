@@ -4,11 +4,11 @@ import Sidebar from '../../components/Sidebar/Sidebar';
 import Pagination from '../../components/Pagination/Pagination';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
-import StaffCreateModal  from './modals/StaffCreateModal';
-import StaffUpdateModal  from './modals/StaffUpdateModal';
-import StaffDetailModal  from './modals/StaffDetailModal';
-import StaffToggleModal  from './modals/StaffToggleModal';
-import StaffResignModal  from './modals/StaffResignModal'; 
+import StaffCreateModal from './modals/StaffCreateModal';
+import StaffUpdateModal from './modals/StaffUpdateModal';
+import StaffDetailModal from './modals/StaffDetailModal';
+import StaffToggleModal from './modals/StaffToggleModal';
+import StaffResignModal from './modals/StaffResignModal';
 
 const StaffList = () => {
     const [staffs, setStaffs] = useState([]);
@@ -42,12 +42,12 @@ const StaffList = () => {
     useEffect(() => { fetchData(); }, [fetchData]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, statusFilter]);
 
-    const openCreate  = () => setModalType('create');
-    const openUpdate  = (s) => { setSelectedStaff(s); setModalType('update'); };
-    const openDetail  = (s) => { setSelectedStaff(s); setModalType('detail'); };
-    const openToggle  = (s) => { setSelectedStaff(s); setModalType('toggle'); };
-    const openResign  = (s) => { setSelectedStaff(s); setModalType('resign'); }; 
-    const closeModal  = () => { setModalType(null); setSelectedStaff(null); };
+    const openCreate = () => setModalType('create');
+    const openUpdate = (s) => { setSelectedStaff(s); setModalType('update'); };
+    const openDetail = (s) => { setSelectedStaff(s); setModalType('detail'); };
+    const openToggle = (s) => { setSelectedStaff(s); setModalType('toggle'); };
+    const openResign = (s) => { setSelectedStaff(s); setModalType('resign'); };
+    const closeModal = () => { setModalType(null); setSelectedStaff(null); };
     const handleSuccess = useCallback(() => { closeModal(); fetchData(); }, [fetchData]);
 
     const filteredData = useMemo(() => {
@@ -56,7 +56,7 @@ const StaffList = () => {
                 s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (s.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.phoneNumber.includes(searchTerm);
-            const matchRole   = roleFilter === 'All' || s.roleName === roleFilter;
+            const matchRole = roleFilter === 'All' || s.roleName === roleFilter;
             const matchStatus = statusFilter === 'All' || s.employmentStatus === statusFilter;
             return matchSearch && matchRole && matchStatus;
         });
@@ -68,20 +68,25 @@ const StaffList = () => {
         return data;
     }, [staffs, searchTerm, roleFilter, statusFilter, sortOrder]);
 
-    const indexOfLastItem  = currentPage * itemsPerPage;
+    const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems     = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages       = Math.ceil(filteredData.length / itemsPerPage);
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
     const stats = useMemo(() => ({
-        total:    staffs.length,
-        active:   staffs.filter(s => s.isActive === 'active').length,
-        locked:   staffs.filter(s => s.isActive === 'locked').length,
+        total: staffs.length,
+        active: staffs.filter(s => s.isActive === 'active').length,
+        locked: staffs.filter(s => s.isActive === 'locked').length,
         resigned: staffs.filter(s => s.employmentStatus === 'resigned').length,
     }), [staffs]);
 
-    const roleBadgeClass = (r) =>
-        r === 'Manager' ? 'bg-primary' : r === 'Cashier' ? 'bg-success' : 'bg-warning text-dark';
+    // const roleBadgeClass = (r) =>
+    //     r === 'Manager' ? 'bg-primary' : r === 'Cashier' ? 'bg-success' : 'bg-warning text-dark';
+    const ROLE_MAP = {
+        'Manager': { label: 'Quản lý', color: 'bg-primary' },
+        'Cashier': { label: 'Thu ngân', color: 'bg-success' },
+        'Warehouse': { label: 'Thủ kho', color: 'bg-warning text-dark' }
+    };
 
     return (
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
@@ -104,10 +109,10 @@ const StaffList = () => {
                     </div>
                     <div className="row g-3">
                         {[
-                            { label: 'Tổng nhân viên',  value: stats.total,    icon: 'bi-people-fill' },
-                            { label: 'Đang hoạt động',  value: stats.active,   icon: 'bi-check-circle-fill' },
-                            { label: 'Tài khoản khóa',  value: stats.locked,   icon: 'bi-x-circle-fill' },
-                            { label: 'Đã nghỉ việc',    value: stats.resigned, icon: 'bi-person-dash-fill' }, 
+                            { label: 'Tổng nhân viên', value: stats.total, icon: 'bi-people-fill' },
+                            { label: 'Đang hoạt động', value: stats.active, icon: 'bi-check-circle-fill' },
+                            { label: 'Tài khoản khóa', value: stats.locked, icon: 'bi-x-circle-fill' },
+                            { label: 'Đã nghỉ việc', value: stats.resigned, icon: 'bi-person-dash-fill' },
                         ].map(({ label, value, icon }) => (
                             <div key={label} className="col-6 col-md-3">
                                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '14px 16px', backdropFilter: 'blur(10px)' }}>
@@ -222,8 +227,11 @@ const StaffList = () => {
                                             <td className="text-center text-secondary small">{s.email}</td>
                                             <td className="text-center text-secondary small">{s.phoneNumber}</td>
                                             <td className="text-center">
-                                                <span className={`badge px-3 py-1 rounded-pill ${roleBadgeClass(s.roleName)}`}>
+                                                {/* <span className={`badge px-3 py-1 rounded-pill ${roleBadgeClass(s.roleName)}`}>
                                                     {s.roleName}
+                                                </span> */}
+                                                <span className={`badge ${ROLE_MAP[s.roleName]?.color || 'bg-secondary'}`}>
+                                                    {ROLE_MAP[s.roleName]?.label || s.roleName}
                                                 </span>
                                             </td>
                                             <td className="text-center">
@@ -299,11 +307,11 @@ const StaffList = () => {
             </div>
 
             {/* MODALS */}
-            {modalType === 'create'  && <StaffCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'update'  && selectedStaff && <StaffUpdateModal staffId={selectedStaff.id} onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'detail'  && selectedStaff && <StaffDetailModal staffId={selectedStaff.id} onClose={closeModal} onEdit={() => setModalType('update')} />}
-            {modalType === 'toggle'  && selectedStaff && <StaffToggleModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'resign'  && selectedStaff && <StaffResignModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'create' && <StaffCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'update' && selectedStaff && <StaffUpdateModal staffId={selectedStaff.id} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'detail' && selectedStaff && <StaffDetailModal staffId={selectedStaff.id} onClose={closeModal} onEdit={() => setModalType('update')} />}
+            {modalType === 'toggle' && selectedStaff && <StaffToggleModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'resign' && selectedStaff && <StaffResignModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
         </div>
     );
 };
