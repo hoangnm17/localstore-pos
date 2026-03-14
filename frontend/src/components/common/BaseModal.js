@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function BaseModal({
   children,
   onClose,
-  maxWidth = "900px",
+  maxWidth = "1200px",
   zIndex = 2000,
   closeOnOverlay = true,
   disableClose = false,
@@ -52,7 +52,7 @@ export default function BaseModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth,
-          width: "fit-content",
+          width: "100%",
         }}
       >
         {children}
