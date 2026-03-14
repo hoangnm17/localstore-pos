@@ -1,29 +1,49 @@
 const priceHistoryModel = require('../../models/product/priceHistory.model');
 
 exports.recordInitialPrice = async (productId, data) => {
-    if (data.salePrice == null && data.costPrice == null) return;
+    if (data.salePrice == null || data.productUnitId == null) return;
 
-    await priceHistoryModel.insert({
+    await priceHistoryModel.insertSaleHistory({
         productId,
-        salePrice: data.salePrice,
-        costPrice: data.costPrice,
-        createdBy: data.createdBy || null
+        productUnitId: data.productUnitId,
+        oldSalePrice: null,
+        newSalePrice: data.salePrice,
+        changedBy: data.createdBy || null
     });
 };
 
 exports.recordPriceChange = async (productId, data) => {
-    await priceHistoryModel.insert({
+    if (data.newSalePrice == null || data.productUnitId == null) return;
+
+    await priceHistoryModel.insertSaleHistory({
         productId,
-        salePrice: data.salePrice,
-        costPrice: data.costPrice,
-        createdBy: data.updatedBy || null
+        productUnitId: data.productUnitId,
+        oldSalePrice: data.oldSalePrice ?? null,
+        newSalePrice: data.newSalePrice,
+        changedBy: data.updatedBy || null
     });
 };
 
 exports.getLatestByProductId = async (productId) => {
-    return await priceHistoryModel.getLatestByProductId(productId);
+    const [latestSalePriceHistory, latestCostPriceHistory] = await Promise.all([
+        priceHistoryModel.getLatestSaleByProductId(productId),
+        priceHistoryModel.getLatestCostByProductId(productId)
+    ]);
+
+    return {
+        latestSalePriceHistory,
+        latestCostPriceHistory
+    };
 };
 
 exports.getAllByProductId = async (productId) => {
-    return await priceHistoryModel.getAllByProductId(productId);
+    const [salePriceHistories, costPriceHistories] = await Promise.all([
+        priceHistoryModel.getAllSaleByProductId(productId),
+        priceHistoryModel.getAllCostByProductId(productId)
+    ]);
+
+    return {
+        salePriceHistories,
+        costPriceHistories
+    };
 };

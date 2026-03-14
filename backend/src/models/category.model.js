@@ -63,8 +63,27 @@ exports.getAllDescendants = async (rootIds) => {
     return rs.recordset;
 };
 
+exports.countAllCategories = async (search = '') => {
+
+    const pool = await connectDB();
+
+    const rs = await pool.request()
+        .input('search', sql.NVarChar, `${search}%`)
+        .query(`
+            SELECT COUNT(*) total
+            FROM Categories
+            WHERE status = 1
+            AND name LIKE @search
+        `);
+
+    return rs.recordset[0].total;
+};
+
 // Create
 exports.createCategory = async (name, parentId, imageUrl) => {
+    if (parentId && await exports.hasProduct(parentId)) {
+        throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
+    }
     const pool = await connectDB();
     const rs = await pool.request()
         .input('name', sql.NVarChar, name)
@@ -80,6 +99,9 @@ exports.createCategory = async (name, parentId, imageUrl) => {
 
 // Update
 exports.updateCategory = async (id, name, parentId, imageUrl) => {
+    if (parentId && await exports.hasProduct(parentId)) {
+        throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
+    }
     const pool = await connectDB();
     await pool.request()
         .input('id', sql.Int, id)
@@ -156,18 +178,39 @@ exports.isCircularParent = async (id, parentId) => {
     return rs.recordset[0].total > 0;
 };
 
-exports.getAllCategories = async () => {
+exports.getAllCategories = async (search = '', limit = 10, offset = 0) => {
     const pool = await connectDB();
 
-    const result = await pool.request().query(`
-        SELECT 
-            id,
-            name,
-            imageUrl,
-            parentId
+    const result = await pool.request()
+        .input('search', sql.NVarChar, `${search}%`)
+        .input('limit', sql.Int, limit)
+        .input('offset', sql.Int, offset)
+        .query(`
+            SELECT 
+                id,
+                name,
+                imageUrl,
+                parentId
         FROM Categories
-        ORDER BY name ASC
+        WHERE name LIKE @search
+        ORDER BY name
+        OFFSET @offset ROWS 
+        FETCH NEXT @limit ROWS ONLY
   `);
 
     return result.recordset;
+};
+
+exports.hasProduct = async (id) => {
+    const pool = await connectDB();
+
+    const rs = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`
+            SELECT COUNT(*) total
+            FROM Products
+            WHERE categoryId = @id AND status = 'Selling'
+        `);
+
+    return rs.recordset[0].total > 0;
 };
