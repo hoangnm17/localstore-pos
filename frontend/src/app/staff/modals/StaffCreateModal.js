@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
@@ -9,6 +9,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const { showNotification } = useNotification();
+    const [roleList, setRoleList] = useState([]);
 
     const [formData, setFormData] = useState({
         username: '', fullName: '', email: '', phoneNumber: '',
@@ -16,6 +17,20 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         isActive: 'active', password: '',
         createdAt: new Date().toISOString().split('T')[0]
     });
+
+    useEffect(() => {
+        const fetchRoles = async () => {
+            try {
+                const res = await api.get('/staff/roles');
+                if (res.data?.success) {
+                    setRoleList(res.data.data);
+                }
+            } catch (error) {
+                console.error("Lỗi khi tải danh sách vai trò", error);
+            }
+        };
+        fetchRoles();
+    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -56,6 +71,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
 
         return null;
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const frontendError = validateForm();
@@ -138,10 +154,13 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
                                             <select name="roleId" className="form-select" onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
-                                                <option value="1">Manager</option>
-                                                <option value="2">Cashier</option>
-                                                <option value="3">Warehouse</option>
+                                                {roleList.map(role => (
+                                                    <option key={role.id} value={role.id}>
+                                                        {role.name}
+                                                    </option>
+                                                ))}
                                             </select>
+
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Trạng thái</label>
