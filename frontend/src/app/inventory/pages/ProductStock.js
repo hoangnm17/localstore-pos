@@ -323,7 +323,7 @@ function ProductStock() {
                               onClick={() => handleUpdateStock(p)}
                             >
                               <i className="bi bi-pencil-square"></i>
-                              Cập nhật 
+                              Cập nhật
                             </button>
                           )}
                         </td>

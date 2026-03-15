@@ -1,5 +1,6 @@
 import React from 'react';
 import ModalShell from './ModalShell';
+import { getImageUrl } from 'utils/image';
 
 function formatMoney(value) {
     return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
@@ -120,7 +121,19 @@ function ProductDetailModal({
                                     <p><strong>Giá bán base unit:</strong> {formatMoney(product.salePrice)}</p>
                                     <p><strong>Giá nhập gần nhất:</strong> {formatMoney(product.costPrice)}</p>
                                     <p><strong>Tồn kho hiện tại:</strong> {formatQuantity(product.stockQuantity, product.allowDecimalQuantity)}</p>
-                                    <p className="mb-0"><strong>Image URL:</strong> {product.imageUrl || '—'}</p>
+                                    {product.imageUrl && (
+                                        <div>
+                                            <strong>Ảnh sản phẩm:</strong>
+                                            <div className="mt-2">
+                                                <img
+                                                    src={getImageUrl(product.imageUrl)}
+                                                    alt={product.name}
+                                                    style={{ width: '100%', maxWidth: 200, height: 'auto', borderRadius: 6, border: '1px solid #dee2e6' }}
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

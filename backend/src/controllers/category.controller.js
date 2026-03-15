@@ -15,6 +15,7 @@ function toVietnamese(err) {
 
 exports.getCategoryList = async (req, res) => {
     try {
+        const { search = '', page = 1, limit = 10 } = req.query;
         const pageNum = Math.max(parseInt(page) || 1, 1);
         const limitNum = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
         const data = await categoryService.getCategoryList(search, pageNum, limitNum);

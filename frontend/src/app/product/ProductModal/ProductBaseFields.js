@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getImageUrl } from 'utils/image';
+import { uploadImage } from '../../../services/imageUpload.service';
 export default function ProductBaseFields({ form, handleChange, categories, isCombo, isEdit }) {
     const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
 

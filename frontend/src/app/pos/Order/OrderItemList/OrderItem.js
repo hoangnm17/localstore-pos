@@ -28,7 +28,7 @@ const OrderItem = ({
   const handleChange = (e) => {
     const { value } = e.target;
     let formattedValue = value;
-
+    console.log(item)
     if (item.unitType === "PIECE") {
       // Chỉ cho phép nhập số nguyên: loại bỏ tất cả ký tự không phải số
       formattedValue = value.replace(/\D/g, "");
@@ -63,8 +63,8 @@ const OrderItem = ({
     }
 
     // Nếu đang gõ số thập phân (ví dụ "1.") thì truyền chuỗi để giữ giao diện
-    const finalValue = (item.unitType === "WEIGHT" && formattedValue.includes(".")) 
-      ? formattedValue 
+    const finalValue = (item.unitType === "WEIGHT" && formattedValue.includes("."))
+      ? formattedValue
       : number;
 
     onChangeQty(item.id, finalValue);
