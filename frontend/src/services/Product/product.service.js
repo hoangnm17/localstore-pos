@@ -53,3 +53,13 @@ export const getAllProducts = async ({ page = 1, limit = 20, search = '', status
   });
   return res.data;
 };
+
+export const uploadImage = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  console.log('Calling upload API:', api.defaults.baseURL + '/upload/image'); // ✅ thêm dòng này
+  const res = await api.post('/upload/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};

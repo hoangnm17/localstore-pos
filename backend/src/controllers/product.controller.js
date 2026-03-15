@@ -49,7 +49,7 @@ exports.createProduct = async (req, res) => {
     try {
         const id = await productService.createProduct({
             ...req.body,
-            createdBy: req.user?.staffId || req.user?.id || null
+            createdBy: req.user.staffId
         });
         res.status(201).json({ success: true, id });
     } catch (err) {
@@ -61,7 +61,7 @@ exports.updateProduct = async (req, res) => {
     try {
         await productService.updateProduct(req.params.id, {
             ...req.body,
-            updatedBy: req.user?.staffId || req.user?.id || null
+            updatedBy: req.user.staffId
         });
         res.json({ success: true });
     } catch (err) {

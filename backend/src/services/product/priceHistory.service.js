@@ -20,30 +20,26 @@ exports.recordPriceChange = async (productId, data) => {
         productUnitId: data.productUnitId,
         oldSalePrice: data.oldSalePrice ?? null,
         newSalePrice: data.newSalePrice,
-        changedBy: data.updatedBy || null
+        changedBy: data.updatedBy
     });
 };
 
 exports.getLatestByProductId = async (productId) => {
-    const [latestSalePriceHistory, latestCostPriceHistory] = await Promise.all([
-        priceHistoryModel.getLatestSaleByProductId(productId),
-        priceHistoryModel.getLatestCostByProductId(productId)
+    const [latestSalePriceHistory] = await Promise.all([
+        priceHistoryModel.getLatestSaleByProductId(productId)
     ]);
 
     return {
-        latestSalePriceHistory,
-        latestCostPriceHistory
+        latestSalePriceHistory
     };
 };
 
 exports.getAllByProductId = async (productId) => {
-    const [salePriceHistories, costPriceHistories] = await Promise.all([
+    const [salePriceHistories] = await Promise.all([
         priceHistoryModel.getAllSaleByProductId(productId),
-        priceHistoryModel.getAllCostByProductId(productId)
     ]);
 
     return {
-        salePriceHistories,
-        costPriceHistories
+        salePriceHistories
     };
 };

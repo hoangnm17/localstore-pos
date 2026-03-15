@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import categoryService from '../../services/categoryService';
+import categoryService from '../../services/Category/category.service';
 
-export default function useCategories({ showNotification, onConfirm }) {
+export default function useCategories({ showNotification, onConfirm, search, page, limit }) {
     const [categories, setCategories] = useState([]);
-
-    async function load() {
+    const [pagination, setPagination] = useState({ page: 1, totalPages: 1, totalRoots: 0 });
+    async function load(search, page, limit) {
         try {
-            const res = await categoryService.fetchCategoryTree('', 1, 10);
+            const res = await categoryService.fetchCategoryTree(search, page, limit);
             setCategories(res?.data?.data || []);
+            setPagination(res?.data?.pagination || { page: 1, totalPages: 1, totalRoots: 0 });
         } catch (err) {
             console.error('Lỗi tải danh mục:', err);
             setCategories([]);
@@ -32,11 +33,12 @@ export default function useCategories({ showNotification, onConfirm }) {
     }
 
     useEffect(() => {
-        load();
-    }, []);
+        load(search, page, limit);
+    }, [search, page, limit]);
 
     return {
         categories,
+        pagination,
         reload: load,
         deleteCategory: remove
     };

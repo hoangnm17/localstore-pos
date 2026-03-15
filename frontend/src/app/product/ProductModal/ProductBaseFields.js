@@ -1,5 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { getImageUrl } from 'utils/image';
 export default function ProductBaseFields({ form, handleChange, categories, isCombo, isEdit }) {
+    const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
+
+    async function handleFileChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setPreview(URL.createObjectURL(file));
+
+        try {
+            const data = await uploadImage(file);
+            if (data.success) {
+                handleChange('imageUrl', data.imageUrl);
+            } else {
+                alert('Upload thất bại: ' + data.message);
+            }
+        } catch (err) {
+            alert('Lỗi kết nối khi upload ảnh.');
+        }
+    }
+
+    function handleUrlChange(e) {
+        const url = e.target.value;
+        handleChange('imageUrl', url);
+        setPreview(url || null);
+    }
+
+    function handleRemoveImage() {
+        setPreview(null);
+        handleChange('imageUrl', '');
+    }
+
     return (
         <div className="row g-3 mb-4">
             <div className="col-md-6">
@@ -69,11 +101,43 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             </div>
 
             <div className="col-12">
-                <label className="form-label fw-semibold">Ảnh sản phẩm (URL)</label>
+                <label className="form-label fw-semibold">Ảnh sản phẩm</label>
+
+                {/* Preview */}
+                {preview && (
+                    <div className="mb-2 position-relative d-inline-block">
+                        <img
+                            src={preview}
+                            alt="preview"
+                            style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
+                            onError={() => setPreview(null)}
+                        />
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute top-0 end-0"
+                            style={{ padding: '1px 5px', fontSize: 10 }}
+                            onClick={handleRemoveImage}
+                        >✕</button>
+                    </div>
+                )}
+
+                {/* Chọn file */}
+                <div className="text-muted small mb-1">Chọn file từ máy tính:</div>
                 <input
+                    type="file"
+                    className="form-control mb-2"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                />
+
+                {/* Nhập URL */}
+                <div className="text-muted small mb-1">Hoặc nhập URL ảnh:</div>
+                <input
+                    type="text"
                     className="form-control"
-                    value={form.imageUrl}
-                    onChange={(e) => handleChange('imageUrl', e.target.value)}
+                    value={form.imageUrl || ''}
+                    onChange={handleUrlChange}
+                    placeholder="https://example.com/image.jpg"
                 />
             </div>
         </div>
