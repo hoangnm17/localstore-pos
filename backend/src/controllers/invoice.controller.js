@@ -1,12 +1,8 @@
 const invoiceService = require("../services/invoice.service");
 
-/* =====================================================
-   HELPER: HANDLE ERROR
-===================================================== */
 const handleError = (res, err) => {
   console.error(err);
 
-  // Ưu tiên statusCode nếu sau này service có thêm
   if (err.statusCode) {
     return res.status(err.statusCode).json({
       success: false,
@@ -29,25 +25,19 @@ const handleError = (res, err) => {
   });
 };
 
-/* =====================================================
-   GET ALL (Pagination)
-===================================================== */
 const getAllInvoice = async (req, res) => {
   try {
     const {
       page = 1,
       pageSize = 10,
       status,
-      invoiceCode // Lấy từ query string (?invoiceCode=INV001)
+      invoiceCode 
     } = req.query;
-    console.log(req.query);
     
-    // Clean & validate
     const currentPage = Number(page) > 0 ? Number(page) : 1;
     const limit = Number(pageSize) > 0 ? Number(pageSize) : 10;
-    const cleanInvoiceCode = invoiceCode?.trim(); // Xóa khoảng trắng thừa
+    const cleanInvoiceCode = invoiceCode?.trim();
 
-    // Validate status enum
     const allowedStatus = ["UNPAID", "PAID", "CANCELLED"];
     const cleanStatus = status?.trim();
 
@@ -58,7 +48,6 @@ const getAllInvoice = async (req, res) => {
       });
     }
 
-    // Gọi service với đầy đủ các filter
     const result = await invoiceService.getAllInvoice({
       page: currentPage,
       pageSize: limit,
@@ -76,9 +65,6 @@ const getAllInvoice = async (req, res) => {
   }
 };
 
-/* =====================================================
-   CREATE INVOICE
-===================================================== */
 const createInvoice = async (req, res) => {
   try {
     const staffId = req.user?.id;
@@ -114,37 +100,6 @@ const createInvoice = async (req, res) => {
   }
 };
 
-const payCash = async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    const result = await invoiceService.payCash(id, req.body);
-
-    return res.status(200).json({
-      success: true,
-      ...result,
-    });
-
-  } catch (err) {
-    return handleError(res, err);
-  }
-};
-
-const payBank = async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    const result = await invoiceService.payBank(id, req.body);
-
-    return res.status(200).json({
-      success: true,
-      ...result,
-    });
-
-  } catch (err) {
-    return handleError(res, err);
-  }
-};
 
 const cancelInvoice = async (req, res) => {
   try {
@@ -182,9 +137,6 @@ const updateInvoiceItems = async (req, res) => {
   }
 };
 
-/* =====================================================
-   UPDATE INVOICE
-===================================================== */
 const updateInvoice = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -207,9 +159,6 @@ const updateInvoice = async (req, res) => {
   }
 };
 
-/* =====================================================
-   GET DRAFTS
-===================================================== */
 const getDrafts = async (req, res) => {
   try {
     const data = await invoiceService.getDraftInvoices();
@@ -224,9 +173,6 @@ const getDrafts = async (req, res) => {
   }
 };
 
-/* =====================================================
-   GET DETAIL
-===================================================== */
 const getDetail = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -279,8 +225,6 @@ module.exports = {
   getDrafts,
   getDetail,
   updateInvoiceCustomer,
-  payBank,
-  payCash,
   cancelInvoice,
   updateInvoiceItems,
 };
