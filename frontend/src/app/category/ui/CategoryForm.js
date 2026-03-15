@@ -42,7 +42,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     async function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
-
         const tempUrl = URL.createObjectURL(file);
         setPreview(tempUrl);
 
@@ -61,6 +60,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
             alert('Lỗi kết nối khi upload ảnh.');
         }
     }
+
 
     function handleUrlChange(e) {
         const url = e.target.value;
@@ -129,6 +129,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                             src={preview}
                             alt="preview"
                             style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
+                            onError={() => setPreview(null)}  // ✅ thêm onError
                         />
                         <button
                             type="button"
