@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import categoryService from '../../../services/Category/category.service';
+import { uploadImage } from '../../../services/imageUpload.service';
 import { getImageUrl } from 'utils/image';
 
 export default function CategoryForm({ form, change, submit, onDone, editId }) {
@@ -20,26 +21,43 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         });
     }, []);
 
+    useEffect(() => {
+        // Cleanup preview URL khi component unmount
+        return () => {
+            if (preview && preview.startsWith('blob:')) {
+                URL.revokeObjectURL(preview);
+            }
+        };
+    }, [preview]);
+
+
     async function onSubmit(e) {
         e.preventDefault();
-        await submit();
-        onDone();
+        const success = await submit();
+        if (success) {
+            onDone();
+        }
     }
 
     async function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        setPreview(URL.createObjectURL(file));
+        const tempUrl = URL.createObjectURL(file);
+        setPreview(tempUrl);
 
         try {
             const data = await uploadImage(file);
             if (data.success) {
+                URL.revokeObjectURL(tempUrl);
                 change('imageUrl', data.imageUrl);
+                setPreview(getImageUrl(data.imageUrl));
             } else {
+                URL.revokeObjectURL(tempUrl);
                 alert('Upload thất bại: ' + data.message);
             }
         } catch (err) {
+            URL.revokeObjectURL(tempUrl);
             alert('Lỗi kết nối khi upload ảnh.');
         }
     }
@@ -111,7 +129,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                             src={preview}
                             alt="preview"
                             style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
-                            onError={() => setPreview(null)}  // ✅ thêm onError
                         />
                         <button
                             type="button"

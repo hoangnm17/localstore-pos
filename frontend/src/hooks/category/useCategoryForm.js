@@ -26,7 +26,7 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
     async function submit() {
         if (!form.name.trim()) {
             if (showNotification) showNotification('Tên danh mục không được để trống.', 'warning');
-            return;
+            return false;
         }
 
         if (editId) {
@@ -34,7 +34,12 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
         } else {
             await categoryService.createCategory(form);
         }
+        return true;
     }
 
-    return { form, change, submit };
+    return {
+        form,
+        change,
+        submit
+    };
 }

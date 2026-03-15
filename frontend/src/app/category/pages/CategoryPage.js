@@ -21,7 +21,7 @@ export default function CategoryPage() {
     const PAGE_SIZE = 10;
 
     const { categories, pagination, reload, deleteCategory } = useCategories({ showNotification, onConfirm, search, page: currentPage, limit: PAGE_SIZE });
-    const form = useCategoryForm(editId, { showNotification });
+    const formHook = useCategoryForm(editId, { showNotification });
 
     function openCreate() {
         setEditId(null);
@@ -99,7 +99,7 @@ export default function CategoryPage() {
 
             {/* Modal */}
             <CategoryModal
-                {...form}
+                {...formHook}
                 open={open}
                 isEdit={!!editId}
                 editId={editId}
