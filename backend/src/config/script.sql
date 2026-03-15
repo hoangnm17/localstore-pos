@@ -826,5 +826,28 @@ ALTER TABLE [WorkSchedules]
 ADD [snapshotStartTime] TIME NULL,
     [snapshotEndTime]   TIME NULL,
     [snapshotShiftName] NVARCHAR(50) NULL;
--- END OF SCRIPT
 
+ALTER TABLE ReturnItems
+ADD productName NVARCHAR(250); 
+
+ALTER TABLE ReturnItems
+ADD restockApproved BIT NULL,
+    checkedAt DATETIME2 NULL,
+    checkedBy BIGINT NULL;
+GO
+
+ALTER TABLE Returns
+ADD approvedAt DATETIME2 NULL;
+GO
+
+ALTER TABLE ReturnItems
+ADD CONSTRAINT FK_Returns_checkedBy
+FOREIGN KEY (checkedBy) REFERENCES Staff(id);
+GO
+
+ALTER TABLE ReturnItems
+ADD CONSTRAINT DF_ReturnItems_restockApproved
+DEFAULT 'Pending' FOR restockApproved;
+GO
+
+-- END OF SCRIPT
