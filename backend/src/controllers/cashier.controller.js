@@ -17,13 +17,13 @@ const getStaffByUserId = async (userId) => {
 module.exports.getMySchedule = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const userId = req.user.id; 
+        const userId = req.user.id;
 
         const staff = await getStaffByUserId(userId);
         if (!staff) return res.status(404).json({ success: false, message: "Tài khoản chưa liên kết nhân viên!" });
 
         const schedules = await cashierModel.getMySchedule(staff.id, startDate, endDate);
-        
+
         return res.json({ success: true, data: { staff, schedules } });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -74,5 +74,42 @@ module.exports.submitHandover = async (req, res) => {
         return res.json({ success: true, message: "Bàn giao tiền mặt thành công!" });
     } catch (err) {
         return res.status(500).json({ success: false, message: "Lỗi kết ca: " + err.message });
+    }
+};
+
+module.exports.getHandoverReport = async (req, res) => {
+    try {
+        const {
+            fromDate, toDate,
+            counterId, role,         
+            staffName, shiftName,   
+            page = 1, pageSize = 10
+        } = req.query;
+
+        const result = await cashierModel.getHandoverReport({
+            fromDate: fromDate || null,
+            toDate: toDate || null,
+            counterId: counterId ? Number(counterId) : null,
+            role: role || null,
+            staffName: staffName || null,
+            shiftName: shiftName || null,
+            page: Math.max(1, Number(page)),
+            pageSize: Math.min(50, Math.max(1, Number(pageSize))),
+        });
+
+        return res.json({
+            success: true,
+            data: result.data,
+            summary: result.summary,
+            pagination: {
+                page: Number(page),
+                pageSize: Number(pageSize),
+                totalItems: result.total,
+                totalPages: Math.ceil(result.total / Number(pageSize)),
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: "Lỗi hệ thống: " + err.message });
     }
 };

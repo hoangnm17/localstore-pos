@@ -94,9 +94,10 @@ module.exports.toggleShift = async (id) => {
   }
 
   const currentActive = current.recordset[0].isActive;
-
+const isCurrentlyActive = (currentActive === true 
+  || currentActive === 1);
   // Nếu đang active → sắp deactivate → kiểm tra lịch tương lai
-  if (currentActive === 1) {
+  if (isCurrentlyActive) {
     const futureCheck = await pool.request()
       .input('shiftId', sql.Int, id)
       .input('today', sql.Date, new Date())
@@ -114,7 +115,7 @@ module.exports.toggleShift = async (id) => {
     }
   }
 
-  const newActive = currentActive === 1 ? 0 : 1;
+  const newActive = isCurrentlyActive ? 0 : 1;
   await pool.request()
     .input('id', sql.Int, id)
     .input('isActive', sql.Bit, newActive)
