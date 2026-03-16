@@ -82,3 +82,12 @@ exports.getPromotionReport = async ({ page = 1, limit = 20 } = {}) => {
         totalPages: Math.ceil(total / pageSize)
     };
 };
+
+/**
+ * Tìm giảm giá áp dụng cho sản phẩm theo productId và productUnitId.
+ * Trả về: { discountPercent, discountAmount, promotionId, promotionName, type }
+ */
+exports.getDiscountByProduct = async ({ productId, productUnitId }) => {
+    if (!productId) throw new Error('productId là bắt buộc');
+    return await promotionModel.getDiscountByProduct({ productId, productUnitId });
+};

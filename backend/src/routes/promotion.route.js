@@ -5,6 +5,7 @@ const ctrl = require('../controllers/promotion.controller');
 // ─── SPECIAL (đặt trước /:id) ─────────────────────────────────────────────────
 router.get('/active', ctrl.getActivePromotions);  // UC8: cashier lấy KM đang hiệu lực
 router.get('/report', ctrl.getPromotionReport);   // UC9: manager xem báo cáo hiệu quả KM
+router.get('/discount', ctrl.getProductDiscount); // Lấy % giảm giá theo productId + productUnitId
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 router.get('/', ctrl.getPromotions);

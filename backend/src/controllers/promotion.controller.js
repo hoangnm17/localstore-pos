@@ -118,3 +118,23 @@ exports.getPromotionReport = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+/**
+ * GET /promotions/discount?productId=1&productUnitId=2
+ * Trả về phần trăm giảm giá áp dụng cho sản phẩm + đơn vị cụ thể
+ */
+exports.getProductDiscount = async (req, res) => {
+    try {
+        const { productId, productUnitId } = req.query;
+        if (!productId) return res.status(400).json({ success: false, message: 'productId là bắt buộc' });
+
+        const data = await promotionService.getDiscountByProduct({
+            productId: parseInt(productId),
+            productUnitId: productUnitId ? parseInt(productUnitId) : null
+        });
+
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
