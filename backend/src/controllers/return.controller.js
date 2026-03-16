@@ -80,7 +80,6 @@ const rejectReturn = async (req, res) => {
         const data = await returnService.rejectReturn(
             req.user,
             req.params.id,
-            req.body.reason
         );
 
         res.json({

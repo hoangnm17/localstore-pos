@@ -3,7 +3,6 @@ const { connectDB } = require("../config/database");
 const invoiceModel = require("../models/invoice.model");
 const returnModel = require("../models/return.model");
 const returnItemModel = require("../models/returnItem.model");
-const inventoryService = require("./InventoryServices/inventory.service");
 
 const runInTransaction = async (work) => {
     const pool = await connectDB();
