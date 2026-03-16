@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "services/axiosInstance";
-import ProductCard from "app/pos/Product/ProductList/ProductCard";
+import ProductCard from "components/pos/Product/ProductCard";
 import { formatCurrency } from "utils/formatters";
 import { approveReturn, getReturnDetail, rejectReturn } from "services/Return/return.service";
 
@@ -27,10 +26,9 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
   }, [returnId]);
 
   const handleApprove = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn duyệt đơn hoàn này?")) return;
     try {
       setSubmitting(true);
-      await approveReturn;
+      await approveReturn(returnId);
       onActionSuccess();
     } catch (err) {
       alert("Duyệt thất bại: " + (err.response?.data?.message || "Lỗi server"));
@@ -40,11 +38,9 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
   };
 
   const handleReject = async () => {
-    const reason = window.prompt("Nhập lý do từ chối (không bắt buộc):");
-    if (reason === null) return;
     try {
       setSubmitting(true);
-      await rejectReturn();
+      await rejectReturn(returnId);
       onActionSuccess();
     } catch (err) {
       alert("Từ chối thất bại: " + (err.response?.data?.message || "Lỗi server"));
@@ -97,6 +93,10 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
                 ...item.product,
                 units: [{ unitName: item.product.unitName, factor: 1 }]
               }}
+              showStock={false}
+              showUnits={false}
+              selectable={false}
+              showPrice={false}
             />
             <div className="mt-2 text-center border-top pt-2">
               <div className="small text-muted">Số lượng: <b className="text-danger">{item.quantity}</b></div>
@@ -141,7 +141,7 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
             ) : (
               <div className="text-muted small fst-italic border-start ps-3 border-secondary">
                 <i className="bi bi-info-circle me-1"></i>
-                Bạn không có quyền duyệt đơn. <br/>Vui lòng chờ Quản lý xử lý.
+                Bạn không có quyền duyệt đơn. <br />Vui lòng chờ Quản lý xử lý.
               </div>
             )
           ) : (

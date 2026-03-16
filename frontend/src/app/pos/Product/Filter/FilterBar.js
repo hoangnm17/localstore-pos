@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import useDebounce from "hooks/common/useDebounce";
-import { getAllProducts, getProductWithBarcode } from "services/Product/product.service";
-import { useNotification } from "components/global/Notification/NotificationContext";
 
 const ITEMS_PER_PAGE = 4;
 
@@ -12,147 +10,125 @@ export default function FilterBar({
   selectedCategory,
   onSelectCategory,
   addItem,
+  focusSignal,
 }) {
-  const { showNotification } = useNotification();
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
-  const [categoryPage, setCategoryPage] = useState(1);
-
+  const inputRef = useRef(null);
+  const scrollRef = useRef(null);
   const debouncedKeyword = useDebounce(displayKeyword, 500);
 
-  const handleAddItem = async (keyword) => {
-    addItem(keyword);
-  };
-
   useEffect(() => {
-    onKeywordChange(debouncedKeyword);
-  }, [debouncedKeyword, onKeywordChange]);
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [focusSignal]);
 
   useEffect(() => {
     setDisplayKeyword(keyword);
   }, [keyword]);
 
-  /* CATEGORY PAGINATION */
-
-  const totalPages = Math.ceil(categories.length / ITEMS_PER_PAGE);
-
-  const displayCategories = useMemo(() => {
-    const start = (categoryPage - 1) * ITEMS_PER_PAGE;
-    return categories.slice(start, start + ITEMS_PER_PAGE);
-  }, [categories, categoryPage]);
-
   useEffect(() => {
-    setCategoryPage(1);
-  }, [categories]);
+    onKeywordChange(debouncedKeyword);
+  }, [debouncedKeyword, onKeywordChange]);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === "left" ? scrollLeft - 200 : scrollLeft + 200;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
+    }
+  };
 
   return (
-    <div className="w-100 mb-4">
+    <div className="filter-bar-container w-100 mb-4">
+      <div className="search-wrapper position-relative mb-4">
+        <div className="input-group shadow-sm rounded-pill overflow-hidden border-0">
+          <span className="input-group-text bg-light border-0 ps-3">
+            <i className="bi bi-search text-primary"></i>
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            className="form-control border-0 bg-light py-2"
+            placeholder="Tìm tên sản phẩm hoặc mã vạch..."
+            value={displayKeyword}
+            onChange={(e) => setDisplayKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
 
-      {/* SEARCH */}
-      <div className="position-relative mb-4">
-
-        <i
-          className="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"
-          style={{ fontSize: "1.2rem", zIndex: 5 }}
-        />
-
-        <input
-          type="text"
-          className="form-control border-0 rounded-pill shadow-sm ps-5 pe-5"
-          placeholder="Tìm sản phẩm..."
-          value={displayKeyword}
-          onChange={(e) => setDisplayKeyword(e.target.value)}
-          style={{
-            height: "50px",
-            fontSize: "0.95rem",
-            background: "#f9fafb",
-            transition: "all .2s",
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddItem(displayKeyword);
-            }
-          }}
-        />
-
-        {/* CLEAR BUTTON */}
-        {displayKeyword && (
-          <button
-            className="btn position-absolute top-50 end-0 translate-middle-y me-2"
-            onClick={() => setDisplayKeyword("")}
-          >
-            <i className="bi bi-x-circle text-secondary"></i>
-          </button>
-        )}
+                addItem(displayKeyword);
+              }
+            }}
+            style={{ fontSize: "1rem", boxShadow: "none" }}
+          />
+          {displayKeyword && (
+            <button
+              className="btn bg-light border-0 text-secondary"
+              onClick={() => setDisplayKeyword("")}
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* CATEGORY */}
-      <div className="position-relative">
-
-        {/* LEFT BUTTON */}
-        {categoryPage > 1 && (
-          <button
-            className="btn btn-light position-absolute start-0 top-50 translate-middle-y shadow-sm rounded-circle"
-            style={{ zIndex: 10 }}
-            onClick={() => setCategoryPage((prev) => prev - 1)}
-          >
-            <i className="bi bi-chevron-left"></i>
-          </button>
-        )}
+      <div className="category-scroll-container position-relative d-flex align-items-center">
+        <button
+          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute start-0"
+          onClick={() => scroll("left")}
+          style={{ zIndex: 2, left: "-15px" }}
+        >
+          <i className="bi bi-chevron-left"></i>
+        </button>
 
         <div
-          className="d-flex gap-2 px-4"
+          ref={scrollRef}
+          className="category-list d-flex gap-2 overflow-auto no-scrollbar pb-2"
           style={{
-            overflow: "hidden",
-            whiteSpace: "nowrap",
+            scrollBehavior: "smooth",
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch"
           }}
         >
-          {/* ALL */}
           <button
-            className={`btn rounded-pill px-4 fw-semibold ${!selectedCategory
-              ? "btn-primary shadow-sm"
-              : "btn-light border text-secondary"
+            className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${!selectedCategory ? "btn-primary shadow" : "btn-outline-secondary border-light-subtle"
               }`}
-            style={{
-              transition: "all .2s",
-            }}
             onClick={() => onSelectCategory(null)}
           >
             TẤT CẢ
           </button>
 
-          {displayCategories.map((cat) => {
-            const isActive = selectedCategory?.id === cat.id;
-
-            return (
-              <button
-                key={cat.id}
-                className={`btn rounded-pill px-4 fw-semibold ${isActive
-                  ? "btn-primary shadow-sm"
-                  : "btn-light border text-secondary"
-                  }`}
-                style={{
-                  transition: "all .2s",
-                }}
-                onClick={() => onSelectCategory(cat)}
-              >
-                {cat.name.toUpperCase()}
-              </button>
-            );
-          })}
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${selectedCategory?.id === cat.id
+                ? "btn-primary shadow"
+                : "btn-outline-secondary border-light-subtle"
+                }`}
+              onClick={() => onSelectCategory(cat)}
+            >
+              {cat.name.toUpperCase()}
+            </button>
+          ))}
         </div>
 
-        {/* RIGHT BUTTON */}
-        {categoryPage < totalPages && (
-          <button
-            className="btn btn-light position-absolute end-0 top-50 translate-middle-y shadow-sm rounded-circle"
-            style={{ zIndex: 10 }}
-            onClick={() => setCategoryPage((prev) => prev + 1)}
-          >
-            <i className="bi bi-chevron-right"></i>
-          </button>
-        )}
+        <button
+          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute end-0"
+          onClick={() => scroll("right")}
+          style={{ zIndex: 2, right: "-15px" }}
+        >
+          <i className="bi bi-chevron-right"></i>
+        </button>
       </div>
+
+      <style jsx>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .transition-all { transition: all 0.25s ease-in-out; }
+        .btn-outline-secondary:hover { background-color: #f8f9fa; color: #0d6efd; }
+        .category-list { padding: 5px; }
+      `}</style>
     </div>
   );
 }

@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
 import PaymentModal from "./Payment/PaymentModal";
+import Bill from "components/pos/Sale/Bill";
+import { invoiceGetDetail } from "services/Invoices/invoice.service";
+import useHotkeys from "hooks/pos/useHotKeys";
 
 export default function Order({
   orderId,
@@ -15,58 +18,99 @@ export default function Order({
   remove,
   onSelectCustomer,
   onPay,
-  onBankPaid,
+  onBankPaid: onParentBankPaid,
   activeItemId,
   onChangeQty,
   focusSignal,
   openPaymentSignal,
 }) {
   const [showPayment, setShowPayment] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [showBill, setShowBill] = useState(false);
+  const [billData, setBillData] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!orderItems.length) return;
-    setShowPayment(true);
-  }, [openPaymentSignal]);
+    setQrData(null);
+  }, [orderId]);
 
-  const handleConfirmPayment = async ({ method, amount, discount }) => {
+  useEffect(() => {
+    if (openPaymentSignal > 0 && orderItems.length > 0) {
+      setShowPayment(true);
+    }
+  }, [openPaymentSignal, orderItems.length]);
+
+  useHotkeys(
+    {
+      enter: () => {
+        if (showBill) {
+          setShowBill(false);
+          onParentBankPaid?.(billData?.id);
+        }
+      }
+    },
+    {
+      enabled: showBill
+    }
+  );
+
+  const fetchAndShowBill = useCallback(async (id) => {
     try {
-      const res = await onPay({
-        method,
-        amount,
-        discount,
-      });
+      const res = await invoiceGetDetail(id);
+      const invoice = res?.data?.data || res?.data || res;
+      setBillData(invoice);
+      setShowBill(true);
+    } catch (err) {
+      console.error("Load bill error:", err);
+    }
+  }, []);
+
+  const handleConfirmPayment = async (paymentData) => {
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+
+      const res = await onPay(paymentData);
+
+      if (res?.pending) {
+        setQrData(res.qr);
+        return res;
+      }
 
       if (res?.paid || res?.success) {
         setShowPayment(false);
+        setQrData(null);
+
+        const finalInvoiceId = res?.data?.id || res?.id || orderId;
+        await fetchAndShowBill(finalInvoiceId);
       }
+
+      return res;
     } catch (error) {
       console.error("Payment error:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleSelectCustomer = (selectedCustomer) => {
-    onSelectCustomer(selectedCustomer);
-  };
-
-  const isEmpty = orderItems.length === 0;
+  const handleBankPaidSuccess = useCallback(async (payload) => {
+    setShowPayment(false);
+    setQrData(null);
+    await fetchAndShowBill(payload.invoiceId);
+  }, [fetchAndShowBill]);
 
   return (
-    <div
-      className="d-flex flex-column h-100 bg-white"
-      style={{ borderRight: "1px solid #e5e7eb" }}
-    >
+    <div className="d-flex flex-column h-100 bg-white border-end">
       <div className="p-3 border-bottom">
         <CustomerSearch
           invoiceId={orderId}
           customer={customer}
-          onSelectCustomer={handleSelectCustomer}
+          onSelectCustomer={onSelectCustomer}
         />
       </div>
 
-      <div
-        className="flex-grow-1 overflow-auto p-3"
-        style={{ background: "#f9fafb" }}
-      >
+      <div className="flex-grow-1 overflow-auto p-3 bg-light">
         <OrderItemList
           orderItems={orderItems}
           increase={increase}
@@ -78,15 +122,12 @@ export default function Order({
         />
       </div>
 
-      <div
-        className="p-3 border-top bg-white"
-        style={{ boxShadow: "0 -2px 8px rgba(0,0,0,0.05)" }}
-      >
+      <div className="p-3 border-top bg-white shadow-sm">
         <PaymentDetail
           items={orderItems}
           total={total}
           totalQuantity={totalQuantity}
-          disabled={isEmpty}
+          disabled={orderItems.length === 0}
           onOpenPayment={() => setShowPayment(true)}
         />
       </div>
@@ -96,11 +137,23 @@ export default function Order({
           orderId={orderId}
           total={total}
           customer={customer}
-          onClose={() => setShowPayment(false)}
-          onConfirm={handleConfirmPayment}
-          onBankPaid={() => {
+          qr={qrData}
+          submitting={submitting}
+          onClose={() => {
             setShowPayment(false);
-            onBankPaid?.(orderId);
+            setQrData(null);
+          }}
+          onConfirm={handleConfirmPayment}
+          onBankPaid={handleBankPaidSuccess}
+        />
+      )}
+
+      {showBill && billData && (
+        <Bill
+          invoice={billData}
+          onClose={() => {
+            setShowBill(false);
+            onParentBankPaid?.(billData.id);
           }}
         />
       )}
