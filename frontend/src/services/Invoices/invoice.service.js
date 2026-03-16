@@ -15,16 +15,6 @@ export const invoiceUpdateItems = async (id, data) => {
   return res.data;
 };
 
-export const payCash = async (id, data) => {
-  const res = await api.post(`/invoices/${id}/pay-cash`, data);
-  return res.data;
-};
-
-export const payBank = async (id, data) => {
-  const res = await api.post(`/invoices/${id}/pay-bank`, data);
-  return res.data;
-};
-
 export const invoiceCancel = async (id) => {
   const res = await api.post(`/invoices/${id}/cancel`);
   return res.data;
