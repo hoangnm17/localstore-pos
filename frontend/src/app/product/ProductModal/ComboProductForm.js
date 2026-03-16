@@ -105,8 +105,8 @@ export default function ComboProductForm({
                                     <th>Chọn</th>
                                     <th>Mã SP</th>
                                     <th>Tên SP</th>
-                                    <th>Base unit</th>
-                                    <th>Giá base</th>
+                                    <th>Đơn vị cơ bản</th>
+                                    <th>Giá đơn vị cơ bản</th>
                                     <th>Tồn kho</th>
                                 </tr>
                             </thead>
@@ -212,7 +212,7 @@ export default function ComboProductForm({
                             <div className="row g-3 mt-1">
                                 <div className="col-md-6">
                                     <div className="alert alert-warning mb-0">
-                                        <strong>Số lượng quy đổi về base unit:</strong><br />
+                                        <strong>Số lượng quy đổi về đơn vị cơ bản:</strong><br />
                                         {selectedChildUnit
                                             ? `${childBaseQuantity.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit}`
                                             : '—'}
@@ -240,7 +240,7 @@ export default function ComboProductForm({
                                     <th>Tên SP con</th>
                                     <th>Đơn vị chọn</th>
                                     <th>Số lượng theo đơn vị chọn</th>
-                                    <th>Quy đổi base unit</th>
+                                    <th>Quy đổi về đơn vị cơ bản</th>
                                     <th>Giá bán đơn vị</th>
                                     <th>Thành tiền</th>
                                     <th>Thao tác</th>
