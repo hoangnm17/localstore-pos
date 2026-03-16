@@ -74,6 +74,11 @@ const getProductBasicInfo = async (productId) => {
     return await productModel.getProductBasicInfo(productId);
 };
 
+const addStock = async (transaction, productId, quantity) => {
+    return await productModel.addStock(transaction, productId, quantity);
+};
+
+
 const deductStock = async (transaction, items) => {
     const updatedStocks = [];
 
@@ -183,5 +188,6 @@ module.exports = {
     updateMinThreshold,
     searchProducts,
     getLowStockProducts,
-    searchProductUnits
+    searchProductUnits,
+    addStock,
 }

@@ -17,6 +17,7 @@ import scheduleRoute from "./schedule.route";
 import salaryRoute from "./salary.route";
 import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
+import restockRoute from "./restock.route"
 
 const AppRoutes = () => {
   return (
@@ -45,6 +46,7 @@ const AppRoutes = () => {
         <Route element={<AppLayout />}>
           {InvocieRoutes}
           {cashierRoute}
+          {restockRoute}
         </Route>
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>

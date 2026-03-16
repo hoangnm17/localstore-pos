@@ -326,46 +326,72 @@ const getDraftInvoices = async (counterId) => {
 const getInvoiceDetail = async (id) => {
   const pool = await connectDB();
 
-  // 1. Lấy thông tin chung của hóa đơn (Bổ sung Customer, Staff, Counter)
+  /* ===============================
+     GET INVOICE
+  =============================== */
+
   const invoiceResult = await pool.request()
     .input("id", sql.Int, id)
     .query(`
       SELECT 
-        i.id, i.invoiceCode, i.createdAt, i.finalAmount, i.status, i.customerId,
+        i.id,
+        i.invoiceCode,
+        i.createdAt,
+        i.finalAmount,
+        i.status,
+        i.customerId,
+
         cu.name AS customerName,
         s.fullName AS staffName,
-        c.counterName AS counterName
+        c.counterName
+
       FROM Invoices i
       LEFT JOIN Customers cu ON i.customerId = cu.id
       LEFT JOIN Staff s ON i.staffId = s.id
       LEFT JOIN Counters c ON i.counterId = c.id
+
       WHERE i.id = @id
     `);
 
   const invoice = invoiceResult.recordset[0];
   if (!invoice) return null;
 
-  // 2. Lấy danh sách sản phẩm (Bổ sung ProductCode/SKU)
+  /* ===============================
+     GET INVOICE ITEMS
+  =============================== */
+
   const itemsResult = await pool.request()
     .input("invoiceId", sql.Int, id)
     .query(`
       SELECT 
-        ii.id, 
-        ii.productId, 
-        ii.quantity, 
-        ii.unitPrice, 
-        ii.lineTotal, 
-        ii.unitName,
-        p.name,
-        p.code -- Để hiển thị "Mã: SKU-..." trên Modal
+        ii.id,
+        ii.productId,
+        ii.productUnitId,
+        ii.quantity,
+        ii.unitPrice,
+        ii.lineTotal,
+
+        pu.unitName,
+        pu.conversionFactor AS factor,
+        pu.unitType,
+
+        p.name AS productName,
+        p.code
+
       FROM InvoiceItems ii
-      JOIN Products p ON p.id = ii.productId
+
+      JOIN Products p
+        ON p.id = ii.productId
+
+      LEFT JOIN ProductUnits pu
+        ON pu.id = ii.productUnitId
+
       WHERE ii.invoiceId = @invoiceId
     `);
 
   return {
     ...invoice,
-    items: itemsResult.recordset,
+    items: itemsResult.recordset
   };
 };
 
@@ -373,8 +399,16 @@ const getInvoiceItems = async (transaction, invoiceId) => {
   const result = await new sql.Request(transaction)
     .input("invoiceId", sql.Int, invoiceId)
     .query(`
-      SELECT productId, quantity, baseQuantity
-      FROM InvoiceItems iv
+      SELECT 
+        id,
+        productId,
+        productUnitId,
+        productName,
+        unitName,
+        quantity,
+        unitPrice,
+        baseQuantity
+      FROM InvoiceItems
       WHERE invoiceId = @invoiceId
     `);
 
@@ -413,6 +447,18 @@ const updateCustomer = (transaction, invoiceId, customerId) => {
       SET customerId = @customerId
       WHERE id = @invoiceId
     `);
+};
+
+const getInvoiceId = async (transaction, id) => {
+  const result = await new sql.Request(transaction)
+    .input("id", sql.Int, id)
+    .query(`
+      SELECT id, customerId, status, totalAmount, finalAmount
+      FROM Invoices WITH (UPDLOCK, ROWLOCK)
+      WHERE id = @id
+    `);
+
+  return result.recordset[0] || null;
 };
 
 /* =====================================================
@@ -481,7 +527,6 @@ const createManagerSchedule = async (staffId, counterId, counterName) => {
 /* =====================================================
    EXPORT
 ===================================================== */
-
 module.exports = {
   getInvoiceList,
   insertInvoice,
@@ -500,6 +545,7 @@ module.exports = {
   getCustomerById,
   updateCustomer,
   updateInvoiceDiscount,
+  getInvoiceId,
   getStaffAndSchedule,
   getCounterName,
   checkInSchedule,

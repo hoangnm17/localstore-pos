@@ -15,7 +15,6 @@ const OrderItem = ({
 
   const qtyRef = useRef(null);
 
-  // Auto focus và select khi item được kích hoạt
   useEffect(() => {
     if (activeItemId === item.id && qtyRef.current) {
       requestAnimationFrame(() => {
@@ -30,11 +29,8 @@ const OrderItem = ({
     let formattedValue = value;
     console.log(item)
     if (item.unitType === "PIECE") {
-      // Chỉ cho phép nhập số nguyên: loại bỏ tất cả ký tự không phải số
       formattedValue = value.replace(/\D/g, "");
     } else {
-      // unitType === "WEIGHT": Cho phép số thực
-      // Loại bỏ ký tự lạ, chỉ giữ lại số và tối đa 1 dấu chấm
       formattedValue = value.replace(/[^0-9.]/g, "");
       const parts = formattedValue.split(".");
       if (parts.length > 2) {

@@ -7,7 +7,7 @@ const POINT_RATE = 100; // 1 point = 100đ
 export default function OrderDiscount({
   subtotal = 0,
   customer = null,
-  onChange = () => {}
+  onChange = () => { }
 }) {
 
   const safeSubtotal = useMemo(() => Number(subtotal) || 0, [subtotal]);
@@ -135,7 +135,7 @@ export default function OrderDiscount({
 
   useEffect(() => {
     onChange({
-      pointUsed: actualPointUsed,      
+      pointUsed: actualPointUsed,
       voucherId: voucher?.id ?? null,
       promotionId: promotion?.id ?? null,
       totalDiscount,
@@ -273,9 +273,8 @@ export default function OrderDiscount({
           return (
             <div
               key={p.id}
-              className={`border rounded p-2 mb-2 d-flex justify-content-between align-items-center ${
-                promotion?.id === p.id ? "border-primary bg-light" : ""
-              }`}
+              className={`border rounded p-2 mb-2 d-flex justify-content-between align-items-center ${promotion?.id === p.id ? "border-primary bg-light" : ""
+                }`}
             >
               <div>
                 <div className="fw-semibold">{p.name}</div>

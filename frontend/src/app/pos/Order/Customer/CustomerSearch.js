@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CustomerCreateModal from "app/pos/Order/Customer/CustomerCreateModal";
 import { useCustomerSearch } from "hooks/pos/useCustomerSearch";
+import useHotkeys from "hooks/pos/useHotKeys";
+import { POS_HOTKEYS } from "config/HotKey";
 
 export default function CustomerSearch({
   invoiceId,
@@ -10,10 +12,22 @@ export default function CustomerSearch({
   const [phone, setPhone] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const { result, loading } = useCustomerSearch(phone);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    setPhone(""); 
+    setPhone("");
   }, [invoiceId]);
+
+  useHotkeys({
+    [POS_HOTKEYS.SEARCH_CUSTOMER]: () => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    },
+
+    [POS_HOTKEYS.CREATE_CUSTOMER]: () => {
+      setShowCreate(true);
+    }
+  });
 
   const handlePhoneChange = (e) => {
     const value = e.target.value;
@@ -50,6 +64,7 @@ export default function CustomerSearch({
             <div className="search-box-container flex-grow-1">
               <i className="bi bi-search search-icon"></i>
               <input
+                ref={inputRef}
                 type="tel"
                 className="form-control search-input"
                 placeholder="Nhập SĐT tìm khách hàng..."
