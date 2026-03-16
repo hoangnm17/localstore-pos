@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { getImageUrl } from 'utils/image';
 import { uploadImage } from '../../../services/imageUpload.service';
-export default function ProductBaseFields({ form, handleChange, categories, isCombo, isEdit }) {
+import CategorySelector from './CategorySelector';
+export default function ProductBaseFields({ form, handleChange, categories, isCombo, isEdit, errors = {} }) {
     const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
 
     async function handleFileChange(e) {
@@ -38,36 +39,30 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             <div className="col-md-6">
                 <label className="form-label fw-semibold">Mã sản phẩm<span className="text-danger">*</span></label>
                 <input
-                    className="form-control"
+                    className={`form-control ${errors.code ? 'is-invalid' : ''}`}
                     value={form.code}
                     disabled={isEdit}
                     onChange={(e) => handleChange('code', e.target.value)}
                 />
+                {errors.code && <div className="text-danger small mt-1">{errors.code}</div>}
             </div>
 
             <div className="col-md-6">
                 <label className="form-label fw-semibold">Tên sản phẩm<span className="text-danger">*</span></label>
                 <input
-                    className="form-control"
+                    className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                     value={form.name}
                     onChange={(e) => handleChange('name', e.target.value)}
                 />
+                {errors.name && <div className="text-danger small mt-1">{errors.name}</div>}
             </div>
 
             <div className="col-md-6">
-                <label className="form-label fw-semibold">Danh mục</label>
-                <select
-                    className="form-select"
+                <CategorySelector
                     value={form.categoryId}
-                    onChange={(e) => handleChange('categoryId', e.target.value)}
-                >
-                    <option value="">Chọn danh mục</option>
-                    {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                            {category.name}
-                        </option>
-                    ))}
-                </select>
+                    onChange={(categoryId) => handleChange('categoryId', categoryId)}
+                    categories={categories}
+                />
             </div>
 
             <div className="col-md-6">
@@ -85,11 +80,12 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
             <div className="col-md-6">
                 <label className="form-label fw-semibold">Đơn vị cơ bản<span className="text-danger">*</span></label>
                 <input
-                    className="form-control"
+                    className={`form-control ${errors.baseUnit ? 'is-invalid' : ''}`}
                     value={form.baseUnit}
                     onChange={(e) => handleChange('baseUnit', e.target.value)}
                     placeholder={isCombo ? 'Combo' : form.saleMode === 'weight' ? 'Kg' : 'Cái'}
                 />
+                {errors.baseUnit && <div className="text-danger small mt-1">{errors.baseUnit}</div>}
             </div>
 
             <div className="col-md-6">

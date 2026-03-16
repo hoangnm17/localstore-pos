@@ -8,10 +8,10 @@ import {
     getProductUnits
 } from '../../../services/Product/product.service';
 
-function toNumber(value, fallback = 0) {
-    const num = Number(value);
-    return Number.isNaN(num) ? fallback : num;
-}
+// function toNumber(value, fallback = 0) {
+//     const num = Number(value);
+//     return Number.isNaN(num) ? fallback : num;
+// }
 
 function roundNumber(value, digits = 3) {
     const factor = 10 ** digits;
@@ -168,8 +168,6 @@ function ProductFormModal({
             })();
             return;
         }
-
-        if (!isEdit) searchChildProducts('');
     }, [open, isEdit, initialData, form.productType]); // eslint-disable-line
 
     // Tự update giá combo theo mode auto
@@ -303,22 +301,35 @@ function ProductFormModal({
     const handleRemoveComboRow = (rowKey) => setComboRows((prev) => prev.filter((r) => r.key !== rowKey));
 
     const validate = () => {
-        if (!String(form.code).trim()) return 'Vui lòng nhập mã sản phẩm.';
-        if (!String(form.name).trim()) return 'Vui lòng nhập tên sản phẩm.';
-        if (!String(form.baseUnit).trim()) return 'Vui lòng nhập đơn vị cơ bản.';
+        const errors = {};
+        if (!String(form.code).trim()) errors.code = 'Vui lòng nhập mã sản phẩm.';
+        if (!String(form.name).trim()) errors.name = 'Vui lòng nhập tên sản phẩm.';
+        if (!String(form.baseUnit).trim()) errors.baseUnit = 'Vui lòng nhập đơn vị cơ bản.';
         const sp = Number(form.salePrice);
-        if (Number.isNaN(sp) || sp < 0) return 'Giá bán không hợp lệ.';
+        if (Number.isNaN(sp) || sp < 0) errors.salePrice = 'Giá bán không hợp lệ.';
         const mt = Number(form.minThreshold || 0);
-        if (Number.isNaN(mt) || mt < 0) return 'Ngưỡng tồn kho tối thiểu không hợp lệ.';
-        if (isCombo && comboRows.length === 0) return 'Sản phẩm combo phải có ít nhất 1 sản phẩm con.';
-        return '';
+        if (Number.isNaN(mt) || mt < 0) errors.minThreshold = 'Ngưỡng tồn kho tối thiểu không hợp lệ.';
+        if (isCombo) {
+            if (comboRows.length === 0) {
+                errors.combo = 'Sản phẩm combo phải có ít nhất 1 sản phẩm con.';
+            }
+            // Kiểm tra nếu đã chọn sản phẩm con nhưng chưa thêm vào combo
+            if (selectedChildProduct) {
+                errors.combo = 'Bạn đã chọn sản phẩm con nhưng chưa nhấn "Thêm vào combo". Vui lòng thêm hoặc bỏ chọn sản phẩm.';
+            }
+        }
+        return errors;
     };
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
-        const msg = validate();
-        if (msg) { setError(msg); return; }
-        setError('');
+        const errors = validate();
+        if (Object.keys(errors).length > 0) {
+            setError(errors);
+            return;
+        }
+        setError({});
+        if (submitting) return;
         onSubmit({
             code: String(form.code).trim(),
             name: String(form.name).trim(),
@@ -344,7 +355,7 @@ function ProductFormModal({
             subtitle={
                 isCombo
                     ? 'Tạo/sửa combo theo đúng nghiệp vụ: chọn sản phẩm con trước, hệ thống tự tính tổng giá lẻ rồi mới ra giá combo.'
-                    : 'Base unit được tạo cùng lúc với sản phẩm. Unit phụ sẽ thêm ở popup chi tiết.'
+                    : 'Base unit được tạo cùng lúc với sản phẩm. Unit phụ sẽ thêm ở chi tiết sản phẩm.'
             }
             width="1150px"
             onClose={onClose}
@@ -402,6 +413,7 @@ function ProductFormModal({
                         handleChange={handleChange}
                         categories={categories}
                         isEdit={isEdit}
+                        errors={error}
                     />
                 ) : (
                     <ComboProductForm
@@ -409,6 +421,7 @@ function ProductFormModal({
                         handleChange={handleChange}
                         categories={categories}
                         isEdit={isEdit}
+                        errors={error}
                         comboRows={comboRows}
                         comboLoading={comboLoading}
                         comboRetailTotal={comboRetailTotal}
@@ -436,8 +449,6 @@ function ProductFormModal({
                         onRemoveComboRow={handleRemoveComboRow}
                     />
                 )}
-
-                {error && <div className="alert alert-danger mb-0">{error}</div>}
             </form>
         </ModalShell>
     );

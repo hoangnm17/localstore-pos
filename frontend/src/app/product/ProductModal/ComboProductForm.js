@@ -10,6 +10,7 @@ export default function ComboProductForm({
     handleChange,
     categories,
     isEdit,
+    errors = {},
     comboRows,
     comboLoading,
     comboRetailTotal,
@@ -45,6 +46,7 @@ export default function ComboProductForm({
                 categories={categories}
                 isCombo={true}
                 isEdit={isEdit}
+                errors={errors}
             />
 
             {/* ── 1. Thành phần combo ── */}
@@ -279,6 +281,7 @@ export default function ComboProductForm({
                             </tbody>
                         </table>
                     </div>
+                    {errors.combo && <div className="text-danger small mt-2">{errors.combo}</div>}
                 </div>
             </div>
 
@@ -341,7 +344,7 @@ export default function ComboProductForm({
                         <div className="col-md-6">
                             <label className="form-label fw-semibold">Giá bán combo *</label>
                             <input
-                                className="form-control"
+                                className={`form-control ${errors.salePrice ? 'is-invalid' : ''}`}
                                 type="number"
                                 min="0"
                                 disabled={form.pricingMode === 'auto'}

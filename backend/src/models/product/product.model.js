@@ -92,21 +92,23 @@ exports.getProducts = async (filters) => {
             WHERE pc.parentProductId = p.id
         ) comboStock
         WHERE
-            (@status IS NULL OR p.status = @status)
-            AND (
-                @search = N''
-                OR p.name COLLATE Latin1_General_CI_AI LIKE @searchLike
-                OR p.code COLLATE Latin1_General_CI_AI LIKE @searchLike
-                OR EXISTS (
-                    SELECT 1
-                    FROM ProductUnits pu
-                    WHERE pu.productId = p.id
-                      AND (
-                          pu.barcode COLLATE Latin1_General_CI_AI LIKE @searchLike
-                          OR pu.unitName COLLATE Latin1_General_CI_AI LIKE @searchLike
-                      )
-                )
+    (@status IS NULL OR p.status = @status)
+    AND (
+        (@search = N'' OR @search IS NULL)
+        OR (
+            p.name COLLATE Latin1_General_CI_AI LIKE @searchLike
+            OR p.code COLLATE Latin1_General_CI_AI LIKE @searchLike
+            OR EXISTS (
+                SELECT 1
+                FROM ProductUnits pu
+                WHERE pu.productId = p.id
+                  AND (
+                      pu.barcode COLLATE Latin1_General_CI_AI LIKE @searchLike
+                      OR pu.unitName COLLATE Latin1_General_CI_AI LIKE @searchLike
+                  )
             )
+        )
+    )
             ${categoryId ? `AND p.categoryId IN (SELECT id FROM CategoryTree)` : ``}
         ORDER BY p.createdAt DESC
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
