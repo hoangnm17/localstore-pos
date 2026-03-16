@@ -177,8 +177,8 @@ export default function InvoicesPage() {
                           <span className="fw-bold text-primary">#{inv.invoiceCode}</span>
                         </td>
                         <td>
-                          <div className="small fw-medium text-dark">{new Date(inv.createdAt).toLocaleDateString('vi-VN')}</div>
-                          <div className="text-muted xx-small">{new Date(inv.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="small fw-medium text-dark">{new Date(inv.createdAt.replace('Z', '')).toLocaleDateString('vi-VN')}</div>
+                          <div className="text-muted xx-small">{new Date(inv.createdAt.replace('Z', '')).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
                         </td>
                         <td>
                           <div className="fw-semibold text-slate-700">{inv.customerName || "Khách lẻ"}</div>

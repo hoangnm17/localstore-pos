@@ -1,7 +1,6 @@
 import { Route } from "react-router-dom";
 import CategoryStock from "../app/inventory/pages/CategoryStock";
 import ProductStock from "../app/inventory/pages/ProductStock";
-import MainLayout from "../layouts/MainLayout";
 import InventoryMenu from "../app/inventory/pages/InventoryMenu";
 import ProblematicReport from "../app/inventory/pages/ProblematicReport";
 import PurchaseOrderList from "../app/inventory/pages/PurchaseOrderList";
@@ -15,7 +14,7 @@ import AdjustmentDetail from "../app/inventory/pages/AdjustmentDetail";
 import CreateAdjustment from "../app/inventory/pages/CreateAdjustment";
 
 const InventoryRoutes = (
-    <Route path="/inventory" element={<MainLayout />}>
+    <Route path="/inventory" >
         <Route path="categories" element={<CategoryStock />} />
         <Route
             path="categories/:categoryId/products"
