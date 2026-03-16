@@ -250,10 +250,19 @@ const getLowStockProductUnits = async () => {
         JOIN Products p
             ON p.id = pu.productId
 
+        JOIN SupplierProductPrices spp
+            ON spp.unitId = pu.id
+
         LEFT JOIN InventoryStocks i
             ON i.productId = p.id
 
-        WHERE ISNULL(i.quantityOnHand,0) <= i.minThreshold
+        WHERE pu.conversionFactor = (
+            SELECT MAX(pu2.conversionFactor)
+            FROM ProductUnits pu2
+            WHERE pu2.productId = pu.productId
+        )
+
+        AND ISNULL(i.quantityOnHand,0) <= i.minThreshold
 
         ORDER BY stockQuantity ASC
     `);
