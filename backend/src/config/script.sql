@@ -310,40 +310,6 @@ GO
 -- MODULE 3: SUPPLY CHAIN & INVENTORY (FIXED VERSION)
 -- ================================================================
 
-
--- ProductSuppliers
-CREATE TABLE ProductSuppliers (
-    productId BIGINT NOT NULL,
-    supplierId INT NOT NULL,
-    status VARCHAR(20) DEFAULT 'active',
-    PRIMARY KEY (productId, supplierId),
-    CONSTRAINT FK_PS_Product FOREIGN KEY (productId) REFERENCES Products(id),
-    CONSTRAINT FK_PS_Supplier FOREIGN KEY (supplierId) REFERENCES Suppliers(id)
-);
-GO
-
-CREATE TABLE SupplierProductPrices (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    
-    productId BIGINT NOT NULL,
-    supplierId INT NOT NULL,
-    unitId INT NOT NULL,
-    
-    price DECIMAL(15,2) NOT NULL,
-    createdAt DATETIME2 DEFAULT GETDATE(),
-    createdBy INT NULL,
-
-    CONSTRAINT FK_SPP_Product 
-        FOREIGN KEY (productId) REFERENCES Products(id),
-
-    CONSTRAINT FK_SPP_Supplier 
-        FOREIGN KEY (supplierId) REFERENCES Suppliers(id),
-
-    CONSTRAINT FK_SPP_ProductUnit 
-        FOREIGN KEY (unitId) REFERENCES ProductUnits(id)
-);
-GO
-
 -- 18. InventoryStocks
 CREATE TABLE InventoryStocks (
     productId BIGINT NOT NULL,
@@ -826,6 +792,7 @@ ALTER TABLE [WorkSchedules]
 ADD [snapshotStartTime] TIME NULL,
     [snapshotEndTime]   TIME NULL,
     [snapshotShiftName] NVARCHAR(50) NULL;
+GO
 
 ALTER TABLE ReturnItems
 ADD productName NVARCHAR(250); 

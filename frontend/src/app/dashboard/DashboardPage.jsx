@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DashboardPage.css';
-import Sidebar from '../../components/Sidebar/Sidebar';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -21,7 +20,7 @@ const DashboardPage = () => {
 
     return (
         <div className="dashboard-layout">
-            <Sidebar />
+            {/* <Sidebar /> */}
 
             <div className="dashboard-main">
                 {/* Top Header */}

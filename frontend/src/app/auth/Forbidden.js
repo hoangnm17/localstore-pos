@@ -5,7 +5,7 @@ const Forbidden = () => {
     const { roleName } = useAuth();
     const goHome = () => {
         if (roleName === 'Manager') navigate('/dashboard');
-        else if (roleName === 'Cashier') navigate('/sales');
+        else if (roleName === 'Cashier') navigate('/my-schedule');
         else if (roleName === 'Warehouse') navigate('/inventory/menu');
         else navigate('/login');
     };

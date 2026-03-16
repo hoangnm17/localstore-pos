@@ -9,5 +9,5 @@ router.get("/my-schedule", protect(PERMISSIONS.VIEW_MY_SCHEDULE), cashierControl
 router.get("/handover/pending", protect(PERMISSIONS.CREATE_CASH_HANDOVER), cashierController.getPendingShifts);
 router.get("/handover/system-cash", protect(PERMISSIONS.CREATE_CASH_HANDOVER), cashierController.getSystemCash);
 router.post("/handover", protect(PERMISSIONS.CREATE_CASH_HANDOVER), cashierController.submitHandover);
-
+router.get("/handover/report",protect(PERMISSIONS.VIEW_HANDOVER_REPORT),  cashierController.getHandoverReport);
 module.exports = router;

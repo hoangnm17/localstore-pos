@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import categoryService from '../../../services/categoryService';
+import categoryService from '../../services/Category/category.service';
 
-export default function useCategoryForm(editId) {
+export default function useCategoryForm(editId, { showNotification } = {}) {
     const [form, setForm] = useState({
         name: '',
         parentId: null,
@@ -25,8 +25,8 @@ export default function useCategoryForm(editId) {
 
     async function submit() {
         if (!form.name.trim()) {
-            alert('Tên danh mục bắt buộc');
-            return;
+            if (showNotification) showNotification('Tên danh mục không được để trống.', 'warning');
+            return false;
         }
 
         if (editId) {
@@ -34,7 +34,12 @@ export default function useCategoryForm(editId) {
         } else {
             await categoryService.createCategory(form);
         }
+        return true;
     }
 
-    return { form, change, submit };
+    return {
+        form,
+        change,
+        submit
+    };
 }

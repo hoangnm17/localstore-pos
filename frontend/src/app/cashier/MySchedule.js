@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Sidebar from '../../components/Sidebar/Sidebar';
 import api from '../../services/axiosInstance';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import CashHandover from './CashHandover';
@@ -28,7 +27,7 @@ const calcHours = (start, end) => {
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins < 0) mins += 24 * 60; 
+    if (mins < 0) mins += 24 * 60;
     return mins / 60;
 };
 
@@ -97,44 +96,40 @@ const MySchedule = () => {
 
     return (
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
-            <Sidebar />
-            <div className="flex-grow-1 p-4">
+            <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
 
-                <div style={{
-                    background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
-                    borderRadius: '20px', padding: '24px 32px', marginBottom: '24px', color: '#fff',
-                }}>
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h3 className="fw-bold m-0">Lịch Làm Việc Cá Nhân</h3>
-                            <p className="m-0 mt-1 opacity-75 small">Xem ca làm việc và thực hiện bàn giao kết ca</p>
-                        </div>
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            background: 'rgba(255,255,255,0.15)', borderRadius: '999px',
-                            padding: '4px 8px', backdropFilter: 'blur(10px)',
-                        }}>
-                            <button className="btn btn-sm text-white fw-bold border-0" onClick={prevWeek}>◀ Trước</button>
-                            <span style={{ fontWeight: 700, fontSize: '0.88rem', padding: '0 8px' }}>
-                                {weekDates[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                                &nbsp;—&nbsp;
-                                {weekDates[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                            </span>
-                            <button className="btn btn-sm text-white fw-bold border-0" onClick={nextWeek}>Sau ▶</button>
-                        </div>
+                {/* Header & Điều hướng */}
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 className="fw-bold m-0 text-dark">Lịch Làm Việc Cá Nhân</h3>
+                        <p className="m-0 mt-2 text-secondary">Xem ca làm việc và thực hiện bàn giao kết ca.</p>
+                    </div>
+                    <div className="d-flex align-items-center gap-2 p-1 bg-white rounded-pill shadow-sm border border-light">
+                        <button className="btn btn-sm btn-light rounded-pill fw-bold px-3 text-secondary" onClick={prevWeek}>
+                            <i className="bi bi-chevron-left me-1"></i> Trước
+                        </button>
+                        <span className="fw-bold text-dark px-2" style={{ fontSize: '0.88rem' }}>
+                            {weekDates[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                            &nbsp;—&nbsp;
+                            {weekDates[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </span>
+                        <button className="btn btn-sm btn-light rounded-pill fw-bold px-3 text-secondary" onClick={nextWeek}>
+                            Sau <i className="bi bi-chevron-right ms-1"></i>
+                        </button>
                     </div>
                 </div>
 
+                {/* Staff Info & Nút Action */}
                 <div className="card border-0 shadow-sm rounded-4 p-3 mb-4 d-flex flex-row justify-content-between align-items-center">
                     <div className="fw-bold text-secondary" style={{ fontSize: '1rem' }}>
                         <i className="bi bi-person-badge-fill me-2 text-primary" />
                         Nhân viên: <span className="text-dark">{staffInfo ? staffInfo.fullName : (loading ? 'Đang tải...' : '')}</span>
                     </div>
-                    <button className="btn btn-primary fw-bold px-4 rounded-pill shadow-sm"
-                        style={{ background: 'linear-gradient(135deg, #0ea5e9, #3b82f6)', border: 'none' }}
+                    <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+                        style={{ borderRadius: '8px', background: '#6366f1', border: 'none' }}
                         onClick={() => setShowHandover(true)}
                         disabled={loading || !staffInfo}>
-                        <i className="bi bi-wallet2 me-2" /> Bàn Giao Tiền Mặt
+                        <i className="bi bi-wallet2" /> Bàn Giao Tiền Mặt
                     </button>
                 </div>
 
@@ -148,7 +143,7 @@ const MySchedule = () => {
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table className="table table-hover align-middle mb-0" style={{ minWidth: '1100px' }}>
-                                <thead style={{ background: '#f8fafc' }}>
+                                <thead style={{ background: '#f8faff' }}>
                                     <tr>
                                         <th className="py-3 ps-4 fw-bold text-secondary" style={{ fontSize: '0.75rem', textTransform: 'uppercase', width: '220px' }}>
                                             NHÂN VIÊN
@@ -159,16 +154,16 @@ const MySchedule = () => {
                                         {weekDates.map((d, i) => {
                                             const isToday = formatDate(d) === todayStr;
                                             return (
-                                                <th key={i} className="py-2 text-center" style={{ width: '120px' }}>
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#fbbf24' : '#475569', textTransform: 'uppercase' }}>
+                                                <th key={i} className="py-2 text-center border-start border-light" style={{ width: '120px' }}>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#d97706' : '#64748b', textTransform: 'uppercase' }}>
                                                         {dayLabels[i]}
                                                     </div>
                                                     <span style={{
                                                         display: 'inline-block',
-                                                        background: isToday ? '#f59e0b' : 'transparent',
-                                                        color: isToday ? '#fff' : '#0f172a',
+                                                        background: isToday ? '#f59e0b' : '#e2e8f0',
+                                                        color: isToday ? '#fff' : '#475569',
                                                         borderRadius: '6px', padding: '2px 8px',
-                                                        fontWeight: 700, fontSize: '0.85rem',
+                                                        fontWeight: 700, fontSize: '0.8rem', marginTop: '2px'
                                                     }}>
                                                         {d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                                                     </span>

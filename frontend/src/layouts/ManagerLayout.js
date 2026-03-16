@@ -1,17 +1,17 @@
-import Footer from "../components/Footer/Footer";
-import Sidebar from "../components/Sidebar/Sidebar";
+import Header from '../components/Header/Header';
+import Sidebar from '../components/Sidebar/Sidebar';
 
 function ManagerLayout({ children }) {
     return (
-        <>
-            <div style={{ display: 'flex' }}>
-                <Sidebar />
-                <main className="min-vh-100" style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+            <Sidebar />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <Header />
+                <main style={{ flex: 1, overflowY: 'auto', background: '#f4f6fa' }}>
                     {children}
                 </main>
             </div>
-            <Footer />
-        </>
+        </div>
     );
 }
 

@@ -12,12 +12,27 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     const [errorType, setErrorType] = useState('danger');
     const [originalData, setOriginalData] = useState(null);
     const { showNotification } = useNotification();
+    const [roleList, setRoleList] = useState([]);
 
     const [formData, setFormData] = useState({
         username: '', fullName: '', email: '', phoneNumber: '',
         roleId: '', salaryType: 'hourly', baseSalary: 0,
         isActive: '', employmentStatus: 'working', createdAt: '', newPassword: ''
     });
+
+    useEffect(() => {
+        const fetchRoles = async () => {
+            try {
+                const res = await api.get('/staff/roles');
+                if (res.data?.success) {
+                    setRoleList(res.data.data);
+                }
+            } catch (error) {
+                console.error("Lỗi khi tải danh sách vai trò", error);
+            }
+        };
+        fetchRoles();
+    }, []);
 
     useEffect(() => {
         const fetchStaffData = async () => {
@@ -184,10 +199,13 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
                                             <select name="roleId" className="form-select" value={formData.roleId} onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
-                                                <option value="1">Quản Lý</option>
-                                                <option value="2">Thu Ngân</option>
-                                                <option value="3">Thủ Kho</option>
+                                                {roleList.map(role => (
+                                                    <option key={role.id} value={role.id}>
+                                                        {role.name}
+                                                    </option>
+                                                ))}
                                             </select>
+
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Trạng thái</label>

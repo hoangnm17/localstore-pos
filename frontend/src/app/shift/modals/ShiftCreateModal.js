@@ -27,7 +27,6 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
   const { showNotification } = useNotification();
   const alertRef = useRef(null);
 
-  // Khi có lỗi mới → cuộn lên đầu để thấy thông báo
   useEffect(() => {
     if (errorMsg && alertRef.current) {
       alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -131,14 +130,11 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
         return;
       }
 
-      // Lấy message từ đúng nơi: res.data?.message (axios success response)
-      // hoặc res.message (interceptor-resolved error response)
       const msg = res.data?.message || res.message || 'Có lỗi xảy ra!';
       if (msg.includes('tồn tại')) setErrors(p => ({ ...p, name: msg }));
       else setErrorMsg(msg);
 
     } catch (err) {
-      // Trường hợp interceptor không bắt được (network error, v.v.)
       const msg = err.response?.data?.message || err.message || 'Có lỗi xảy ra!';
       if (msg.includes('tồn tại')) setErrors(p => ({ ...p, name: msg }));
       else setErrorMsg(msg);
@@ -158,7 +154,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
         flexDirection: 'column',
         maxHeight: '95vh',
       }}>
-        {/* Header - cố định */}
+        {/* Header  */}
         <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)', padding: '18px 28px', color: '#fff', flexShrink: 0 }}>
           <div className="d-flex justify-content-between align-items-center">
             <div>
@@ -178,7 +174,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
           {/* Body */}
           <div style={{ padding: '20px 28px', overflowY: 'auto', flex: 1 }}>
 
-            {/* Alert lỗi - nằm ở đầu vùng scroll */}
+            {/* Alert */}
             {errorMsg && (
               <div ref={alertRef} style={{ marginBottom: '14px' }}>
                 <AlertMessage type="danger" message={errorMsg} />
@@ -267,7 +263,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
 
           </div>
 
-          {/* Footer - cố định */}
+          {/* Footer */}
           <div style={{
             padding: '14px 28px',
             borderTop: '1px solid #f0f0f0',

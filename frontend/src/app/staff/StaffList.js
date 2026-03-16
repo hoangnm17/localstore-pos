@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../../services/axiosInstance';
-import Sidebar from '../../components/Sidebar/Sidebar';
 import Pagination from '../../components/Pagination/Pagination';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
-import StaffCreateModal  from './modals/StaffCreateModal';
-import StaffUpdateModal  from './modals/StaffUpdateModal';
-import StaffDetailModal  from './modals/StaffDetailModal';
-import StaffToggleModal  from './modals/StaffToggleModal';
-import StaffResignModal  from './modals/StaffResignModal'; 
+import StaffCreateModal from './modals/StaffCreateModal';
+import StaffUpdateModal from './modals/StaffUpdateModal';
+import StaffDetailModal from './modals/StaffDetailModal';
+import StaffToggleModal from './modals/StaffToggleModal';
+import StaffResignModal from './modals/StaffResignModal';
 
 const StaffList = () => {
     const [staffs, setStaffs] = useState([]);
@@ -42,12 +41,12 @@ const StaffList = () => {
     useEffect(() => { fetchData(); }, [fetchData]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, statusFilter]);
 
-    const openCreate  = () => setModalType('create');
-    const openUpdate  = (s) => { setSelectedStaff(s); setModalType('update'); };
-    const openDetail  = (s) => { setSelectedStaff(s); setModalType('detail'); };
-    const openToggle  = (s) => { setSelectedStaff(s); setModalType('toggle'); };
-    const openResign  = (s) => { setSelectedStaff(s); setModalType('resign'); }; 
-    const closeModal  = () => { setModalType(null); setSelectedStaff(null); };
+    const openCreate = () => setModalType('create');
+    const openUpdate = (s) => { setSelectedStaff(s); setModalType('update'); };
+    const openDetail = (s) => { setSelectedStaff(s); setModalType('detail'); };
+    const openToggle = (s) => { setSelectedStaff(s); setModalType('toggle'); };
+    const openResign = (s) => { setSelectedStaff(s); setModalType('resign'); };
+    const closeModal = () => { setModalType(null); setSelectedStaff(null); };
     const handleSuccess = useCallback(() => { closeModal(); fetchData(); }, [fetchData]);
 
     const filteredData = useMemo(() => {
@@ -56,7 +55,7 @@ const StaffList = () => {
                 s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (s.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.phoneNumber.includes(searchTerm);
-            const matchRole   = roleFilter === 'All' || s.roleName === roleFilter;
+            const matchRole = roleFilter === 'All' || s.roleName === roleFilter;
             const matchStatus = statusFilter === 'All' || s.employmentStatus === statusFilter;
             return matchSearch && matchRole && matchStatus;
         });
@@ -68,61 +67,64 @@ const StaffList = () => {
         return data;
     }, [staffs, searchTerm, roleFilter, statusFilter, sortOrder]);
 
-    const indexOfLastItem  = currentPage * itemsPerPage;
+    const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems     = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages       = Math.ceil(filteredData.length / itemsPerPage);
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
     const stats = useMemo(() => ({
-        total:    staffs.length,
-        active:   staffs.filter(s => s.isActive === 'active').length,
-        locked:   staffs.filter(s => s.isActive === 'locked').length,
+        total: staffs.length,
+        active: staffs.filter(s => s.isActive === 'active').length,
+        locked: staffs.filter(s => s.isActive === 'locked').length,
         resigned: staffs.filter(s => s.employmentStatus === 'resigned').length,
     }), [staffs]);
 
-    const roleBadgeClass = (r) =>
-        r === 'Manager' ? 'bg-primary' : r === 'Cashier' ? 'bg-success' : 'bg-warning text-dark';
+    const ROLE_MAP = {
+        'Manager': { label: 'Quản lý', color: 'bg-primary' },
+        'Cashier': { label: 'Thu ngân', color: 'bg-success' },
+        'Warehouse': { label: 'Thủ kho', color: 'bg-warning text-dark' }
+    };
 
     return (
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
-            <Sidebar />
-            <div className="flex-grow-1 p-4">
-                {/* HEADER STATS */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #728bfd 0%, #3062d5 100%)',
-                    borderRadius: '20px', padding: '28px 32px', marginBottom: '24px', color: '#fff'
-                }}>
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h3 className="fw-bold m-0">Quản Lý Nhân Viên</h3>
-                            <p className="m-0 mt-1 opacity-75 small">Quản lý toàn bộ nhân sự của cửa hàng</p>
-                        </div>
-                        <button className="btn btn-light fw-bold px-4 shadow-sm"
-                            style={{ borderRadius: '12px' }} onClick={openCreate}>
-                            <i className="bi bi-person-plus-fill me-2" />Thêm Mới
-                        </button>
+            <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
+
+                {/* HEADER (Đã đồng bộ giao diện Hóa Đơn) */}
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 className="fw-bold m-0 text-dark">Quản lý nhân viên</h3>
+                        <p className="m-0 mt-2 text-secondary">Quản lý toàn bộ nhân sự của cửa hàng.</p>
                     </div>
-                    <div className="row g-3">
-                        {[
-                            { label: 'Tổng nhân viên',  value: stats.total,    icon: 'bi-people-fill' },
-                            { label: 'Đang hoạt động',  value: stats.active,   icon: 'bi-check-circle-fill' },
-                            { label: 'Tài khoản khóa',  value: stats.locked,   icon: 'bi-x-circle-fill' },
-                            { label: 'Đã nghỉ việc',    value: stats.resigned, icon: 'bi-person-dash-fill' }, 
-                        ].map(({ label, value, icon }) => (
-                            <div key={label} className="col-6 col-md-3">
-                                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '14px 16px', backdropFilter: 'blur(10px)' }}>
-                                    <div className="d-flex align-items-center gap-2">
-                                        <i className={`bi ${icon} fs-5 opacity-75`} />
-                                        <div>
-                                            <div className="fw-bold fs-5 lh-1">{value}</div>
-                                            <small className="opacity-75" style={{ fontSize: '0.75rem' }}>{label}</small>
-                                        </div>
+                    <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+                        style={{ borderRadius: '8px', background: '#6366f1' }} onClick={openCreate}>
+                        <i className="bi bi-person-plus-fill" /> Thêm Mới
+                    </button>
+                </div>
+
+                {/* STATS (Được thiết kế lại thành Card sáng màu để không phá vỡ layout) */}
+                <div className="row g-3 mb-4">
+                    {[
+                        { label: 'Tổng nhân viên', value: stats.total, icon: 'bi-people-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
+                        { label: 'Đang hoạt động', value: stats.active, icon: 'bi-check-circle-fill', textClass: 'text-success', bgClass: 'bg-success-subtle' },
+                        { label: 'Tài khoản khóa', value: stats.locked, icon: 'bi-x-circle-fill', textClass: 'text-danger', bgClass: 'bg-danger-subtle' },
+                        { label: 'Đã nghỉ việc', value: stats.resigned, icon: 'bi-person-dash-fill', textClass: 'text-secondary', bgClass: 'bg-secondary-subtle' },
+                    ].map(({ label, value, icon, textClass, bgClass }) => (
+                        <div key={label} className="col-6 col-md-3">
+                            <div className="card border-0 shadow-sm rounded-4 h-100 p-3">
+                                <div className="d-flex align-items-center gap-3">
+                                    <div className={`d-flex align-items-center justify-content-center rounded-3 ${bgClass} ${textClass}`} style={{ width: '48px', height: '48px' }}>
+                                        <i className={`bi ${icon} fs-4`} />
+                                    </div>
+                                    <div>
+                                        <div className="fw-bold fs-4 lh-1 text-dark mb-1">{value}</div>
+                                        <small className="text-secondary fw-medium" style={{ fontSize: '0.8rem' }}>{label}</small>
                                     </div>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
+
                 {/* SEARCH & FILTER */}
                 <div className="card border-0 shadow-sm rounded-4 p-3 mb-4">
                     <div className="row g-3 align-items-end">
@@ -222,8 +224,8 @@ const StaffList = () => {
                                             <td className="text-center text-secondary small">{s.email}</td>
                                             <td className="text-center text-secondary small">{s.phoneNumber}</td>
                                             <td className="text-center">
-                                                <span className={`badge px-3 py-1 rounded-pill ${roleBadgeClass(s.roleName)}`}>
-                                                    {s.roleName}
+                                                <span className={`badge ${ROLE_MAP[s.roleName]?.color || 'bg-secondary'}`}>
+                                                    {ROLE_MAP[s.roleName]?.label || s.roleName}
                                                 </span>
                                             </td>
                                             <td className="text-center">
@@ -299,11 +301,11 @@ const StaffList = () => {
             </div>
 
             {/* MODALS */}
-            {modalType === 'create'  && <StaffCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'update'  && selectedStaff && <StaffUpdateModal staffId={selectedStaff.id} onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'detail'  && selectedStaff && <StaffDetailModal staffId={selectedStaff.id} onClose={closeModal} onEdit={() => setModalType('update')} />}
-            {modalType === 'toggle'  && selectedStaff && <StaffToggleModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
-            {modalType === 'resign'  && selectedStaff && <StaffResignModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'create' && <StaffCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'update' && selectedStaff && <StaffUpdateModal staffId={selectedStaff.id} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'detail' && selectedStaff && <StaffDetailModal staffId={selectedStaff.id} onClose={closeModal} onEdit={() => setModalType('update')} />}
+            {modalType === 'toggle' && selectedStaff && <StaffToggleModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
+            {modalType === 'resign' && selectedStaff && <StaffResignModal staff={selectedStaff} onClose={closeModal} onSuccess={handleSuccess} />}
         </div>
     );
 };

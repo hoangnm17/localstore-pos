@@ -1,5 +1,4 @@
 import { Route } from 'react-router-dom';
-import ManagerLayout from '../layouts/ManagerLayout';
 import ProtectedRoute from './protected.route';
 import ProductList from '../app/product/productList';
 
@@ -8,9 +7,7 @@ const ProductRoutes = (
         <Route
             path="/products/list"
             element={
-                <ManagerLayout>
                     <ProductList />
-                </ManagerLayout>
             }
         />
     </Route>

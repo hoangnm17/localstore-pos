@@ -10,14 +10,14 @@ exports.getProducts = async (req, res) => {
             limit = 10
         } = req.query;
 
-        const pageNumber = Math.max(parseInt(page), 1);
-        const pageSize = Math.max(parseInt(limit), 1);
+        const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.max(parseInt(limit, 10) || 10, 1);
         const offset = (pageNumber - 1) * pageSize;
 
         const result = await productService.getProductList({
             search,
-            status,
-            categoryId: categoryId ? parseInt(categoryId) : null,
+            status: status === 'All' ? null : status,
+            categoryId: categoryId ? parseInt(categoryId, 10) : null,
             limit: pageSize,
             offset
         });
@@ -29,10 +29,7 @@ exports.getProducts = async (req, res) => {
             ...result
         });
     } catch (err) {
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
@@ -40,7 +37,7 @@ exports.getProductById = async (req, res) => {
     try {
         const product = await productService.getProductDetail(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
         }
         res.json({ success: true, data: product });
     } catch (err) {
@@ -50,7 +47,10 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const id = await productService.createProduct(req.body);
+        const id = await productService.createProduct({
+            ...req.body,
+            createdBy: req.user.staffId
+        });
         res.status(201).json({ success: true, id });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
@@ -59,7 +59,10 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
-        await productService.updateProduct(req.params.id, req.body);
+        await productService.updateProduct(req.params.id, {
+            ...req.body,
+            updatedBy: req.user.staffId
+        });
         res.json({ success: true });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });

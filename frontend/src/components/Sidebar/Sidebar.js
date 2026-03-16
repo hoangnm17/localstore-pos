@@ -50,7 +50,7 @@ const Sidebar = () => {
         },
         {
             title: 'Sản phẩm', icon: 'bi-box-fill', id: 'products',
-            roles: ['Manager'],
+            roles: ['Manager','Warehouse'],
             children: [
                 { title: 'Danh mục sản phẩm', path: '/categories' },
                 { title: 'Danh sách sản phẩm', path: '/products/list' }
@@ -76,11 +76,13 @@ const Sidebar = () => {
         {
             title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', id: 'reports',
             roles: ['Manager'],
-            children: [{ title: 'Báo cáo lương', path: '/salary' }]
+            children: [{ title: 'Báo cáo lương', path: '/salary' },
+                { title: 'Báo cáo bàn giao tiền', path: '/handover-report' },
+            ]
         },
         {
             title: 'Lịch Của Tôi', icon: 'bi-calendar-week-fill', path: '/my-schedule',
-            roles: ['Cashier']
+            roles: ['Cashier','Manager'] 
         }
     ];
 

@@ -1,5 +1,4 @@
 import { Route } from 'react-router-dom';
-import ManagerLayout from '../layouts/ManagerLayout';
 import CategoryPage from '../app/category/pages/CategoryPage';
 import ProtectedRoute from './protected.route';
 
@@ -8,9 +7,7 @@ const CategoryRoutes = (
         <Route
             path="/categories/*"
             element={
-                <ManagerLayout>
                     <CategoryPage />
-                </ManagerLayout>
             }
         />
     </Route>

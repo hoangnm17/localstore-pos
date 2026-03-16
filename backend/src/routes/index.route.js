@@ -18,6 +18,7 @@ const sseRoutes = require("./event.route")
 const cashierRoutes = require("./cashier.route");
 const returnRoutes = require("./return.route")
 const returnItemRoutes = require("./returnItem.route")
+const uploadRoutes = require("./upload.route");
 
 module.exports = (app) => {
     const version = "/api";
@@ -42,5 +43,6 @@ module.exports = (app) => {
     app.use(version + "/cashier", cashierRoutes);
     app.use(version + "/returns", returnRoutes)
     app.use(version + "/return-items", returnItemRoutes)
+    app.use(version + "/upload", uploadRoutes);
 };
 
