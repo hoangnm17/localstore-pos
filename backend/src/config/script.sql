@@ -243,7 +243,6 @@ CREATE TABLE [SupplierProductPrices] (
     [supplierId] INT NOT NULL,
     [unitId] INT NOT NULL,
     [price] DECIMAL(15,2) NOT NULL,
-    [effectiveFrom] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [createdAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [createdBy] BIGINT NULL,
 
@@ -252,10 +251,6 @@ CREATE TABLE [SupplierProductPrices] (
     CONSTRAINT [FK_SPP_ProductUnit] FOREIGN KEY ([unitId]) REFERENCES [ProductUnits]([id]),
     CONSTRAINT [FK_SPP_Staff] FOREIGN KEY ([createdBy]) REFERENCES [Staff]([id])
 );
-GO
-
-CREATE INDEX [IX_SPP_Product_Supplier_Unit_EffectiveFrom]
-ON [SupplierProductPrices] ([productId], [supplierId], [unitId], [effectiveFrom] DESC);
 GO
 
 -- 14. ProductCombos
