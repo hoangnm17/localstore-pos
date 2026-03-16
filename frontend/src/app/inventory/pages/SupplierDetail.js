@@ -30,6 +30,7 @@ function SupplierDetail() {
 
   //Load supplier detail
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadSupplier = async () => {
       try {
         const res = await supplierService.getSupplierById(id);

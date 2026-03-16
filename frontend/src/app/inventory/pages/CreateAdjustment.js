@@ -16,6 +16,7 @@ const CreateAdjustment = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const delay = setTimeout(() => {
       if (keyword.trim().length >= 2) {
         handleSearch(keyword);
@@ -61,46 +62,45 @@ const CreateAdjustment = () => {
     if (val === "") val = "0";
 
     setAdjustmentItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, actualLargest: val } : item))
+      prev.map((item) =>
+        item.id === id ? { ...item, actualLargest: val } : item
+      )
     );
   };
 
   const handleRemainderChange = (id, e) => {
-  let val = e.target.value;
+    let val = e.target.value;
 
-  const item = adjustmentItems.find((i) => i.id === id);
-  const allowDecimal = item?.allowDecimalQuantity === true;
+    const item = adjustmentItems.find((i) => i.id === id);
+    const allowDecimal = item?.allowDecimalQuantity === true;
 
-  if (allowDecimal) {
-    // cho phép số thập phân
-    val = val.replace(/[^0-9.]/g, "");
+    if (allowDecimal) {
+      val = val.replace(/[^0-9.]/g, "");
 
-    const parts = val.split(".");
-    if (parts.length > 2) {
-      val = parts[0] + "." + parts.slice(1).join("");
+      const parts = val.split(".");
+      if (parts.length > 2) {
+        val = parts[0] + "." + parts.slice(1).join("");
+      }
+    } else {
+      val = val.replace(/[^0-9]/g, "");
+
+      const max = item?.largestConversionFactor
+        ? item.largestConversionFactor - 1
+        : 999999;
+
+      if (val !== "" && Number(val) >= max) {
+        val = (max - 1).toString();
+      }
     }
 
-  } else {
-    // chỉ cho số nguyên
-    val = val.replace(/[^0-9]/g, "");
+    if (val === "") val = "0";
 
-    const max = item?.largestConversionFactor
-      ? item.largestConversionFactor - 1
-      : 999999;
-
-    if (val !== "" && Number(val) >= max) {
-      val = (max - 1).toString();
-    }
-  }
-
-  if (val === "") val = "0";
-
-  setAdjustmentItems((prev) =>
-    prev.map((item) =>
-      item.id === id ? { ...item, actualRemainder: val } : item
-    )
-  );
-};
+    setAdjustmentItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, actualRemainder: val } : item
+      )
+    );
+  };
 
   const handleRemove = (id) => {
     setAdjustmentItems((prev) => prev.filter((i) => i.id !== id));
@@ -121,9 +121,8 @@ const CreateAdjustment = () => {
     const unit = item.largestUnitName || item.baseUnit || "Đơn vị";
 
     if (largest > 0)
-      return `${largest.toLocaleString()} ${unit}${
-        remainder ? ` + ${remainder} lẻ` : ""
-      }`;
+      return `${largest.toLocaleString()} ${unit}${remainder ? ` + ${remainder} lẻ` : ""
+        }`;
 
     return remainder ? `${remainder} lẻ` : "0";
   };
@@ -200,7 +199,7 @@ const CreateAdjustment = () => {
             </button>
           </div>
 
-          {/* Thông tin phiếu */}
+          {/* Lý do */}
 
           <div className="card shadow-sm border-0 rounded-4 mb-4">
             <div className="card-header bg-primary text-white">
@@ -209,7 +208,6 @@ const CreateAdjustment = () => {
             </div>
 
             <div className="card-body">
-
               <label className="form-label fw-semibold">
                 Lý do điều chỉnh <span className="text-danger">*</span>
               </label>
@@ -242,7 +240,6 @@ const CreateAdjustment = () => {
             <div className="card-body">
 
               <div className="input-group">
-
                 <span className="input-group-text">
                   <i className="bi bi-search"></i>
                 </span>
@@ -266,7 +263,6 @@ const CreateAdjustment = () => {
                     <i className="bi bi-x"></i>
                   </button>
                 )}
-
               </div>
 
               {loading && (
@@ -276,7 +272,6 @@ const CreateAdjustment = () => {
               )}
 
               {showSearchResults && searchResults.length > 0 && (
-
                 <div
                   className="list-group mt-3"
                   style={{ maxHeight: 300, overflowY: "auto" }}
@@ -298,45 +293,47 @@ const CreateAdjustment = () => {
                     </button>
                   ))}
                 </div>
-
               )}
             </div>
           </div>
 
-          {/* Bảng sản phẩm */}
+          {/* GIỎ HÀNG LUÔN HIỂN THỊ */}
 
-          {adjustmentItems.length > 0 && (
-            <div className="card shadow-sm border-0 rounded-4">
+          <div className="card shadow-sm border-0 rounded-4">
 
-              <div className="card-header bg-dark text-white">
-                <i className="bi bi-list-ul me-2"></i>
-                Danh sách sản phẩm kiểm kê
-              </div>
+            <div className="card-header bg-dark text-white">
+              <i className="bi bi-list-ul me-2"></i>
+              Danh sách sản phẩm kiểm kê
+            </div>
 
-              <div className="table-responsive">
+            <div className="table-responsive">
 
-                <table className="table table-hover align-middle mb-0">
+              <table className="table table-hover align-middle mb-0">
 
-                  <thead
-                    className="table-light"
-                    style={{
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 1,
-                    }}
-                  >
+                <thead className="table-light">
+                  <tr>
+                    <th>Sản phẩm</th>
+                    <th className="text-end">Tồn hệ thống</th>
+                    <th className="text-end">Tồn thực tế</th>
+                    <th className="text-end">Chênh lệch</th>
+                    <th className="text-center">Xóa</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  {adjustmentItems.length === 0 ? (
+
                     <tr>
-                      <th>Sản phẩm</th>
-                      <th className="text-end">Tồn hệ thống</th>
-                      <th className="text-end">Tồn thực tế</th>
-                      <th className="text-end">Chênh lệch</th>
-                      <th className="text-center">Xóa</th>
+                      <td colSpan="5" className="text-center py-5 text-muted">
+                        <i className="bi bi-cart-x fs-3 d-block mb-2"></i>
+                        Chưa có sản phẩm nào được thêm
+                      </td>
                     </tr>
-                  </thead>
 
-                  <tbody>
+                  ) : (
 
-                    {adjustmentItems.map((item) => {
+                    adjustmentItems.map((item) => {
 
                       const diff = calculateDifference(item);
                       const unit = item.largestUnitName || "ĐV";
@@ -357,13 +354,13 @@ const CreateAdjustment = () => {
 
                             <div className="d-flex gap-2 justify-content-end">
 
-                              <div className="input-group input-group-sm" style={{width:120}}>
+                              <div className="input-group input-group-sm" style={{ width: 120 }}>
 
                                 <input
                                   type="text"
                                   className="form-control text-end"
                                   value={item.actualLargest}
-                                  onChange={(e)=>handleLargestChange(item.id,e)}
+                                  onChange={(e) => handleLargestChange(item.id, e)}
                                 />
 
                                 <span className="input-group-text">
@@ -372,13 +369,13 @@ const CreateAdjustment = () => {
 
                               </div>
 
-                              <div className="input-group input-group-sm" style={{width:120}}>
+                              <div className="input-group input-group-sm" style={{ width: 120 }}>
 
                                 <input
                                   type="text"
                                   className="form-control text-end"
                                   value={item.actualRemainder}
-                                  onChange={(e)=>handleRemainderChange(item.id,e)}
+                                  onChange={(e) => handleRemainderChange(item.id, e)}
                                 />
 
                                 <span className="input-group-text">
@@ -394,16 +391,17 @@ const CreateAdjustment = () => {
                           <td className="text-end">
 
                             <span
-                              className={`badge ${
-                                diff > 0
+                              className={`badge ${diff > 0
                                   ? "bg-success"
                                   : diff < 0
-                                  ? "bg-danger"
-                                  : "bg-secondary"
-                              }`}
+                                    ? "bg-danger"
+                                    : "bg-secondary"
+                                }`}
                             >
                               {diff > 0 ? "+" : ""}
-                              {diff}
+                              {item.allowDecimalQuantity
+                                ? Number(diff).toFixed(3)
+                                : diff}
                             </span>
 
                           </td>
@@ -412,7 +410,7 @@ const CreateAdjustment = () => {
 
                             <button
                               className="btn btn-sm btn-outline-danger"
-                              onClick={()=>handleRemove(item.id)}
+                              onClick={() => handleRemove(item.id)}
                             >
                               <i className="bi bi-trash"></i>
                             </button>
@@ -422,69 +420,67 @@ const CreateAdjustment = () => {
                         </tr>
                       );
 
-                    })}
+                    })
 
-                  </tbody>
+                  )}
 
-                </table>
+                </tbody>
 
-              </div>
+              </table>
+
             </div>
-          )}
 
-          {/* SUMMARY + SUBMIT */}
+          </div>
 
-          {adjustmentItems.length > 0 && (
+          {/* SUMMARY */}
 
-            <div className="card shadow-sm border-0 rounded-4 mt-4">
+          <div className="card shadow-sm border-0 rounded-4 mt-4">
 
-              <div className="card-body">
+            <div className="card-body">
 
-                <div className="row align-items-center">
+              <div className="row align-items-center">
 
-                  <div className="col-md-8">
+                <div className="col-md-8">
 
-                    <div className="d-flex gap-3 flex-wrap">
+                  <div className="d-flex gap-3 flex-wrap">
 
-                      <span className="badge bg-primary fs-6 p-2">
-                        Tổng sản phẩm: {summary.total}
-                      </span>
+                    <span className="badge bg-primary fs-6 p-2">
+                      Tổng sản phẩm: {summary.total}
+                    </span>
 
-                      <span className="badge bg-success fs-6 p-2">
-                        Tăng: {summary.increase}
-                      </span>
+                    <span className="badge bg-success fs-6 p-2">
+                      Tăng: {summary.increase}
+                    </span>
 
-                      <span className="badge bg-danger fs-6 p-2">
-                        Giảm: {summary.decrease}
-                      </span>
-
-                    </div>
+                    <span className="badge bg-danger fs-6 p-2">
+                      Giảm: {summary.decrease}
+                    </span>
 
                   </div>
 
-                  <div className="col-md-4 text-end">
+                </div>
 
-                    <button
-                      className="btn btn-success btn-lg px-4"
-                      disabled={saving}
-                      onClick={handleSubmit}
-                    >
+                <div className="col-md-4 text-end">
 
-                      {saving ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          Đang tạo...
-                        </>
-                      ) : (
-                        <>
-                          <i className="bi bi-check-circle me-2"></i>
-                          Tạo phiếu điều chỉnh
-                        </>
-                      )}
+                  <button
+                    className="btn btn-success btn-lg px-4"
+                    disabled={saving}
+                    onClick={handleSubmit}
+                  >
 
-                    </button>
+                    {saving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2"></span>
+                        Đang tạo...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle me-2"></i>
+                        Tạo phiếu điều chỉnh
+                      </>
+                    )}
 
-                  </div>
+                  </button>
 
                 </div>
 
@@ -492,7 +488,7 @@ const CreateAdjustment = () => {
 
             </div>
 
-          )}
+          </div>
 
         </div>
       </div>

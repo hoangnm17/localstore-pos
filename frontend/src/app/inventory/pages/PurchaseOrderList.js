@@ -78,11 +78,14 @@ const PurchaseOrderList = () => {
 
   // Fetch khi filters hoặc page thay đổi
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetchData(page);
   }, [filters, page, fetchData]);
 
   // Đồng bộ filters + page → URL
   useEffect(() => {
+    window.scrollTo(0, 0);
+
     const params = new URLSearchParams();
 
     if (filters.from) params.set("from", filters.from);
