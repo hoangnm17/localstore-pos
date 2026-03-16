@@ -15,6 +15,8 @@ import scheduleRoute from "./schedule.route";
 import salaryRoute from "./salary.route";
 import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
+import returnRoute from "./return.route"
+import restockRoute from "./restock.route"
 
 const AppRoutes = () => {
   return (
@@ -32,11 +34,13 @@ const AppRoutes = () => {
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Warehouse']} />}>
         {InventoryRoutes}
+        {restockRoute}
         <Route path="/inventory/*" element={<InventoryRoutes />} />
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         {salesRoute}
         {InvocieRoutes}
+        {returnRoute}
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Cashier']} />}>
         {cashierRoute}
