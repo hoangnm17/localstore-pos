@@ -524,6 +524,41 @@ const updateInvoiceCustomer = async (
     });
 };
 
+/* =====================================================
+   TỰ ĐỘNG ĐỒNG BỘ CA LÀM THEO FILE CONFIG
+===================================================== */
+const syncCounter = async (userId, configCounterId) => {
+    const data = await invoiceModel.getStaffAndSchedule(userId);
+    if (!data)
+         throw new Error("Tài khoản chưa được liên kết với nhân viên!");
+    const { staffId,roleName, schedule } = data;
+
+    if (schedule) {
+        if (schedule.counterId !== null && 
+            String(schedule.counterId) !== String(configCounterId)) {
+            const machineName = await invoiceModel.getCounterName(configCounterId);
+            const assignedName = schedule.counterName || `Quầy khác`;
+            
+            const err = new Error(`
+                Bạn được phân công làm việc tại "${assignedName}"
+                . Không thể bán hàng tại máy của "${machineName}"!`);
+            err.statusCode = 400; 
+            throw err; 
+        }
+        
+        await invoiceModel.checkInSchedule(schedule.id);
+    } else {
+        if (roleName === 'Cashier') {
+            const err = new Error("Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!");
+            err.statusCode = 400;
+            throw err;
+        }
+        const machineName = await invoiceModel.getCounterName(configCounterId);
+        await invoiceModel.createManagerSchedule(staffId, configCounterId, machineName);
+    }
+
+    return { staffId, counterId: configCounterId };
+};
 module.exports = {
     getAllInvoice,
     createInvoice,
@@ -534,4 +569,5 @@ module.exports = {
     payCash,
     cancelInvoice,
     validateDiscount,
+    syncCounter,
 };

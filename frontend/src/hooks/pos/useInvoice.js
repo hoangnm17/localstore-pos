@@ -48,6 +48,15 @@ export const useInvoiceTabs = () => {
     const loadDrafts = async () => {
       try {
         const res = await invoiceGetDrafts();
+        if (res && res.success === false) {
+          showNotification(res.message
+             || "Lỗi truy cập ca làm việc!", "error");
+          const local = createLocalInvoice();
+          setInvoices([local]);
+          setAsActive(local.id);
+          return;
+        }
+
         const drafts = res?.data || [];
 
         if (drafts.length === 0) {
@@ -160,6 +169,19 @@ export const useInvoiceTabs = () => {
         );
 
         const res = await invoiceCreate({ items: newItems });
+
+        if (res && res.success === false) {
+          showNotification(res.message || "Bạn đang ngồi sai Quầy!", "error");
+          setInvoices(prev => 
+            prev.map(inv => 
+              inv.id === invoiceId ? 
+              { ...inv, 
+                isSaving: false, 
+                items: [] }
+                 : inv
+                ));
+          return;
+        }
         const newDbId = res?.data?.id;
         if (!newDbId) return;
 
@@ -241,7 +263,11 @@ export const useInvoiceTabs = () => {
           items: invoice.items,
           customerId: customer?.id ?? null
         });
-
+        if (res && res.success === false) {
+          showNotification(res.message || "Lỗi tạo hóa đơn!", "error");
+          setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, isSaving: false } : inv));
+          return;
+        }
         const newDbId = res?.data?.id;
         if (newDbId) {
           setInvoices(prev => prev.map(inv =>

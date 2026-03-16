@@ -1,6 +1,6 @@
 import React from 'react';
 import ProductBaseFields from './ProductBaseFields';
-export default function RegularProductForm({ form, handleChange, categories, isEdit }) {
+export default function RegularProductForm({ form, handleChange, categories, isEdit, errors = {} }) {
     return (
         <>
             {/* Kiểu bán */}
@@ -38,30 +38,34 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                 categories={categories}
                 isCombo={false}
                 isEdit={isEdit}
+                errors={errors}
             />
+
 
             {/* Giá bán + ngưỡng tồn */}
             <div className="row g-3 mb-4">
                 <div className="col-md-6">
-                    <label className="form-label fw-semibold">Giá bán base unit *</label>
+                    <label className="form-label fw-semibold">Giá bán base unit<span className="text-danger">*</span></label>
                     <input
-                        className="form-control"
+                        className={`form-control ${errors.salePrice ? 'is-invalid' : ''}`}
                         type="number"
                         min="0"
                         value={form.salePrice}
                         onChange={(e) => handleChange('salePrice', e.target.value)}
                     />
+                    {errors.salePrice && <div className="text-danger small mt-1">{errors.salePrice}</div>}
                 </div>
 
                 <div className="col-md-6">
                     <label className="form-label fw-semibold">Ngưỡng tồn tối thiểu</label>
                     <input
-                        className="form-control"
+                        className={`form-control ${errors.minThreshold ? 'is-invalid' : ''}`}
                         type="number"
                         min="0"
                         value={form.minThreshold}
                         onChange={(e) => handleChange('minThreshold', e.target.value)}
                     />
+                    {errors.minThreshold && <div className="text-danger small mt-1">{errors.minThreshold}</div>}
                 </div>
             </div>
         </>

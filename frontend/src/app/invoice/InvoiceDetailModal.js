@@ -83,7 +83,7 @@ export default function InvoiceDetailModal({ invoiceId, onClose }) {
             <div className="icon-box"><i className="bi bi-receipt"></i></div>
             <div>
               <h4 className="fw-bold m-0">Chi tiết hóa đơn</h4>
-              <p className="text-muted small m-0">Mã: <span className="text-dark fw-medium">{inv?.invoiceCode}</span> • {inv?.createdAt && new Date(inv.createdAt).toLocaleString('vi-VN')}</p>
+              <p className="text-muted small m-0">Mã: <span className="text-dark fw-medium">{inv?.invoiceCode}</span> • {inv?.createdAt && new Date(inv.createdAt.replace('Z', '')).toLocaleString('vi-VN')}</p>
             </div>
           </div>
           <span className="soft-badge" style={{ backgroundColor: meta.bg, color: meta.color, borderColor: meta.border }}>

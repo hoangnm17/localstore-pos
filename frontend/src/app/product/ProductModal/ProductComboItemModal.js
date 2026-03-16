@@ -118,23 +118,38 @@ function ProductComboItemModal({
     };
 
     useEffect(() => {
-        if (!open) return;
+        if (!keyword.trim()) {
+            setResults([]);
+            return;
+        }
 
-        setKeyword('');
-        setResults([]);
-        setSelectedProduct(null);
-        setUnitOptions([]);
-        setSelectedUnitId('');
-        setQuantity(1);
-        setError('');
-        setExistingEstimatedTotal(0);
+        const timer = setTimeout(() => {
+            searchProducts(keyword);
+        }, 500); // Đợi 500ms
 
-        searchProducts('');
-        loadExistingEstimatedTotal();
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [keyword]);
+
+    useEffect(() => {
+        if (!open) {
+
+            setKeyword('');
+            setResults([]);
+            setSelectedProduct(null);
+
+            setUnitOptions([]);
+            setSelectedUnitId('');
+            setQuantity(1);
+            setError('');
+            setExistingEstimatedTotal(0);
+            loadExistingEstimatedTotal();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     useEffect(() => {
+
         if (!selectedProduct?.id) return;
         loadUnitsForSelectedProduct(selectedProduct.id);
     }, [selectedProduct]);
@@ -260,11 +275,6 @@ function ProductComboItemModal({
                             className="form-control"
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    searchProducts(keyword);
-                                }
-                            }}
                             placeholder="Tên sản phẩm, mã SP, barcode..."
                         />
                     </div>
@@ -314,6 +324,12 @@ function ProductComboItemModal({
                             <tr>
                                 <td colSpan="8" className="text-center py-4">
                                     Đang tìm sản phẩm...
+                                </td>
+                            </tr>
+                        ) : keyword === '' && results.length === 0 ? (
+                            <tr>
+                                <td colSpan="8" className="text-center py-4 text-muted">
+                                    Nhập tên, mã sản phẩm hoặc barcode để tìm kiếm...
                                 </td>
                             </tr>
                         ) : results.length === 0 ? (

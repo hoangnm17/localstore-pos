@@ -16,6 +16,8 @@ const PAGE_TITLES = {
     '/schedule': 'Thời Khóa Biểu',
     '/reports': 'Báo Cáo',
     '/salary': 'Báo Cáo Lương',
+    '/my-schedule': 'Lịch của tôi',
+    '/handover-report':'Báo Cáo Bàn Giao Tiền Mặt',
 };
 
 const ROLE_LABELS = {
