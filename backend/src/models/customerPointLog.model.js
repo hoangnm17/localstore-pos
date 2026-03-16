@@ -57,3 +57,24 @@ exports.addPointLog = async ({ customerId, invoiceId = null, pointChange, reason
         `);
     return result.recordset[0];
 };
+
+exports.insertPointLog = async (
+    transaction,
+    customerId,
+    invoiceId,
+    pointChange,
+    reason
+) => {
+
+    await new sql.Request(transaction)
+        .input("customerId", sql.Int, customerId)
+        .input("invoiceId", sql.Int, invoiceId)
+        .input("pointChange", sql.Int, pointChange)
+        .input("reason", sql.VarChar, reason)
+        .query(`
+            INSERT INTO CustomerPointLogs
+            (customerId, invoiceId, pointChange, reason)
+            VALUES (@customerId, @invoiceId, @pointChange, @reason)
+        `);
+
+};

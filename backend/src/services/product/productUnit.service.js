@@ -9,35 +9,67 @@ function translateSqlError(err) {
 
     if (num === 2627 || num === 2601) {
         if (/barcode/i.test(msg)) {
-            return new Error('Barcode đơn vị tính đã được dùng. Vui lòng dùng barcode khác.');
+            return new Error('Barcode đơn vị tính đã được dùng.');
         }
-        return new Error('Dữ liệu đơn vị tính bị trùng lặp. Vui lòng kiểm tra lại.');
+        if (/UQ_ProductUnits_Product_UnitName/i.test(msg)) {
+            return new Error('Tên đơn vị tính đã tồn tại trong sản phẩm này.');
+        }
+        if (/UX_ProductUnits_OneBaseUnit/i.test(msg)) {
+            return new Error('Base unit đã tồn tại. Không thể tạo thêm đơn vị có conversionFactor = 1.');
+        }
+        return new Error('Dữ liệu đơn vị tính bị trùng.');
     }
 
     if (num === 547) {
-        if (/productId|Products/i.test(msg)) {
-            return new Error('Sản phẩm không tồn tại hoặc đã bị xóa.');
-        }
         return new Error('Dữ liệu liên kết không hợp lệ.');
     }
 
     return err;
 }
 
+function validatePayload(data) {
+    if (!data.unitName || !String(data.unitName).trim()) {
+        throw new Error('Tên đơn vị tính không được để trống.');
+    }
+
+    if (!VALID_UNIT_TYPES.includes(data.unitType)) {
+        throw new Error('Loại đơn vị không hợp lệ. Chỉ chấp nhận PIECE hoặc WEIGHT.');
+    }
+
+    const conversionFactor = Number(data.conversionFactor);
+    if (Number.isNaN(conversionFactor) || conversionFactor <= 0) {
+        throw new Error('Hệ số quy đổi phải lớn hơn 0.');
+    }
+
+    const salePrice = Number(data.salePrice);
+    if (Number.isNaN(salePrice) || salePrice <= 0) {
+        throw new Error('Giá bán không được để trống và phải lớn hơn 0.');
+    }
+}
+
 exports.getList = (filters) => productUnitModel.getList(filters);
 
-exports.getByBarcode = (barcode) => productUnitModel.getByBarcode(barcode);
+exports.getByBarcode = (barcode) => productUnitModel.getByBarcode(barcode?.trim());
 
 exports.getByProduct = (productId) => productUnitModel.getByProduct(productId);
 
 exports.create = async (data) => {
-    if (!VALID_UNIT_TYPES.includes(data.unitType)) {
-        throw new Error('Loại đơn vị không hợp lệ. Chỉ chấp nhận PIECE hoặc WEIGHT.');
+    validatePayload(data);
+    data.barcode = data.barcode?.trim() || null;
+
+    if (Number(data.conversionFactor) === 1) {
+        throw new Error('Base unit phải được quản lý ở API sản phẩm, không tạo ở API đơn vị tính.');
     }
+
     const product = await productModel.getProductById(data.productId);
     if (!product) {
         throw new Error('Không tìm thấy sản phẩm.');
     }
+
+    if (Number(data.salePrice) <= Number(product.salePrice)) {
+        throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
+    }
+
     if (data.barcode) {
         const existed = await productUnitModel.getByBarcode(data.barcode);
         if (existed) throw new Error('Barcode đã được dùng bởi đơn vị tính khác.');
@@ -51,22 +83,63 @@ exports.create = async (data) => {
 };
 
 exports.update = async (id, data) => {
-    if (data.unitType && !VALID_UNIT_TYPES.includes(data.unitType)) {
-        throw new Error('Loại đơn vị không hợp lệ. Chỉ chấp nhận PIECE hoặc WEIGHT.');
+    const current = await productUnitModel.getById(id);
+    if (!current) {
+        throw new Error('Không tìm thấy đơn vị tính.');
     }
-    if (data.barcode) {
-        const existed = await productUnitModel.getByBarcode(data.barcode);
-        // Cho phép barcode trùng với chính nó (update)
-        if (existed && String(existed.id) !== String(id)) {
+
+    if (Number(current.conversionFactor) === 1) {
+        throw new Error('Base unit phải được cập nhật ở API sản phẩm.');
+    }
+
+    const product = await productModel.getProductById(current.productId);
+    if (!product) {
+        throw new Error('Không tìm thấy sản phẩm.');
+    }
+
+    const merged = {
+        ...current,
+        ...data
+    };
+    merged.barcode = merged.barcode?.trim() || null;
+    validatePayload(merged);
+
+    if (Number(merged.conversionFactor) === 1) {
+        throw new Error('Không được đổi đơn vị phụ thành base unit.');
+    }
+
+    if (Number(merged.salePrice) <= Number(product.salePrice)) {
+        throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
+    }
+
+    if (merged.barcode) {
+        const existed = await productUnitModel.getByBarcode(merged.barcode);
+        if (existed && String(existed.productUnitId) !== String(id)) {
             throw new Error('Barcode đã được dùng bởi đơn vị tính khác.');
         }
     }
 
     try {
-        return await productUnitModel.update(id, data);
+        return await productUnitModel.update(id, merged);
     } catch (err) {
         throw translateSqlError(err);
     }
 };
 
-exports.remove = (id) => productUnitModel.remove(id);
+exports.remove = async (id) => {
+    const current = await productUnitModel.getById(id);
+    if (!current) {
+        throw new Error('Không tìm thấy đơn vị tính.');
+    }
+
+    if (Number(current.conversionFactor) === 1) {
+        throw new Error('Không được xóa base unit bằng API đơn vị tính.');
+    }
+
+    const deleted = await productUnitModel.remove(id);
+    if (!deleted) {
+        throw new Error('Xóa đơn vị tính thất bại.');
+    }
+
+    return true;
+};

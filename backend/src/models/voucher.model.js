@@ -269,3 +269,14 @@ exports.countVoucherReport = async () => {
         .query(`SELECT COUNT(*) AS total FROM Vouchers`);
     return result.recordset[0].total;
 };
+
+
+exports.increaseUsage = async (transaction, voucherId) => {
+    await new sql.Request(transaction)
+        .input("voucherId", sql.Int, voucherId)
+        .query(`
+            UPDATE Vouchers
+            SET currentUsage = currentUsage + 1
+            WHERE id = @voucherId
+        `);
+}

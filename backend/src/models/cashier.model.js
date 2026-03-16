@@ -11,9 +11,29 @@ module.exports.getMySchedule = async (staffId, startDate, endDate) => {
         .query(`
             SELECT 
                 ws.id as scheduleId, ws.workDate, ws.status as scheduleStatus,
-                sh.id as shiftId, ISNULL(sh.name, ws.snapshotShiftName) as shiftName, 
-                CONVERT(VARCHAR(5), ISNULL(sh.startTime, ws.snapshotStartTime), 108) as startTime,
-                CONVERT(VARCHAR(5), ISNULL(sh.endTime, ws.snapshotEndTime), 108) as endTime,
+                sh.id as shiftId, 
+                
+                -- LOGIC: Nếu <= Hôm nay thì giữ giờ cũ (snapshot). Nếu tương lai thì lấy giờ mới 
+                CASE 
+                    WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
+                    THEN ISNULL(ws.snapshotShiftName, sh.name)
+                    ELSE ISNULL(sh.name, ws.snapshotShiftName) 
+                END as shiftName, 
+                
+                CONVERT(VARCHAR(5), 
+                    CASE 
+                        WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
+                        THEN ISNULL(ws.snapshotStartTime, sh.startTime)
+                        ELSE ISNULL(sh.startTime, ws.snapshotStartTime) 
+                    END, 108) as startTime,
+                    
+                CONVERT(VARCHAR(5), 
+                    CASE 
+                        WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
+                        THEN ISNULL(ws.snapshotEndTime, sh.endTime)
+                        ELSE ISNULL(sh.endTime, ws.snapshotEndTime) 
+                    END, 108) as endTime,
+                    
                 c.counterName, c.counterCode,
                 ch.id as handoverId
             FROM WorkSchedules ws
@@ -46,7 +66,7 @@ module.exports.getPendingHandovers = async (staffId, workDate) => {
             WHERE ws.staffId = @staffId 
               AND ws.workDate = @workDate 
               AND ch.id IS NULL -- Điều kiện: Ca này chưa có bản ghi bàn giao
-              AND ws.counterId IS NOT NULL -- Thu ngân phải có quầy
+              AND ws.counterId IS NOT NULL 
             ORDER BY startTime ASC
         `);
     return result.recordset;

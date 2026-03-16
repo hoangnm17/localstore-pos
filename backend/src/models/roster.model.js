@@ -75,7 +75,7 @@ module.exports.checkCounterConflict = async (counterId, shiftId, workDate) => {
     return result.recordset[0];
 };
 
-// Tính tổng giờ trong ngày của nhân viên
+// Tính tổng giờ trong ngày 
 module.exports.getDailyHours = async (staffId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -83,17 +83,25 @@ module.exports.getDailyHours = async (staffId, workDate) => {
         .input('workDate', sql.Date, workDate)
         .query(`
             SELECT ISNULL(SUM(
-                DATEDIFF(MINUTE, sh.startTime, sh.endTime) / 60.0
+                CASE WHEN Eff.effEnd < Eff.effStart 
+                     THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
+                     ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
+                END
             ), 0) AS totalHours
             FROM WorkSchedules ws
             JOIN Shifts sh ON ws.shiftId = sh.id
+            CROSS APPLY (
+                SELECT 
+                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotStartTime IS NOT NULL THEN ws.snapshotStartTime ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
+                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotEndTime IS NOT NULL THEN ws.snapshotEndTime ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
+            ) AS Eff
             WHERE ws.staffId  = @staffId
               AND ws.workDate = @workDate
         `);
     return result.recordset[0]?.totalHours || 0;
 };
 
-// Tính tổng giờ trong tuần của nhân viên
+// Tính tổng giờ trong tuần 
 module.exports.getWeeklyHours = async (staffId, weekStart, weekEnd) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -102,10 +110,18 @@ module.exports.getWeeklyHours = async (staffId, weekStart, weekEnd) => {
         .input('weekEnd',sql.Date,   weekEnd)
         .query(`
             SELECT ISNULL(SUM(
-                DATEDIFF(MINUTE, sh.startTime, sh.endTime) / 60.0
+                CASE WHEN Eff.effEnd < Eff.effStart 
+                     THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
+                     ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
+                END
             ), 0) AS totalHours
             FROM WorkSchedules ws
             JOIN Shifts sh ON ws.shiftId = sh.id
+            CROSS APPLY (
+                SELECT 
+                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotStartTime IS NOT NULL THEN ws.snapshotStartTime ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
+                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotEndTime IS NOT NULL THEN ws.snapshotEndTime ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
+            ) AS Eff
             WHERE ws.staffId  = @staffId
               AND ws.workDate BETWEEN @weekStart AND @weekEnd
         `);
@@ -121,7 +137,7 @@ module.exports.removeShift = async (scheduleId) => {
     return true;
 };
 
-// Lấy lịch tuần
+// Lấy lịch tuần tổng hợp 
 module.exports.getWeeklySchedule = async (startDate, endDate) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -139,21 +155,36 @@ module.exports.getWeeklySchedule = async (startDate, endDate) => {
                 ws.counterId,
                 co.counterName,
                 co.counterCode,
-                ISNULL(sh.name, N'Hành chính') AS shiftName,
-                CONVERT(VARCHAR(5), ISNULL(sh.startTime,'08:00:00'), 108) AS startTime,
-                CONVERT(VARCHAR(5), ISNULL(sh.endTime, '17:00:00'), 108) AS endTime,
+                
+                -- CROSS APPLY xử lý logic thời gian
+                Eff.effName AS shiftName,
+                CONVERT(VARCHAR(5), Eff.effStart, 108) AS startTime,
+                CONVERT(VARCHAR(5), Eff.effEnd, 108) AS endTime,
+                
                 CASE
-                    WHEN ws.shiftId IS NOT NULL
-                        THEN DATEDIFF(MINUTE, sh.startTime, sh.endTime) / 60.0
+                    WHEN ws.shiftId IS NOT NULL THEN
+                        CASE WHEN Eff.effEnd < Eff.effStart 
+                             THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
+                             ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
+                        END
                     ELSE 8.0
                 END AS shiftHours
+                
             FROM Staff s
             LEFT JOIN Users u  ON s.userId = u.id
             LEFT JOIN Roles r  ON u.roleId = r.id
-            LEFT JOIN WorkSchedules ws ON s.id = ws.staffId
-                AND ws.workDate BETWEEN @startDate AND @endDate
+            LEFT JOIN WorkSchedules ws ON s.id = ws.staffId AND ws.workDate BETWEEN @startDate AND @endDate
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
             LEFT JOIN Counters co ON ws.counterId = co.id
+            
+            -- LOGIC: Nếu <= Hôm nay thì giữ giờ cũ (snapshot). Nếu tương lai thì lấy giờ mới (bảng Shifts)
+            CROSS APPLY (
+                SELECT 
+                    effName = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotShiftName, sh.name) ELSE ISNULL(sh.name, ws.snapshotShiftName) END,
+                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotStartTime, sh.startTime) ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
+                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotEndTime, sh.endTime) ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
+            ) AS Eff
+            
             WHERE s.employmentStatus = 'working'
             ORDER BY r.name, s.fullName, ws.workDate
         `);

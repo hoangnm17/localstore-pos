@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   invoiceCreate,
-  invoiceUpdate,
+  payCash,
   invoiceGetDrafts,
   invoiceGetDetail,
-  invoiceUpdateCustomer
+  invoiceUpdateCustomer,
+  invoiceCancel,
+  invoiceUpdateItems
 } from "../../services/Invoices/invoice.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 
@@ -28,7 +30,7 @@ export const useInvoiceTabs = () => {
 
   const createLocalInvoice = () => ({
     id: "local-" + crypto.randomUUID(),
-    items: [],                
+    items: [],
     status: "LOCAL",
     isSaving: false,
     itemsLoaded: true
@@ -57,7 +59,7 @@ export const useInvoiceTabs = () => {
 
         const formatted = drafts.map(inv => ({
           ...inv,
-          items: [],             
+          items: [],
           itemsLoaded: false,
           isSaving: false
         }));
@@ -96,13 +98,12 @@ export const useInvoiceTabs = () => {
       try {
         const res = await invoiceGetDetail(activeInvoice.id);
         const detail = res?.data;
-
         setInvoices(prev =>
           prev.map(inv =>
             inv.id === activeInvoice.id
               ? {
                 ...inv,
-                items: detail?.items ?? [],   
+                items: detail?.items ?? [],
                 itemsLoaded: true
               }
               : inv
@@ -137,7 +138,6 @@ export const useInvoiceTabs = () => {
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
 
-    // Optimistic UI update
     setInvoices(prev =>
       prev.map(inv =>
         inv.id === invoiceId
@@ -205,7 +205,7 @@ export const useInvoiceTabs = () => {
             )
           );
 
-          await invoiceUpdate(invoiceId, { items: newItems });
+          await invoiceUpdateItems(invoiceId, { items: newItems });
 
         } catch (err) {
           console.error("Auto save failed:", err);
@@ -228,27 +228,51 @@ export const useInvoiceTabs = () => {
 
   const updateInvoiceCustomer = async (invoiceId, customer) => {
     const id = String(invoiceId);
+    const invoice = invoices.find(i => String(i.id) === id);
+    if (!invoice) return;
 
     try {
-      // nếu invoice đã có trên DB thì update DB
-      const invoice = invoices.find(i => String(i.id) === id);
+      if (invoice.status === "LOCAL") {
+        setInvoices(prev => prev.map(inv =>
+          inv.id === id ? { ...inv, isSaving: true } : inv
+        ));
 
-      if (invoice && invoice.status !== "LOCAL") {
+        const res = await invoiceCreate({
+          items: invoice.items,
+          customerId: customer?.id ?? null
+        });
+
+        const newDbId = res?.data?.id;
+        if (newDbId) {
+          setInvoices(prev => prev.map(inv =>
+            inv.id === id ? {
+              ...inv,
+              id: newDbId,
+              status: "UNPAID",
+              customer,
+              isSaving: false,
+              itemsLoaded: true
+            } : inv
+          ));
+          setActiveInvoiceId(newDbId);
+        }
+        return;
+      }
+
+      if (invoice.status !== "LOCAL") {
         await invoiceUpdateCustomer(id, {
           customerId: customer?.id ?? null
         });
+
+        setInvoices(prev => prev.map(inv =>
+          String(inv.id) === id ? { ...inv, customer } : inv
+        ));
       }
-
-      setInvoices(prev =>
-        prev.map(inv =>
-          String(inv.id) === id
-            ? { ...inv, customer }   // lưu full object
-            : inv
-        )
-      );
-
     } catch (err) {
       console.error("Update customer failed:", err);
+      setInvoices(prev => prev.map(inv =>
+        inv.id === id ? { ...inv, isSaving: false } : inv
+      ));
     }
   };
 
@@ -259,58 +283,58 @@ export const useInvoiceTabs = () => {
   const pay = async (paymentInfo) => {
     if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
 
-    const paidInvoiceId = activeInvoice.id;
+    const invoiceId = activeInvoice.id;
 
     try {
-      clearAutoSave(paidInvoiceId);
+      clearAutoSave(invoiceId);
 
-      const res = await invoiceUpdate(paidInvoiceId, {
-        status: "PAID",
-        payment: paymentInfo
-      });
+      let res;
 
-      // bắt paid từ nhiều kiểu response khác nhau
-      const paid =
-        res?.paid ??
-        res?.data?.paid ??
-        res?.data?.data?.paid ??
-        res?.success ??
-        res?.data?.success ??
-        res?.data?.data?.success;
+      switch (paymentInfo.method) {
+        case "CASH":
+          res = await payCash(invoiceId, { payment: paymentInfo });
+          break;
 
-      // nếu backend trả pending thì xử lý riêng
-      if (res?.pending || res?.data?.pending) {
-        showNotification("Đang chờ....!", "error");
-        return res;
+        case "BANK":
+          return { pending: true };
+        default:
+          throw new Error("Unsupported payment method");
       }
-      //  nếu update ok (paid/success) thì cập nhật UI
-      if (!paid) {
-        showNotification("Thanh toán thất bại!", "success");
+
+      const data = res?.data?.data || res?.data || res;
+      
+      if (!data?.paid) {
+        showNotification(res || "Thanh toán thất bại!", "error");
         return res;
       }
 
       showNotification("Thanh toán thành công!", "success");
+
       let nextActiveId = null;
 
-      setInvoices(prev => {
-        const remaining = prev.filter(inv => inv.id !== paidInvoiceId);
+      setInvoices((prev) => {
+        const remaining = prev.filter((inv) => inv.id !== invoiceId);
 
-        const nextUnpaid = [...remaining].reverse().find(inv => inv.status === "UNPAID");
+        const nextUnpaid = [...remaining]
+          .reverse()
+          .find((inv) => inv.status === "UNPAID");
+
         if (nextUnpaid) {
           nextActiveId = nextUnpaid.id;
           return remaining;
         }
 
-        const local = createLocalInvoice(); // items: []
+        const local = createLocalInvoice();
         nextActiveId = local.id;
         return [...remaining, local];
       });
 
       if (nextActiveId) setActiveInvoiceId(nextActiveId);
 
-      return res;
+      return data;
     } catch (err) {
       console.error("Payment failed:", err);
+      showNotification("Thanh toán thất bại!", "error");
       throw err;
     }
   };
@@ -332,7 +356,7 @@ export const useInvoiceTabs = () => {
 
     if (shouldCancel && invoice.status === "UNPAID") {
       try {
-        await invoiceUpdate(id, { status: "CANCELLED" });
+        await invoiceCancel(id);
       } catch (err) {
         console.error("Cancel invoice failed:", err);
         return;

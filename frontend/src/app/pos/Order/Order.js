@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OrderItemList from "./OrderItemList/OrderItemList";
 import PaymentDetail from "./Payment/PaymentDetail";
 import CustomerSearch from "./Customer/CustomerSearch";
@@ -15,40 +15,46 @@ export default function Order({
   remove,
   onSelectCustomer,
   onPay,
+  onBankPaid,
+  activeItemId,
+  onChangeQty,
+  focusSignal,
+  openPaymentSignal,
 }) {
   const [showPayment, setShowPayment] = useState(false);
 
-  const handleConfirmPayment = async ({ method, amount }) => {
+  useEffect(() => {
+    if (!orderItems.length) return;
+    setShowPayment(true);
+  }, [openPaymentSignal]);
+
+  const handleConfirmPayment = async ({ method, amount, discount }) => {
     try {
       const res = await onPay({
         method,
-        amount
+        amount,
+        discount,
       });
 
       if (res?.paid || res?.success) {
         setShowPayment(false);
       }
-
-      if (res?.pending && res?.paymentUrl) {
-        window.location.href = res.paymentUrl;
-      }
-
     } catch (error) {
       console.error("Payment error:", error);
     }
   };
 
+  const handleSelectCustomer = (selectedCustomer) => {
+    onSelectCustomer(selectedCustomer);
+  };
+
   const isEmpty = orderItems.length === 0;
 
-const handleSelectCustomer = (selectedCustomer) => {
-  onSelectCustomer(selectedCustomer);
-};
   return (
     <div
       className="d-flex flex-column h-100 bg-white"
       style={{ borderRight: "1px solid #e5e7eb" }}
     >
-      {/* HEADER */}
       <div className="p-3 border-bottom">
         <CustomerSearch
           invoiceId={orderId}
@@ -57,7 +63,6 @@ const handleSelectCustomer = (selectedCustomer) => {
         />
       </div>
 
-      {/* ORDER BODY */}
       <div
         className="flex-grow-1 overflow-auto p-3"
         style={{ background: "#f9fafb" }}
@@ -67,10 +72,12 @@ const handleSelectCustomer = (selectedCustomer) => {
           increase={increase}
           decrease={decrease}
           remove={remove}
+          activeItemId={activeItemId}
+          onChangeQty={onChangeQty}
+          focusSignal={focusSignal}
         />
       </div>
 
-      {/* PAYMENT */}
       <div
         className="p-3 border-top bg-white"
         style={{ boxShadow: "0 -2px 8px rgba(0,0,0,0.05)" }}
@@ -88,8 +95,13 @@ const handleSelectCustomer = (selectedCustomer) => {
         <PaymentModal
           orderId={orderId}
           total={total}
+          customer={customer}
           onClose={() => setShowPayment(false)}
           onConfirm={handleConfirmPayment}
+          onBankPaid={() => {
+            setShowPayment(false);
+            onBankPaid?.(orderId);
+          }}
         />
       )}
     </div>

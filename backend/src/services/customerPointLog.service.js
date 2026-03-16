@@ -23,31 +23,50 @@ exports.getPointLogs = async (customerId, { page = 1, limit = 20 } = {}) => {
     };
 };
 
-/**
- * Điều chỉnh điểm thủ công (UC4: Accumulate Loyalty Points — staff thao tác)
- * pointChange > 0: cộng điểm  | pointChange < 0: trừ điểm
- */
-exports.adjustPoints = async (customerId, { pointChange, reason }) => {
-    if (!pointChange || pointChange === 0) {
-        throw new Error('pointChange phải khác 0');
-    }
+exports.adjustPoints = async (
+    transaction,
+    customerId,
+    invoiceId,
+    pointChange,
+    reason = "ADJUST"
+) => {
 
-    // Kiểm tra khách tồn tại
-    const customer = await customerModel.getCustomerById(customerId);
-    if (!customer) throw new Error('Không tìm thấy khách hàng');
+    if (!pointChange || pointChange === 0)
+        return 0;
+    
+    const customer = await customerModel.getCustomerForUpdate(
+        transaction,
+        customerId
+    );
 
-    // Không để min điểm < 0
-    if (pointChange < 0 && (customer.loyaltyPoints + pointChange) < 0) {
-        throw new Error(`Khách chỉ có ${customer.loyaltyPoints} điểm, không thể trừ ${Math.abs(pointChange)} điểm`);
-    }
+    if (!customer)
+        throw new Error("Customer not found");
 
-    // Ghi log + cập nhật điểm
-    const [log] = await Promise.all([
-        customerPointLogModel.addPointLog({ customerId, pointChange, reason }),
-        customerModel.updateCustomer(customerId, {
-            loyaltyPoints: customer.loyaltyPoints + pointChange
-        })
-    ]);
+    const newPoints = customer.loyaltyPoints + pointChange;
 
-    return log;
+    if (newPoints < 0)
+        throw new Error(
+            `Customer only has ${customer.loyaltyPoints} points`
+        );
+
+    /* ===== UPDATE POINT ===== */
+
+    await customerModel.updateCustomerPoints(
+        transaction,
+        customerId,
+        newPoints
+    );
+
+    /* ===== INSERT LOG ===== */
+
+    await customerPointLogModel.insertPointLog(
+        transaction,
+        customerId,
+        invoiceId,
+        pointChange,
+        reason
+    );
+
+    return pointChange;
 };
+

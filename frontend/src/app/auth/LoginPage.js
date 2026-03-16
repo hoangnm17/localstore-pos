@@ -15,7 +15,7 @@ function LoginPage() {
         navigate("/dashboard");
         break;
       case 'Cashier':
-        navigate("/sales");
+        navigate("/my-schedule");
         break;
       case 'Warehouse':
         navigate("/inventory/menu");

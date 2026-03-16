@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { formatCurrency } from "utils/formatters";
-
-const QUICK_MONEY = [10000, 20000, 50000, 100000, 200000, 500000];
+import useHotkeys from "hooks/pos/useHotKeys";
 
 export default function CashPayment({ total, onConfirm }) {
   const [customerPay, setCustomerPay] = useState("");
@@ -32,29 +31,16 @@ export default function CashPayment({ total, onConfirm }) {
     setCustomerPay(raw);
   };
 
-  const handleQuickAdd = (amount) => {
-    const current = Number(customerPay) || 0;
-    const newValue = current + amount;
-
-    setCustomerPay(String(newValue));
-
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-  };
+  useHotkeys({
+    F9: () => setCustomerPay(String(total)),
+    Enter: () => handleSubmit(),
+  });
 
   const handleSubmit = () => {
     if (customerPayNumber < total) return;
-
     onConfirm({
       amount: customerPayNumber,
     });
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
   };
 
   return (
@@ -73,7 +59,6 @@ export default function CashPayment({ total, onConfirm }) {
           className="form-control form-control-lg fw-bold text-primary pe-5"
           value={formatNumber(customerPay)}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
         />
 
         {customerPay && (
@@ -95,17 +80,6 @@ export default function CashPayment({ total, onConfirm }) {
 
       {/* QUICK MONEY */}
       <div className="row g-2 mb-3">
-        {QUICK_MONEY.map((amount) => (
-          <div key={amount} className="col-4">
-            <button
-              type="button"
-              className="btn btn-outline-secondary w-100 small fw-bold"
-              onClick={() => handleQuickAdd(amount)}
-            >
-              +{amount / 1000}k
-            </button>
-          </div>
-        ))}
 
         <div className="col-4">
           <button
@@ -121,8 +95,8 @@ export default function CashPayment({ total, onConfirm }) {
       {/* CHANGE DISPLAY */}
       <div
         className={`d-flex justify-content-between align-items-center p-4 rounded-4 mb-4 border ${change > 0
-            ? "bg-success bg-opacity-10 border-success border-opacity-25"
-            : "bg-light border-light"
+          ? "bg-success bg-opacity-10 border-success border-opacity-25"
+          : "bg-light border-light"
           }`}
         style={{
           transition: "all 0.2s ease",
