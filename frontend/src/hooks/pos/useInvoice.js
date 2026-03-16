@@ -16,6 +16,7 @@ export const useInvoiceTabs = () => {
   const [invoices, setInvoices] = useState([]);
   const [activeInvoiceId, setActiveInvoiceId] = useState(null);
   const saveTimeouts = useRef({});
+  const [accessError, setAccessError] = useState(null);
 
   /* =====================================================
      HELPERS
@@ -78,9 +79,14 @@ export const useInvoiceTabs = () => {
 
       } catch (err) {
         console.error("Load drafts failed:", err);
-        const local = createLocalInvoice();
-        setInvoices([local]);
-        setAsActive(local.id);
+        const errorMsg =
+         err.response?.data?.message 
+         || "Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!";
+        showNotification(errorMsg, "error");
+        setAccessError(errorMsg);
+        // const local = createLocalInvoice();
+        // setInvoices([local]);
+        // setAsActive(local.id);
       }
     };
 
@@ -427,5 +433,6 @@ export const useInvoiceTabs = () => {
     pay,
     closeTab,
     updateInvoiceCustomer,
+    accessError,
   };
 };
