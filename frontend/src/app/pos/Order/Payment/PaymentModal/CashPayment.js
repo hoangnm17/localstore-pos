@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { formatCurrency } from "utils/formatters";
 import useHotkeys from "hooks/pos/useHotKeys";
+import { POS_HOTKEYS } from "config/HotKey";
 
 export default function CashPayment({ total, onConfirm }) {
   const [customerPay, setCustomerPay] = useState("");
@@ -32,8 +33,13 @@ export default function CashPayment({ total, onConfirm }) {
   };
 
   useHotkeys({
-    F9: () => setCustomerPay(String(total)),
-    Enter: () => handleSubmit(),
+    [POS_HOTKEYS.CASH_FULL_AMOUNT]: () => {
+      setCustomerPay(String(total));
+    },
+
+    [POS_HOTKEYS.CONFIRM_PAYMENT]: () => {
+      handleSubmit();
+    },
   });
 
   const handleSubmit = () => {
@@ -87,7 +93,7 @@ export default function CashPayment({ total, onConfirm }) {
             className="btn btn-warning w-100 small fw-bold border-0"
             onClick={() => setCustomerPay(String(total))}
           >
-            Đủ tiền
+            Đủ tiền (F9)
           </button>
         </div>
       </div>

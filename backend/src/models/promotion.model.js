@@ -341,3 +341,63 @@ exports.countPromotionReport = async () => {
         .query(`SELECT COUNT(*) AS total FROM Promotions`);
     return result.recordset[0].total;
 };
+
+/**
+ * Tìm giảm giá áp dụng cho sản phẩm theo productId và productUnitId.
+ * Ưu tiên: theo đơn vị (productUnitId) > theo sản phẩm (productId) > theo danh mục (categoryId)
+ * Nếu có nhiều KM cùng cấp, chọn giá trị cao nhất.
+ */
+exports.getDiscountByProduct = async ({ productId, productUnitId }) => {
+    const pool = await connectDB();
+
+    // Lấy categoryId của sản phẩm
+    const productRes = await pool.request()
+        .input('productId', sql.BigInt, productId)
+        .query('SELECT categoryId FROM Products WHERE id = @productId');
+
+    if (productRes.recordset.length === 0) return null;
+    const categoryId = productRes.recordset[0].categoryId;
+
+    const now = new Date();
+    const result = await pool.request()
+        .input('productId', sql.BigInt, productId)
+        .input('productUnitId', sql.Int, productUnitId || null)
+        .input('categoryId', sql.Int, categoryId || null)
+        .input('now', sql.DateTime2, now)
+        .query(`
+            SELECT TOP 1
+                p.id          AS promotionId,
+                p.name        AS promotionName,
+                p.type,
+                p.value       AS discountValue,
+                CASE 
+                    WHEN pp.productUnitId = @productUnitId THEN 1
+                    WHEN pp.productId    = @productId      THEN 2
+                    ELSE 3
+                END AS priority
+            FROM Promotions p
+            JOIN PromotionProducts pp ON pp.promotionId = p.id
+            WHERE p.status = 'Active'
+              AND (p.startDate IS NULL OR p.startDate <= @now)
+              AND (p.endDate   IS NULL OR p.endDate   >= @now)
+              AND (
+                    (@productUnitId IS NOT NULL AND pp.productUnitId = @productUnitId)
+                 OR pp.productId    = @productId
+                 OR (@categoryId IS NOT NULL AND pp.categoryId = @categoryId)
+              )
+            ORDER BY priority ASC, p.value DESC
+        `);
+
+    if (result.recordset.length === 0) {
+        return { discountPercent: 0, discountAmount: 0, promotionId: null, promotionName: null };
+    }
+
+    const row = result.recordset[0];
+    return {
+        promotionId: row.promotionId,
+        promotionName: row.promotionName,
+        type: row.type,
+        discountPercent: row.type === 'Percent' ? parseFloat(row.discountValue) : 0,
+        discountAmount: row.type === 'Amount' ? parseFloat(row.discountValue) : 0
+    };
+};

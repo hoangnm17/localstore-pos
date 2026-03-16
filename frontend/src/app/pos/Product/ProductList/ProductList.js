@@ -1,6 +1,6 @@
 import React, { memo, useState } from "react";
-import ProductCard from "./ProductCard.js";
 import ProductUnitModal from "./ProductUnitModal.js";
+import ProductCard from "components/pos/Product/ProductCard.js";
 
 const ProductList = ({ products = [], onSelect }) => {
   const [targetProduct, setTargetProduct] = useState(null);
@@ -22,7 +22,7 @@ const ProductList = ({ products = [], onSelect }) => {
   };
 
   return (
-    <div className="d-flex flex-wrap gap-3 justify-content-start">
+    <div className="d-flex flex-wrap gap-4 justify-content-start">
       {products.map((product) => (
         <ProductCard
           key={product.id}

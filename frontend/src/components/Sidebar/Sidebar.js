@@ -35,11 +35,18 @@ const Sidebar = () => {
         {
             title: 'Đơn Hàng', icon: 'bi-receipt', id: 'orders',
             roles: ['Manager', 'Cashier'],
-            children: [{ title: 'Danh sách đơn', path: '/invoices' }]
+            children: [
+                { title: 'Danh sách đơn hàng', path: '/invoices' },
+                { title: 'Danh sách hoàn hàng', path: '/returns' }
+            ]
         },
         {
-            title: 'Kho Hàng', icon: 'bi-box-seam-fill', path: '/inventory/menu',
-            roles: ['Manager', 'Warehouse']
+            title: 'Kho Hàng', icon: 'bi-box-seam-fill', id: 'inventory',
+            roles: ['Manager', 'Warehouse'],
+            children: [
+                { title: 'Quản lý kho', path: '/inventory/menu'},
+                { title: 'Nhập kho hàng hoàn trả', path: '/return-items' }
+            ]
         },
         {
             title: 'Sản phẩm', icon: 'bi-box-fill', id: 'products',
@@ -63,7 +70,7 @@ const Sidebar = () => {
             roles: ['Manager'],
             children: [
                 { title: 'Danh sách ca', path: '/shifts' },
-                { title: 'Phân công lịch', path: '/schedule' } 
+                { title: 'Phân công lịch', path: '/schedule' }
             ]
         },
         {
@@ -97,8 +104,8 @@ const Sidebar = () => {
                     padding: '10px 16px',
                     margin: '0 12px 12px',
                     background: roleName === 'Manager' ? 'rgba(81, 204, 237, 1)'
-                              : roleName === 'Cashier' ? 'rgba(34,197,94,1)'
-                              : 'rgba(251,146,60,1)',
+                        : roleName === 'Cashier' ? 'rgba(34,197,94,1)'
+                            : 'rgba(251,146,60,1)',
                     borderRadius: '10px',
                     color: '#fff'
                 }}>

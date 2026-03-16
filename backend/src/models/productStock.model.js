@@ -317,6 +317,20 @@ const searchProductUnits = async (keyword) => {
     return result.recordset;
 };
 
+const addStock = async (transaction, productId, quantity) => {
+
+  const result = await new sql.Request(transaction)
+    .input("productId", sql.BigInt, productId)
+    .input("quantity", sql.Decimal(15, 3), quantity)
+    .query(`
+      UPDATE InventoryStocks
+      SET quantityOnHand = quantityOnHand + @quantity
+      WHERE productId = @productId
+    `);
+
+  return result.rowsAffected[0];
+};
+
 module.exports = {
     getStockByProductId,
     updateStock,
@@ -329,5 +343,6 @@ module.exports = {
     updateMinThreshold,
     searchProducts,
     getLowStockProductUnits,
-    searchProductUnits
+    searchProductUnits,
+    addStock,
 }

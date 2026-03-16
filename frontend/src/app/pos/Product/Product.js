@@ -4,15 +4,17 @@ import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
 import { getAllProducts } from "services/Product/product.service";
-import ScanBarcode from "components/pos/ScanBarcode";
+import ScanBarcode from "components/pos/Sale/ScanBarcode";
 import { useNotification } from "components/global/Notification/NotificationContext";
 import { getSocket } from "utils/socket";
+import { POS_HOTKEYS } from "config/HotKey";
+import useHotkeys from "hooks/pos/useHotKeys";
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
 };
 
-export default function Product({ addItem }) {
+export default function Product({ addItem, focusSignal } ) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -26,28 +28,21 @@ export default function Product({ addItem }) {
   useEffect(() => {
     const socket = getSocket();
     const handleInventoryUpdate = (data) => {
-
       if (!data?.items) return;
-
       setProducts((prev) =>
         prev.map((p) => {
-
           const found = data.items.find(
             (i) => String(i.productId) === String(p.id)
           );
 
           if (!found) return p;
-
           return {
             ...p,
             stock: found.stock
           };
-
         })
       );
-
     };
-
     socket.on("inventory:update", handleInventoryUpdate);
 
     return () => {
@@ -56,35 +51,23 @@ export default function Product({ addItem }) {
 
   }, []);
 
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
+  useHotkeys({
+    [POS_HOTKEYS.OPEN_SCAN]: () => {
       const tag = document.activeElement.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 
-      if (e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        setShowScan(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
+      setShowScan(true);
+    },
+  });
 
   const handleAddItem = (product, unit) => {
     if (unit.stock <= 0) {
       showNotification(`Sản phẩm [${unit?.unitName || 'Đơn vị'}] đã hết hàng!`, "error");
       return;
     }
-
     addItem({
       productId: product.id,
-      unitId: unit.unitId,
+      productUnitId: unit.unitId,
       productName: product.name,
       unitName: unit.unitName,
       unitPrice: unit.price,
@@ -170,78 +153,84 @@ export default function Product({ addItem }) {
   }, [search, selectedCategory]);
 
   return (
-    <div className="container-fluid py-4 bg-light min-vh-100">
-      <div className="row justify-content-center">
-        <div className="col-12" style={{ maxWidth: "1200px" }}>
-          <div className="bg-white p-4 shadow-sm rounded-4 border-0">
+    <div className="d-flex flex-column bg-light" style={{ height: "100vh", overflow: "hidden" }}>
+      <div className="container-fluid flex-grow-1 d-flex flex-column py-3 overflow-hidden">
+        <div className="card border-0 shadow-sm rounded-4 d-flex flex-column flex-grow-1 overflow-hidden">
 
-            {/* FILTER */}
-            <div className="mb-4 border-bottom pb-4">
-              <FilterBar
-                keyword={search}
-                onKeywordChange={setSearch}
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                addItem={handleBarcode}
-              />
-            </div>
+          {/* HEADER: FilterBar (Cố định chiều cao) */}
+          <div className="card-header bg-white border-0 pt-4 px-4 flex-shrink-0">
+            <FilterBar
+              keyword={search}
+              onKeywordChange={setSearch}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              addItem={handleBarcode}
+              focusSignal={focusSignal}
+            />
+          </div>
 
-            {/* LOADING */}
+          {/* BODY: Danh sách sản phẩm (Tự động lấp đầy và cho phép cuộn nội bộ) */}
+          <div className="card-body px-4 flex-grow-1 overflow-auto custom-scrollbar">
             {loading ? (
-              <div className="text-center py-5">
-                <div
-                  className="spinner-border text-primary border-3"
-                  role="status"
-                />
-                <p className="mt-3 text-secondary fw-medium">
-                  Đang cập nhật danh sách...
-                </p>
+              <div className="d-flex flex-column align-items-center justify-content-center h-100">
+                <div className="spinner-border text-primary" role="status"></div>
+                <span className="mt-2 text-muted">Đang tải...</span>
               </div>
             ) : products.length > 0 ? (
-              <>
-                <ProductList
-                  products={products}
-                  onSelect={(product, selectedUnit) => {
-                    handleAddItem(product, selectedUnit)
-                  }}
-                />
-
-                {showScan && (
-                  <ScanBarcode
-                    open={showScan}
-                    onClose={() => setShowScan(false)}
-                    onDetected={handleBarcode}
-                  />
-                )}
-
-                {/* PAGINATION */}
-                <div className="mt-4 border-top pt-4">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={(page) => {
-                      setCurrentPage(page);
-                      window.scrollTo({
-                        top: 0,
-                        behavior: "smooth",
-                      });
-                    }}
-                  />
-                </div>
-
-              </>
+              <ProductList
+                products={products}
+                onSelect={handleAddItem}
+              />
             ) : (
-              <div className="text-center py-5">
+              <div className="h-100 d-flex flex-column align-items-center justify-content-center">
                 <i className="bi bi-search fs-1 text-muted opacity-25"></i>
-                <p className="mt-3 text-secondary fs-5">
-                  Không tìm thấy sản phẩm
-                </p>
+                <p className="text-secondary mt-2">Không tìm thấy sản phẩm</p>
               </div>
             )}
           </div>
+
+          {/* FOOTER: Pagination (Cố định ở đáy card) */}
+          {products.length > 0 && (
+            <div className="card-footer bg-white border-top py-3 px-4 flex-shrink-0">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted small d-none d-md-inline">
+                  Hiển thị {products.length} sản phẩm
+                </span>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {showScan && <ScanBarcode open={showScan} onClose={() => setShowScan(false)} onDetected={handleBarcode} />}
+
+      <style jsx>{`
+        /* Ẩn thanh cuộn toàn trang */
+        :global(body) {
+          overflow: hidden;
+        }
+
+        /* Tùy chỉnh thanh cuộn nội bộ cho đẹp */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #ccc;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #bbb;
+        }
+      `}</style>
     </div>
   );
 }
