@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   invoiceCreate,
-  payCash,
   invoiceGetDrafts,
   invoiceGetDetail,
   invoiceUpdateCustomer,
   invoiceCancel,
   invoiceUpdateItems
 } from "../../services/Invoices/invoice.service";
+
+import { payCash, createBankPayment } from "services/Payment/payment.service";
 import { useNotification } from "components/global/Notification/NotificationContext";
 
 export const useInvoiceTabs = () => {
@@ -17,9 +18,6 @@ export const useInvoiceTabs = () => {
   const [activeInvoiceId, setActiveInvoiceId] = useState(null);
   const saveTimeouts = useRef({});
 
-  /* =====================================================
-     HELPERS
-  ===================================================== */
 
   const clearAutoSave = (id) => {
     if (saveTimeouts.current[id]) {
@@ -82,8 +80,7 @@ export const useInvoiceTabs = () => {
      ACTIVE INVOICE
   ===================================================== */
 
-  const activeInvoice =
-    invoices.find(i => i.id === activeInvoiceId) || null;
+  const activeInvoice = invoices.find(i => i.id === activeInvoiceId) || null;
 
   /* =====================================================
      LAZY LOAD DETAIL
@@ -119,19 +116,12 @@ export const useInvoiceTabs = () => {
 
   }, [activeInvoiceId]);
 
-  /* =====================================================
-     CREATE TAB
-  ===================================================== */
-
   const createInvoiceTab = useCallback(() => {
     const local = createLocalInvoice();
     setInvoices(prev => [...prev, local]);
     setAsActive(local.id);
   }, []);
 
-  /* =====================================================
-     UPDATE ITEMS
-  ===================================================== */
 
   const updateInvoiceItems = async (invoiceId, newItems = []) => {
 
@@ -145,8 +135,6 @@ export const useInvoiceTabs = () => {
           : inv
       )
     );
-
-    /* ========= LOCAL → CREATE ========= */
 
     if (invoice.status === "LOCAL" && newItems.length > 0) {
       try {
@@ -188,8 +176,6 @@ export const useInvoiceTabs = () => {
       return;
     }
 
-    /* ========= UNPAID → AUTOSAVE ========= */
-
     if (invoice.status === "UNPAID") {
 
       clearAutoSave(invoiceId);
@@ -204,7 +190,6 @@ export const useInvoiceTabs = () => {
                 : inv
             )
           );
-
           await invoiceUpdateItems(invoiceId, { items: newItems });
 
         } catch (err) {
@@ -221,10 +206,6 @@ export const useInvoiceTabs = () => {
       }, 1000);
     }
   };
-
-  /* =====================================================
-   UPDATE CUSTOMER
-===================================================== */
 
   const updateInvoiceCustomer = async (invoiceId, customer) => {
     const id = String(invoiceId);
@@ -276,71 +257,52 @@ export const useInvoiceTabs = () => {
     }
   };
 
-  /* =====================================================
-     PAY
-  ===================================================== */
+  const handlePaymentSuccess = useCallback((invoiceId) => {
+    showNotification("Thanh toán thành công!", "success");
+
+    let nextActiveId = null;
+    setInvoices((prev) => {
+      const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
+
+      // Tìm hóa đơn UNPAID khác để nhảy sang
+      const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
+
+      if (nextUnpaid) {
+        nextActiveId = nextUnpaid.id;
+        return remaining;
+      }
+
+      // Nếu không còn đơn nào thì tạo đơn mới
+      const local = createLocalInvoice();
+      nextActiveId = local.id;
+      return [...remaining, local];
+    });
+
+    if (nextActiveId) setActiveInvoiceId(nextActiveId);
+  }, [showNotification]);
 
   const pay = async (paymentInfo) => {
     if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
-
     const invoiceId = activeInvoice.id;
 
     try {
       clearAutoSave(invoiceId);
-
-      let res;
-
-      switch (paymentInfo.method) {
-        case "CASH":
-          res = await payCash(invoiceId, { payment: paymentInfo });
-          break;
-
-        case "BANK":
-          return { pending: true };
-        default:
-          throw new Error("Unsupported payment method");
+      if (paymentInfo.method === "CASH") {
+        const res = await payCash(invoiceId, { payment: paymentInfo });
+        const data = res?.data?.data || res?.data || res;
+        return data;
+      } else if (paymentInfo.method === "BANK") {
+        const qrRes = await createBankPayment(invoiceId, { discount: paymentInfo.discount });
+        const qr = qrRes?.data?.data?.qr;
+        if (!qr) throw new Error("QR generation failed");
+        return { pending: true, qr };
       }
-
-      const data = res?.data?.data || res?.data || res;
-      
-      if (!data?.paid) {
-        showNotification(res || "Thanh toán thất bại!", "error");
-        return res;
-      }
-
-      showNotification("Thanh toán thành công!", "success");
-
-      let nextActiveId = null;
-
-      setInvoices((prev) => {
-        const remaining = prev.filter((inv) => inv.id !== invoiceId);
-
-        const nextUnpaid = [...remaining]
-          .reverse()
-          .find((inv) => inv.status === "UNPAID");
-
-        if (nextUnpaid) {
-          nextActiveId = nextUnpaid.id;
-          return remaining;
-        }
-
-        const local = createLocalInvoice();
-        nextActiveId = local.id;
-        return [...remaining, local];
-      });
-
-      if (nextActiveId) setActiveInvoiceId(nextActiveId);
-
-      return data;
     } catch (err) {
-      console.error("Payment failed:", err);
       showNotification("Thanh toán thất bại!", "error");
       throw err;
     }
   };
-  /* =====================================================
-     CLOSE TAB
-  ===================================================== */
+
 
   const closeTab = async (id, shouldCancel = true) => {
 
@@ -379,9 +341,32 @@ export const useInvoiceTabs = () => {
     }
   };
 
-  /* =====================================================
-     CLEANUP
-  ===================================================== */
+  const goToNextInvoice = useCallback(() => {
+    if (!invoices.length || !activeInvoiceId) return;
+
+    const currentIndex = invoices.findIndex(
+      (inv) => String(inv.id) === String(activeInvoiceId)
+    );
+
+    if (currentIndex === -1) return;
+
+    const nextIndex = (currentIndex + 1) % invoices.length;
+    setAsActive(invoices[nextIndex].id);
+  }, [invoices, activeInvoiceId]);
+
+  const goToPrevInvoice = useCallback(() => {
+    if (!invoices.length || !activeInvoiceId) return;
+
+    const currentIndex = invoices.findIndex(
+      (inv) => String(inv.id) === String(activeInvoiceId)
+    );
+
+    if (currentIndex === -1) return;
+
+    const prevIndex = (currentIndex - 1 + invoices.length) % invoices.length;
+    setAsActive(invoices[prevIndex].id);
+  }, [invoices, activeInvoiceId]);
+
 
   useEffect(() => {
     const timeouts = saveTimeouts.current;
@@ -401,5 +386,8 @@ export const useInvoiceTabs = () => {
     pay,
     closeTab,
     updateInvoiceCustomer,
+    handlePaymentSuccess,
+    goToNextInvoice,
+    goToPrevInvoice,
   };
 };

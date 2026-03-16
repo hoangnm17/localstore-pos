@@ -4,22 +4,21 @@ export const useOrderItems = () => {
     const existed = items.find(
       p =>
         p.productId === product.productId &&
-        p.unitPrice === product.unitPrice
+        p.productUnitId === product.productUnitId
     );
 
     if (existed) {
+
+      const maxQty = existed.quantityOnHand ?? Infinity;
+
       const updated = items.map(p =>
         p.id === existed.id
           ? {
             ...p,
-            quantity: Math.min(
-              p.quantity + 1,
-              p.quantityOnHand
-            )
+            quantity: Math.min(p.quantity + 1, maxQty)
           }
           : p
       );
-
       return {
         items: updated,
         activeId: existed.id
@@ -30,7 +29,7 @@ export const useOrderItems = () => {
       id: crypto.randomUUID(),
       productId: product.productId,
       productName: product.productName,
-      productUnitId: product.unitId,
+      productUnitId: product.productUnitId,
       unitPrice: product.unitPrice,
       unitName: product.unitName,
       quantity: 1,
@@ -38,7 +37,7 @@ export const useOrderItems = () => {
       factor: product.factor,
       unitType: product.unitType,
     };
-    
+
     return {
       items: [...items, newItem],
       activeId: newItem.id
