@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import Sidebar from '../../components/Sidebar/Sidebar';
 import api from '../../services/axiosInstance';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
@@ -46,8 +45,8 @@ const WorkSchedule = () => {
     const [currentPage, setCurrentPage] = useState(1);
 
 
-    const [assignCell, setAssignCell] = useState(null);        
-    const [removeId, setRemoveId] = useState(null);            
+    const [assignCell, setAssignCell] = useState(null);
+    const [removeId, setRemoveId] = useState(null);
     const [removeLoading, setRemoveLoading] = useState(false);
 
     const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -158,9 +157,8 @@ const WorkSchedule = () => {
             `}</style>
 
             <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
-                <Sidebar />
+                <div className=" flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
 
-                <div className="flex-grow-1 p-4">
                     {/* Header */}
                     <ScheduleHeader
                         weekDates={weekDates}

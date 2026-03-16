@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import Sidebar from '../../components/Sidebar/Sidebar';
 import Pagination from '../../components/Pagination/Pagination';
 import api from '../../services/axiosInstance';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
@@ -40,29 +39,29 @@ const ShiftList = () => {
   useEffect(() => { fetchShifts(); }, [fetchShifts]);
   useEffect(() => { setPage(1); }, [searchTerm, filterStatus]);
 
-  const openCreate  = () => setModalType('create');
-  const openUpdate  = (s) => { setSelectedShift(s); setModalType('update'); };
-  const openToggle  = (s) => { setSelectedShift(s); setModalType('toggle'); };
-  const closeModal  = () => { setModalType(null); setSelectedShift(null); };
+  const openCreate = () => setModalType('create');
+  const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
+  const openToggle = (s) => { setSelectedShift(s); setModalType('toggle'); };
+  const closeModal = () => { setModalType(null); setSelectedShift(null); };
   const handleSuccess = useCallback(() => { closeModal(); fetchShifts(); }, [fetchShifts]);
 
   const filteredShifts = useMemo(() => {
     return shifts.filter(s => {
       const matchSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus =
-        filterStatus === 'all'      ? true :
-        filterStatus === 'active'   ? (s.isActive === 1 || s.isActive === true) :
-        !(s.isActive === 1 || s.isActive === true);
+        filterStatus === 'all' ? true :
+          filterStatus === 'active' ? (s.isActive === 1 || s.isActive === true) :
+            !(s.isActive === 1 || s.isActive === true);
       return matchSearch && matchStatus;
     });
   }, [shifts, searchTerm, filterStatus]);
 
   const totalPages = Math.ceil(filteredShifts.length / PAGE_SIZE);
-  const paginated  = filteredShifts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const paginated = filteredShifts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = useMemo(() => ({
-    total:    shifts.length,
-    active:   shifts.filter(s => s.isActive === 1 || s.isActive === true).length,
+    total: shifts.length,
+    active: shifts.filter(s => s.isActive === 1 || s.isActive === true).length,
     inactive: shifts.filter(s => !(s.isActive === 1 || s.isActive === true)).length,
   }), [shifts]);
 
@@ -88,44 +87,41 @@ const ShiftList = () => {
 
   return (
     <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
-      <Sidebar />
-      <div className="flex-grow-1 p-4">
-
-        {/* HEADER BANNER */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
-          borderRadius: '20px', padding: '28px 32px', marginBottom: '24px', color: '#fff'
-        }}>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h3 className="fw-bold m-0">Quản Lý Ca Làm Việc</h3>
-              <p className="m-0 mt-1 opacity-75 small">Quản lý và kích hoạt / ngừng sử dụng ca làm việc</p>
-            </div>
-            <button className="btn btn-light fw-bold px-4 shadow-sm"
-              style={{ borderRadius: '12px' }} onClick={openCreate}>
-              <i className="bi bi-plus-circle-fill me-2" />Tạo Ca Mới
-            </button>
+      <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
+        
+        {/* HEADER */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h3 className="fw-bold m-0 text-dark">Quản Lý Ca Làm Việc</h3>
+            <p className="m-0 mt-2 text-secondary">Quản lý và kích hoạt / ngừng sử dụng ca làm việc.</p>
           </div>
+          <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+            style={{ borderRadius: '8px', background: '#6366f1' }} onClick={openCreate}>
+            <i className="bi bi-plus-circle-fill" /> Tạo Ca Mới
+          </button>
+        </div>
 
-          <div className="row g-3">
-            {[
-              { label: 'Tổng số ca', value: stats.total, icon: 'bi-clock-fill', color: 'rgba(255,255,255,0.15)' },
-              { label: 'Đang sử dụng', value: stats.active, icon: 'bi-check-circle-fill', color: 'rgba(255,255,255,0.15)' },
-              { label: 'Ngừng sử dụng', value: stats.inactive, icon: 'bi-x-circle-fill', color: 'rgba(255,255,255,0.15)' },
-            ].map(({ label, value, icon, color }) => (
-              <div key={label} className="col-6 col-md-4">
-                <div style={{ background: color, borderRadius: '12px', padding: '14px 16px', backdropFilter: 'blur(10px)' }}>
-                  <div className="d-flex align-items-center gap-2">
-                    <i className={`bi ${icon} fs-5 opacity-75`} />
-                    <div>
-                      <div className="fw-bold fs-5 lh-1">{value}</div>
-                      <small className="opacity-75" style={{ fontSize: '0.75rem' }}>{label}</small>
-                    </div>
+        {/* STATS */}
+        <div className="row g-3 mb-4">
+          {[
+            { label: 'Tổng số ca', value: stats.total, icon: 'bi-clock-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
+            { label: 'Đang sử dụng', value: stats.active, icon: 'bi-check-circle-fill', textClass: 'text-success', bgClass: 'bg-success-subtle' },
+            { label: 'Ngừng sử dụng', value: stats.inactive, icon: 'bi-x-circle-fill', textClass: 'text-danger', bgClass: 'bg-danger-subtle' },
+          ].map(({ label, value, icon, textClass, bgClass }) => (
+            <div key={label} className="col-12 col-md-4">
+              <div className="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <div className="d-flex align-items-center gap-3">
+                  <div className={`d-flex align-items-center justify-content-center rounded-3 ${bgClass} ${textClass}`} style={{ width: '48px', height: '48px' }}>
+                    <i className={`bi ${icon} fs-4`} />
+                  </div>
+                  <div>
+                    <div className="fw-bold fs-4 lh-1 text-dark mb-1">{value}</div>
+                    <small className="text-secondary fw-medium" style={{ fontSize: '0.8rem' }}>{label}</small>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* SEARCH & FILTER */}
