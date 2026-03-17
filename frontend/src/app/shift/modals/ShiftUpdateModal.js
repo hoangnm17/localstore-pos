@@ -33,20 +33,29 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [errorMsg]);
+const getDiff = (m1, m2) => {
+    let d = m1 - m2;
+    if (d < -720) d += 1440;
+    if (d > 720) d -= 1440;
+    return d;
+  };
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Tên ca không được để trống!';
     else if (form.name.trim().length < 3) e.name = 'Tên ca phải có ít nhất 3 ký tự!';
+    else if (form.name.length > 50) e.name = 'Tên ca tối đa 50 ký tự!';
 
     if (!form.startTime) e.startTime = 'Chọn giờ bắt đầu!';
     if (!form.endTime) e.endTime = 'Chọn giờ kết thúc!';
 
     if (form.startTime && form.endTime) {
-      const diff = toMins(form.endTime) - toMins(form.startTime);
-      if (diff <= 0) e.endTime = 'Giờ kết thúc phải sau giờ bắt đầu!';
-      else if (diff < 30) e.endTime = 'Ca làm tối thiểu 30 phút!';
-      else if (diff > 720) e.endTime = 'Ca làm tối đa 12 giờ!';
+      let duration = toMins(form.endTime) - toMins(form.startTime);
+      if (duration < 0) duration += 1440; 
+
+      if (duration === 0) e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
+      else if (duration < 30) e.endTime = 'Ca làm tối thiểu 30 phút!';
+      else if (duration > 600) e.endTime = 'Ca làm tối đa 10 giờ!';
     }
 
     const hasCheckIn = form.checkInStart || form.checkInEnd;
@@ -55,28 +64,29 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       if (!form.checkInEnd) e.checkInEnd = 'Nhập deadline chấm công!';
 
       if (form.checkInStart && form.checkInEnd && form.startTime && form.endTime) {
-        const startM    = toMins(form.startTime);
-        const endM      = toMins(form.endTime);
+        const startM = toMins(form.startTime);
+        const endM = toMins(form.endTime);
         const checkInSM = toMins(form.checkInStart);
         const checkInEM = toMins(form.checkInEnd);
 
-        if (checkInSM >= checkInEM)
+        if (getDiff(checkInEM, checkInSM) <= 0)
           e.checkInEnd = 'Deadline phải sau giờ bắt đầu nhận chấm công!';
-        if (checkInSM < startM - 30)
+        if (getDiff(checkInSM, startM) < -30)
           e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
-        if (checkInEM > endM + 30)
+        if (getDiff(checkInEM, endM) > 30)
           e.checkInEnd = 'Không được muộn hơn giờ kết thúc ca quá 30 phút!';
       }
     }
 
     if (form.checkOutDeadline && form.startTime && form.endTime) {
       const checkOutM = toMins(form.checkOutDeadline);
-      const startM    = toMins(form.startTime);
-      const endM      = toMins(form.endTime);
-      if (checkOutM <= startM)
+      const startM = toMins(form.startTime);
+      const endM = toMins(form.endTime);
+      
+      if (getDiff(checkOutM, startM) <= 0)
         e.checkOutDeadline = 'Thời gian kết ca phải sau giờ bắt đầu ca!';
-      if (checkOutM > endM + 120)
-        e.checkOutDeadline = 'Thời gian kết ca không được trễ hơn giờ kết thúc quá 2 giờ!';
+      if (getDiff(checkOutM, endM) > 30)
+        e.checkOutDeadline = 'Thời gian kết ca không được trễ hơn giờ kết thúc quá 30 phút!';
     }
 
     setErrors(e);
@@ -92,7 +102,7 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       if (name === 'startTime' && value) {
         const startMins = toMins(value);
         updated.checkInStart = fromMins(startMins - 5);
-        updated.checkInEnd   = fromMins(startMins - 5 + 10);
+        updated.checkInEnd = fromMins(startMins - 5 + 10);
       }
 
       if (name === 'checkInStart' && value) {

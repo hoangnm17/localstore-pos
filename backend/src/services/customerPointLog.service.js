@@ -49,15 +49,12 @@ exports.adjustPoints = async (
             `Customer only has ${customer.loyaltyPoints} points`
         );
 
-    /* ===== UPDATE POINT ===== */
 
     await customerModel.updateCustomerPoints(
         transaction,
         customerId,
         newPoints
     );
-
-    /* ===== INSERT LOG ===== */
 
     await customerPointLogModel.insertPointLog(
         transaction,

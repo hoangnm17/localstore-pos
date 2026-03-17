@@ -558,16 +558,16 @@ CREATE TABLE InvoiceItems (
     invoiceId BIGINT NOT NULL,
 
     productId BIGINT NOT NULL,
-    productUnitId INT NOT NULL,
+    -- productUnitId INT NOT NULL,
 
     productName NVARCHAR(255) NOT NULL,
-    unitName NVARCHAR(20) NOT NULL,
+    -- unitName NVARCHAR(20) NOT NULL,
 
     unitPrice DECIMAL(15,2) NOT NULL,
 
     quantity DECIMAL(15,3) NOT NULL,
 
-    baseQuantity DECIMAL(15,3) NOT NULL,
+    -- baseQuantity DECIMAL(15,3) NOT NULL,
 
     lineTotal DECIMAL(15,2) NOT NULL,
 
@@ -622,10 +622,10 @@ CREATE TABLE [Returns] (
     [totalRefundAmount] DECIMAL(15,2) NOT NULL,
     [reason] NVARCHAR(MAX),
     
-    [status] VARCHAR(20) DEFAULT 'Pending', -- Đã sửa: Thêm kiểu dữ liệu
-    [approveBy] BIGINT NULL,               -- Đã sửa: Thêm kiểu dữ liệu và cho phép NULL
+    -- [status] VARCHAR(20) DEFAULT 'Pending', -- Đã sửa: Thêm kiểu dữ liệu
+    -- [approveBy] BIGINT NULL,               -- Đã sửa: Thêm kiểu dữ liệu và cho phép NULL
     
-    [createdAt] DATETIME2 DEFAULT GETDATE(),
+    -- [createdAt] DATETIME2 DEFAULT GETDATE(),
     
     -- Constraints
     CONSTRAINT [FK_Returns_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]),
@@ -649,14 +649,14 @@ CREATE TABLE ReturnItems (
     invoiceItemId BIGINT NOT NULL,
 
     productId BIGINT NOT NULL,
-    productUnitId INT NOT NULL,
+    -- productUnitId INT NOT NULL,
 
     productName NVARCHAR(255) NOT NULL,
-    unitName NVARCHAR(20) NOT NULL,
+    -- unitName NVARCHAR(20) NOT NULL,
 
     quantity DECIMAL(15,3) NOT NULL,
 
-    baseQuantity DECIMAL(15,3) NOT NULL,
+    -- baseQuantity DECIMAL(15,3) NOT NULL,
 
     refundAmount DECIMAL(15,2) NOT NULL,
 
@@ -794,5 +794,27 @@ ADD [snapshotStartTime] TIME NULL,
     [snapshotShiftName] NVARCHAR(50) NULL;
 GO
 
--- END OF SCRIPT
+ALTER TABLE ReturnItems
+ADD productName NVARCHAR(250); 
 
+ALTER TABLE ReturnItems
+ADD restockApproved BIT NULL,
+    checkedAt DATETIME2 NULL,
+    checkedBy BIGINT NULL;
+GO
+
+ALTER TABLE Returns
+ADD approvedAt DATETIME2 NULL;
+GO
+
+ALTER TABLE ReturnItems
+ADD CONSTRAINT FK_Returns_checkedBy
+FOREIGN KEY (checkedBy) REFERENCES Staff(id);
+GO
+
+ALTER TABLE ReturnItems
+ADD CONSTRAINT DF_ReturnItems_restockApproved
+DEFAULT 'Pending' FOR restockApproved;
+GO
+
+-- END OF SCRIPT

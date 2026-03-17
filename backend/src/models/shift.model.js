@@ -143,6 +143,8 @@ module.exports.checkTimeConflict = async (startTime, endTime, excludeId = null) 
     FROM Shifts 
     WHERE (startTime < @endTime AND endTime > @startTime)
       AND isActive = 1
+      AND name != N'Ca Quản Lý'
+
   `;
   if (excludeId) query += ` AND id != @excludeId`;
   const request = pool.request()
