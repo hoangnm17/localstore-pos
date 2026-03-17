@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { formatCurrency } from "utils/formatters";
+import { safeParse } from "utils/safeParse";
 
 const OrderItem = ({
   item,
@@ -11,7 +12,8 @@ const OrderItem = ({
   focusSignal,
 }) => {
   const displayName = item.name ? item.name : item.productName;
-  const lineTotal = (item.unitPrice || 0) * item.quantity;
+  const qty = safeParse(item.quantity);
+  const lineTotal = item.unitPrice * qty;
 
   const qtyRef = useRef(null);
 
@@ -27,7 +29,7 @@ const OrderItem = ({
   const handleChange = (e) => {
     const { value } = e.target;
     let formattedValue = value;
-    console.log(item)
+
     if (item.unitType === "PIECE") {
       formattedValue = value.replace(/\D/g, "");
     } else {
@@ -38,27 +40,20 @@ const OrderItem = ({
       }
     }
 
-    // Trường hợp đang gõ dở: để trống hoặc chỉ có dấu chấm
     if (formattedValue === "" || formattedValue === ".") {
       onChangeQty(item.id, formattedValue);
       return;
     }
 
     let number = parseFloat(formattedValue);
-
-    // Kiểm tra giới hạn tồn kho (quantityOnHand)
     if (number > item.quantityOnHand) {
       number = item.quantityOnHand;
       formattedValue = number.toString();
     }
-
-    // Không cho phép số âm
     if (number < 0) {
       number = 0;
       formattedValue = "0";
     }
-
-    // Nếu đang gõ số thập phân (ví dụ "1.") thì truyền chuỗi để giữ giao diện
     const finalValue = (item.unitType === "WEIGHT" && formattedValue.includes("."))
       ? formattedValue
       : number;
@@ -67,16 +62,17 @@ const OrderItem = ({
   };
 
   const handleBlur = () => {
-    // Khi thoát khỏi input, nếu giá trị không hợp lệ thì reset về 1
-    const currentQty = parseFloat(item.quantity);
-    if (isNaN(currentQty) || currentQty <= 0) {
-      onChangeQty(item.id, 1);
+    let currentQty = safeParse(item.quantity);
+
+    if (currentQty <= 0) {
+      currentQty = 1;
     }
+
+    onChangeQty(item.id, currentQty);
   };
 
   return (
     <tr className="border-top align-middle">
-      {/* PRODUCT NAME */}
       <td className="text-start">
         <div className="fw-semibold">{displayName}</div>
         {(item.variant || item.code) && (
@@ -86,7 +82,6 @@ const OrderItem = ({
         )}
       </td>
 
-      {/* UNIT NAME */}
       <td>
         <span className={`badge ${item.unitType === 'WEIGHT' ? 'bg-info' : 'bg-secondary'}`}>
           {item.unitName}
@@ -128,7 +123,7 @@ const OrderItem = ({
           <button
             className="btn btn-light btn-sm border-0 rounded-0"
             onClick={() => increase(item.id)}
-            disabled={item.quantity >= item.quantityOnHand}
+            disabled={safeParse(item.quantity) >= item.quantityOnHand}
             type="button"
           >
             <i className="bi bi-plus"></i>
