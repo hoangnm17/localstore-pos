@@ -5,6 +5,7 @@ import CustomerSearch from "./Customer/CustomerSearch";
 import PaymentModal from "./Payment/PaymentModal";
 import Bill from "components/pos/Sale/Bill";
 import { invoiceGetDetail } from "services/Invoices/invoice.service";
+import { cancelPendingPayment } from "services/Payment/payment.service"
 import useHotkeys from "hooks/pos/useHotKeys";
 
 export default function Order({
@@ -64,6 +65,14 @@ export default function Order({
       console.error("Load bill error:", err);
     }
   }, []);
+
+  const handleCancelBank = async (invoiceId) => {
+    try {
+      await cancelPendingPayment(invoiceId);
+    } catch (err) {
+      console.error("Cancel bank error:", err);
+    }
+  };
 
   const handleConfirmPayment = async (paymentData) => {
     if (submitting) return;
@@ -145,6 +154,7 @@ export default function Order({
           }}
           onConfirm={handleConfirmPayment}
           onBankPaid={handleBankPaidSuccess}
+          onCancelBank={handleCancelBank}
         />
       )}
 
