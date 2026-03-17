@@ -81,8 +81,8 @@ function ProductDetailModal({
                                     <p><strong>Mã sản phẩm:</strong> {product.code}</p>
                                     <p><strong>Tên sản phẩm:</strong> {product.name}</p>
                                     <p><strong>Danh mục:</strong> {product.categoryName || 'Chưa có'}</p>
-                                    <p><strong>Base unit:</strong> {product.baseUnit}</p>
-                                    <p><strong>Barcode base:</strong> {product.barcode || '—'}</p>
+                                    <p><strong>Đơn vị cơ bản:</strong> {product.baseUnit}</p>
+                                    <p><strong>Barcode đơn vị cơ bản:</strong> {product.barcode || '—'}</p>
                                     <p className="mb-0">
                                         <strong>Trạng thái:</strong>{' '}
                                         {product.status === 'Selling' ? 'Đang bán' : 'Ngừng bán'}
@@ -118,7 +118,7 @@ function ProductDetailModal({
                             <div className="card h-100">
                                 <div className="card-header fw-bold">Giá và tồn kho</div>
                                 <div className="card-body">
-                                    <p><strong>Giá bán base unit:</strong> {formatMoney(product.salePrice)}</p>
+                                    <p><strong>Giá bán đơn vị cơ bản:</strong> {formatMoney(product.salePrice)}</p>
                                     <p><strong>Giá nhập gần nhất:</strong> {formatMoney(product.costPrice)}</p>
                                     <p><strong>Tồn kho hiện tại:</strong> {formatQuantity(product.stockQuantity, product.allowDecimalQuantity)}</p>
                                     {product.imageUrl && (

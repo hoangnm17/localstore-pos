@@ -39,7 +39,7 @@ export default function CategorySelector({ value, onChange, categories: initialC
         if (initialCategories?.length === 0) {
             reloadCategories();
         }
-    }, []);
+    }, [initialCategories]);
 
     const handleDone = async () => {
         await reloadCategories();
