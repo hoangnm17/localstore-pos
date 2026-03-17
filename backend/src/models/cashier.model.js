@@ -75,73 +75,51 @@ module.exports.getPendingHandovers = async (staffId, workDate) => {
 module.exports.getSystemCash = async (staffId, scheduleId) => {
     const pool = await connectDB();
 
-    const sched = await pool.request()
+    const result = await pool.request()
         .input('id', sql.Int, scheduleId)
         .input('staffId', sql.BigInt, staffId)
         .query(`
-            SELECT ws.workDate, ws.counterId, 
-                   ISNULL(sh.startTime, ws.snapshotStartTime) as startTime, 
-                   ISNULL(sh.endTime, ws.snapshotEndTime) as endTime
+            DECLARE @startDT DATETIME, @endDT DATETIME, @counterId BIGINT;
+            DECLARE @workDate DATE, @startTime VARCHAR(10), @endTime VARCHAR(10);
+
+           -- Lấy thông tin Ca làm việc 
+            SELECT 
+                @counterId = ws.counterId,
+                @workDate = ws.workDate,
+                @startTime = CAST(ISNULL(sh.startTime, ws.snapshotStartTime) AS VARCHAR(10)),
+                @endTime = CAST(ISNULL(sh.endTime, ws.snapshotEndTime) AS VARCHAR(10))
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            WHERE ws.id = @id AND ws.staffId = @staffId
-        `);
+            WHERE ws.id = @id AND ws.staffId = @staffId;
 
-    if (sched.recordset.length === 0) {
-        throw new Error("Không tìm thấy ca làm việc!");
-    }
+            SET @startDT = CAST(CONCAT(@workDate, ' ', @startTime) AS DATETIME);
+            SET @endDT = CAST(CONCAT(@workDate, ' ', @endTime) AS DATETIME);
 
-    const { workDate, counterId, startTime, endTime } = sched.recordset[0];
+            -- XỬ LÝ CA QUA ĐÊM
+            IF @endDT < @startDT 
+            BEGIN
+                SET @endDT = DATEADD(day, 1, @endDT);
+            END
 
-    const parseTime = (t) => {
-        if (t instanceof Date) {
-            return {
-                h: t.getHours(),
-                m: t.getMinutes(),
-                s: t.getSeconds()
-            };
-        }
-        const parts = t.split(':').map(Number);
-        return {
-            h: parts[0] || 0,
-            m: parts[1] || 0,
-            s: parts[2] || 0
-        };
-    };
 
-    const start = parseTime(startTime);
-    const end = parseTime(endTime);
+            IF @startDT > GETDATE()
+            BEGIN
+                SET @startDT = DATEADD(day, -1, @startDT);
+                SET @endDT = DATEADD(day, -1, @endDT);
+            END
 
-    const startDT = new Date(workDate);
-    startDT.setHours(start.h, start.m, start.s, 0);
-
-    const endDT = new Date(workDate);
-    endDT.setHours(end.h, end.m, end.s, 0);
-
-    if (endDT <= startDT) {
-        endDT.setDate(endDT.getDate() + 1);
-    }
-
-    console.log("startDT:", startDT);
-    console.log("endDT:", endDT);
-
-    const result = await pool.request()
-        .input('staffId', sql.BigInt, staffId)
-        .input('counterId', sql.BigInt, counterId)
-        .input('startDT', sql.DateTime2, startDT)
-        .input('endDT', sql.DateTime2, endDT)
-        .query(`
             SELECT ISNULL(SUM(p.amount), 0) as systemCash
             FROM Invoices i
             JOIN Payments p ON i.id = p.invoiceId
             WHERE i.staffId = @staffId 
               AND i.counterId = @counterId
-              AND i.createdAt BETWEEN @startDT AND @endDT
+              AND i.createdAt >= DATEADD(hour, -1, @startDT)
+              AND i.createdAt <= DATEADD(hour, 2, @endDT)
               AND p.paymentMethod = 'CASH' 
-              AND p.status = 'SUCCESS'
+              AND p.status = 'SUCCESS';
         `);
 
-    return result.recordset[0].systemCash;
+    return result.recordset[0]?.systemCash || 0;
 };
 
 module.exports.createHandover = async (data) => {
