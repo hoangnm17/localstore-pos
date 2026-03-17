@@ -87,11 +87,43 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
             WHERE ws.id = @id AND ws.staffId = @staffId
         `);
 
-    if (sched.recordset.length === 0) throw new Error("Không tìm thấy ca làm việc!");
+    if (sched.recordset.length === 0) {
+        throw new Error("Không tìm thấy ca làm việc!");
+    }
+
     const { workDate, counterId, startTime, endTime } = sched.recordset[0];
 
-    const startDT = `${workDate.toISOString().split('T')[0]}T${startTime.toISOString().split('T')[1]}`;
-    const endDT = `${workDate.toISOString().split('T')[0]}T${endTime.toISOString().split('T')[1]}`;
+    const parseTime = (t) => {
+        if (t instanceof Date) {
+            return {
+                h: t.getHours(),
+                m: t.getMinutes(),
+                s: t.getSeconds()
+            };
+        }
+        const parts = t.split(':').map(Number);
+        return {
+            h: parts[0] || 0,
+            m: parts[1] || 0,
+            s: parts[2] || 0
+        };
+    };
+
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+
+    const startDT = new Date(workDate);
+    startDT.setHours(start.h, start.m, start.s, 0);
+
+    const endDT = new Date(workDate);
+    endDT.setHours(end.h, end.m, end.s, 0);
+
+    if (endDT <= startDT) {
+        endDT.setDate(endDT.getDate() + 1);
+    }
+
+    console.log("startDT:", startDT);
+    console.log("endDT:", endDT);
 
     const result = await pool.request()
         .input('staffId', sql.BigInt, staffId)
@@ -108,6 +140,7 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
               AND p.paymentMethod = 'CASH' 
               AND p.status = 'SUCCESS'
         `);
+
     return result.recordset[0].systemCash;
 };
 
