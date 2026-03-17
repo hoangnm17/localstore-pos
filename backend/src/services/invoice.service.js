@@ -170,9 +170,36 @@ const getDraftInvoices = async () => {
 };
 
 const getInvoiceDetail = async (id) => {
-    const invoice = await invoiceModel.getInvoiceDetail(id);
-    if (!invoice) throw new Error("Invoice not found");
-    return invoice;
+    const data = await invoiceModel.getInvoiceDetail(id);
+    if (!data) throw new Error("Invoice not found");
+
+    return {
+        id: Number(data.id),
+        invoiceCode: data.invoiceCode,
+        createdAt: data.createdAt,
+        finalAmount: Number(data.finalAmount) || 0,
+        status: data.status,
+        customerId: data.customerId ? Number(data.customerId) : null,
+        customerName: data.customerName,
+        staffName: data.staffName,
+        counterName: data.counterName,
+        items: data.items.map(item => {
+            const factor = Number(item.factor) || 1;
+            return {
+                ...item,
+                id: Number(item.id),
+                productId: Number(item.productId),
+                productUnitId: Number(item.productUnitId),
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unitPrice) || 0,
+                lineTotal: Number(item.lineTotal) || 0,
+                factor: factor,
+                quantityOnHand: Math.floor(
+                    (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
+                )
+            };
+        })
+    };
 };
 
 const updateInvoiceCustomer = async (
@@ -224,22 +251,22 @@ const updateInvoiceCustomer = async (
 const syncCounter = async (userId, configCounterId) => {
     const data = await invoiceModel.getStaffAndSchedule(userId);
     if (!data)
-         throw new Error("Tài khoản chưa được liên kết với nhân viên!");
-    const { staffId,roleName, schedule } = data;
+        throw new Error("Tài khoản chưa được liên kết với nhân viên!");
+    const { staffId, roleName, schedule } = data;
 
     if (schedule) {
-        if (schedule.counterId !== null && 
+        if (schedule.counterId !== null &&
             String(schedule.counterId) !== String(configCounterId)) {
             const machineName = await invoiceModel.getCounterName(configCounterId);
             const assignedName = schedule.counterName || `Quầy khác`;
-            
+
             const err = new Error(`
                 Bạn được phân công làm việc tại "${assignedName}"
                 . Không thể bán hàng tại máy của "${machineName}"!`);
-            err.statusCode = 400; 
-            throw err; 
+            err.statusCode = 400;
+            throw err;
         }
-        
+
         await invoiceModel.checkInSchedule(schedule.id);
     } else {
         if (roleName === 'Cashier') {

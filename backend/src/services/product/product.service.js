@@ -1,4 +1,5 @@
 const productModel = require('../../models/product/product.model');
+const promotionService = require('../promotion.service')
 
 function translateSqlError(err) {
     const num = err.number;
@@ -116,11 +117,15 @@ exports.getAllProducts = async (filters) => {
     const rawData = await productModel.getAllProducts(filters);
 
     const productsMap = new Map();
-    
-    rawData.forEach(row => {
-        console.log(row);
+
+    for (const row of rawData) {
         const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
-        
+
+        const discount = await promotionService.getDiscountByProduct({
+            productId: row.id,
+            productUnitId: row.unitId
+        });
+
         if (!productsMap.has(row.id)) {
             productsMap.set(row.id, {
                 id: row.id,
@@ -132,8 +137,16 @@ exports.getAllProducts = async (filters) => {
                 units: []
             });
         }
-
         if (row.unitId) {
+            const factor = Number(row.factor) || 1;
+            const stock = Math.floor((Number(row.stock) || 0) / factor);
+            const price = Number(row.price) || 0;
+
+            const discountPercent = Number(discount?.discountPercent) || 0;
+            const discountAmount = Number(discount?.discountAmount) || 0;
+
+            const totalDiscount = (price * stock * discountPercent / 100) + (discountAmount * stock);
+
             productsMap.get(row.id).units.push({
                 unitId: row.unitId,
                 unitName: row.unitName,
@@ -143,9 +156,10 @@ exports.getAllProducts = async (filters) => {
                 stock: row.factor ? Math.floor(row.stock / row.factor) : 0,
                 unitType: row.unitType,
                 lowStock: lowStock,
+                totalDiscount: totalDiscount,
+                finalPrice: price - totalDiscount,
             });
         }
-    });
-
+    }
     return Array.from(productsMap.values());
 };
