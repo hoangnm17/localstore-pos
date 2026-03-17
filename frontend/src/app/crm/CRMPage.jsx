@@ -368,6 +368,11 @@ function PromotionsTab() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSave = async () => {
+        if (!form.name || !form.name.trim()) {
+            setAlertMsg("Tên chương trình khuyến mãi không được để trống!");
+            return;
+        }
+
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
