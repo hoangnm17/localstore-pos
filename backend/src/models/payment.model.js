@@ -25,7 +25,53 @@ const updatePaymentStatus = async (transaction, invoiceId, status) => {
     `);
 };
 
+const updatePayment = async (transaction, data) => {
+  const request = new sql.Request(transaction);
+
+  const result = await request
+    .input("invoiceId", sql.BigInt, Number(data.invoiceId))
+    .input("amount", sql.Decimal(15, 2), data.amount)
+    .input("status", sql.VarChar(20), data.status)
+    .input("transactionId", sql.VarChar(100), data.transactionId || null)
+    .query(`
+      UPDATE Payments
+      SET 
+        amount = @amount,
+        status = @status,
+        transactionId = COALESCE(@transactionId, transactionId)
+      WHERE invoiceId = @invoiceId
+    `);
+
+  return result.rowsAffected[0];
+};
+
+const findByTransactionId = async (transaction, transactionId) => {
+  const result = await new sql.Request(transaction)
+    .input("transactionId", sql.VarChar(100), transactionId)
+    .query(`
+      SELECT TOP 1 *
+      FROM Payments
+      WHERE transactionId = @transactionId
+    `);
+
+  return result.recordset[0];
+};
+
+
+const updatePaymentCancel = async (transaction, invoiceId, status) => {
+  await new sql.Request(transaction)
+    .input("invoiceId", sql.BigInt, Number(invoiceId))
+    .input("status", sql.VarChar(20), status)
+    .query(`
+      UPDATE Payments
+      SET status = @status
+      WHERE invoiceId = @invoiceId AND status = 'PENDING'
+    `);
+};
 module.exports = {
   insertPayment,
   updatePaymentStatus,
+  updatePayment,
+  findByTransactionId,
+  updatePaymentCancel,
 };

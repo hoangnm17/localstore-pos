@@ -1,10 +1,5 @@
 const { connectDB, sql } = require("../config/database");
 
-const MAX_PAGE_SIZE = 50;
-
-/* =====================================================
-   GET INVOICE LIST (Pagination - NO TRANSACTION)
-===================================================== */
 const getInvoiceList = async ({
   page = 1,
   pageSize = 10,
@@ -20,13 +15,11 @@ const getInvoiceList = async ({
   let whereClause = "WHERE 1=1";
   const request = pool.request();
 
-  // Filter theo Status
   if (status) {
     whereClause += " AND i.status = @status";
     request.input("status", sql.VarChar(20), status);
   }
 
-  // Filter theo Invoice Code (Tìm kiếm gần đúng với LIKE)
   if (invoiceCode) {
     whereClause += " AND i.invoiceCode LIKE @invoiceCode";
     request.input("invoiceCode", sql.VarChar(50), `%${invoiceCode}%`);
@@ -35,8 +28,6 @@ const getInvoiceList = async ({
   request.input("offset", sql.Int, offset);
   request.input("limit", sql.Int, limit);
 
-  /* ================= LIST QUERY ================= */
-  // Sử dụng chung logic WHERE cho cả 2 query để đảm bảo tính đồng nhất
   const listQuery = `
     SELECT
       i.id,
@@ -62,9 +53,6 @@ const getInvoiceList = async ({
 
   const listResult = await request.query(listQuery);
 
-  /* ================= COUNT QUERY ================= */
-  // Lưu ý: Request object cũ đã chứa các tham số @status và @invoiceCode
-  // nên ta có thể tái sử dụng hoặc tạo request mới có cùng input.
   const countResult = await request.query(`
     SELECT COUNT(*) AS total
     FROM Invoices i
@@ -83,9 +71,6 @@ const getInvoiceList = async ({
     }
   };
 };
-/* =====================================================
-   TRANSACTION FUNCTIONS
-===================================================== */
 
 const insertInvoice = async (
   transaction,
@@ -306,17 +291,13 @@ const insertPayment = async (
     `);
 };
 
-/* =====================================================
-   NON-TRANSACTION READ FUNCTIONS
-===================================================== */
-
 const getDraftInvoices = async (counterId) => {
   const pool = await connectDB();
 
   const result = await pool.request().query(`
     SELECT id, invoiceCode, createdAt, finalAmount, status
     FROM Invoices
-    WHERE status = 'UNPAID'
+    WHERE status = 'UNPAID' OR status = 'PENDING'
     ORDER BY createdAt ASC
   `);
 
@@ -325,11 +306,6 @@ const getDraftInvoices = async (counterId) => {
 
 const getInvoiceDetail = async (id) => {
   const pool = await connectDB();
-
-  /* ===============================
-     GET INVOICE
-  =============================== */
-
   const invoiceResult = await pool.request()
     .input("id", sql.Int, id)
     .query(`
@@ -356,38 +332,39 @@ const getInvoiceDetail = async (id) => {
   const invoice = invoiceResult.recordset[0];
   if (!invoice) return null;
 
-  /* ===============================
-     GET INVOICE ITEMS
-  =============================== */
+const itemsResult = await pool.request()
+  .input("invoiceId", sql.Int, id)
+  .query(`
+    SELECT 
+      ii.id,
+      ii.productId,
+      ii.productUnitId,
+      ii.quantity,
+      ii.unitPrice,
+      ii.lineTotal,
 
-  const itemsResult = await pool.request()
-    .input("invoiceId", sql.Int, id)
-    .query(`
-      SELECT 
-        ii.id,
-        ii.productId,
-        ii.productUnitId,
-        ii.quantity,
-        ii.unitPrice,
-        ii.lineTotal,
+      pu.unitName,
+      pu.conversionFactor AS factor,
+      pu.unitType,
 
-        pu.unitName,
-        pu.conversionFactor AS factor,
-        pu.unitType,
+      p.name AS productName,
+      p.code,
 
-        p.name AS productName,
-        p.code
+      inv.quantityOnHand
 
-      FROM InvoiceItems ii
+    FROM InvoiceItems ii
 
-      JOIN Products p
-        ON p.id = ii.productId
+    JOIN Products p
+      ON p.id = ii.productId
 
-      LEFT JOIN ProductUnits pu
-        ON pu.id = ii.productUnitId
+    LEFT JOIN ProductUnits pu
+      ON pu.id = ii.productUnitId
 
-      WHERE ii.invoiceId = @invoiceId
-    `);
+    LEFT JOIN InventoryStocks inv
+      ON inv.productId = ii.productId
+
+    WHERE ii.invoiceId = @invoiceId
+  `);
 
   return {
     ...invoice,
@@ -461,9 +438,6 @@ const getInvoiceId = async (transaction, id) => {
   return result.recordset[0] || null;
 };
 
-/* =====================================================
-   CÁC HÀM HỖ TRỢ ĐỒNG BỘ CA LÀM (CHỈ CHỨA SQL)
-===================================================== */
 const getStaffAndSchedule = async (userId) => {
     const pool = await connectDB();
     const staffRes = await pool.request()
@@ -524,9 +498,22 @@ const createManagerSchedule = async (staffId, counterId, counterName) => {
             VALUES (@sid, @shiftId, CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE), @cid, 'working', '08:00', '18:00', @cname);
         `);
 };
-/* =====================================================
-   EXPORT
-===================================================== */
+
+const updateInvoiceExpire = async (transaction, invoiceId, expiresAt) => {
+  const request = new sql.Request(transaction);
+
+  const result = await request
+    .input("invoiceId", sql.BigInt, invoiceId)
+    .input("expiresAt", sql.DateTime2, expiresAt)
+    .query(`
+      UPDATE Invoices
+      SET expiresAt = @expiresAt
+      WHERE id = @invoiceId
+    `);
+
+  return result.rowsAffected[0];
+};
+
 module.exports = {
   getInvoiceList,
   insertInvoice,
@@ -550,4 +537,5 @@ module.exports = {
   getCounterName,
   checkInSchedule,
   createManagerSchedule,
+  updateInvoiceExpire,
 };
