@@ -644,3 +644,20 @@ exports.getAllProducts = async (filters) => {
     const result = await request.query(query);
     return result.recordset;
 };
+
+exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {
+    if (!barcode || String(barcode).trim() === '') return false;
+
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('barcode', sql.VarChar(50), barcode)
+        .input('excludeProductId', sql.BigInt, excludeProductId)
+        .query(`
+            SELECT COUNT(*) as count
+            FROM ProductUnits
+            WHERE barcode = @barcode
+            ${excludeProductId ? 'AND productId != @excludeProductId' : ''}
+        `);
+
+    return result.recordset[0].count > 0;
+};
