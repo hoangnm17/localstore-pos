@@ -13,11 +13,13 @@ function AdjustmentList() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         const statusParam = searchParams.get("status");
         if (statusParam) setStatus(statusParam);
     }, [searchParams]);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         fetchData();
     }, [status, fromDate, toDate]);
 

@@ -22,6 +22,7 @@ function SupplierList() {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const timer = setTimeout(() => {
       setSearch(searchInput.trim());
     }, 500);

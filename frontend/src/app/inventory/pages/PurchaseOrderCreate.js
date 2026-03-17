@@ -26,6 +26,7 @@ const PurchaseOrderCreate = () => {
   const debounceTimeout = useRef(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadLowStock = async () => {
       setLoadingLowStock(true);
       try {
@@ -41,6 +42,7 @@ const PurchaseOrderCreate = () => {
   }, []);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (step !== 1) return;
 
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
