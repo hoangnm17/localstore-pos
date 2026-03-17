@@ -7,6 +7,7 @@ import {
     addPromotionItem, removePromotionItem,
     getVouchers, createVoucher, updateVoucher, deleteVoucher,
     getPromotionReport, getVoucherReport,
+    getEvents, createEvent, updateEvent, deleteEvent
 } from '../../services/crm.service';
 
 // ─── Hằng số ───────────────────────────────────────────────────────────────
@@ -14,6 +15,7 @@ const TABS = [
     { key: 'customers', label: '👤 Khách hàng' },
     { key: 'promotions', label: '🎯 Khuyến mãi' },
     { key: 'vouchers', label: '🎟️ Voucher' },
+    { key: 'events', label: '📅 Sự kiện' },
     { key: 'report', label: '📊 Báo cáo' },
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
@@ -23,6 +25,12 @@ const PAGE_SIZE = 10;
 const DEFAULT_CUSTOMER = { name: '', phone: '', status: 'Active' };
 const DEFAULT_PROMOTION = { name: '', type: 'Percent', value: '', startDate: '', endDate: '', status: 'Active' };
 const DEFAULT_VOUCHER = { code: '', value: '', type: 'Fixed', minOrderValue: 0, maxUsage: 100, startDate: '', expiryDate: '', status: 'Active' };
+const DEFAULT_EVENT = { name: '', description: '', startTime: '', endTime: '', privilegeType: 'multiplier_points', privilegeValue: 2, minRank: 'None', status: 'Active' };
+const EVENT_PRIVILEGE_TYPES = [
+    { key: 'multiplier_points', label: 'Nhân hệ số điểm' },
+    { key: 'extra_discount', label: 'Giảm giá thêm (%)' },
+    { key: 'free_gift', label: 'Tặng quà đi kèm' }
+];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
@@ -368,6 +376,11 @@ function PromotionsTab() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSave = async () => {
+        if (!form.name || !form.name.trim()) {
+            setAlertMsg("Tên chương trình khuyến mãi không được để trống!");
+            return;
+        }
+
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
@@ -551,6 +564,114 @@ function VouchersTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  Events Tab
+// ═══════════════════════════════════════════════════════════════════════════
+function EventsTab() {
+    const [events, setEvents] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [showModal, setShowModal] = useState(false);
+    const [editTarget, setEditTarget] = useState(null);
+    const [form, setForm] = useState(DEFAULT_EVENT);
+    const [alertMsg, setAlertMsg] = useState('');
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await getEvents({ page, limit: PAGE_SIZE });
+            setEvents(res?.data || []);
+            setTotal(res?.total || 0);
+        } catch { } finally { setLoading(false); }
+    }, [page]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleSave = async () => {
+        if (!form.name || !form.name.trim()) {
+            setAlertMsg("Tên sự kiện không được để trống!");
+            return;
+        }
+        try {
+            if (editTarget) await updateEvent(editTarget.id, form);
+            else await createEvent(form);
+            setShowModal(false); fetchData();
+        } catch (e) {
+            setAlertMsg(e.response?.data?.message || e.message);
+        }
+    };
+
+    return (
+        <>
+            <div className="glass-panel">
+                <div className="toolbar">
+                    <span className="total-badge">{total} sự kiện</span>
+                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_EVENT); setEditTarget(null); setShowModal(true); }}>＋ Tạo sự kiện mới</button>
+                </div>
+                <div className="crm-table-container">
+                    <table className="crm-table">
+                        <thead><tr><th>Tên sự kiện</th><th>Đặc quyền</th><th>Giá trị</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                        <tbody>
+                            {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
+                                events.map(ev => (
+                                    <tr key={ev.id}>
+                                        <td><strong>{ev.name}</strong><br /><small className="text-muted">{ev.description}</small></td>
+                                        <td><TypeBadge t={EVENT_PRIVILEGE_TYPES.find(p => p.key === ev.privilegeType)?.label || ev.privilegeType} /></td>
+                                        <td style={{ fontWeight: 700, color: '#facc15' }}>{ev.privilegeValue}{ev.privilegeType === 'extra_discount' ? '%' : 'x'}</td>
+                                        <td className="text-muted" style={{ fontSize: 12 }}>
+                                            {fmtDate(ev.startTime)} - {fmtDate(ev.endTime)}
+                                        </td>
+                                        <td><StatusBadge s={ev.status} /></td>
+                                        <td>
+                                            <div className="action-btns">
+                                                <button className="btn-icon edit" onClick={() => { setForm({ ...ev, startTime: toInputDate(ev.startTime), endTime: toInputDate(ev.endTime) }); setEditTarget(ev); setShowModal(true); }}>✏️</button>
+                                                <button className="btn-icon del" onClick={async () => { if (window.confirm('Xóa sự kiện này?')) { await deleteEvent(ev.id); fetchData(); } }}>🗑️</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
+            </div>
+            {showModal && (
+                <Modal title={editTarget ? '✏️ Sửa sự kiện' : '📅 Tạo sự kiện'} onClose={() => setShowModal(false)} onSubmit={handleSave} wide>
+                    <div className="form-grid">
+                        <div className="form-group form-full"><label>Tên sự kiện *</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                        <div className="form-group form-full"><label>Mô tả ngắn</label><textarea className="form-input" style={{ height: 60, paddingTop: 8 }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+                        <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} /></div>
+                        <div className="form-group"><label>Kết thúc</label><input className="form-input" type="date" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} /></div>
+                        <div className="form-group"><label>Loại đặc quyền</label>
+                            <select className="form-input" value={form.privilegeType} onChange={e => setForm({ ...form, privilegeType: e.target.value })}>
+                                {EVENT_PRIVILEGE_TYPES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                            </select>
+                        </div>
+                        <div className="form-group"><label>Giá trị đặc quyền</label><input className="form-input" type="number" value={form.privilegeValue} onChange={e => setForm({ ...form, privilegeValue: e.target.value })} /></div>
+                        <div className="form-group"><label>Xếp hạng tối thiểu</label>
+                            <select className="form-input" value={form.minRank} onChange={e => setForm({ ...form, minRank: e.target.value })}>
+                                <option value="None">Tất cả</option>
+                                <option value="Silver">Bạc trở lên</option>
+                                <option value="Gold">Vàng trở lên</option>
+                                <option value="Diamond">Kim cương</option>
+                            </select>
+                        </div>
+                        <div className="form-group"><label>Trạng thái</label>
+                            <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                                <option value="Active">Hoạt động</option>
+                                <option value="Inactive">Tạm dừng</option>
+                            </select>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
+        </>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  Report Tab
 // ═══════════════════════════════════════════════════════════════════════════
 function ReportTab() {
@@ -618,6 +739,7 @@ const CRMPage = () => {
                 {activeTab === 'customers' && <CustomersTab />}
                 {activeTab === 'promotions' && <PromotionsTab />}
                 {activeTab === 'vouchers' && <VouchersTab />}
+                {activeTab === 'events' && <EventsTab />}
                 {activeTab === 'report' && <ReportTab />}
             </main>
         </div>
