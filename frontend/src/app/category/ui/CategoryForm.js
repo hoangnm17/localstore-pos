@@ -8,7 +8,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
 
     useEffect(() => {
-        categoryService.fetchCategoryTree('', 1, 100).then(res => {            // Flatten tree để hiển thị trong dropdown
+        categoryService.fetchCategoryTree('', 1, 100).then(res => {
             const flat = [];
             function flatten(items, level = 0) {
                 items.forEach(item => {
@@ -22,7 +22,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     }, []);
 
     useEffect(() => {
-        // Cleanup preview URL khi component unmount
         return () => {
             if (preview && preview.startsWith('blob:')) {
                 URL.revokeObjectURL(preview);
@@ -30,9 +29,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         };
     }, [preview]);
 
-
-    async function onSubmit(e) {
-        e.preventDefault();
+    async function handleSubmit() {
         const success = await submit();
         if (success) {
             onDone();
@@ -61,7 +58,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         }
     }
 
-
     function handleUrlChange(e) {
         const url = e.target.value;
         change('imageUrl', url);
@@ -74,8 +70,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     }
 
     return (
-        <form onSubmit={onSubmit}>
-            {/* Tên danh mục */}
+        <div>
             <div className="mb-3">
                 <label className="form-label">Tên danh mục <span className="text-danger">*</span></label>
                 <input
@@ -86,7 +81,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                 />
             </div>
 
-            {/* Danh mục cha */}
             <div className="mb-3">
                 <label className="form-label">
                     Danh mục cha <span className="text-muted small">(không bắt buộc)</span>
@@ -117,7 +111,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                 </select>
             </div>
 
-            {/* Ảnh */}
             <div className="mb-3">
                 <label className="form-label">
                     Ảnh danh mục <span className="text-muted small">(không bắt buộc)</span>
@@ -129,7 +122,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                             src={preview}
                             alt="preview"
                             style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
-                            onError={() => setPreview(null)}  // ✅ thêm onError
+                            onError={() => setPreview(null)}
                         />
                         <button
                             type="button"
@@ -159,8 +152,8 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
             </div>
 
             <div className="d-flex justify-content-end gap-2 mt-3">
-                <button type="submit" className="btn btn-primary">Lưu</button>
+                <button type="button" className="btn btn-primary" onClick={handleSubmit}>Lưu</button>
             </div>
-        </form>
+        </div>
     );
 }

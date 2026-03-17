@@ -74,15 +74,18 @@ const ShiftList = () => {
   ];
   const getColor = (idx) => shiftColors[idx % shiftColors.length];
 
-  const getDuration = (start, end) => {
+const getDuration = (start, end) => {
     if (!start || !end) return '—';
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
-    const mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins <= 0) return '—';
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) {
+        mins += 1440;
+    }
+    if (mins === 0) return '—'; 
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return m > 0 ? `${h}h${m}m` : `${h}h`;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
   return (

@@ -39,7 +39,7 @@ function ProductPriceHistoryModal({ open, loading, product, histories, onClose }
             ) : tab === 'sale' ? (
                 <>
                     <div className="alert alert-primary">
-                        Lịch sử giá bán hiển thị cho cả base unit và các unit phụ của sản phẩm.
+                        Lịch sử giá bán hiển thị cho cả đơn vị cơ bản và các đơn vị phụ của sản phẩm.
                     </div>
 
                     <div className="table-responsive">
