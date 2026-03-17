@@ -20,10 +20,12 @@ const returnRoutes = require("./return.route")
 const returnItemRoutes = require("./returnItem.route")
 const uploadRoutes = require("./upload.route");
 const marketingEventRoutes = require("./marketingEvent.route");
+const dashboardRoutes = require("./dashboard.route");
 
 module.exports = (app) => {
     const version = "/api";
 
+    app.use(version + "/dashboard", dashboardRoutes);
     app.use(version + "/users", userRoutes);
     app.use(version + "/inventory", inventoryRoutes);
     app.use(version + "/invoices", invoiceRoutes);
