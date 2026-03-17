@@ -3,9 +3,10 @@ import ReturnList from "app/invoice/ReturnList";
 import MainLayout from "layouts/MainLayout";
 
 const InvoiceRoutes = (
-  <Route element={<MainLayout />}>
-    <Route path="/returns" element={<ReturnList />} />
-    </Route>
-    );
+  <Route path="/returns" element={<ReturnList />}>
+  </Route>
+);
 
-    export default InvoiceRoutes;
+
+
+export default InvoiceRoutes;
