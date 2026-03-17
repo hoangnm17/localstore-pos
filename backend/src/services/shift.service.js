@@ -36,6 +36,7 @@ module.exports.createShift = async (data) => {
   let duration = endMins - startMins;
   if (duration < 0) duration += 1440; 
   if (duration === 0) throw new Error("Giờ kết thúc không được trùng giờ bắt đầu!");
+  if (duration < 30) throw new Error("Ca làm tối thiểu 30 phút!");
   if (duration > 600) throw new Error("Ca làm tối đa 10 giờ!");
 
   if (data.checkInStart || data.checkInEnd) {
@@ -61,8 +62,8 @@ module.exports.createShift = async (data) => {
     if (getDiff(checkOutDeadlineM, startMins) <= 0) {
       throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
     }
-    if (getDiff(checkOutDeadlineM, endMins) > 120) {
-      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 2 tiếng!");
+    if (getDiff(checkOutDeadlineM, endMins) > 30) {
+      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
     }
   }
 
