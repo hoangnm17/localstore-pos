@@ -74,16 +74,16 @@ exports.getProducts = async (filters) => {
         LEFT JOIN InventoryStocks s
             ON s.productId = p.id
         OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
-) latestCost
+            SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+            FROM PurchaseOrderItems poi
+            INNER JOIN PurchaseOrders po
+                ON po.id = poi.poId
+            INNER JOIN ProductUnits puCost
+                ON puCost.id = poi.productUnitId
+            WHERE puCost.productId = p.id
+                AND po.status = 'Received'
+            ORDER BY po.createdAt DESC, poi.id DESC
+        ) latestCost
         OUTER APPLY (
             SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
             FROM ProductCombos pc
@@ -210,16 +210,16 @@ exports.getProductDetail = async (id) => {
             LEFT JOIN InventoryStocks s
                 ON s.productId = p.id
             OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
-) latestCost
+                SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+                FROM PurchaseOrderItems poi
+                INNER JOIN PurchaseOrders po
+                    ON po.id = poi.poId
+                INNER JOIN ProductUnits puCost
+                    ON puCost.id = poi.productUnitId
+                WHERE puCost.productId = p.id
+                    AND po.status = 'Received'
+                ORDER BY po.createdAt DESC, poi.id DESC
+            ) latestCost
             OUTER APPLY (
                 SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
                 FROM ProductCombos pc
@@ -292,15 +292,15 @@ exports.getProductByBarcode = async (barcode) => {
             LEFT JOIN InventoryStocks s
                 ON s.productId = p.id
             OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
+            SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+            FROM PurchaseOrderItems poi
+            INNER JOIN PurchaseOrders po
+                ON po.id = poi.poId
+            INNER JOIN ProductUnits puCost
+                ON puCost.id = poi.productUnitId
+            WHERE puCost.productId = p.id
+                AND po.status = 'Received'
+            ORDER BY po.createdAt DESC, poi.id DESC
             ) latestCost
             OUTER APPLY (
                 SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
@@ -643,4 +643,21 @@ exports.getAllProducts = async (filters) => {
 
     const result = await request.query(query);
     return result.recordset;
+};
+
+exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {
+    if (!barcode || String(barcode).trim() === '') return false;
+
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('barcode', sql.VarChar(50), barcode)
+        .input('excludeProductId', sql.BigInt, excludeProductId)
+        .query(`
+            SELECT COUNT(*) as count
+            FROM ProductUnits
+            WHERE barcode = @barcode
+            ${excludeProductId ? 'AND productId != @excludeProductId' : ''}
+        `);
+
+    return result.recordset[0].count > 0;
 };

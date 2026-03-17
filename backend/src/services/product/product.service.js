@@ -72,7 +72,12 @@ exports.getProductDetail = async (id) => {
 
 exports.createProduct = async (productData) => {
     validateProductPayload(productData);
-
+    if (productData.barcode && String(productData.barcode).trim()) {
+        const barcodeExists = await productModel.checkBarcodeExists(productData.barcode);
+        if (barcodeExists) {
+            throw new Error('Barcode đã được sử dụng.');
+        }
+    }
     try {
         return await productModel.createProduct(productData);
     } catch (err) {
@@ -82,6 +87,13 @@ exports.createProduct = async (productData) => {
 
 exports.updateProduct = async (id, productData) => {
     validateProductPayload(productData);
+
+    if (productData.barcode && String(productData.barcode).trim()) {
+        const barcodeExists = await productModel.checkBarcodeExists(productData.barcode, id);
+        if (barcodeExists) {
+            throw new Error('Barcode đã được sử dụng.');
+        }
+    }
 
     try {
         const updated = await productModel.updateProduct(id, productData);
@@ -126,6 +138,8 @@ exports.getAllProducts = async (filters) => {
             productUnitId: row.unitId
         });
 
+
+    rawData.forEach(row => {
         if (!productsMap.has(row.id)) {
             productsMap.set(row.id, {
                 id: row.id,
