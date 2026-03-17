@@ -2,24 +2,27 @@ const inventoryAdjustmentModel = require("../../models/adjust.model");
 const staffModel = require("../../models/staff.model");
 
 const createAdjustment = async (user, body) => {
-
     if (!user.permissions.includes("CREATE_ADJUST")) {
         throw new Error("Bạn không có quyền tạo phiếu");
     }
 
     const staff = await staffModel.getStaffByUserId(user.id);
-
     if (!staff) {
         throw new Error("Không tìm thấy nhân viên");
     }
 
     const { reason, items } = body;
-
     if (!reason || !items || items.length === 0) {
         throw new Error("Dữ liệu không hợp lệ");
     }
 
-    // Gọi model xử lý transaction
+    // Validation mới cho format kiểm kê theo unit lớn nhất
+    for (let item of items) {
+        if (!item.productId || typeof item.actualLargest !== "number" || typeof item.actualRemainder !== "number") {
+            throw new Error("Dữ liệu item không hợp lệ (cần productId, actualLargest, actualRemainder)");
+        }
+    }
+
     const adjustmentId = await inventoryAdjustmentModel.createAdjustmentWithItems(
         staff.id,
         reason,
@@ -30,7 +33,7 @@ const createAdjustment = async (user, body) => {
 };
 
 const updateStatus = async (user, adjustmentId, newStatus) => {
-
+    // giữ nguyên
     if (!user.permissions.includes("PROCESS_ADJUST")) {
         throw new Error("Bạn không có quyền xử lý phiếu");
     }
@@ -40,7 +43,6 @@ const updateStatus = async (user, adjustmentId, newStatus) => {
     }
 
     const staff = await staffModel.getStaffByUserId(user.id);
-
     if (!staff) {
         throw new Error("Không tìm thấy nhân viên");
     }
@@ -57,13 +59,10 @@ const getAdjustments = async (filters) => {
 };
 
 const getAdjustmentDetail = async (adjustmentId) => {
-
     const data = await inventoryAdjustmentModel.getAdjustmentDetail(adjustmentId);
-
     if (!data) {
         throw new Error("Phiếu không tồn tại");
     }
-
     return data;
 };
 
