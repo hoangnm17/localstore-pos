@@ -1,19 +1,21 @@
 const shiftModel = require("../models/shift.model");
-
-// Helper: chuyển "HH:MM" → số phút từ 00:00
+// Helper
 const toMinutes = (timeStr) => {
   if (!timeStr) return null;
   const [h, m] = timeStr.split(":").map(Number);
   return h * 60 + m;
 };
 
-module.exports.getAllShifts = async () => {
-  return await shiftModel.getAllShifts();
+// HELPER MỚI: Tính khoảng cách phút 
+const getDiff = (m1, m2) => {
+  let d = m1 - m2;
+  if (d < -720) d += 1440; 
+  if (d > 720) d -= 1440;  
+  return d;
 };
 
-module.exports.getShiftById = async (id) => {
-  return await shiftModel.getShiftById(id);
-};
+module.exports.getAllShifts = async () => { return await shiftModel.getAllShifts(); };
+module.exports.getShiftById = async (id) => { return await shiftModel.getShiftById(id); };
 
 module.exports.createShift = async (data) => {
   if (!data.name || !data.startTime || !data.endTime) {
@@ -25,39 +27,42 @@ module.exports.createShift = async (data) => {
 
   const conflict = await shiftModel.checkTimeConflict(data.startTime, data.endTime);
   if (conflict.length > 0) {
-    throw new Error(
-      `Thời gian trùng với ca "${conflict[0].name}" (${conflict[0].startTime}–${conflict[0].endTime})`
-    );
+    throw new Error(`Thời gian trùng với ca "${conflict[0].name}" (${conflict[0].startTime}–${conflict[0].endTime})`);
   }
+
+  const startMins = toMinutes(data.startTime);
+  const endMins = toMinutes(data.endTime);
+  
+  let duration = endMins - startMins;
+  if (duration < 0) duration += 1440; 
+  if (duration === 0) throw new Error("Giờ kết thúc không được trùng giờ bắt đầu!");
+  if (duration < 30) throw new Error("Ca làm tối thiểu 30 phút!");
+  if (duration > 600) throw new Error("Ca làm tối đa 10 giờ!");
 
   if (data.checkInStart || data.checkInEnd) {
     if (!data.checkInStart || !data.checkInEnd) {
       throw new Error("Phải nhập cả giờ bắt đầu và deadline giới hạn chấm công!");
     }
-
-    const startMins = toMinutes(data.startTime);
-    const endMins = toMinutes(data.endTime);
     const checkInStartM = toMinutes(data.checkInStart);
     const checkInEndM = toMinutes(data.checkInEnd);
 
-    if (checkInStartM >= checkInEndM) {
-      throw new Error("Giờ bắt đầu giới hạn chấm công phải trước deadline!");
+    if (getDiff(checkInEndM, checkInStartM) <= 0) {
+      throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
     }
-    if (checkInStartM < startMins - 30) {
+    if (getDiff(checkInStartM, startMins) < -30) {
       throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
     }
-    if (checkInEndM > endMins + 30) {
+    if (getDiff(checkInEndM, endMins) > 30) {
       throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 30 phút!");
     }
   }
 
   if (data.checkOutDeadline) {
-    const endMins           = toMinutes(data.endTime);
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (checkOutDeadlineM <= toMinutes(data.startTime)) {
+    if (getDiff(checkOutDeadlineM, startMins) <= 0) {
       throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
     }
-    if (checkOutDeadlineM > endMins + 30) {
+    if (getDiff(checkOutDeadlineM, endMins) > 30) {
       throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
     }
   }
@@ -75,41 +80,31 @@ module.exports.updateShift = async (id, data) => {
 
   const conflict = await shiftModel.checkTimeConflict(data.startTime, data.endTime, id);
   if (conflict.length > 0) {
-    throw new Error(
-      `Thời gian trùng với ca "${conflict[0].name}" (${conflict[0].startTime}–${conflict[0].endTime})`
-    );
+    throw new Error(`Thời gian trùng với ca "${conflict[0].name}" (${conflict[0].startTime}–${conflict[0].endTime})`);
   }
 
-  if (data.checkInStart || data.checkInEnd) {
-    if (!data.checkInStart || !data.checkInEnd) {
-      throw new Error("Phải nhập cả giờ bắt đầu và deadline giới hạn chấm công!");
-    }
+  const startMins = toMinutes(data.startTime);
+  const endMins = toMinutes(data.endTime);
 
-    const startMins = toMinutes(data.startTime);
-    const endMins = toMinutes(data.endTime);
+  let duration = endMins - startMins;
+  if (duration < 0) duration += 1440;
+  if (duration === 0) throw new Error("Giờ kết thúc không được trùng giờ bắt đầu!");
+  if (duration > 600) throw new Error("Ca làm tối đa 10 giờ!");
+
+  if (data.checkInStart || data.checkInEnd) {
+    if (!data.checkInStart || !data.checkInEnd) throw new Error("Phải nhập cả giờ bắt đầu và deadline!");
     const checkInStartM = toMinutes(data.checkInStart);
     const checkInEndM = toMinutes(data.checkInEnd);
 
-    if (checkInStartM >= checkInEndM) {
-      throw new Error("Giờ bắt đầu giới hạn chấm công phải trước deadline!");
-    }
-    if (checkInStartM < startMins - 30) {
-      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
-    }
-    if (checkInEndM > endMins + 30) {
-      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 30 phút!");
-    }
+    if (getDiff(checkInEndM, checkInStartM) <= 0) throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
+    if (getDiff(checkInStartM, startMins) < -30) throw new Error("Nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
+    if (getDiff(checkInEndM, endMins) > 30) throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 30 phút!");
   }
 
   if (data.checkOutDeadline) {
-    const endMins           = toMinutes(data.endTime);
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (checkOutDeadlineM <= toMinutes(data.startTime)) {
-      throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
-    }
-    if (checkOutDeadlineM > endMins + 30) {
-      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
-    }
+    if (getDiff(checkOutDeadlineM, startMins) <= 0) throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
+    if (getDiff(checkOutDeadlineM, endMins) > 30) throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc quá 30 phút!");
   }
 
   return await shiftModel.updateShift(id, data);
