@@ -558,16 +558,16 @@ CREATE TABLE InvoiceItems (
     invoiceId BIGINT NOT NULL,
 
     productId BIGINT NOT NULL,
-    productUnitId INT NOT NULL,
+    -- productUnitId INT NOT NULL,
 
     productName NVARCHAR(255) NOT NULL,
-    unitName NVARCHAR(20) NOT NULL,
+    -- unitName NVARCHAR(20) NOT NULL,
 
     unitPrice DECIMAL(15,2) NOT NULL,
 
     quantity DECIMAL(15,3) NOT NULL,
 
-    baseQuantity DECIMAL(15,3) NOT NULL,
+    -- baseQuantity DECIMAL(15,3) NOT NULL,
 
     lineTotal DECIMAL(15,2) NOT NULL,
 
@@ -622,10 +622,10 @@ CREATE TABLE [Returns] (
     [totalRefundAmount] DECIMAL(15,2) NOT NULL,
     [reason] NVARCHAR(MAX),
     
-    [status] VARCHAR(20) DEFAULT 'Pending', -- Đã sửa: Thêm kiểu dữ liệu
-    [approveBy] BIGINT NULL,               -- Đã sửa: Thêm kiểu dữ liệu và cho phép NULL
+    -- [status] VARCHAR(20) DEFAULT 'Pending', -- Đã sửa: Thêm kiểu dữ liệu
+    -- [approveBy] BIGINT NULL,               -- Đã sửa: Thêm kiểu dữ liệu và cho phép NULL
     
-    [createdAt] DATETIME2 DEFAULT GETDATE(),
+    -- [createdAt] DATETIME2 DEFAULT GETDATE(),
     
     -- Constraints
     CONSTRAINT [FK_Returns_Invoice] FOREIGN KEY ([invoiceId]) REFERENCES [Invoices]([id]),
@@ -649,14 +649,14 @@ CREATE TABLE ReturnItems (
     invoiceItemId BIGINT NOT NULL,
 
     productId BIGINT NOT NULL,
-    productUnitId INT NOT NULL,
+    -- productUnitId INT NOT NULL,
 
     productName NVARCHAR(255) NOT NULL,
-    unitName NVARCHAR(20) NOT NULL,
+    -- unitName NVARCHAR(20) NOT NULL,
 
     quantity DECIMAL(15,3) NOT NULL,
 
-    baseQuantity DECIMAL(15,3) NOT NULL,
+    -- baseQuantity DECIMAL(15,3) NOT NULL,
 
     refundAmount DECIMAL(15,2) NOT NULL,
 
