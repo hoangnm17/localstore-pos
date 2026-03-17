@@ -817,4 +817,107 @@ ADD CONSTRAINT DF_ReturnItems_restockApproved
 DEFAULT 'Pending' FOR restockApproved;
 GO
 
+
+/* =========================================
+   1. ADD expiresAt vào Invoices
+========================================= */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns 
+    WHERE Name = N'expiresAt' 
+    AND Object_ID = Object_ID(N'Invoices')
+)
+BEGIN
+    ALTER TABLE Invoices
+    ADD expiresAt DATETIME2 NULL;
+END
+GO
+
+
+/* =========================================
+   2. UPDATE CHECK CONSTRAINT STATUS
+========================================= */
+-- Drop constraint cũ
+DECLARE @constraintName NVARCHAR(200);
+
+SELECT @constraintName = name
+FROM sys.check_constraints
+WHERE parent_object_id = OBJECT_ID('Invoices')
+AND definition LIKE '%status%';
+
+IF @constraintName IS NOT NULL
+BEGIN
+    EXEC('ALTER TABLE Invoices DROP CONSTRAINT ' + @constraintName);
+END
+GO
+
+-- Add constraint mới
+ALTER TABLE Invoices
+ADD CONSTRAINT CK_Invoice_Status 
+CHECK (status IN (
+    'UNPAID',
+    'PENDING',
+    'PAID',
+    'FAILED',
+    'CANCELLED',
+    'REFUNDED'
+));
+GO
+
+
+/* =========================================
+   3. ADD INDEX cho timeout query
+========================================= */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'IX_Invoices_Status_ExpiresAt'
+)
+BEGIN
+    CREATE INDEX IX_Invoices_Status_ExpiresAt
+    ON Invoices(status, expiresAt);
+END
+GO
+
+
+/* =========================================
+   4. ADD transactionId vào Payments
+========================================= */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns 
+    WHERE Name = N'transactionId' 
+    AND Object_ID = Object_ID(N'Payments')
+)
+BEGIN
+    ALTER TABLE Payments
+    ADD transactionId VARCHAR(100) NULL;
+END
+GO
+
+
+/* =========================================
+   5. UNIQUE INDEX chống duplicate webhook (SePay)
+========================================= */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'UX_SePay_sepayId'
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_SePay_sepayId
+    ON SePayTransactions(sepayId)
+    WHERE sepayId IS NOT NULL;
+END
+GO
+
+
+/* =========================================
+   6. (OPTIONAL) DEFAULT expiresAt NULL SAFE
+========================================= */
+-- Không cần default vì set từ BE
+-- giữ NULL để distinguish chưa tạo QR
+
+
+/* =========================================
+   DONE
+========================================= */
+PRINT 'Migration completed successfully';
+
 -- END OF SCRIPT
