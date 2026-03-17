@@ -91,15 +91,7 @@ export const useInvoiceTabs = () => {
     loadDrafts();
   }, []);
 
-  /* =====================================================
-     ACTIVE INVOICE
-  ===================================================== */
-
   const activeInvoice = invoices.find(i => i.id === activeInvoiceId) || null;
-
-  /* =====================================================
-     LAZY LOAD DETAIL
-  ===================================================== */
 
   useEffect(() => {
     if (!activeInvoice) return;
@@ -296,7 +288,6 @@ export const useInvoiceTabs = () => {
     setInvoices((prev) => {
       const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
 
-      // Tìm hóa đơn UNPAID khác để nhảy sang
       const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
 
       if (nextUnpaid) {
@@ -304,7 +295,6 @@ export const useInvoiceTabs = () => {
         return remaining;
       }
 
-      // Nếu không còn đơn nào thì tạo đơn mới
       const local = createLocalInvoice();
       nextActiveId = local.id;
       return [...remaining, local];
