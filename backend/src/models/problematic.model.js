@@ -1,0 +1,103 @@
+const { sql, connectDB } = require("../config/database.js");
+
+const create = async ({ title, issueDescription, reportedBy }) => {
+    const pool = await connectDB();
+
+    return pool.request()
+        .input("title", sql.NVarChar, title)
+        .input("issueDescription", sql.NVarChar, issueDescription)
+        .input("reportedBy", sql.BigInt, reportedBy)
+        .query(`
+            INSERT INTO ProblematicGoodsReport (title, issueDescription, reportedBy)
+            VALUES (@title, @issueDescription, @reportedBy)
+        `);
+};
+
+const getReports = async ({ userId, isManager, filters }) => {
+    const pool = await connectDB();
+
+    let query = `
+        SELECT *
+        FROM ProblematicGoodsReport
+        WHERE 1=1
+    `;
+
+    const request = pool.request();
+
+    //Warehouse chỉ xem của mình
+    if (!isManager) {
+        query += " AND reportedBy = @userId";
+        request.input("userId", sql.BigInt, userId);
+    }
+
+    //Filter status
+    if (filters.status && filters.status !== "ALL") {
+        query += " AND status = @status";
+        request.input("status", sql.NVarChar, filters.status);
+    }
+
+    //Filter ngày tạo (FROM)
+    if (filters.createdFrom) {
+        query += " AND createdAt >= @createdFrom";
+        request.input(
+            "createdFrom",
+            sql.DateTime,
+            new Date(filters.createdFrom)
+        );
+    }
+
+    //Filter ngày tạo (TO) — set 23:59:59
+    if (filters.createdTo) {
+        const endDate = new Date(filters.createdTo);
+        endDate.setHours(23, 59, 59, 999);
+
+        query += " AND createdAt <= @createdTo";
+        request.input("createdTo", sql.DateTime, endDate);
+    }
+
+    query += " ORDER BY createdAt DESC";
+
+    const result = await request.query(query);
+
+    return result.recordset;
+};
+const getById = async (reportId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("reportId", sql.BigInt, reportId)
+        .query(`
+            SELECT * 
+            FROM ProblematicGoodsReport 
+            WHERE id = @reportId
+        `);
+
+    return result.recordset[0];
+};
+
+const updateStatus = async ({ reportId, status, updatedBy }) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("reportId", sql.BigInt, reportId)
+        .input("status", sql.NVarChar, status)
+        .input("updatedBy", sql.BigInt, updatedBy)
+        .query(`
+            UPDATE ProblematicGoodsReport
+            SET 
+                status = @status
+            WHERE id = @reportId;
+
+            SELECT * FROM ProblematicGoodsReport 
+            WHERE id = @reportId;
+        `);
+
+    return result.recordset[0];
+};
+
+module.exports = {
+    create,
+    getReports,
+    getById,
+    updateStatus
+};

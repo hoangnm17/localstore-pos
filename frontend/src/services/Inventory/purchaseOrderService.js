@@ -1,0 +1,71 @@
+import api from "../axiosInstance";
+
+/**
+ * GET LIST PURCHASE ORDERS
+ * GET /inventory/purchase-orders/list
+ */
+function getPurchaseOrders(params = {}) {
+  return api.get("/inventory/purchase-orders/list", {
+    params
+  });
+}
+
+/**
+ * GET PURCHASE ORDER DETAIL
+ * GET /inventory/purchase-orders/detail/:id
+ */
+function getPurchaseOrderDetail(id) {
+  return api.get(`/inventory/purchase-orders/detail/${id}`);
+}
+
+/**
+ * CREATE PURCHASE ORDER
+ * POST /inventory/purchase-orders/request
+ */
+function createPurchaseOrder(data) {
+  return api.post("/inventory/purchase-orders/request", data);
+}
+
+/**
+ * UPDATE PURCHASE ORDER STATUS
+ * PATCH /inventory/purchase-orders/status/:id
+ */
+function updatePurchaseOrderStatus(id, status) {
+  return api.patch(
+    `/inventory/purchase-orders/status/${id}`,
+    { status }
+  );
+}
+
+/**
+ * WAREHOUSE - RECEIVE PURCHASE ORDER
+ */
+function receivePurchaseOrder(id, payload) {
+  return api.patch(`/inventory/purchase-orders/receive/${id}`, payload);
+}
+
+/**
+ * GET MONTHLY PURCHASE ORDER REPORT
+ * GET /inventory/purchase-orders/report
+ */
+function getMonthlyPOReport(params = {}) {
+  return api.get("/inventory/purchase-orders/report", {
+    params
+  });
+}
+
+function getSuppliersByProductUnit(productUnitId) {
+  return api.get(`/inventory/product-units/${productUnitId}/suppliers`);
+}
+
+const purchaseOrderService = {
+  getPurchaseOrders,
+  getPurchaseOrderDetail,
+  createPurchaseOrder,
+  updatePurchaseOrderStatus,
+  receivePurchaseOrder,
+  getMonthlyPOReport,
+  getSuppliersByProductUnit
+};
+
+export default purchaseOrderService;
