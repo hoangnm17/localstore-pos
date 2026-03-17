@@ -178,25 +178,20 @@ exports.isCircularParent = async (id, parentId) => {
     return rs.recordset[0].total > 0;
 };
 
-exports.getAllCategories = async (search = '', limit = 10, offset = 0) => {
+exports.getAllCategories = async () => {
     const pool = await connectDB();
 
     const result = await pool.request()
-        .input('search', sql.NVarChar, `${search}%`)
-        .input('limit', sql.Int, limit)
-        .input('offset', sql.Int, offset)
         .query(`
             SELECT 
                 id,
                 name,
                 imageUrl,
                 parentId
-        FROM Categories
-        WHERE name LIKE @search
-        ORDER BY name
-        OFFSET @offset ROWS 
-        FETCH NEXT @limit ROWS ONLY
-  `);
+            FROM Categories
+            WHERE status = 1
+            ORDER BY name
+        `);
 
     return result.recordset;
 };
