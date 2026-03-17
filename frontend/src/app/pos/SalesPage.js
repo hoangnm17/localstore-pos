@@ -137,36 +137,49 @@ export default function SalesHome() {
     const newItems = activeInvoice.items.map(it => {
       if (it.id !== id) return it;
 
-      const safeQty = Math.max(
-        1,
-        Math.min(quantity, it.quantityOnHand)
-      );
+      if (quantity === "" || quantity === ".") {
+        return { ...it, quantity: quantity };
+      }
 
-      return { ...it, quantity: safeQty };
+      let num = parseFloat(quantity);
+
+      if (isNaN(num)) return it;
+
+      const maxQty = it.quantityOnHand ?? Infinity;
+
+      if (num > maxQty) {
+        return { ...it, quantity: maxQty };
+      }
+
+      if (num < 0) return { ...it, quantity: 0 };
+      if (typeof quantity === 'string' && quantity.endsWith('.') && it.unitType !== "PIECE") {
+        return { ...it, quantity: quantity };
+      }
+      return { ...it, quantity: quantity };
     });
 
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
-  if (accessError) {
-    return (
-      <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-        <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
-           <i className="bi bi-exclamation-triangle-fill"></i>
-        </div>
-        <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
-        <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
-            {accessError}
-        </p>
-        <button 
-            className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm" 
-            onClick={() => window.location.href = '/my-schedule'} 
-        >
-            <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
-        </button>
-      </div>
-    );
-  }
+  // if (accessError) {
+  //   return (
+  //     <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+  //       <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
+  //          <i className="bi bi-exclamation-triangle-fill"></i>
+  //       </div>
+  //       <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
+  //       <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
+  //           {accessError}
+  //       </p>
+  //       <button 
+  //           className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm" 
+  //           onClick={() => window.location.href = '/my-schedule'} 
+  //       >
+  //           <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
+  //       </button>
+  //     </div>
+  //   );
+  // }
   if (!activeInvoice) {
     return (
       <div className="vh-100 d-flex flex-column justify-content-center align-items-center">

@@ -16,9 +16,10 @@ export default function PaymentModal({
   total = 0,
   customer = null,
   qr = null,
-  onClose = () => { },
-  onConfirm = () => { },
-  onBankPaid = () => { },
+  onClose = () => {},
+  onConfirm = () => {},
+  onBankPaid = () => {},
+  onCancelBank = () => {},
 }) {
   useTitle("Thanh toán");
 
@@ -40,10 +41,15 @@ export default function PaymentModal({
   });
 
   useEffect(() => {
-    if (method === "BANK") {
-      setInternalQr(null);
-    }
-  }, [finalAmount, method]);
+    setInternalQr(null);
+  }, [finalAmount]);
+
+  useEffect(() => {
+  if (method === "CASH") {
+    setInternalQr(null);
+    onCancelBank?.(orderId);
+  }
+}, [method]);
 
   useEffect(() => {
     if (method !== "BANK" || internalQr || finalAmount <= 0) return;
@@ -132,7 +138,12 @@ export default function PaymentModal({
                 ) : method === "CASH" ? (
                   <CashPayment total={finalAmount} onConfirm={handleConfirmCash} />
                 ) : (
-                  <BankPayment qr={internalQr} total={finalAmount} loading={loadingQr} />
+                  <BankPayment
+                    qr={internalQr}
+                    total={finalAmount}
+                    loading={loadingQr}
+                    expiresAt={internalQr?.expiresAt}
+                  />
                 )}
               </div>
             </div>

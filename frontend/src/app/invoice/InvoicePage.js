@@ -9,6 +9,7 @@ import useTitle from "hooks/common/useTitle";
 
 const STATUS = {
   ALL: "ALL",
+  PENDING: "PENDING",
   UNPAID: "UNPAID",
   PAID: "PAID",
   CANCELLED: "CANCELLED",
@@ -17,6 +18,7 @@ const STATUS = {
 const STATUS_META = {
   PAID: { label: "Đã thanh toán", bg: "#D1FAE5", color: "#065F46", icon: "bi-check-all" },
   UNPAID: { label: "Chờ thanh toán", bg: "#FEF3C7", color: "#92400E", icon: "bi-clock-history" },
+  PENDING: { label: "Đang xử lý", bg: "#E0F2FE", color: "#075985", icon: "bi-hourglass-split" },
   CANCELLED: { label: "Đã hủy bỏ", bg: "#FEE2E2", color: "#991B1B", icon: "bi-trash3" },
   DEFAULT: { label: "N/A", bg: "#F3F4F6", color: "#374151", icon: "bi-question-circle" }
 };
@@ -39,9 +41,9 @@ export default function InvoicesPage() {
     totalPages: 1 
   });
 
-  // Cập nhật tiêu đề trang động theo trạng thái filter
-  useTitle(status === STATUS.ALL ? "Tất cả hóa đơn" : `${STATUS_META[status]?.label}`);
+  useTitle(status === STATUS.ALL ? "Tất cả hóa đơn" : (STATUS_META[status]?.label || "Hóa đơn"));
 
+  // Reset về trang 1 khi filter thay đổi
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, status]);
@@ -72,21 +74,17 @@ export default function InvoicesPage() {
     fetchInvoices();
   }, [params]);
 
-  // Hàm xử lý in lại hóa đơn
   const handlePrint = (id) => {
-    // Mở trang in trong tab mới với kích thước chuẩn hóa đơn POS
     const printUrl = `/print/invoice/${id}`;
     const printWindow = window.open(printUrl, '_blank', 'width=450,height=700');
-    if (printWindow) {
-      printWindow.focus();
-    }
+    if (printWindow) printWindow.focus();
   };
 
   return (
     <div className="invoice-container py-4">
       <div className="container-fluid px-lg-5">
-
-        {/* HEADER SECTION */}
+        
+        {/* HEADER */}
         <div className="row align-items-center mb-4">
           <div className="col-md-6">
             <h4 className="fw-bold text-slate-800 mb-1">Quản lý hóa đơn</h4>
@@ -99,7 +97,7 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* TOOLBAR: FILTERS & SEARCH */}
+        {/* TOOLBAR */}
         <div className="card border-0 shadow-sm mb-4 br-16">
           <div className="card-body p-3">
             <div className="row g-3">
@@ -111,7 +109,7 @@ export default function InvoicesPage() {
                       className={`btn-filter ${status === STATUS[key] ? "active" : ""}`}
                       onClick={() => setStatus(STATUS[key])}
                     >
-                      {key === 'ALL' ? 'Tất cả' : STATUS_META[key].label}
+                      {key === 'ALL' ? 'Tất cả' : STATUS_META[key]?.label}
                     </button>
                   ))}
                 </div>
@@ -122,7 +120,7 @@ export default function InvoicesPage() {
                   <input
                     type="text"
                     className="form-control border-0 bg-transparent shadow-none"
-                    placeholder="Nhập mã hóa đơn cần tìm..."
+                    placeholder="Tìm mã hóa đơn..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -137,7 +135,7 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* DATA TABLE SECTION */}
+        {/* TABLE */}
         <div className="card border-0 shadow-sm br-16 overflow-hidden">
           <div className="table-responsive">
             <table className="table align-middle mb-0">
@@ -161,28 +159,32 @@ export default function InvoicesPage() {
                 ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-5">
-                      <i className="bi bi-search fs-1 d-block mb-2 text-muted opacity-25"></i>
-                      <p className="text-muted">Không tìm thấy hóa đơn nào phù hợp với bộ lọc.</p>
-                      <button className="btn btn-sm btn-outline-primary" onClick={() => {setSearch(""); setStatus(STATUS.ALL)}}>
-                        Xóa tất cả bộ lọc
-                      </button>
+                      <div className="py-4">
+                        <i className="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-25"></i>
+                        <p className="text-muted">Không tìm thấy hóa đơn nào.</p>
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => {setSearch(""); setStatus(STATUS.ALL)}}>
+                          Xóa bộ lọc
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   rows.map((inv) => {
                     const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
+                    const date = new Date(inv.createdAt);
+                    
                     return (
                       <tr key={inv.id} className="invoice-row">
                         <td className="ps-4">
                           <span className="fw-bold text-primary">#{inv.invoiceCode}</span>
                         </td>
                         <td>
-                          <div className="small fw-medium text-dark">{new Date(inv.createdAt.replace('Z', '')).toLocaleDateString('vi-VN')}</div>
-                          <div className="text-muted xx-small">{new Date(inv.createdAt.replace('Z', '')).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="small fw-medium text-dark">{date.toLocaleDateString('vi-VN')}</div>
+                          <div className="text-muted xx-small">{date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
                         </td>
                         <td>
                           <div className="fw-semibold text-slate-700">{inv.customerName || "Khách lẻ"}</div>
-                          <div className="text-muted small" style={{fontSize: '0.7rem'}}>NV: {inv.staffName || 'Admin'}</div>
+                          <div className="text-muted small" style={{fontSize: '0.7rem'}}>NV: {inv.staffName || 'Hệ thống'}</div>
                         </td>
                         <td className="text-end fw-bold text-dark">
                           {formatCurrency(inv.finalAmount)}
@@ -194,19 +196,14 @@ export default function InvoicesPage() {
                         </td>
                         <td className="text-end pe-4">
                           <div className="d-flex justify-content-end gap-1">
-                            {/* Xem chi tiết */}
-                            <button className="btn-icon-action" title="Xem chi tiết" onClick={() => setDetailId(inv.id)}>
+                            <button className="btn-icon-action" title="Xem" onClick={() => setDetailId(inv.id)}>
                               <i className="bi bi-eye-fill"></i>
                             </button>
-
-                            {/* In lại hóa đơn */}
-                            <button className="btn-icon-action text-info" title="In lại hóa đơn" onClick={() => handlePrint(inv.id)}>
+                            <button className="btn-icon-action text-info" title="In" onClick={() => handlePrint(inv.id)}>
                               <i className="bi bi-printer-fill"></i>
                             </button>
-
-                            {/* Thanh toán nhanh (Nếu chưa trả tiền) */}
-                            {inv.status === 'UNPAID' && (
-                              <button className="btn-icon-action text-success" title="Thanh toán ngay" onClick={() => navigate(`/sales?invoiceId=${inv.id}`)}>
+                            {['UNPAID', 'PENDING'].includes(inv.status) && (
+                              <button className="btn-icon-action text-success" title="Thanh toán" onClick={() => navigate(`/sales?invoiceId=${inv.id}`)}>
                                 <i className="bi bi-credit-card-fill"></i>
                               </button>
                             )}
@@ -220,23 +217,21 @@ export default function InvoicesPage() {
             </table>
           </div>
 
-          {/* PAGINATION FOOTER */}
           <div className="card-footer bg-white border-top-0 py-3">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <span className="text-muted small">
-                Hiển thị <b>{rows.length}</b> trên <b>{pagination.totalItems}</b> hóa đơn
+                Hiển thị <b>{rows.length}</b> / <b>{pagination.totalItems}</b> hóa đơn
               </span>
               <Pagination
-                currentPage={pagination.page}
+                currentPage={page}
                 totalPages={pagination.totalPages}
-                onPageChange={(p) => setPage(p)}
+                onPageChange={setPage}
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modals */}
       {detailId && <InvoiceDetailModal invoiceId={detailId} onClose={() => setDetailId(null)} />}
 
       <style>{`
@@ -275,14 +270,14 @@ export default function InvoicesPage() {
         }
 
         .invoice-row { transition: all 0.2s; border-bottom: 1px solid #f1f5f9; }
-        .invoice-row:hover { background-color: #f8fafc; transform: scale(1.002); }
+        .invoice-row:hover { background-color: #f8fafc; }
         
         .btn-icon-action {
-          width: 36px; height: 36px; border-radius: 10px; border: none;
+          width: 32px; height: 32px; border-radius: 8px; border: none;
           background: transparent; color: #64748b; transition: all 0.2s;
           display: flex; align-items: center; justify-content: center;
         }
-        .btn-icon-action:hover { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transform: translateY(-1px); }
+        .btn-icon-action:hover { background: #edf2f7; color: #1a202c; }
         
         .skeleton-row .skeleton-line {
           height: 20px; background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
