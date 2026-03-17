@@ -171,7 +171,7 @@ export default function InvoicesPage() {
                 ) : (
                   rows.map((inv) => {
                     const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
-                    const date = new Date(inv.createdAt);
+                    const date = new Date(inv.createdAt ? inv.createdAt.replace('Z', '') : new Date());
                     
                     return (
                       <tr key={inv.id} className="invoice-row">
