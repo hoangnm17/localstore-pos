@@ -150,9 +150,9 @@ function InventoryMenu() {
                 <div className="bg-warning bg-gradient text-white rounded-circle p-5 mb-4 shadow">
                   <i className="bi bi-exclamation-triangle fs-2"></i>
                 </div>
-                <h4 className="card-title fw-bold mb-3 text-dark">Lỗi nhập hàng</h4>
+                <h4 className="card-title fw-bold mb-3 text-dark">Vấn đề của kho</h4>
                 <p className="card-text text-muted mb-4 fs-5">
-                  Ghi nhận và xử lý các sai lệch khi nhập kho
+                  Ghi nhận các vấn đề của kho
                 </p>
               </div>
               <div className="card-footer bg-transparent border-0 pb-5 pt-0">

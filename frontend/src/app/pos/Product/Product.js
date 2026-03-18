@@ -125,28 +125,35 @@ export default function Product({ addItem, focusSignal } ) {
     fetchProductList();
   }, [currentPage, search, selectedCategory]);
 
-  const fetchProductList = async () => {
-    setLoading(true);
+ const fetchProductList = async () => {
+  setLoading(true);
 
-    try {
+  try {
+    const res = await getAllProducts({
+      search: search || "",
+      categoryId: selectedCategory?.id || null,
+    });
 
-      const res = await getAllProducts({
-        page: currentPage,
-        limit: PAGE_CONFIG.ITEMS_PER_PAGE,
-        search: search || "",
-        categoryId: selectedCategory?.id || null,
-      });
-      if (res.success) {
-        setProducts(res.data || []);
-        setTotalPages(res.totalPages || 1);
-      }
+    if (res.success) {
+      const allProducts = res.data || [];
 
-    } catch (err) {
-      console.error("Fetch products error:", err);
-    } finally {
-      setLoading(false);
+      // 🔥 tự phân trang
+      const start = (currentPage - 1) * PAGE_CONFIG.ITEMS_PER_PAGE;
+      const end = start + PAGE_CONFIG.ITEMS_PER_PAGE;
+
+      const paginated = allProducts.slice(start, end);
+
+      setProducts(paginated);
+      setTotalPages(
+        Math.ceil(allProducts.length / PAGE_CONFIG.ITEMS_PER_PAGE)
+      );
     }
-  };
+  } catch (err) {
+    console.error("Fetch products error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     setCurrentPage(1);
@@ -191,7 +198,7 @@ export default function Product({ addItem, focusSignal } ) {
           </div>
 
           {/* FOOTER: Pagination (Cố định ở đáy card) */}
-          {products.length > 0 && (
+          {totalPages > 1 && (
             <div className="card-footer bg-white border-top py-3 px-4 flex-shrink-0">
               <div className="d-flex justify-content-between align-items-center">
                 <span className="text-muted small d-none d-md-inline">

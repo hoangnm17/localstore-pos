@@ -60,17 +60,26 @@ function SupplierList() {
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* HEADER giữ nguyên UI */}
+      {/* HEADER*/}
       <header className="bg-white border-bottom shadow-sm">
         <div className="container-fluid px-3 px-md-4">
           <div className="d-flex align-items-center justify-content-between py-3">
-            <h1 className="fs-3 fw-bold text-dark mb-0">
-              Quản lý nhà cung cấp
-            </h1>
+
+            <div className="d-flex align-items-center gap-3">
+              <button
+                className="btn btn-outline-secondary rounded-circle p-2"
+                onClick={() => navigate("/inventory/menu")}
+              >
+                <i className="bi bi-arrow-left"></i>
+              </button>
+
+              <h1 className="fs-3 fw-bold text-dark mb-0">
+                Quản lý nhà cung cấp
+              </h1>
+            </div>
 
             <div className="d-flex align-items-center gap-3 gap-md-4">
 
-              {/* 🔥 SEARCH debounce */}
               <div className="position-relative d-none d-md-block">
                 <input
                   type="search"
@@ -86,9 +95,7 @@ function SupplierList() {
               <button
                 className="btn btn-outline-secondary d-md-none rounded-circle p-2"
                 onClick={() =>
-                  document
-                    .querySelector('input[type="search"]')
-                    ?.focus()
+                  document.querySelector('input[type="search"]')?.focus()
                 }
               >
                 <i className="bi bi-search"></i>
@@ -109,7 +116,7 @@ function SupplierList() {
         </div>
       </header>
 
-      {/* MAIN giữ nguyên */}
+      {/* MAIN */}
       <main className="container-fluid px-3 px-md-4 py-4 pt-4">
         {loading ? (
           <div className="text-center py-5 my-5">

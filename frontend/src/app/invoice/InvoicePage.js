@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { invoiceGetList, invoiceGetDetail } from "services/Invoices/invoice.service";
 import Pagination from "components/Pagination/Pagination";
 import { formatCurrency } from "utils/formatters";
-import BillModal from "components/pos/Sale/Bill"; 
+import BillModal from "components/pos/Sale/Bill";
 import useDebounce from "hooks/common/useDebounce";
 import useTitle from "hooks/common/useTitle";
 
@@ -32,16 +32,16 @@ export default function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
-  
+
   // States cho BillModal (Dùng chung cho cả Xem và In)
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [autoPrint, setAutoPrint] = useState(false);
 
-  const [pagination, setPagination] = useState({ 
-    page: 1, 
-    pageSize: 10, 
-    totalItems: 0, 
-    totalPages: 1 
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 1
   });
 
   useTitle(status === STATUS.ALL ? "Tất cả hóa đơn" : (STATUS_META[status]?.label || "Hóa đơn"));
@@ -166,15 +166,15 @@ export default function InvoicesPage() {
                 ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-5">
-                        <i className="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-25"></i>
-                        <p className="text-muted">Không tìm thấy hóa đơn nào.</p>
+                      <i className="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-25"></i>
+                      <p className="text-muted">Không tìm thấy hóa đơn nào.</p>
                     </td>
                   </tr>
                 ) : (
                   rows.map((inv) => {
                     const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
                     const date = new Date(inv.createdAt ? inv.createdAt.replace('Z', '') : new Date());
-                    
+
                     return (
                       <tr key={inv.id} className="invoice-row">
                         <td className="ps-4">
@@ -186,7 +186,7 @@ export default function InvoicesPage() {
                         </td>
                         <td>
                           <div className="fw-semibold text-slate-700">{inv.customerName || "Khách lẻ"}</div>
-                          <div className="text-muted small" style={{fontSize: '0.7rem'}}>NV: {inv.staffName || 'Hệ thống'}</div>
+                          <div className="text-muted small" style={{ fontSize: '0.7rem' }}>NV: {inv.staffName || 'Hệ thống'}</div>
                         </td>
                         <td className="text-end fw-bold text-dark">
                           {formatCurrency(inv.finalAmount)}
@@ -235,10 +235,10 @@ export default function InvoicesPage() {
       </div>
 
       {selectedInvoice && (
-        <BillModal 
-          invoice={selectedInvoice} 
-          autoPrint={autoPrint} 
-          onClose={() => setSelectedInvoice(null)} 
+        <BillModal
+          invoice={selectedInvoice}
+          autoPrint={autoPrint}
+          onClose={() => setSelectedInvoice(null)}
         />
       )}
 

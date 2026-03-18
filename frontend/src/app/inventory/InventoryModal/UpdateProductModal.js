@@ -45,40 +45,33 @@ function UpdateProductModal({
   if (!show || !product) return null;
 
   const handleUpdate = async () => {
-
-  try {
-
-    setLoading(true);
-
-    const data = {
+  // validate
+      if (!price || price.toString().trim() === "") {
+      alert("Gia nhap khong duoc de trong");
+      return;
+     }
+    try {
+      setLoading(true);
+      const data = {
       status
-    };
-
-    // chỉ gửi price khi có thay đổi
-    if (price && Number(price) !== Number(product.supplyPrice)) {
+      };
+      if (Number(price) !== Number(product.supplyPrice)) {
       data.price = Number(price);
       data.productUnitId = Number(productUnitId);
-    }
-
-    await supplierService.updateProductOfSupplier(
+      }
+      await supplierService.updateProductOfSupplier(
       supplierId,
       product.id,
       data
     );
-
-    onSuccess();
-    onClose();
-
-  } catch (err) {
-
-    console.error("Update error:", err);
-
-  } finally {
-
-    setLoading(false);
-
-  }
-};
+      onSuccess();
+      onClose();
+      } catch (err) {
+      console.error("Update error:", err);
+      } finally {
+      setLoading(false);
+      }
+    };
 
   return (
     <>
