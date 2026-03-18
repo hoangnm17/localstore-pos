@@ -32,9 +32,11 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
       phoneRef.current?.focus();
       return;
     }
+
     try {
       setSaving(true);
       setError("");
+
       const payload = {
         name: form.name.trim(),
         phone: form.phone.trim(),
@@ -42,11 +44,7 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
 
       const res = await customerCreate(payload);
       if (res?.success === false) {
-        setError(res.message || "Số điện thoại này đã tồn tại.");
-        setTimeout(() => {
-          phoneRef.current?.focus();
-        }, 10);
-        return;
+        throw new Error(res.message || "Số điện thoại này đã tồn tại.");
       }
 
       showNotification("Tạo khách hàng thành công", "success");
@@ -54,8 +52,19 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
       onClose();
 
     } catch (err) {
-      const serverMsg = err?.message;
-      setError(serverMsg || "Có lỗi xảy ra khi kết nối server.");
+      const serverMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Có lỗi xảy ra khi kết nối server.";
+
+      setError(serverMsg);
+
+      if (serverMsg.toLowerCase().includes("điện thoại")) {
+        setTimeout(() => phoneRef.current?.focus(), 10);
+      } else {
+        setTimeout(() => nameRef.current?.focus(), 10);
+      }
+
     } finally {
       setSaving(false);
     }
@@ -64,7 +73,6 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
   return (
     <BaseModal onClose={onClose} disableClose={saving}>
       <div className="customer-modal-premium">
-        {/* Header Section */}
         <div className="modal-header-section">
           <div className="header-content">
             <div className="header-icon">
@@ -80,7 +88,6 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
           </button>
         </div>
 
-        {/* Form Body */}
         <div className="modal-body-section">
           <form onSubmit={handleSubmit}>
             <div className="input-group-custom">
