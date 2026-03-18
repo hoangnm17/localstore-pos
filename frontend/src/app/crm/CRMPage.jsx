@@ -651,14 +651,23 @@ function EventsTab() {
                                 {EVENT_PRIVILEGE_TYPES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
                             </select>
                         </div>
-                        <div className="form-group"><label>Giá trị đặc quyền</label><input className="form-input" type="number" value={form.privilegeValue} onChange={e => setForm({ ...form, privilegeValue: e.target.value })} /></div>
-                        <div className="form-group"><label>Xếp hạng tối thiểu</label>
-                            <select className="form-input" value={form.minRank} onChange={e => setForm({ ...form, minRank: e.target.value })}>
-                                <option value="None">Tất cả</option>
-                                <option value="Silver">Bạc trở lên</option>
-                                <option value="Gold">Vàng trở lên</option>
-                                <option value="Diamond">Kim cương</option>
-                            </select>
+                        <div className="form-group">
+                            <label>
+                                {form.privilegeType === 'extra_discount' ? 'Tỉ lệ giảm giá thêm (%)' :
+                                    form.privilegeType === 'multiplier_points' ? 'Hệ số nhân điểm (lần)' :
+                                        'Tên quà tặng kèm'}
+                            </label>
+                            <input
+                                className="form-input"
+                                type={form.privilegeType === 'free_gift' ? 'text' : 'number'}
+                                value={form.privilegeValue}
+                                onChange={e => setForm({ ...form, privilegeValue: e.target.value })}
+                                placeholder={
+                                    form.privilegeType === 'extra_discount' ? 'Ví dụ: 10 (%)' :
+                                        form.privilegeType === 'multiplier_points' ? 'Ví dụ: 2 (lần)' :
+                                            'Ví dụ: Tặng 1 mũ bảo hiểm cao cấp'
+                                }
+                            />
                         </div>
                         <div className="form-group"><label>Trạng thái</label>
                             <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>

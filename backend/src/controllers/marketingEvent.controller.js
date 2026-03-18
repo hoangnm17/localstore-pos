@@ -25,7 +25,7 @@ module.exports.create = async (req, res) => {
         const event = await eventModel.create(req.body);
         return res.status(201).json({ success: true, data: event });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(400).json({ success: false, message: error.message });
     }
 };
 
@@ -34,7 +34,7 @@ module.exports.update = async (req, res) => {
         const event = await eventModel.update(req.params.id, req.body);
         return res.status(200).json({ success: true, data: event });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(400).json({ success: false, message: error.message });
     }
 };
 

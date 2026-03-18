@@ -30,6 +30,7 @@ class EventModel {
     }
 
     async create(data) {
+        this.validateFields(data);
         const pool = await connectDB();
         const res = await pool.request()
             .input('name', sql.NVarChar, data.name)
@@ -49,6 +50,7 @@ class EventModel {
     }
 
     async update(id, data) {
+        this.validateFields(data);
         const pool = await connectDB();
         const res = await pool.request()
             .input('id', sql.Int, id)
@@ -94,6 +96,57 @@ class EventModel {
             `);
         return res.recordset;
     }
+    validateFields(data) {
+        const { name, startTime, endTime } = data;
+
+        // 1. Chặn tên bỏ trống
+        if (!name || name.trim() === '') {
+            throw new Error('Tên sự kiện không được để trống');
+        }
+
+        if (!startTime || startTime.toString().trim() === '') {
+            throw new Error('Ngày bắt đầu không được để trống');
+        }
+
+        if (!endTime || endTime.toString().trim() === '') {
+            throw new Error('Ngày kết thúc không được để trống');
+        }
+
+        // 2. Kiểm tra ngày (không được ở quá khứ)
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Quy về đầu ngày để so sánh
+
+        if (startTime) {
+            if (isNaN(Date.parse(startTime))) {
+                throw new Error('Ngày bắt đầu không đúng định dạng');
+            }
+            const start = new Date(startTime);
+            if (start < now) {
+                throw new Error('Ngày bắt đầu không được ở trong quá khứ');
+            }
+        }
+
+        if (endTime) {
+            if (isNaN(Date.parse(endTime))) {
+                throw new Error('Ngày kết thúc không đúng định dạng');
+            }
+            const end = new Date(endTime);
+            if (end < now) {
+                throw new Error('Ngày kết thúc không được ở trong quá khứ');
+            }
+        }
+
+        // 3. Logic so sánh ngày bắt đầu & kết thúc
+        if (startTime && endTime && !isNaN(Date.parse(startTime)) && !isNaN(Date.parse(endTime))) {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            if (start > end) {
+                throw new Error('Ngày bắt đầu không được lớn hơn ngày kết thúc');
+            }
+        }
+    }
+
 }
+
 
 module.exports = new EventModel();
