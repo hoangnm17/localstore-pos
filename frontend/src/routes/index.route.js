@@ -8,7 +8,7 @@ import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
 import CategoryRoutes from "./category.route.js";
 import ProductRoutes from "./product.route";
-import InvocieRoutes from "./invoice.route";
+import InvoiceRoutes from "./invoice.route";
 import staffRoute from "./staff.route";
 import crmRoute from "./crm.route";
 import dashboardRoute from "./dashboard.route";
@@ -18,6 +18,7 @@ import salaryRoute from "./salary.route";
 import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
 import restockRoute from "./restock.route"
+import returnRoute from "./return.route"
 
 const AppRoutes = () => {
   return (
@@ -44,9 +45,10 @@ const AppRoutes = () => {
 
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         <Route element={<AppLayout />}>
-          {InvocieRoutes}
+          {InvoiceRoutes}
           {cashierRoute}
           {restockRoute}
+          {returnRoute}
         </Route>
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
