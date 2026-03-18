@@ -17,24 +17,44 @@ exports.getCustomerById = async (id) => {
 };
 
 exports.createCustomer = async (data) => {
+    let { name, phone } = data;
 
-    const { phone } = data;
+    name = name?.trim();
+    phone = phone?.trim();
+
+    if (!name) {
+        throw new Error("Tên khách hàng không được để trống");
+    }
+
+    if (name.length < 2 || name.length > 50) {
+        throw new Error("Tên khách hàng phải từ 2 đến 50 ký tự");
+    }
+
+    const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+    if (!nameRegex.test(name)) {
+        throw new Error("Tên khách hàng không được chứa số hoặc ký tự đặc biệt");
+    }
 
     if (!phone) {
         throw new Error("Số điện thoại không được để trống");
     }
 
-    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+    if (phone.startsWith("+84")) {
+        phone = "0" + phone.slice(3);
+    }
 
+    const phoneRegex = /^0[0-9]{9}$/;
     if (!phoneRegex.test(phone)) {
         throw new Error("Số điện thoại không hợp lệ");
     }
 
     const existed = await customerModel.getCustomerByPhone(phone);
-
     if (existed) {
         throw new Error("Số điện thoại đã tồn tại");
     }
+
+    data.name = name;
+    data.phone = phone;
 
     return await customerModel.createCustomer(data);
 };

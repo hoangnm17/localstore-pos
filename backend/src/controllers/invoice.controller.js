@@ -39,7 +39,7 @@ const getAllInvoice = async (req, res) => {
     const limit = Number(pageSize) > 0 ? Number(pageSize) : 10;
     const cleanInvoiceCode = invoiceCode?.trim();
 
-    const allowedStatus = ["UNPAID", "PAID", "CANCELLED"];
+    const allowedStatus = ["UNPAID", "PAID", "CANCELLED", "PENDING"];
     const cleanStatus = status?.trim();
 
     if (cleanStatus && !allowedStatus.includes(cleanStatus)) {

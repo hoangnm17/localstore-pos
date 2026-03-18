@@ -16,13 +16,29 @@ exports.getVouchers = async (req, res) => {
     }
 };
 
+// voucher.controller.js
 exports.getVoucherByCode = async (req, res) => {
     try {
-        const voucher = await voucherService.getVoucherByCode(req.params.code);
-        if (!voucher) return res.status(404).json({ success: false, message: 'Voucher không tồn tại' });
-        res.json({ success: true, data: voucher });
+        const { code } = req.params;
+        // Lấy subtotal từ query string (ví dụ: ?subtotal=150000)
+        const subtotal = Number(req.query.subtotal) || 0; 
+
+        const voucher = await voucherService.getVoucherByCode(code, subtotal);
+        
+        // Nếu service không ném lỗi, trả về dữ liệu thành công
+        return res.status(200).json({ 
+            success: true, 
+            data: voucher 
+        });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        // Trả về lỗi 400 (Bad Request) cho các lỗi logic như: hết hạn, chưa đủ tiền đơn hàng...
+        // Trả về lỗi 404 nếu không tìm thấy mã
+        const statusCode = err.message === "Mã giảm giá không tồn tại" ? 404 : 400;
+        
+        return res.status(statusCode).json({ 
+            success: false, 
+            message: err.message 
+        });
     }
 };
 
@@ -41,8 +57,8 @@ exports.createVoucher = async (req, res) => {
         const voucher = await voucherService.createVoucher(req.body);
         res.status(201).json({ success: true, data: voucher });
     } catch (err) {
-        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
-        res.status(status).json({ success: false, message: err.message });
+        // Mọi lỗi từ validateFields hoặc lỗi trùng mã đều nên trả về 400
+        res.status(400).json({ success: false, message: err.message });
     }
 };
 
@@ -52,8 +68,7 @@ exports.updateVoucher = async (req, res) => {
         if (!voucher) return res.status(404).json({ success: false, message: 'Voucher không tồn tại' });
         res.json({ success: true, data: voucher });
     } catch (err) {
-        const status = (err.message.includes('không hợp lệ') || err.message.includes('số âm') || err.message.includes('ngày')) ? 400 : 500;
-        res.status(status).json({ success: false, message: err.message });
+        res.status(400).json({ success: false, message: err.message });
     }
 };
 

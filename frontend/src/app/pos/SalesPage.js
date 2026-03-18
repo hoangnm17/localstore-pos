@@ -137,12 +137,25 @@ export default function SalesHome() {
     const newItems = activeInvoice.items.map(it => {
       if (it.id !== id) return it;
 
-      const safeQty = Math.max(
-        1,
-        Math.min(quantity, it.quantityOnHand)
-      );
+      if (quantity === "" || quantity === ".") {
+        return { ...it, quantity: quantity };
+      }
 
-      return { ...it, quantity: safeQty };
+      let num = parseFloat(quantity);
+
+      if (isNaN(num)) return it;
+
+      const maxQty = it.quantityOnHand ?? Infinity;
+
+      if (num > maxQty) {
+        return { ...it, quantity: maxQty };
+      }
+
+      if (num < 0) return { ...it, quantity: 0 };
+      if (typeof quantity === 'string' && quantity.endsWith('.') && it.unitType !== "PIECE") {
+        return { ...it, quantity: quantity };
+      }
+      return { ...it, quantity: quantity };
     });
 
     updateInvoiceItems(activeInvoice.id, newItems);

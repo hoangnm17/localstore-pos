@@ -386,7 +386,8 @@ function PromotionsTab() {
             else await createPromotion(form);
             setShowModal(false); fetchData();
         } catch (e) {
-            setAlertMsg(e.response?.data?.message || e.message);
+            const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
+            setAlertMsg(errorText);
         }
     };
 
@@ -511,7 +512,8 @@ function VouchersTab() {
             else await createVoucher(form);
             setShowModal(false); fetchData();
         } catch (e) {
-            setAlertMsg(e.response?.data?.message || e.message);
+            const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
+            setAlertMsg(errorText);
         }
     };
 
@@ -597,7 +599,8 @@ function EventsTab() {
             else await createEvent(form);
             setShowModal(false); fetchData();
         } catch (e) {
-            setAlertMsg(e.response?.data?.message || e.message);
+            const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
+            setAlertMsg(errorText);
         }
     };
 
