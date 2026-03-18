@@ -8,8 +8,37 @@ exports.getVoucherList = async (filters) => {
     return { data, total, totalPages: Math.ceil(total / (filters.limit || 10)) };
 };
 
-exports.getVoucherByCode = async (code) => {
-    return await voucherModel.getVoucherByCode(code);
+exports.getVoucherByCode = async (code, orderValue = 0) => {
+    if (!code) {
+        throw new Error("Mã giảm giá không được để trống");
+    }
+
+    const voucher = await voucherModel.getVoucherByCode(code);
+
+    if (!voucher) {
+        throw new Error("Mã giảm giá không tồn tại");
+    }
+
+    if (voucher.status !== 'Active') {
+        throw new Error("Mã giảm giá hiện không khả dụng hoặc đã bị vô hiệu hóa");
+    }
+
+    const now = new Date();
+    if (voucher.startDate && now < new Date(voucher.startDate)) {
+        throw new Error("Chương trình giảm giá chưa bắt đầu");
+    }
+    if (voucher.expiryDate && now > new Date(voucher.expiryDate)) {
+        throw new Error("Mã giảm giá đã hết hạn sử dụng");
+    }
+
+    if (voucher.maxUsage !== null && voucher.currentUsage >= voucher.maxUsage) {
+        throw new Error("Mã giảm giá đã hết lượt sử dụng");
+    }
+    if (Number(orderValue) < Number(voucher.minOrderValue)) {
+        throw new Error(`Đơn hàng tối thiểu phải từ ${new Intl.NumberFormat('vi-VN').format(voucher.minOrderValue)}đ để áp dụng mã này`);
+    }
+
+    return voucher;
 };
 
 exports.getVoucherById = async (id) => {

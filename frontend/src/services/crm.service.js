@@ -109,8 +109,10 @@ export const getVouchers = async (params) => {
     return res.data;
 };
 
-export const getVoucherByCode = async (code) => {
-    const res = await api.get(`/vouchers/code/${code}`);
+export const getVoucherByCode = async (code, subtotal = 0) => {
+    const res = await api.get(`/vouchers/code/${code}`, {
+        params: { subtotal }
+    });
     return res.data;
 };
 
