@@ -9,10 +9,7 @@ const promotionModel = require("../models/promotion.model");
 const customerModel = require("../models/customer.model");
 const sseService = require("./sse.service");
 const socketService = require("./socket.service");
-
-const POINT_EXCHANGE = 100;
-const EARN_POINT_EXCHANGE = 10000;
-const EXPIRE_MINUTES = 0.5;
+const loyaltyConfig = require("../constants/loyalty")
 
 const getEditableInvoice = async (transaction, id) => {
 
@@ -148,7 +145,7 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
       throw new Error("Cannot use loyalty point over current point!");
 
     const rawPointDiscount =
-      discount.pointUsed * POINT_EXCHANGE;
+      discount.pointUsed * loyaltyConfig.POINT_EXCHANGE;
 
     const remaining =
       totalAmount - totalDiscount;
@@ -157,10 +154,10 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
       Math.min(rawPointDiscount, remaining);
 
     actualPointUsed =
-      Math.floor(pointDiscount / POINT_EXCHANGE);
+      Math.floor(pointDiscount / loyaltyConfig.POINT_EXCHANGE);
 
     pointDiscount =
-      actualPointUsed * POINT_EXCHANGE;
+      actualPointUsed * loyaltyConfig.POINT_EXCHANGE;
 
     totalDiscount += pointDiscount;
   }
@@ -282,7 +279,7 @@ const payCash = async (id, { payment }) => {
     /* ================= EARN POINT ================= */
 
     const earnedPoints =
-      Math.floor(finalAmount / EARN_POINT_EXCHANGE);
+      Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
 
     if (earnedPoints > 0 && invoice.customerId) {
 
@@ -443,7 +440,7 @@ const createQR = async (invoiceId, discount = {}) => {
       });
     }
 
-    const expiresAt = new Date(Date.now() + EXPIRE_MINUTES * 60 * 1000);
+    const expiresAt = new Date(Date.now() + loyaltyConfig.EXPIRE_MINUTES * 60 * 1000);
 
     await invoiceModel.updateStatus(transaction, invoiceId, "PENDING");
     await invoiceModel.updateInvoiceExpire(transaction, invoiceId, expiresAt);
@@ -632,7 +629,7 @@ const confirmPayment = async (payload) => {
       await voucherModel.increaseUsage(transaction, voucherId);
     }
 
-    const earnedPoints = Math.floor(finalAmount / EARN_POINT_EXCHANGE);
+    const earnedPoints = Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
 
     if (earnedPoints > 0 && invoice.customerId) {
 

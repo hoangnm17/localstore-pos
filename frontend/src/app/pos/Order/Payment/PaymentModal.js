@@ -9,8 +9,6 @@ import useHotkeys from "hooks/pos/useHotKeys";
 import useTitle from "hooks/common/useTitle";
 import { POS_HOTKEYS } from "config/HotKey";
 
-const SSE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
 export default function PaymentModal({
   orderId,
   total = 0,
@@ -60,7 +58,7 @@ export default function PaymentModal({
         const res = await onConfirm({
           orderId,
           method: "BANK",
-          amount: finalAmount,
+          amount: Math.round(finalAmount),
           discount: safeDiscount
         });
         if (res?.pending) setInternalQr(res.qr);
@@ -78,7 +76,7 @@ export default function PaymentModal({
   useEffect(() => {
     if (!internalQr || method !== "BANK") return;
 
-    const es = new EventSource(`${SSE_URL}/api/sse`);
+    const es = new EventSource(`${process.env.REACT_APP_API_BASE_URL}/sse`);
 
     es.onmessage = (event) => {
       try {
@@ -103,7 +101,7 @@ export default function PaymentModal({
       orderId,
       ...payload,
       method: "CASH",
-      amount: finalAmount,
+      amount: Math.round(finalAmount),
       discount: safeDiscount,
     });
   }, [onConfirm, orderId, finalAmount, safeDiscount]);
