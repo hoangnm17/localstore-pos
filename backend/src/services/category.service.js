@@ -48,6 +48,12 @@ exports.getCategoryById = async (id) => {
 
 exports.createCategory = async (name, parentId, imageUrl) => {
     if (!name) throw new Error('Tên danh mục không được để trống.');
+    if (await categoryModel.isDuplicateName(name)) {
+        throw new Error('Tên danh mục đã tồn tại. Vui lòng dùng tên khác.');
+    }
+    if (parentId && await categoryModel.hasProduct(parentId)) {
+        throw new Error('Danh mục cha phải là danh mục chưa có sản phẩm nào.');
+    }
     try {
         return await categoryModel.createCategory(name, parentId, imageUrl);
     } catch (err) {
@@ -58,8 +64,14 @@ exports.createCategory = async (name, parentId, imageUrl) => {
 exports.updateCategory = async (id, name, parentId, imageUrl) => {
     if (!name) throw new Error('Tên danh mục không được để trống.');
     if (!await categoryModel.exists(id)) throw new Error('Không tìm thấy danh mục.');
+    if (await categoryModel.isDuplicateName(name, id)) {
+        throw new Error('Tên danh mục đã tồn tại. Vui lòng dùng tên khác.');
+    }
     if (await categoryModel.isCircularParent(id, parentId)) {
-        throw new Error('Không thể đặt danh mục con làm cha của chính nó (vòng tròn).');
+        throw new Error('Không thể đặt danh mục con làm cha của chính nó.');
+    }
+    if (parentId && await categoryModel.hasProduct(parentId)) {
+        throw new Error('Danh mục cha phải là danh mục chưa có sản phẩm nào.');
     }
     try {
         await categoryModel.updateCategory(id, name, parentId, imageUrl);

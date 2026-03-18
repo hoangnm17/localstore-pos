@@ -81,9 +81,6 @@ exports.countAllCategories = async (search = '') => {
 
 // Create
 exports.createCategory = async (name, parentId, imageUrl) => {
-    if (parentId && await exports.hasProduct(parentId)) {
-        throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
-    }
     const pool = await connectDB();
     const rs = await pool.request()
         .input('name', sql.NVarChar, name)
@@ -99,9 +96,6 @@ exports.createCategory = async (name, parentId, imageUrl) => {
 
 // Update
 exports.updateCategory = async (id, name, parentId, imageUrl) => {
-    if (parentId && await exports.hasProduct(parentId)) {
-        throw new Error('CATEGORY_HAS_PRODUCT_CANNOT_HAVE_CHILD');
-    }
     const pool = await connectDB();
     await pool.request()
         .input('id', sql.Int, id)
@@ -207,5 +201,19 @@ exports.hasProduct = async (id) => {
             WHERE categoryId = @id AND status = 'Selling'
         `);
 
+    return rs.recordset[0].total > 0;
+};
+
+exports.isDuplicateName = async (name, excludeId = null) => {
+    const pool = await connectDB();
+    const req = pool.request()
+        .input('name', sql.NVarChar, name)
+        .input('excludeId', sql.Int, excludeId);
+
+    const query = excludeId
+        ? `SELECT COUNT(*) total FROM Categories WHERE name = @name AND status = 1 AND id != @excludeId`
+        : `SELECT COUNT(*) total FROM Categories WHERE name = @name AND status = 1`;
+
+    const rs = await req.query(query);
     return rs.recordset[0].total > 0;
 };
