@@ -164,7 +164,9 @@ export default function Order({
           onClose={() => {
             setShowBill(false);
             onParentBankPaid?.(billData.id);
-          }}
+          }
+          }
+          autoPrint={true}
         />
       )}
     </div>

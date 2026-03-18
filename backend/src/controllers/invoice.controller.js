@@ -68,22 +68,34 @@ const getAllInvoice = async (req, res) => {
 
 const createInvoice = async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) 
-      return res.status(401).json({ 
-    success: false, 
-    message: "Unauthorized" 
-  });
+    const staffId = req.user?.id;
+    const counterId = req.user?.counterId;
 
-    const { staffId } = await invoiceService.syncCounter(userId, COUNTER_ID);
+    if (!staffId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (!counterId) {
+      return res.status(500).json({
+        success: false,
+        message: "Missing Counter",
+      })
+    }
 
     const result = await invoiceService.createInvoice({
       ...req.body,
       staffId,
-      counterId: COUNTER_ID,
+      counterId,
     });
 
-    return res.status(201).json({ success: true, data: result });
+    return res.status(201).json({
+      success: true,
+      data: result,
+    });
+
   } catch (err) {
     return handleError(res, err);
   }

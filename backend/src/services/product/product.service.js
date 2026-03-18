@@ -127,53 +127,53 @@ exports.getProductWithBarcode = async (barcode) => {
 
 exports.getAllProducts = async (filters) => {
     const rawData = await productModel.getAllProducts(filters);
-
     const productsMap = new Map();
-
     for (const row of rawData) {
-        const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
-
         const discount = await promotionService.getDiscountByProduct({
             productId: row.id,
             productUnitId: row.unitId
         });
 
+        const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
 
-    rawData.forEach(row => {
         if (!productsMap.has(row.id)) {
             productsMap.set(row.id, {
                 id: row.id,
                 name: row.name,
                 code: row.code,
                 imageUrl: row.imageUrl,
-                stock: row.stock,
+                stock: row.stock, 
                 categoryId: row.categoryId,
                 units: []
             });
         }
+
         if (row.unitId) {
             const factor = Number(row.factor) || 1;
-            const stock = Math.floor((Number(row.stock) || 0) / factor);
+            const stockByUnit = Math.floor((Number(row.stock) || 0) / factor);
             const price = Number(row.price) || 0;
 
             const discountPercent = Number(discount?.discountPercent) || 0;
             const discountAmount = Number(discount?.discountAmount) || 0;
 
-            const totalDiscount = (price * stock * discountPercent / 100) + (discountAmount * stock);
+            const unitDiscount = (price * discountPercent / 100) + discountAmount;
+            
+            const totalStockDiscount = unitDiscount * stockByUnit;
 
             productsMap.get(row.id).units.push({
                 unitId: row.unitId,
                 unitName: row.unitName,
-                factor: row.factor,
+                factor: factor,
                 barcode: row.barcode,
-                price: row.price,
-                stock: row.factor ? Math.floor(row.stock / row.factor) : 0,
+                price: price,
+                stock: stockByUnit,
                 unitType: row.unitType,
                 lowStock: lowStock,
-                totalDiscount: totalDiscount,
-                finalPrice: price - totalDiscount,
+                totalDiscount: unitDiscount, 
+                finalPrice: price - unitDiscount, 
             });
         }
     }
+    
     return Array.from(productsMap.values());
 };

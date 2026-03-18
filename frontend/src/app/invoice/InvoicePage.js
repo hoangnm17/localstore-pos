@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { invoiceGetList } from "services/Invoices/invoice.service";
+import { invoiceGetList, invoiceGetDetail } from "services/Invoices/invoice.service";
 import Pagination from "components/Pagination/Pagination";
 import { formatCurrency } from "utils/formatters";
-import InvoiceDetailModal from "./InvoiceDetailModal";
+import BillModal from "components/pos/Sale/Bill"; 
 import useDebounce from "hooks/common/useDebounce";
 import useTitle from "hooks/common/useTitle";
 
@@ -26,14 +26,17 @@ const STATUS_META = {
 export default function InvoicesPage() {
   const navigate = useNavigate();
 
-  // --- States ---
   const [status, setStatus] = useState(STATUS.ALL);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
-  const [detailId, setDetailId] = useState(null);
+  
+  // States cho BillModal (Dùng chung cho cả Xem và In)
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [autoPrint, setAutoPrint] = useState(false);
+
   const [pagination, setPagination] = useState({ 
     page: 1, 
     pageSize: 10, 
@@ -43,12 +46,10 @@ export default function InvoicesPage() {
 
   useTitle(status === STATUS.ALL ? "Tất cả hóa đơn" : (STATUS_META[status]?.label || "Hóa đơn"));
 
-  // Reset về trang 1 khi filter thay đổi
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, status]);
 
-  // --- Logic ---
   const params = useMemo(() => {
     const p = { page, pageSize: pagination.pageSize };
     if (status !== STATUS.ALL) p.status = status;
@@ -74,21 +75,29 @@ export default function InvoicesPage() {
     fetchInvoices();
   }, [params]);
 
-  const handlePrint = (id) => {
-    const printUrl = `/print/invoice/${id}`;
-    const printWindow = window.open(printUrl, '_blank', 'width=450,height=700');
-    if (printWindow) printWindow.focus();
+  const handleOpenBill = async (id, isPrintAction) => {
+    setLoading(true);
+    try {
+      const res = await invoiceGetDetail(id);
+      if (res?.data) {
+        setSelectedInvoice(res.data);
+        setAutoPrint(isPrintAction);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy chi tiết hóa đơn:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="invoice-container py-4">
       <div className="container-fluid px-lg-5">
-        
-        {/* HEADER */}
+
         <div className="row align-items-center mb-4">
           <div className="col-md-6">
             <h4 className="fw-bold text-slate-800 mb-1">Quản lý hóa đơn</h4>
-            <p className="text-muted small mb-0">Tra cứu mã hóa đơn, trạng thái và in lại chứng từ bán hàng.</p>
+            <p className="text-muted small mb-0">Tra cứu, xem chi tiết và in lại hóa đơn bán hàng.</p>
           </div>
           <div className="col-md-6 text-md-end mt-3 mt-md-0">
             <button className="btn btn-primary-modern shadow-sm" onClick={() => navigate('/sales')}>
@@ -97,7 +106,6 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* TOOLBAR */}
         <div className="card border-0 shadow-sm mb-4 br-16">
           <div className="card-body p-3">
             <div className="row g-3">
@@ -135,7 +143,6 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* TABLE */}
         <div className="card border-0 shadow-sm br-16 overflow-hidden">
           <div className="table-responsive">
             <table className="table align-middle mb-0">
@@ -150,7 +157,7 @@ export default function InvoicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loading && rows.length === 0 ? (
                   [...Array(pagination.pageSize)].map((_, i) => (
                     <tr key={i} className="skeleton-row">
                       <td colSpan="6" className="py-4"><div className="skeleton-line w-100"></div></td>
@@ -159,13 +166,8 @@ export default function InvoicesPage() {
                 ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-5">
-                      <div className="py-4">
                         <i className="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-25"></i>
                         <p className="text-muted">Không tìm thấy hóa đơn nào.</p>
-                        <button className="btn btn-sm btn-outline-primary" onClick={() => {setSearch(""); setStatus(STATUS.ALL)}}>
-                          Xóa bộ lọc
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -196,10 +198,10 @@ export default function InvoicesPage() {
                         </td>
                         <td className="text-end pe-4">
                           <div className="d-flex justify-content-end gap-1">
-                            <button className="btn-icon-action" title="Xem" onClick={() => setDetailId(inv.id)}>
+                            <button className="btn-icon-action" title="Xem chi tiết" onClick={() => handleOpenBill(inv.id, false)}>
                               <i className="bi bi-eye-fill"></i>
                             </button>
-                            <button className="btn-icon-action text-info" title="In" onClick={() => handlePrint(inv.id)}>
+                            <button className="btn-icon-action text-info" title="In lại" onClick={() => handleOpenBill(inv.id, true)}>
                               <i className="bi bi-printer-fill"></i>
                             </button>
                             {['UNPAID', 'PENDING'].includes(inv.status) && (
@@ -232,7 +234,13 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {detailId && <InvoiceDetailModal invoiceId={detailId} onClose={() => setDetailId(null)} />}
+      {selectedInvoice && (
+        <BillModal 
+          invoice={selectedInvoice} 
+          autoPrint={autoPrint} 
+          onClose={() => setSelectedInvoice(null)} 
+        />
+      )}
 
       <style>{`
         .invoice-container { background: #f8fafc; min-height: 100vh; }
