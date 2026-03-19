@@ -66,8 +66,8 @@ export default function Product({ addItem, focusSignal } ) {
       return;
     }
     addItem({
-      productId: product.id,
-      productUnitId: unit.unitId,
+      productId: Number(product.id),
+      productUnitId: Number(unit.unitId),
       productName: product.name,
       unitName: unit.unitName,
       unitPrice: unit.price,
@@ -137,7 +137,6 @@ export default function Product({ addItem, focusSignal } ) {
     if (res.success) {
       const allProducts = res.data || [];
 
-      // 🔥 tự phân trang
       const start = (currentPage - 1) * PAGE_CONFIG.ITEMS_PER_PAGE;
       const end = start + PAGE_CONFIG.ITEMS_PER_PAGE;
 
@@ -164,7 +163,6 @@ export default function Product({ addItem, focusSignal } ) {
       <div className="container-fluid flex-grow-1 d-flex flex-column py-3 overflow-hidden">
         <div className="card border-0 shadow-sm rounded-4 d-flex flex-column flex-grow-1 overflow-hidden">
 
-          {/* HEADER: FilterBar (Cố định chiều cao) */}
           <div className="card-header bg-white border-0 pt-4 px-4 flex-shrink-0">
             <FilterBar
               keyword={search}
@@ -177,7 +175,6 @@ export default function Product({ addItem, focusSignal } ) {
             />
           </div>
 
-          {/* BODY: Danh sách sản phẩm (Tự động lấp đầy và cho phép cuộn nội bộ) */}
           <div className="card-body px-4 flex-grow-1 overflow-auto custom-scrollbar">
             {loading ? (
               <div className="d-flex flex-column align-items-center justify-content-center h-100">
@@ -218,7 +215,6 @@ export default function Product({ addItem, focusSignal } ) {
       {showScan && <ScanBarcode open={showScan} onClose={() => setShowScan(false)} onDetected={handleBarcode} />}
 
       <style jsx>{`
-        /* Ẩn thanh cuộn toàn trang */
         :global(body) {
           overflow: hidden;
         }
