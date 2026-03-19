@@ -271,7 +271,7 @@ function ProductFormModal({
         const qty = Number(childQuantity || 0);
         if (Number.isNaN(qty) || qty <= 0) { setError('Số lượng sản phẩm con phải lớn hơn 0.'); return; }
         if (comboRows.some((r) => String(r.childProductId) === String(selectedChildProduct.id))) {
-            setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo. Muốn đổi số lượng, hãy xóa dòng cũ rồi thêm lại.');
+            setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo.');
             return;
         }
 
@@ -354,8 +354,8 @@ function ProductFormModal({
             title={modalTitle}
             subtitle={
                 isCombo
-                    ? 'Tạo/sửa combo theo đúng nghiệp vụ: chọn sản phẩm con trước, hệ thống tự tính tổng giá lẻ rồi mới ra giá combo.'
-                    : 'Base unit được tạo cùng lúc với sản phẩm. Unit phụ sẽ thêm ở chi tiết sản phẩm.'
+                    ? 'Chọn sản phẩm con trước, hệ thống tự tính tổng giá lẻ rồi mới ra giá combo.'
+                    : 'Đơn vị cơ bản được tạo cùng lúc với sản phẩm. Đơn vị phụ sẽ thêm ở chi tiết sản phẩm.'
             }
             width="1150px"
             onClose={onClose}

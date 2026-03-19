@@ -55,7 +55,6 @@ function ProductList() {
         handlePageChange,
         handleCheckAll,
         handleCheckOne,
-        handleBulkStopSelling,
         handleBulkSoftDelete
     } = useProductList({ showNotification, onConfirm });
 
@@ -329,7 +328,7 @@ function ProductList() {
                                                 ) : (
                                                     <span className="badge bg-warning text-dark">
                                                         <i className="bi bi-tag me-1" />
-                                                        Piece
+                                                        Số lượng
                                                     </span>
                                                 )}
                                             </td>

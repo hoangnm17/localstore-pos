@@ -9,6 +9,7 @@ function toVietnamese(err) {
         'NAME_REQUIRED': 'Tên danh mục không được để trống.',
         'Category not found': 'Không tìm thấy danh mục.',
         'Category name is required': 'Tên danh mục không được để trống.',
+        'Tên danh mục đã tồn tại. Vui lòng dùng tên khác.': 'Tên danh mục đã tồn tại. Vui lòng dùng tên khác.',
     };
     return map[err.message] || err.message;
 }
