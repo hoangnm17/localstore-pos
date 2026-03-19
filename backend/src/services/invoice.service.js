@@ -2,6 +2,7 @@ const sql = require("mssql");
 const { connectDB } = require("../config/database");
 const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
+const paymentModel = require("../models/payment.model")
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -147,6 +148,23 @@ const updateInvoiceItems = async (id, { items }) => {
 
 };
 
+const getEditableInvoice = async (transaction, id) => {
+
+    const invoice = await invoiceModel.getInvoiceById(
+        transaction,
+        id,
+        { forUpdate: true }
+    );
+
+    if (!invoice)
+        throw new Error("Invoice not found");
+
+    if (["PAID", "CANCELLED"].includes(invoice.status))
+        throw new Error("Cannot update this invoice");
+
+    return invoice;
+};
+
 const cancelInvoice = async (id) => {
 
     return runInTransaction(async (transaction) => {
@@ -159,6 +177,16 @@ const cancelInvoice = async (id) => {
             "CANCELLED"
         );
 
+        // const existingPayment = await invoiceModel.getPaymentByInvoiceId(transaction, id);
+
+        // if (existingPayment) {
+        //     await paymentModel.updatePayment(transaction, {
+        //         invoiceId: id,
+        //         amount: existingPayment.amount,
+        //         paymentMethod: existingPayment.paymentMethod,
+        //         status: "CANCELLED",
+        //     });
+        // }
         return { cancelled: true };
 
     });
@@ -194,8 +222,7 @@ const getInvoiceDetail = async (id) => {
                 unitPrice: Number(item.unitPrice) || 0,
                 lineTotal: Number(item.lineTotal) || 0,
                 factor: factor,
-                quantityOnHand: Math.floor(
-                    (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
+                quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1
                 )
             };
         })
