@@ -230,7 +230,6 @@ const updateMinThreshold = async (productId, minThreshold) => {
 };
 
 const getLowStockProductUnits = async () => {
-
     const pool = await connectDB();
 
     const result = await pool.request().query(`
@@ -242,33 +241,39 @@ const getLowStockProductUnits = async () => {
             p.id AS productId,
             p.name AS productName,
 
-            ISNULL(i.quantityOnHand,0) AS stockQuantity,
+            ISNULL(i.quantityOnHand, 0) AS stockQuantity,
             i.minThreshold
 
         FROM ProductUnits pu
 
-        JOIN Products p
+        INNER JOIN Products p
             ON p.id = pu.productId
-
-        JOIN SupplierProductPrices spp
-            ON spp.unitId = pu.id
 
         LEFT JOIN InventoryStocks i
             ON i.productId = p.id
 
-        WHERE pu.conversionFactor = (
-            SELECT MAX(pu2.conversionFactor)
-            FROM ProductUnits pu2
-            WHERE pu2.productId = pu.productId
-        )
+        WHERE 
+            -- chỉ lấy unit lớn nhất của mỗi product
+            pu.conversionFactor = (
+                SELECT MAX(pu2.conversionFactor)
+                FROM ProductUnits pu2
+                WHERE pu2.productId = pu.productId
+            )
 
-        AND ISNULL(i.quantityOnHand,0) <= i.minThreshold
+            -- đảm bảo có giá từ supplier (KHÔNG gây duplicate)
+            AND EXISTS (
+                SELECT 1
+                FROM SupplierProductPrices spp
+                WHERE spp.unitId = pu.id
+            )
+
+            -- lọc tồn kho thấp
+            AND ISNULL(i.quantityOnHand, 0) <= ISNULL(i.minThreshold, 0)
 
         ORDER BY stockQuantity ASC
     `);
 
     return result.recordset;
-
 };
 
 const searchProductUnits = async (keyword) => {
