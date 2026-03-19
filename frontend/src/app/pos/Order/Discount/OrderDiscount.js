@@ -260,7 +260,18 @@ export default function OrderDiscount({
           <div className="small text-muted">Không có khuyến mãi khả dụng.</div>
         )}
 
-        {promotions.map((p) => {
+        {promotions
+          .filter(p => {
+              // Nếu khuyến mãi này đã được tính trực tiếp vào từng sản phẩm rồi thì không hiện ở đây nữa
+              const isAppliedToItems = (id) => {
+                  // Bạn có thể thêm logic kiểm tra ở đây, nhưng đơn giản nhất là 
+                  // chỉ hiện những KM không phải loại áp lên Sản phẩm/Danh mục cụ thể 
+                  // Hoặc nếu bạn muốn thủ công, hãy để người dùng chọn.
+                  return false; 
+              };
+              return !isAppliedToItems(p.id);
+          })
+          .map((p) => {
           const raw =
             (p.type || "").toLowerCase() === "percent"
               ? Math.floor((safeSubtotal * (Number(p.value) || 0)) / 100)
