@@ -156,10 +156,33 @@ module.exports.assignShift = async (req, res) => {
 module.exports.removeShift = async (req, res) => {
     try {
         const { scheduleId } = req.params;
+        const schedule = await rosterModel.getScheduleById(scheduleId);
+        
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy lịch làm việc!" });
+        }
+
+        const nowVN = new Date(Date.now() + 7 * 3600 * 1000);
+        const todayStr = nowVN.toISOString().split('T')[0];
+        const currentTime = nowVN.toISOString().split('T')[1].substring(0, 5);
+
+        const workDateStr = schedule.workDate.toISOString().split('T')[0];
+        const shiftStartTime = schedule.snapshotStartTime || schedule.startTime;
+
+        if (workDateStr < todayStr) {
+            return res.status(400).json({ success: false, message: "Không được xóa ca trong quá khứ!" });
+        }
+        
+        if (workDateStr === todayStr && currentTime >= shiftStartTime) {
+            return res.status(400).json({ success: false, message: "Ca làm việc đã tới lúc bắt đầu, không thể xóa!" });
+        }
+
         await rosterModel.removeShift(scheduleId);
         return res.json({ success: true, message: "Xóa phân công thành công!" });
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ success: false, message: "Lỗi hệ thống: " + err.message });
     }
 };
+
