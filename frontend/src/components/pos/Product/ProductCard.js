@@ -4,7 +4,7 @@ import { formatCurrency } from "utils/formatters";
 const ProductCard = ({
   product,
   isSelected = false,
-  onSelect = () => {},
+  onSelect = () => { },
   showStock = true,
   showUnits = true,
   showPrice = true,
