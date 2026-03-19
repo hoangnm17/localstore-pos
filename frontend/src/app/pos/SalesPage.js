@@ -110,19 +110,20 @@ export default function SalesHome() {
   // MÀN HÌNH TRUY CẬP BỊ TỪ CHỐI
   if (accessError) {
     return (
-      <div className="vh-100 d-flex justify-content-center align-items-center bg-light">
-        <div className="card shadow-lg border-0 text-center p-5" style={{ maxWidth: "500px", borderRadius: "20px" }}>
-          <div className="card-body">
-            <div className="text-danger mb-4">
-              <i className="bi bi-shield-lock-fill" style={{ fontSize: "4rem" }}></i>
-            </div>
-            <h2 className="fw-bold mb-3">Truy Cập Bị Từ Chối</h2>
-            <p className="text-muted mb-4">{accessError}</p>
-            <button className="btn btn-primary btn-lg w-100 rounded-pill shadow-sm" onClick={() => (window.location.href = "/my-schedule")}>
-              <i className="bi bi-house-door me-2"></i> Quay lại trang chủ
-            </button>
-          </div>
+      <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+        <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
+          <i className="bi bi-exclamation-triangle-fill"></i>
         </div>
+        <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
+        <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
+          {accessError}
+        </p>
+        <button
+          className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm"
+          onClick={() => window.location.href = '/my-schedule'}
+        >
+          <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
+        </button>
       </div>
     );
   }

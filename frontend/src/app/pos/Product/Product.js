@@ -14,7 +14,7 @@ const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
 };
 
-export default function Product({ addItem, focusSignal } ) {
+export default function Product({ addItem, focusSignal }) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -70,7 +70,7 @@ export default function Product({ addItem, focusSignal } ) {
       productUnitId: Number(unit.unitId),
       productName: product.name,
       unitName: unit.unitName,
-      unitPrice: unit.price,
+      unitPrice: unit.finalPrice,
       quantityOnHand: unit.stock,
       factor: unit.factor,
       unitType: unit.unitType,
@@ -125,34 +125,37 @@ export default function Product({ addItem, focusSignal } ) {
     fetchProductList();
   }, [currentPage, search, selectedCategory]);
 
- const fetchProductList = async () => {
-  setLoading(true);
+  const fetchProductList = async () => {
+    setLoading(true);
 
-  try {
-    const res = await getAllProducts({
-      search: search || "",
-      categoryId: selectedCategory?.id || null,
-    });
+    try {
 
-    if (res.success) {
-      const allProducts = res.data || [];
+      const res = await getAllProducts({
+        page: currentPage,
+        limit: PAGE_CONFIG.ITEMS_PER_PAGE,
+        search: search || "",
+        categoryId: selectedCategory?.id || null,
+      });
+      if (res.success) {
+        const allProducts = res.data || []
+        const start = (currentPage - 1) * PAGE_CONFIG.ITEMS_PER_PAGE;
+        const end = start + PAGE_CONFIG.ITEMS_PER_PAGE;
 
-      const start = (currentPage - 1) * PAGE_CONFIG.ITEMS_PER_PAGE;
-      const end = start + PAGE_CONFIG.ITEMS_PER_PAGE;
+        const paginated = allProducts.slice(start, end);
 
-      const paginated = allProducts.slice(start, end);
+        setProducts(paginated);
+        setTotalPages(
+          Math.ceil(allProducts.length / PAGE_CONFIG.ITEMS_PER_PAGE)
+        );
+      }
 
-      setProducts(paginated);
-      setTotalPages(
-        Math.ceil(allProducts.length / PAGE_CONFIG.ITEMS_PER_PAGE)
-      );
+
+    } catch (err) {
+      console.error("Fetch products error:", err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Fetch products error:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -195,7 +198,7 @@ export default function Product({ addItem, focusSignal } ) {
           </div>
 
           {/* FOOTER: Pagination (Cố định ở đáy card) */}
-          {totalPages > 1 && (
+          {products.length > 0 && (
             <div className="card-footer bg-white border-top py-3 px-4 flex-shrink-0">
               <div className="d-flex justify-content-between align-items-center">
                 <span className="text-muted small d-none d-md-inline">
