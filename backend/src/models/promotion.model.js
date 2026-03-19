@@ -230,19 +230,20 @@ exports.deletePromotion = async (id) => {
  */
 exports.addPromotionItem = async (promotionId, item) => {
     const pool = await connectDB();
-    const { productId, categoryId } = item;
+    const { productId, categoryId, productUnitId } = item;
 
-    if (!productId && !categoryId) {
-        throw new Error('Phải cung cấp ít nhất productId hoặc categoryId');
+    if (!productId && !categoryId && !productUnitId) {
+        throw new Error('Phải cung cấp ít nhất productId, categoryId hoặc productUnitId');
     }
 
     await pool.request()
         .input('promotionId', sql.BigInt, promotionId)
         .input('productId', sql.BigInt, productId || null)
         .input('categoryId', sql.Int, categoryId || null)
+        .input('productUnitId', sql.Int, productUnitId || null)
         .query(`
-            INSERT INTO PromotionProducts (promotionId, productId, categoryId)
-            VALUES (@promotionId, @productId, @categoryId)
+            INSERT INTO PromotionProducts (promotionId, productId, categoryId, productUnitId)
+            VALUES (@promotionId, @productId, @categoryId, @productUnitId)
         `);
 };
 
