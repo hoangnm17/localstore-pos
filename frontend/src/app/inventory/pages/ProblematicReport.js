@@ -105,7 +105,7 @@ function ProblematicPage() {
           </button>
 
           <h2 className="mb-0 fw-bold text-primary fs-3">
-            Hàng hóa có vấn đề
+            Các vấn đề của kho
           </h2>
         </div>
 

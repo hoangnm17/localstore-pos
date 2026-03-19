@@ -174,7 +174,6 @@ exports.getAllProducts = async (filters) => {
             });
         }
     }
-    );
+    ;
     return Array.from(productsMap.values());
-}
 }
