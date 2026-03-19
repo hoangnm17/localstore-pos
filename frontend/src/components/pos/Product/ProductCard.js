@@ -108,8 +108,21 @@ const ProductCard = ({
         </div>
 
         {showPrice && (
-          <div className="small text-warning fw-semibold mt-1">
-            {formatCurrency(baseUnit?.price || 0)}
+          <div className="mt-1 d-flex align-items-center gap-1 flex-wrap">
+            {baseUnit?.discountedPrice < baseUnit?.price ? (
+              <>
+                <div className="small text-warning fw-semibold">
+                  {formatCurrency(baseUnit.discountedPrice)}
+                </div>
+                <div className="text-white opacity-50 text-decoration-line-through" style={{ fontSize: '0.65rem' }}>
+                  {formatCurrency(baseUnit.price)}
+                </div>
+              </>
+            ) : (
+              <div className="small text-warning fw-semibold">
+                {formatCurrency(baseUnit?.price || 0)}
+              </div>
+            )}
           </div>
         )}
       </div>
