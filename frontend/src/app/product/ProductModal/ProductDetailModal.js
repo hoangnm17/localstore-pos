@@ -51,27 +51,6 @@ function ProductDetailModal({
                 <div className="text-center py-4">Đang tải chi tiết sản phẩm...</div>
             ) : (
                 <>
-                    <div className="d-flex flex-wrap gap-2 mb-3">
-                        <button type="button" className="btn btn-warning" onClick={() => onEditProduct(product)}>
-                            <i className="bi bi-pencil-square me-2" />
-                            Cập nhật sản phẩm
-                        </button>
-
-                        <button type="button" className="btn btn-dark" onClick={() => onOpenPriceHistory(product)}>
-                            <i className="bi bi-clock-history me-2" />
-                            Lịch sử giá
-                        </button>
-
-                        <button type="button" className="btn btn-outline-secondary" onClick={() => onOpenStatus(product)}>
-                            <i className="bi bi-power me-2" />
-                            Đổi trạng thái
-                        </button>
-
-                        <button type="button" className="btn btn-outline-secondary" onClick={onRefresh}>
-                            <i className="bi bi-arrow-clockwise me-2" />
-                            Làm mới
-                        </button>
-                    </div>
 
                     <div className="row g-3 mb-4">
                         <div className="col-lg-4">
@@ -139,16 +118,16 @@ function ProductDetailModal({
                         </div>
                     </div>
 
-                    <div className="card mb-4">
+                    {!product.isCombo && <div className="card mb-4">
                         <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
                                 <div className="fw-bold">Danh sách đơn vị tính</div>
-                                <small className="text-muted">Base unit và các unit phụ của sản phẩm</small>
+                                <small className="text-muted">Đơn vị cơ bản và các đơn vị phụ của sản phẩm</small>
                             </div>
 
                             <button type="button" className="btn btn-success btn-sm" onClick={onOpenCreateUnit}>
                                 <i className="bi bi-plus-circle me-2" />
-                                Thêm unit phụ
+                                Thêm đơn vị phụ
                             </button>
                         </div>
 
@@ -162,7 +141,7 @@ function ProductDetailModal({
                                             <th>Hệ số quy đổi</th>
                                             <th>Giá bán</th>
                                             <th>Barcode</th>
-                                            <th>Base unit</th>
+                                            <th>Đơn vị cơ bản</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
@@ -215,7 +194,7 @@ function ProductDetailModal({
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </div>}
 
                     {product.isCombo ? (
                         <div className="card">

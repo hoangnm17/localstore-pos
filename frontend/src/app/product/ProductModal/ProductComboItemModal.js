@@ -451,7 +451,7 @@ function ProductComboItemModal({
 
                             <div className="col-md-4">
                                 <div className="alert alert-warning mb-0">
-                                    <strong>Số lượng quy đổi về base unit:</strong><br />
+                                    <strong>Số lượng quy đổi về đươn vị cơ bản:</strong><br />
                                     {selectedUnit
                                         ? `${convertedBaseQuantity.toLocaleString('vi-VN')} ${selectedProduct.baseUnit}`
                                         : '—'}

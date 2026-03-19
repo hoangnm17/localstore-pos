@@ -101,7 +101,7 @@ function useProductActions({
             setProductFormState({
                 open: true,
                 mode: 'edit',
-                productType: product.isCombo ? 'combo' : 'regular',
+                productType: product.isCombo ? 'combo' : 'thường',
                 product: {
                     ...product,
                     comboItems
@@ -220,12 +220,10 @@ function useProductActions({
     const handleSaveUnit = async (payload) => {
         try {
             setSubmitLoading(true);
-            let response;
-
             if (unitModalState.mode === 'create') {
-                response = await createProductUnit(payload);
+                await createProductUnit(payload);
             } else {
-                response = await updateProductUnit(unitModalState.unit.id, payload);
+                await updateProductUnit(unitModalState.unit.id, payload);
             }
             showNotification(
                 unitModalState.mode === 'create'
