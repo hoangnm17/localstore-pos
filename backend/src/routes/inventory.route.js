@@ -52,11 +52,11 @@ router.get("/suppliers/:id", supplierController.getSupplierDetail);
 // // GET MONTHLY REPORT
 router.get("/purchase-orders/report", protect(PERMISSIONS.PO_REPORT), poReportController.getMonthlyReport);
 
-// GET PRODUCTS BY SUPPLIER
-router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
-
 // GET PRODUCTS NOT IN SUPPLIER
 router.get("/suppliers/:id/products/available", supplierController.getProductsNotInSupplier);
+
+// GET PRODUCTS BY SUPPLIER
+router.get("/suppliers/:id/products", supplierController.getSupplierProducts);
 
 // ADD PRODUCT TO SUPPLIER
 router.post("/suppliers/:id/products", protect(PERMISSIONS.UPDATE_SUPPLIER_PRODUCT), supplierController.addProductToSupplier);
@@ -88,14 +88,14 @@ router.get("/adjustments/detail/:id", adjustController.getAdjustmentDetail);
 // SEARCH PRODUCTS
 router.get("/products/search", inventoryController.searchProducts);
 
+//GET low stock products
+router.get("/products/low-stock", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), inventoryController.getLowStockProducts);
+
 //GET product unit
 router.get("/products/:productId/units", supplierController.getProductUnits);
 
 // GET price history detail
 router.get("/suppliers/:id/products/:productId/price-history", supplierController.getPriceHistoryDetail);
-
-//GET low stock products
-router.get("/products/low-stock", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), inventoryController.getLowStockProducts);
 
 // GET suppliers by product unit
 router.get("/product-units/:productUnitId/suppliers", protect(PERMISSIONS.CREATE_PURCHASE_ORDER), purchaseOrderController.getSuppliersByProductUnit);

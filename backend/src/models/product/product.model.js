@@ -136,9 +136,7 @@ exports.countProducts = async (filters) => {
             SELECT id
             FROM Categories
             WHERE id = @categoryId
-
             UNION ALL
-
             SELECT c.id
             FROM Categories c
             JOIN CategoryTree ct ON c.parentId = ct.id

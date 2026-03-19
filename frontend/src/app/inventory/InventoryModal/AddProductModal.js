@@ -20,10 +20,7 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
 
     const fetchProducts = async () => {
       try {
-        const res = await supplierService.getAvailableProducts(
-          supplierId,
-          search
-        );
+        const res = await supplierService.getAvailableProducts(supplierId, search);
 
         if (res?.data?.success) {
           const mapped = res.data.data.map((p) => ({
@@ -41,7 +38,7 @@ function AddProductModal({ show, onClose, supplierId, onSuccess }) {
       }
     };
 
-    fetchProducts();
+    if (!selectedProduct) fetchProducts();
   }, [show, supplierId, search]);
 
   useEffect(() => {

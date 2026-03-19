@@ -10,7 +10,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                     <div className="col-md-6">
                         <button
                             type="button"
-                            className={`btn w-100 text-start ${form.saleMode === 'piece' ? 'btn-warning' : 'btn-outline-warning'}`}
+                            className={`btn w-100 text-start ${form.saleMode === 'Số lượng' ? 'btn-warning' : 'btn-outline-warning'}`}
                             onClick={() => handleChange('saleMode', 'piece')}
                         >
                             <i className="bi bi-tag me-2" />
@@ -21,7 +21,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                     <div className="col-md-6">
                         <button
                             type="button"
-                            className={`btn w-100 text-start ${form.saleMode === 'weight' ? 'btn-info' : 'btn-outline-info'}`}
+                            className={`btn w-100 text-start ${form.saleMode === 'Cân nặng' ? 'btn-info' : 'btn-outline-info'}`}
                             onClick={() => handleChange('saleMode', 'weight')}
                         >
                             <i className="bi bi-scale me-2" />

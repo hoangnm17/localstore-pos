@@ -123,16 +123,6 @@ function useProductList({ showNotification, onConfirm }) {
         }
     };
 
-    const handleBulkStopSelling = async () => {
-        if (!selectedIds.length) {
-            showNotificationRef.current('Vui lòng chọn ít nhất 1 sản phẩm.', 'warning');
-            return;
-        }
-        onConfirmRef.current({
-            message: `Bạn có chắc muốn ngừng bán ${selectedIds.length} sản phẩm đã chọn không?`,
-            onOk: _doBulkStopSelling
-        });
-    };
 
     const handleBulkSoftDelete = async () => {
         if (!selectedIds.length) {
@@ -140,7 +130,7 @@ function useProductList({ showNotification, onConfirm }) {
             return;
         }
         onConfirmRef.current({
-            message: 'Bạn có chắc muốn ngừng bán / xóa các sản phẩm đã chọn không?',
+            message: 'Bạn có chắc muốn ngừng bán các sản phẩm đã chọn không?',
             onOk: _doBulkStopSelling
         });
     };
@@ -162,7 +152,6 @@ function useProductList({ showNotification, onConfirm }) {
         handlePageChange,
         handleCheckAll,
         handleCheckOne,
-        handleBulkStopSelling,
         handleBulkSoftDelete
     };
 }
