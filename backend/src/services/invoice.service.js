@@ -2,6 +2,7 @@ const sql = require("mssql");
 const { connectDB } = require("../config/database");
 const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
+const promotionModel = require("../models/promotion.model");
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -70,23 +71,42 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
         await invoiceModel.updateInvoiceCode(transaction, invoiceId, invoiceCode);
 
         let totalAmount = 0;
+        let totalDiscount = 0;
 
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            const unitPrice = product.salePrice;
+            // Lấy chiết khấu từ chương trình khuyến mãi
+            const discountData = await promotionModel.getDiscountByProduct({
+                productId: item.productId,
+                productUnitId: item.productUnitId
+            });
+
+            let unitPrice = product.salePrice;
+            let itemDiscount = 0;
+
+            if (discountData && discountData.promotionId) {
+                if (discountData.discountPercent > 0) {
+                    itemDiscount = (unitPrice * discountData.discountPercent) / 100;
+                } else if (discountData.discountAmount > 0) {
+                    itemDiscount = discountData.discountAmount;
+                }
+                unitPrice = Math.max(0, unitPrice - itemDiscount);
+            }
+
             const lineTotal = unitPrice * item.quantity;
             const baseQuantity = item.quantity * product.conversionFactor;
 
-            totalAmount += lineTotal;
+            totalAmount += (product.salePrice * item.quantity);
+            totalDiscount += (itemDiscount * item.quantity);
 
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId,
                 productId: item.productId,
                 productName: product.name,
                 quantity: item.quantity,
-                unitPrice,
+                unitPrice, // Lưu giá sau khi giảm
                 lineTotal,
                 productUnitId: item.productUnitId,
                 unitName: product.unitName,
@@ -96,8 +116,13 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
 
         await invoiceModel.updateAmounts(transaction, invoiceId, {
             totalAmount,
-            finalAmount: totalAmount,
+            finalAmount: totalAmount - totalDiscount,
         });
+
+        // Nếu có khuyến mãi chung, cập nhật thêm vào bảng Invoices
+        if (totalDiscount > 0) {
+            await invoiceModel.updateInvoiceDiscount(transaction, invoiceId, null, totalDiscount);
+        }
 
         return { id: invoiceId, invoiceCode };
     });
@@ -112,16 +137,36 @@ const updateInvoiceItems = async (id, { items }) => {
         await invoiceModel.deleteInvoiceItems(transaction, id);
 
         let totalAmount = 0;
+        let totalDiscount = 0;
 
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            const unitPrice = product.salePrice;
+            // Tính chiết khấu
+            const discountData = await promotionModel.getDiscountByProduct({
+                productId: item.productId,
+                productUnitId: item.productUnitId
+            });
+
+            let unitPrice = product.salePrice;
+            let itemDiscount = 0;
+
+            if (discountData && discountData.promotionId) {
+                if (discountData.discountPercent > 0) {
+                    itemDiscount = (unitPrice * discountData.discountPercent) / 100;
+                } else if (discountData.discountAmount > 0) {
+                    itemDiscount = discountData.discountAmount;
+                }
+                unitPrice = Math.max(0, unitPrice - itemDiscount);
+            }
+
             const lineTotal = unitPrice * item.quantity;
             const baseQuantity = item.quantity * product.conversionFactor;
 
-            totalAmount += lineTotal;
+            totalAmount += (product.salePrice * item.quantity);
+            totalDiscount += (itemDiscount * item.quantity);
+
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId: id,
                 productId: item.productId,
@@ -133,13 +178,16 @@ const updateInvoiceItems = async (id, { items }) => {
                 unitName: product.unitName,
                 baseQuantity,
             });
-
         }
 
         await invoiceModel.updateAmounts(transaction, id, {
             totalAmount,
-            finalAmount: totalAmount
+            finalAmount: totalAmount - totalDiscount
         });
+
+        if (totalDiscount > 0) {
+            await invoiceModel.updateInvoiceDiscount(transaction, id, null, totalDiscount);
+        }
 
         return { updated: true };
 
@@ -224,22 +272,22 @@ const updateInvoiceCustomer = async (
 const syncCounter = async (userId, configCounterId) => {
     const data = await invoiceModel.getStaffAndSchedule(userId);
     if (!data)
-         throw new Error("Tài khoản chưa được liên kết với nhân viên!");
-    const { staffId,roleName, schedule } = data;
+        throw new Error("Tài khoản chưa được liên kết với nhân viên!");
+    const { staffId, roleName, schedule } = data;
 
     if (schedule) {
-        if (schedule.counterId !== null && 
+        if (schedule.counterId !== null &&
             String(schedule.counterId) !== String(configCounterId)) {
             const machineName = await invoiceModel.getCounterName(configCounterId);
             const assignedName = schedule.counterName || `Quầy khác`;
-            
+
             const err = new Error(`
                 Bạn được phân công làm việc tại "${assignedName}"
                 . Không thể bán hàng tại máy của "${machineName}"!`);
-            err.statusCode = 400; 
-            throw err; 
+            err.statusCode = 400;
+            throw err;
         }
-        
+
         await invoiceModel.checkInSchedule(schedule.id);
     } else {
         if (roleName === 'Cashier') {

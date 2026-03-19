@@ -12,11 +12,11 @@ import {
 
 // ─── Hằng số ───────────────────────────────────────────────────────────────
 const TABS = [
-    { key: 'customers', label: '👤 Khách hàng' },
-    { key: 'promotions', label: '🎯 Khuyến mãi' },
-    { key: 'vouchers', label: '🎟️ Voucher' },
-    { key: 'events', label: '📅 Sự kiện' },
-    { key: 'report', label: '📊 Báo cáo' },
+    { key: 'customers', label: <><i className="bi bi-people-fill me-2"></i> Khách hàng</> },
+    { key: 'promotions', label: <><i className="bi bi-percent me-2"></i> Khuyến mãi</> },
+    { key: 'vouchers', label: <><i className="bi bi-ticket-perforated-fill me-2"></i> Voucher</> },
+    { key: 'events', label: <><i className="bi bi-calendar-event-fill me-2"></i> Sự kiện</> },
+    { key: 'report', label: <><i className="bi bi-bar-chart-fill me-2"></i> Báo cáo</> },
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
 const PROMOTION_TYPES = ['Percent', 'Amount', 'BuyXGetY'];
@@ -47,14 +47,15 @@ function Modal({ title, onClose, onSubmit, loading, wide, children }) {
             <div className={`crm-modal${wide ? ' crm-modal--wide' : ''}`} onClick={e => e.stopPropagation()}>
                 <div className="crm-modal-header">
                     <h2 className="crm-modal-title">{title}</h2>
-                    <button className="crm-modal-close" onClick={onClose}>✕</button>
+                    <button className="crm-modal-close" onClick={onClose}><i className="bi bi-x-lg"></i></button>
                 </div>
                 <div className="crm-modal-body">{children}</div>
                 {onSubmit && (
                     <div className="crm-modal-footer">
                         <button className="btn-ghost" onClick={onClose} disabled={loading}>Hủy</button>
                         <button className="btn-primary" onClick={onSubmit} disabled={loading}>
-                            {loading ? '⏳ Đang lưu...' : '💾 Lưu'}
+                            {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-save-fill me-2"></i>}
+                            Lưu
                         </button>
                     </div>
                 )}
@@ -67,7 +68,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     return (
         <div className="crm-modal-overlay" onClick={onCancel}>
             <div className="crm-confirm" onClick={e => e.stopPropagation()}>
-                <div className="crm-confirm-icon">⚠️</div>
+                <div className="crm-confirm-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
                 <p className="crm-confirm-msg">{message}</p>
                 <div className="crm-modal-footer" style={{ justifyContent: 'center' }}>
                     <button className="btn-ghost" onClick={onCancel}>Hủy</button>
@@ -82,7 +83,7 @@ function AlertModal({ message, onClose }) {
     return (
         <div className="crm-modal-overlay" onClick={onClose}>
             <div className="crm-confirm" style={{ borderTop: '4px solid #f87171' }} onClick={e => e.stopPropagation()}>
-                <div className="crm-confirm-icon" style={{ color: '#f87171' }}>🚫</div>
+                <div className="crm-confirm-icon" style={{ color: '#f87171' }}><i className="bi bi-slash-circle"></i></div>
                 <h3 style={{ color: '#1e293b', marginBottom: 8, fontSize: '1.2rem' }}>Thông báo</h3>
                 <p className="crm-confirm-msg">{message}</p>
                 <div className="crm-modal-footer" style={{ justifyContent: 'center', marginTop: 20 }}>
@@ -98,11 +99,11 @@ function Pagination({ page, totalPages, onPageChange }) {
     const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
     return (
         <div className="crm-pagination">
-            <button className="page-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}>‹</button>
+            <button className="page-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}><i className="bi bi-chevron-left"></i></button>
             {pages.map(p => (
                 <button key={p} className={`page-btn ${p === page ? 'active' : ''}`} onClick={() => onPageChange(p)}>{p}</button>
             ))}
-            <button className="page-btn" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}>›</button>
+            <button className="page-btn" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}><i className="bi bi-chevron-right"></i></button>
         </div>
     );
 }
@@ -165,22 +166,22 @@ function CustomerDetailModal({ customer, onClose }) {
         setAdjSaving(true); setAdjMsg('');
         try {
             await adjustPoints(customer.id, { pointChange: parseInt(adjForm.pointChange), reason: adjForm.reason });
-            setAdjMsg('✅ Cập nhật điểm thành công!');
+            setAdjMsg(<><i className="bi bi-check-lg me-1"></i> Cập nhật điểm thành công!</>);
             setAdjForm({ pointChange: '', reason: '' });
             fetchLogs();
         } catch (e) {
-            setAdjMsg('❌ ' + (e.response?.data?.message || e.message));
+            setAdjMsg(<><i className="bi bi-x-circle-fill me-1"></i> {e.response?.data?.message || e.message}</>);
         } finally { setAdjSaving(false); }
     };
 
     return (
-        <Modal title={`👤 ${customer.name} — ${customer.phone}`} onClose={onClose} wide>
+        <Modal title={<><i className="bi bi-person-fill me-2"></i> {customer.name} — {customer.phone}</>} onClose={onClose} wide>
             <div style={{ marginBottom: 12, display: 'flex', gap: 16 }}>
-                <span className="status-badge status-active">⭐ {customer.loyaltyPoints} điểm</span>
+                <span className="status-badge status-active"><i className="bi bi-star-fill me-1"></i> {customer.loyaltyPoints} điểm</span>
                 <span className="type-badge">Tổng chi: {fmtMoney(customer.totalSpending)}</span>
                 <StatusBadge s={customer.status} />
             </div>
-            <SubTabBar tabs={[{ key: 'history', label: '🛒 Lịch sử mua hàng' }, { key: 'points', label: '⭐ Điểm tích lũy' }]} active={subTab} onChange={setSubTab} />
+            <SubTabBar tabs={[{ key: 'history', label: <><i className="bi bi-cart-fill me-1"></i> Lịch sử mua hàng</> }, { key: 'points', label: <><i className="bi bi-star-fill me-1"></i> Điểm tích lũy</> }]} active={subTab} onChange={setSubTab} />
             {subTab === 'history' && (
                 <div>
                     {histLoading ? <div className="loading-cell"><div className="spinner" /></div> : (
@@ -209,13 +210,13 @@ function CustomerDetailModal({ customer, onClose }) {
             {subTab === 'points' && (
                 <div>
                     <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                        <h4 style={{ margin: '0 0 12px', color: '#a78bfa' }}>⚡ Điều chỉnh điểm thủ công</h4>
+                        <h4 style={{ margin: '0 0 12px', color: '#a78bfa' }}><i className="bi bi-lightning-fill me-2"></i> Điều chỉnh điểm thủ công</h4>
                         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                             <div className="form-group" style={{ flex: '1 1 120px' }}><label>Điểm +/-</label><input className="form-input" type="number" value={adjForm.pointChange} onChange={e => setAdjForm({ ...adjForm, pointChange: e.target.value })} /></div>
                             <div className="form-group" style={{ flex: '2 1 200px' }}><label>Lý do</label><input className="form-input" value={adjForm.reason} onChange={e => setAdjForm({ ...adjForm, reason: e.target.value })} /></div>
-                            <button className="btn-primary" onClick={handleAdjust} disabled={adjSaving} style={{ height: 42 }}>{adjSaving ? '⏳' : '✅'}</button>
+                            <button className="btn-primary" onClick={handleAdjust} disabled={adjSaving} style={{ height: 42 }}>{adjSaving ? <div className="spinner-border spinner-border-sm" /> : <i className="bi bi-check-lg"></i>}</button>
                         </div>
-                        {adjMsg && <p style={{ margin: '8px 0 0', fontSize: 12, color: adjMsg.includes('✅') ? '#34d399' : '#f87171' }}>{adjMsg}</p>}
+                        {adjMsg && <p style={{ margin: '8px 0 0', fontSize: 12, color: (adjMsg.props?.children?.some?.(c => c.props?.className?.includes('bi-check-lg')) || String(adjMsg).includes('Thành công')) ? '#34d399' : '#f87171' }}>{adjMsg}</p>}
                     </div>
                     {logsLoading ? <div className="loading-cell"><div className="spinner" /></div> : (
                         <div className="crm-table-container">
@@ -226,7 +227,7 @@ function CustomerDetailModal({ customer, onClose }) {
                                         logs.map(l => (
                                             <tr key={l.id}>
                                                 <td className="text-muted">{fmtDate(l.createdAt)}</td>
-                                                <td style={{ fontWeight: 700, color: l.pointChange > 0 ? '#34d399' : '#f87171' }}>{l.pointChange > 0 ? '+' : ''}{l.pointChange} ⭐</td>
+                                                <td style={{ fontWeight: 700, color: l.pointChange > 0 ? '#34d399' : '#f87171' }}>{l.pointChange > 0 ? '+' : ''}{l.pointChange} <i className="bi bi-star-fill small"></i></td>
                                                 <td>{l.reason || '—'}</td>
                                                 <td>{l.invoiceCode ? <code className="voucher-code">{l.invoiceCode}</code> : '—'}</td>
                                             </tr>
@@ -301,9 +302,12 @@ function CustomersTab() {
         <>
             <div className="glass-panel">
                 <div className="toolbar">
-                    <input className="search-input" placeholder="🔍 Tìm tên, SĐT..." value={searchInput} onChange={e => setSearchInput(e.target.value)} />
+                    <div style={{ position: 'relative', width: 260 }}>
+                        <i className="bi bi-search" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}></i>
+                        <input className="search-input" style={{ paddingLeft: 35 }} placeholder="Tìm tên, SĐT..." value={searchInput} onChange={e => setSearchInput(e.target.value)} />
+                    </div>
                     <span className="total-badge">{total} khách hàng</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_CUSTOMER); setEditTarget(null); setShowModal(true); }}>＋ Thêm khách hàng</button>
+                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_CUSTOMER); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Thêm khách hàng</button>
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
@@ -319,9 +323,9 @@ function CustomersTab() {
                                         <td><StatusBadge s={c.status} /></td>
                                         <td>
                                             <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setDetailTarget(c)}>👁️</button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}>✏️</button>
-                                                <button className="btn-icon del" onClick={() => setDeleteTarget(c)}>🗑️</button>
+                                                <button className="btn-icon" onClick={() => setDetailTarget(c)}><i className="bi bi-eye"></i></button>
+                                                <button className="btn-icon edit" onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
+                                                <button className="btn-icon del" onClick={() => setDeleteTarget(c)}><i className="bi bi-trash3"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -333,7 +337,7 @@ function CustomersTab() {
                 <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
             </div>
             {showModal && (
-                <Modal title={editTarget ? '✏️ Sửa khách hàng' : '➕ Thêm khách hàng'} onClose={() => setShowModal(false)} onSubmit={handleSave} loading={saving}>
+                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa khách hàng</> : <><i className="bi bi-plus-lg me-2"></i> Thêm khách hàng</>} onClose={() => setShowModal(false)} onSubmit={handleSave} loading={saving}>
                     <div className="form-grid">
                         <div className="form-group"><label>Họ tên *</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                         <div className="form-group"><label>Số điện thoại *</label><input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
@@ -396,7 +400,7 @@ function PromotionsTab() {
             <div className="glass-panel">
                 <div className="toolbar">
                     <span className="total-badge">{total} chương trình</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_PROMOTION); setEditTarget(null); setShowModal(true); }}>＋ Thêm khuyến mãi</button>
+                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_PROMOTION); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Thêm khuyến mãi</button>
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
@@ -411,9 +415,9 @@ function PromotionsTab() {
                                         <td><StatusBadge s={p.status} /></td>
                                         <td>
                                             <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setItemsTarget(p)}>📋</button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}>✏️</button>
-                                                <button className="btn-icon del" onClick={async () => { await deletePromotion(p.id); fetchData(); }}>🗑️</button>
+                                                <button className="btn-icon" onClick={() => setItemsTarget(p)}><i className="bi bi-journal-list"></i></button>
+                                                <button className="btn-icon edit" onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
+                                                <button className="btn-icon del" onClick={async () => { await deletePromotion(p.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -425,7 +429,7 @@ function PromotionsTab() {
                 <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
             </div>
             {showModal && (
-                <Modal title={editTarget ? '✏️ Sửa KM' : '➕ Thêm KM'} onClose={() => setShowModal(false)} onSubmit={handleSave}>
+                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa KM</> : <><i className="bi bi-plus-lg me-2"></i> Thêm KM</>} onClose={() => setShowModal(false)} onSubmit={handleSave}>
                     <div className="form-grid">
                         <div className="form-group form-full"><label>Tên KM</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                         <div className="form-group"><label>Loại</label><select className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>{PROMOTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
@@ -436,7 +440,7 @@ function PromotionsTab() {
                 </Modal>
             )}
             {itemsTarget && (
-                <Modal title={`📋 Sản phẩm áp dụng: ${itemsTarget.name}`} onClose={() => setItemsTarget(null)} wide>
+                <Modal title={<><i className="bi bi-journal-list me-2"></i> Sản phẩm áp dụng: {itemsTarget.name}</>} onClose={() => setItemsTarget(null)} wide>
                     <PromotionItemsManager promotionId={itemsTarget.id} />
                 </Modal>
             )}
@@ -465,7 +469,7 @@ function PromotionItemsManager({ promotionId }) {
             <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <select className="form-input" style={{ width: 140 }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}><option value="product">Sản phẩm (ID)</option><option value="category">Danh mục (ID)</option></select>
                 <input className="form-input" placeholder="Nhập ID..." value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} />
-                <button className="btn-primary" onClick={add}>➕ Thêm</button>
+                <button className="btn-primary" onClick={add}><i className="bi bi-plus-lg me-1"></i> Thêm</button>
             </div>
             <table className="crm-table">
                 <thead><tr><th>Sản phẩm/Danh mục</th><th>Thao tác</th></tr></thead>
@@ -473,7 +477,7 @@ function PromotionItemsManager({ promotionId }) {
                     {items.map(item => (
                         <tr key={item.id}>
                             <td>{item.productName || item.categoryName || `ID: ${item.productId || item.categoryId}`}</td>
-                            <td><button className="btn-icon del" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}>🗑️</button></td>
+                            <td><button className="btn-icon del" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}><i className="bi bi-trash3"></i></button></td>
                         </tr>
                     ))}
                 </tbody>
@@ -522,7 +526,7 @@ function VouchersTab() {
             <div className="glass-panel">
                 <div className="toolbar">
                     <span className="total-badge">{total} voucher</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_VOUCHER); setEditTarget(null); setShowModal(true); }}>＋ Thêm voucher</button>
+                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_VOUCHER); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Thêm voucher</button>
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
@@ -538,8 +542,8 @@ function VouchersTab() {
                                         <td className="text-muted">{fmtDate(v.expiryDate)}</td>
                                         <td>
                                             <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}>✏️</button>
-                                                <button className="btn-icon del" onClick={async () => { await deleteVoucher(v.id); fetchData(); }}>🗑️</button>
+                                                <button className="btn-icon edit" onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
+                                                <button className="btn-icon del" onClick={async () => { await deleteVoucher(v.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -551,7 +555,7 @@ function VouchersTab() {
                 <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
             </div>
             {showModal && (
-                <Modal title={editTarget ? '✏️ Sửa Voucher' : '➕ Thêm Voucher'} onClose={() => setShowModal(false)} onSubmit={handleSave}>
+                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa Voucher</> : <><i className="bi bi-plus-lg me-2"></i> Thêm Voucher</>} onClose={() => setShowModal(false)} onSubmit={handleSave}>
                     <div className="form-grid">
                         <div className="form-group"><label>Mã Voucher</label><input className="form-input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} /></div>
                         <div className="form-group"><label>Giá trị</label><input className="form-input" type="number" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} /></div>
@@ -609,7 +613,7 @@ function EventsTab() {
             <div className="glass-panel">
                 <div className="toolbar">
                     <span className="total-badge">{total} sự kiện</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_EVENT); setEditTarget(null); setShowModal(true); }}>＋ Tạo sự kiện mới</button>
+                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_EVENT); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Tạo sự kiện mới</button>
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
@@ -627,8 +631,8 @@ function EventsTab() {
                                         <td><StatusBadge s={ev.status} /></td>
                                         <td>
                                             <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...ev, startTime: toInputDate(ev.startTime), endTime: toInputDate(ev.endTime) }); setEditTarget(ev); setShowModal(true); }}>✏️</button>
-                                                <button className="btn-icon del" onClick={async () => { if (window.confirm('Xóa sự kiện này?')) { await deleteEvent(ev.id); fetchData(); } }}>🗑️</button>
+                                                <button className="btn-icon edit" onClick={() => { setForm({ ...ev, startTime: toInputDate(ev.startTime), endTime: toInputDate(ev.endTime) }); setEditTarget(ev); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
+                                                <button className="btn-icon del" onClick={async () => { if (window.confirm('Xóa sự kiện này?')) { await deleteEvent(ev.id); fetchData(); } }}><i className="bi bi-trash3"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -640,7 +644,7 @@ function EventsTab() {
                 <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
             </div>
             {showModal && (
-                <Modal title={editTarget ? '✏️ Sửa sự kiện' : '📅 Tạo sự kiện'} onClose={() => setShowModal(false)} onSubmit={handleSave} wide>
+                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa sự kiện</> : <><i className="bi bi-calendar-plus me-2"></i> Tạo sự kiện</>} onClose={() => setShowModal(false)} onSubmit={handleSave} wide>
                     <div className="form-grid">
                         <div className="form-group form-full"><label>Tên sự kiện *</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                         <div className="form-group form-full"><label>Mô tả ngắn</label><textarea className="form-input" style={{ height: 60, paddingTop: 8 }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
@@ -703,7 +707,7 @@ function ReportTab() {
 
     return (
         <div className="glass-panel">
-            <SubTabBar tabs={[{ key: 'promotion', label: '🎯 Báo cáo Khuyến mãi' }, { key: 'voucher', label: '🎟️ Báo cáo Voucher' }]} active={subTab} onChange={setSubTab} />
+            <SubTabBar tabs={[{ key: 'promotion', label: <><i className="bi bi-percent me-2"></i> Báo cáo Khuyến mãi</> }, { key: 'voucher', label: <><i className="bi bi-ticket-perforated-fill me-2"></i> Báo cáo Voucher</> }]} active={subTab} onChange={setSubTab} />
             <div className="crm-table-container">
                 <table className="crm-table">
                     <thead>

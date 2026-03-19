@@ -277,7 +277,7 @@ const getProductById = async (transaction, productId, productUnitId) => {
         p.name,
         pu.id AS productUnitId,
         pu.unitName,
-        pu.salePrice,
+        pu.salePrice AS salePrice,
         pu.conversionFactor
       FROM Products p
       JOIN ProductUnits pu 
@@ -465,8 +465,8 @@ const getInvoiceId = async (transaction, id) => {
    CÁC HÀM HỖ TRỢ ĐỒNG BỘ CA LÀM (CHỈ CHỨA SQL)
 ===================================================== */
 const getStaffAndSchedule = async (userId) => {
-    const pool = await connectDB();
-    const staffRes = await pool.request()
+  const pool = await connectDB();
+  const staffRes = await pool.request()
     .input('uid', sql.Int, userId)
     .query(`
       SELECT s.id, r.name as roleName 
@@ -475,11 +475,11 @@ const getStaffAndSchedule = async (userId) => {
         JOIN Roles r ON u.roleId = r.id
         WHERE s.userId = @uid
       `);
-    if (!staffRes.recordset.length) return null;
-    
-    const staffId = staffRes.recordset[0].id;
-    const roleName = staffRes.recordset[0].roleName;
-    const schedRes = await pool.request()
+  if (!staffRes.recordset.length) return null;
+
+  const staffId = staffRes.recordset[0].id;
+  const roleName = staffRes.recordset[0].roleName;
+  const schedRes = await pool.request()
     .input('sid', sql.BigInt, staffId)
     .query(`
         SELECT TOP 1 ws.id, ws.counterId, c.counterName 
@@ -489,35 +489,35 @@ const getStaffAndSchedule = async (userId) => {
           AND ws.status IN ('working', 'assigned')
         ORDER BY ws.status DESC
     `);
-    
-    return { staffId,roleName, schedule: schedRes.recordset[0] || null };
+
+  return { staffId, roleName, schedule: schedRes.recordset[0] || null };
 };
 
 const getCounterName = async (counterId) => {
-    const pool = await connectDB();
-    const res = await pool.request()
+  const pool = await connectDB();
+  const res = await pool.request()
     .input('cid', sql.BigInt, counterId)
     .query(`SELECT counterName FROM Counters WHERE id = @cid`);
-    return res.recordset[0]?.counterName || 'Quầy';
+  return res.recordset[0]?.counterName || 'Quầy';
 };
 
 const checkInSchedule = async (scheduleId) => {
-    const pool = await connectDB();
-    await pool.request()
+  const pool = await connectDB();
+  await pool.request()
     .input('id', sql.Int, scheduleId)
     .query(`UPDATE WorkSchedules SET status = 'working' WHERE id = @id`);
 };
 
 const createManagerSchedule = async (staffId, counterId, counterName) => {
-    const pool = await connectDB();
-    await pool.request()
-        .input('sid', sql.BigInt, staffId)
-        .input('cid', sql.BigInt, counterId)
-        .input('cname', sql.NVarChar, 'Ca HC - ' + counterName)
-        .query(`
+  const pool = await connectDB();
+  await pool.request()
+    .input('sid', sql.BigInt, staffId)
+    .input('cid', sql.BigInt, counterId)
+    .input('cname', sql.NVarChar, 'Ca HC - ' + counterName)
+    .query(`
             DECLARE @shiftId INT = (SELECT TOP 1 id FROM Shifts WHERE name = N'Ca Quản Lý');
             IF @shiftId IS NULL BEGIN
-                INSERT INTO Shifts (name, startTime, endTime, isActive) VALUES (N'Ca Quản Lý', '08:00', '18:00', 1);
+                INSERT INTO Shifts (name, startTime, endTime) VALUES (N'Ca Quản Lý', '08:00', '18:00');
                 SET @shiftId = SCOPE_IDENTITY();
             END
             INSERT INTO WorkSchedules (staffId, shiftId, workDate, counterId, status, snapshotStartTime, snapshotEndTime, snapshotShiftName)

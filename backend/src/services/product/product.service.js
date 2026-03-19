@@ -1,4 +1,5 @@
 const productModel = require('../../models/product/product.model');
+const promotionService = require('../promotion.service')
 
 function translateSqlError(err) {
     const num = err.number;
@@ -71,7 +72,12 @@ exports.getProductDetail = async (id) => {
 
 exports.createProduct = async (productData) => {
     validateProductPayload(productData);
-
+    if (productData.barcode && String(productData.barcode).trim()) {
+        const barcodeExists = await productModel.checkBarcodeExists(productData.barcode);
+        if (barcodeExists) {
+            throw new Error('Barcode đã được sử dụng.');
+        }
+    }
     try {
         return await productModel.createProduct(productData);
     } catch (err) {
@@ -81,6 +87,13 @@ exports.createProduct = async (productData) => {
 
 exports.updateProduct = async (id, productData) => {
     validateProductPayload(productData);
+
+    if (productData.barcode && String(productData.barcode).trim()) {
+        const barcodeExists = await productModel.checkBarcodeExists(productData.barcode, id);
+        if (barcodeExists) {
+            throw new Error('Barcode đã được sử dụng.');
+        }
+    }
 
     try {
         const updated = await productModel.updateProduct(id, productData);
@@ -116,11 +129,15 @@ exports.getAllProducts = async (filters) => {
     const rawData = await productModel.getAllProducts(filters);
 
     const productsMap = new Map();
-    
-    rawData.forEach(row => {
-        console.log(row);
+
+    for (const row of rawData) {
         const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
-        
+
+        const discount = await promotionService.getDiscountByProduct({
+            productId: row.id,
+            productUnitId: row.unitId
+        });
+
         if (!productsMap.has(row.id)) {
             productsMap.set(row.id, {
                 id: row.id,
@@ -134,18 +151,29 @@ exports.getAllProducts = async (filters) => {
         }
 
         if (row.unitId) {
+            const factor = Number(row.factor) || 1;
+            const stock = Math.floor((Number(row.stock) || 0) / factor);
+            const price = Number(row.price) || 0;
+
+            const discountPercent = Number(discount?.discountPercent) || 0;
+            const discountAmount = Number(discount?.discountAmount) || 0;
+
+            const totalDiscount = (price * (discountPercent / 100)) + discountAmount;
+
             productsMap.get(row.id).units.push({
                 unitId: row.unitId,
                 unitName: row.unitName,
                 factor: row.factor,
                 barcode: row.barcode,
                 price: row.price,
-                stock: row.factor ? Math.floor(row.stock / row.factor) : 0,
+                stock: stock,
                 unitType: row.unitType,
                 lowStock: lowStock,
+                totalDiscount: totalDiscount,
+                discountedPrice: price - totalDiscount,
+                finalPrice: price - totalDiscount,
             });
         }
-    });
-
+    }
     return Array.from(productsMap.values());
 };

@@ -14,7 +14,7 @@ const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
 };
 
-export default function Product({ addItem, focusSignal } ) {
+export default function Product({ addItem, focusSignal }) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -70,7 +70,7 @@ export default function Product({ addItem, focusSignal } ) {
       productUnitId: unit.unitId,
       productName: product.name,
       unitName: unit.unitName,
-      unitPrice: unit.price,
+      unitPrice: unit.finalPrice,
       quantityOnHand: unit.stock,
       factor: unit.factor,
       unitType: unit.unitType,
