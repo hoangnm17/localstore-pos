@@ -145,7 +145,6 @@ exports.getAllProducts = async (filters) => {
                 lowStock: lowStock,
             });
         }
-    });
-
+    })
     return Array.from(productsMap.values());
-};
+}
