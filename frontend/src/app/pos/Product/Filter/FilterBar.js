@@ -13,8 +13,11 @@ export default function FilterBar({
   focusSignal,
 }) {
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
+  const [categoryPage, setCategoryPage] = useState(0);
+
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
+
   const debouncedKeyword = useDebounce(displayKeyword, 500);
 
   useEffect(() => {
@@ -30,13 +33,18 @@ export default function FilterBar({
     onKeywordChange(debouncedKeyword);
   }, [debouncedKeyword, onKeywordChange]);
 
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === "left" ? scrollLeft - 200 : scrollLeft + 200;
-      scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
-    }
-  };
+  // reset page khi categories thay đổi
+  useEffect(() => {
+    setCategoryPage(0);
+  }, [categories]);
+
+  // danh sách category hiển thị (4 cái)
+  const visibleCategories = categories.slice(
+    categoryPage * ITEMS_PER_PAGE,
+    (categoryPage + 1) * ITEMS_PER_PAGE
+  );
+
+  const maxPage = Math.ceil(categories.length / ITEMS_PER_PAGE) - 1;
 
   return (
     <div className="filter-bar-container w-100 mb-4">
@@ -56,7 +64,6 @@ export default function FilterBar({
               if (e.key === "Enter") {
                 e.preventDefault();
                 e.stopPropagation();
-
                 addItem(displayKeyword);
               }
             }}
@@ -76,7 +83,8 @@ export default function FilterBar({
       <div className="category-scroll-container position-relative d-flex align-items-center">
         <button
           className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute start-0"
-          onClick={() => scroll("left")}
+          onClick={() => setCategoryPage(prev => Math.max(prev - 1, 0))}
+          disabled={categoryPage === 0}
           style={{ zIndex: 2, left: "-15px" }}
         >
           <i className="bi bi-chevron-left"></i>
@@ -84,29 +92,27 @@ export default function FilterBar({
 
         <div
           ref={scrollRef}
-          className="category-list d-flex gap-2 overflow-auto no-scrollbar pb-2"
-          style={{
-            scrollBehavior: "smooth",
-            msOverflowStyle: "none",
-            scrollbarWidth: "none",
-            WebkitOverflowScrolling: "touch"
-          }}
+          className="category-list d-flex gap-2 overflow-hidden no-scrollbar pb-2"
         >
           <button
-            className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${!selectedCategory ? "btn-primary shadow" : "btn-outline-secondary border-light-subtle"
-              }`}
+            className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${
+              !selectedCategory
+                ? "btn-primary shadow"
+                : "btn-outline-secondary border-light-subtle"
+            }`}
             onClick={() => onSelectCategory(null)}
           >
             TẤT CẢ
           </button>
 
-          {categories.map((cat) => (
+          {visibleCategories.map((cat) => (
             <button
               key={cat.id}
-              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${selectedCategory?.id === cat.id
-                ? "btn-primary shadow"
-                : "btn-outline-secondary border-light-subtle"
-                }`}
+              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${
+                selectedCategory?.id === cat.id
+                  ? "btn-primary shadow"
+                  : "btn-outline-secondary border-light-subtle"
+              }`}
               onClick={() => onSelectCategory(cat)}
             >
               {cat.name.toUpperCase()}
@@ -116,7 +122,12 @@ export default function FilterBar({
 
         <button
           className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute end-0"
-          onClick={() => scroll("right")}
+          onClick={() =>
+            setCategoryPage(prev =>
+              prev < maxPage ? prev + 1 : prev
+            )
+          }
+          disabled={categoryPage === maxPage}
           style={{ zIndex: 2, right: "-15px" }}
         >
           <i className="bi bi-chevron-right"></i>

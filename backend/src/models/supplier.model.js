@@ -101,7 +101,6 @@ const getProductsNotInSupplier = async (supplierId, search) => {
             AND (
                 p.name LIKE @search
                 OR p.code LIKE @search
-                OR p.barcode LIKE @search
             )
         `;
         request.input("search", sql.NVarChar, `%${search}%`);
@@ -111,8 +110,7 @@ const getProductsNotInSupplier = async (supplierId, search) => {
         SELECT 
             p.id,
             p.name,
-            p.code,
-            p.barcode
+            p.code
         FROM Products p
         ${whereClause}
         ORDER BY p.name ASC
@@ -134,7 +132,7 @@ const getUnitsByProductId = async (productId) => {
                 unitName,
                 unitType,
                 conversionFactor,
-                price,
+                salePrice,
                 barcode
             FROM ProductUnits
             WHERE productId = @productId

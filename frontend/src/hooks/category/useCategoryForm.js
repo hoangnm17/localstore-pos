@@ -13,7 +13,6 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
             setForm({ name: '', parentId: null, imageUrl: '' });
             return;
         }
-
         categoryService.getCategoryById(editId).then(res => {
             setForm(res.data.data);
         });
@@ -29,12 +28,22 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
             return false;
         }
 
-        if (editId) {
-            await categoryService.updateCategory(editId, form);
-        } else {
-            await categoryService.createCategory(form);
+        try {
+            if (editId) {
+                await categoryService.updateCategory(editId, form);
+            } else {
+                await categoryService.createCategory(form);
+            }
+            return true;
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            if (showNotification) {
+                showNotification(errorMsg, 'error');
+            } else {
+                alert(errorMsg);
+            }
+            return false;
         }
-        return true;
     }
 
     return {

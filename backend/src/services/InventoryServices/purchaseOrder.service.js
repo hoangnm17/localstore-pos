@@ -1,23 +1,6 @@
 const purchaseOrderModel = require("../../models/purchaseOrder.model");
 const staffModel = require("../../models/staff.model");
 
-// exports.getMonthlyReport = async ({
-//     month,
-//     year,
-//     supplierId
-// }) => {
-
-//     if (month < 1 || month > 12) {
-//         throw new Error("INVALID_MONTH");
-//     }
-
-//     return await purchaseOrderModel.getMonthlyReport({
-//         month,
-//         year,
-//         supplierId
-//     });
-// };
-
 const createPurchaseOrder = async (user, note, items) => {
     if (!user.permissions.includes("CREATE_PURCHASE_ORDER")) {
         throw new Error("PERMISSION_DENIED");
