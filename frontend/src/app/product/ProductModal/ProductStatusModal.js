@@ -9,7 +9,7 @@ function ProductStatusModal({ open, product, submitting, onClose, onConfirm }) {
     return (
         <ModalShell
             open={open}
-            title={isSelling ? 'Ngừng bán sản phẩm' : 'Bật bán lại sản phẩm'}
+            title={isSelling ? 'Ngừng bán sản phẩm' : 'Bán lại sản phẩm'}
             subtitle="Thay đổi trạng thái bán, không xóa dữ liệu."
             width="520px"
             onClose={onClose}
@@ -25,7 +25,7 @@ function ProductStatusModal({ open, product, submitting, onClose, onConfirm }) {
                         onClick={() => onConfirm(product)}
                     >
                         <i className="bi bi-power me-2" />
-                        {submitting ? 'Đang xử lý...' : isSelling ? 'Ngừng bán' : 'Bật bán lại'}
+                        {submitting ? 'Đang xử lý...' : isSelling ? 'Ngừng bán' : 'Bán lại'}
                     </button>
                 </>
             }
