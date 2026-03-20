@@ -78,7 +78,7 @@ export default function InvoicesPage() {
   return (
     <div className="bg-light min-vh-100 py-4">
       <div className="container-fluid px-lg-5">
-        
+
         <div className="d-md-flex justify-content-between align-items-center mb-4">
           <div>
             <h3 className="fw-bold text-dark mb-1">Hóa đơn bán hàng</h3>
@@ -95,9 +95,9 @@ export default function InvoicesPage() {
               <div className="col-md-4">
                 <div className="input-group border rounded-2">
                   <span className="input-group-text bg-transparent border-0"><i className="bi bi-search text-muted"></i></span>
-                  <input 
-                    type="text" className="form-control border-0 shadow-none" 
-                    placeholder="Tìm mã hóa đơn..." 
+                  <input
+                    type="text" className="form-control border-0 shadow-none"
+                    placeholder="Tìm mã hóa đơn..."
                     value={search} onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
@@ -132,7 +132,7 @@ export default function InvoicesPage() {
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                   <tr><td colSpan="6" className="text-center py-5 text-muted small italic">Đang tải dữ liệu...</td></tr>
+                  <tr><td colSpan="6" className="text-center py-5 text-muted small italic">Đang tải dữ liệu...</td></tr>
                 ) : rows.map((inv) => {
                   const meta = STATUS_META[inv.status] || STATUS_META.DEFAULT;
                   return (
@@ -148,15 +148,39 @@ export default function InvoicesPage() {
                       </td>
                       <td className="pe-4 text-end">
                         <div className="btn-group shadow-sm border rounded-2 bg-white">
-                          <button className="btn btn-sm btn-white border-0 px-3 py-1 text-primary border-end" onClick={() => handleOpenAction(inv.id, 'VIEW')} title="Xem chi tiết">
+                          <button
+                            className="btn btn-sm btn-white border-0 px-3 py-1 text-primary border-end"
+                            onClick={() => handleOpenAction(inv.id, 'VIEW')}
+                            title="Xem chi tiết"
+                          >
                             <i className="bi bi-eye"></i>
                           </button>
-                          <button className="btn btn-sm btn-white border-0 px-3 py-1 text-secondary border-end" onClick={() => handleOpenAction(inv.id, 'PRINT')} title="In hóa đơn">
+
+                          <button
+                            className="btn btn-sm btn-white border-0 px-3 py-1 text-secondary border-end"
+                            onClick={() => handleOpenAction(inv.id, 'PRINT')}
+                            title="In hóa đơn"
+                          >
                             <i className="bi bi-printer"></i>
                           </button>
+
                           {inv.status === "PAID" && (
-                            <button className="btn btn-sm btn-white border-0 px-3 py-1 text-danger" onClick={() => handleOpenAction(inv.id, 'RETURN')} title="Hoàn trả">
+                            <button
+                              className="btn btn-sm btn-white border-0 px-3 py-1 text-danger"
+                              onClick={() => handleOpenAction(inv.id, 'RETURN')}
+                              title="Hoàn trả"
+                            >
                               <i className="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                          )}
+
+                          {['PENDING', 'UNPAID'].includes(inv.status) && (
+                            <button
+                              className="btn btn-sm btn-white border-0 px-3 py-1 text-success border-end transition-all hover:bg-light"
+                              onClick={() => navigate(`/sales?invoiceId=${inv.id}`)}
+                              title="Thanh toán ngay"
+                            >
+                              <i className="bi bi-credit-card-fill"></i>
                             </button>
                           )}
                         </div>
@@ -167,7 +191,7 @@ export default function InvoicesPage() {
               </tbody>
             </table>
           </div>
-          
+
           <div className="card-footer bg-white border-0 py-3">
             <Pagination currentPage={page} totalPages={pagination.totalPages} onPageChange={setPage} />
           </div>

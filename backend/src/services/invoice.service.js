@@ -77,7 +77,6 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            // Lấy chiết khấu từ chương trình khuyến mãi
             const discountData = await promotionModel.getDiscountByProduct({
                 productId: item.productId,
                 productUnitId: item.productUnitId
@@ -106,7 +105,7 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
                 productId: item.productId,
                 productName: product.name,
                 quantity: item.quantity,
-                unitPrice, // Lưu giá sau khi giảm
+                unitPrice,
                 lineTotal,
                 productUnitId: item.productUnitId,
                 unitName: product.unitName,
@@ -119,7 +118,6 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
             finalAmount: totalAmount - totalDiscount,
         });
 
-        // Nếu có khuyến mãi chung, cập nhật thêm vào bảng Invoices
         if (totalDiscount > 0) {
             await invoiceModel.updateInvoiceDiscount(transaction, invoiceId, null, totalDiscount);
         }
@@ -228,12 +226,16 @@ const getDraftInvoices = async () => {
 const getInvoiceDetail = async (id) => {
     const data = await invoiceModel.getInvoiceDetail(id);
     if (!data) throw new Error("Invoice not found");
+    const totalAmount = data.items.reduce((total, item) => {
+        return total + Number(item.lineTotal || 0);
+    }, 0);
 
     return {
         id: Number(data.id),
         invoiceCode: data.invoiceCode,
         createdAt: data.createdAt,
         finalAmount: Number(data.finalAmount) || 0,
+        totalAmount: totalAmount,
         status: data.status,
         customerId: data.customerId ? Number(data.customerId) : null,
         customerName: data.customerName,
