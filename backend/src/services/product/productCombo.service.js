@@ -24,6 +24,10 @@ exports.getComboItems = async (productId) => {
     return comboModel.getComboItems(productId);
 };
 
+exports.getComboCostPrice = async (productId) => {
+    return comboModel.getComboCostPrice(productId);
+};
+
 exports.addComboItem = async (productId, payload) => {
     const quantity = Number(payload.quantity || 1);
     if (Number.isNaN(quantity) || quantity <= 0) {
@@ -68,4 +72,54 @@ exports.removeComboItem = async (comboItemId, productId) => {
         throw new Error('Không tìm thấy thành phần combo.');
     }
     return true;
+};
+
+exports.assembleCombo = async (productId, quantity) => {
+    const qty = Number(quantity);
+    if (Number.isNaN(qty) || qty <= 0) {
+        throw new Error('Số lượng tạo combo phải lớn hơn 0.');
+    }
+
+    const parent = await productModel.getProductById(productId);
+    if (!parent) {
+        throw new Error('Không tìm thấy sản phẩm combo.');
+    }
+    if (!parent.isCombo) {
+        throw new Error('Sản phẩm này không phải là combo.');
+    }
+
+    try {
+        return await comboModel.assembleCombo(productId, qty);
+    } catch (err) {
+        if (err.message?.startsWith('INSUFFICIENT_STOCK:')) {
+            const [, childId, needed, available] = err.message.split(':');
+            throw new Error(
+                `Không đủ tồn kho sản phẩm con (id: ${childId}). Cần ${needed}, hiện có ${available}.`
+            );
+        }
+        throw err;
+    }
+};
+
+exports.updateComboStock = async (productId, newQuantity) => {
+    const qty = Number(newQuantity);
+    if (Number.isNaN(qty) || qty < 0) {
+        throw new Error('Số lượng tồn kho không hợp lệ.');
+    }
+
+    const parent = await productModel.getProductById(productId);
+    if (!parent) throw new Error('Không tìm thấy sản phẩm combo.');
+    if (!parent.isCombo) throw new Error('Sản phẩm này không phải là combo.');
+
+    try {
+        return await comboModel.updateComboStock(productId, qty);
+    } catch (err) {
+        if (err.message?.startsWith('INSUFFICIENT_STOCK:')) {
+            const [, childId, needed, available] = err.message.split(':');
+            throw new Error(
+                `Không đủ tồn kho sản phẩm con (id: ${childId}). Cần ${needed}, hiện có ${available}.`
+            );
+        }
+        throw err;
+    }
 };

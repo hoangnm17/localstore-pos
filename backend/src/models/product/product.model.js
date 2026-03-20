@@ -60,11 +60,11 @@ exports.getProducts = async (filters) => {
             puBase.id AS baseUnitId,
             puBase.barcode AS barcode,
             puBase.salePrice AS salePrice,
-            ISNULL(latestCost.costPrice, 0) AS costPrice,
             CASE
-                WHEN p.isCombo = 1 THEN ISNULL(comboStock.stockQuantity, 0)
-                ELSE ISNULL(s.quantityOnHand, 0)
-            END AS stockQuantity
+                WHEN p.isCombo = 1 THEN ISNULL(comboCost.costPrice, 0)
+                ELSE ISNULL(latestCost.costPrice, 0)
+            END AS costPrice,
+            ISNULL(s.quantityOnHand, 0) AS stockQuantity
         FROM Products p
         LEFT JOIN Categories c
             ON c.id = p.categoryId
@@ -85,12 +85,21 @@ exports.getProducts = async (filters) => {
             ORDER BY po.createdAt DESC, poi.id DESC
         ) latestCost
         OUTER APPLY (
-            SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
+            SELECT ISNULL(SUM(pc.quantity * ISNULL(childLatest.costPrice, 0)), 0) AS costPrice
             FROM ProductCombos pc
-            LEFT JOIN InventoryStocks cs
-                ON cs.productId = pc.childProductId
+            LEFT JOIN (
+                SELECT
+                    puC.productId,
+                    CAST(ROUND(poiC.costPrice / NULLIF(CAST(puC.conversionFactor AS DECIMAL(15,3)), 0), 0) AS DECIMAL(15,0)) AS costPrice,
+                    ROW_NUMBER() OVER (PARTITION BY puC.productId ORDER BY poC.createdAt DESC, poiC.id DESC) AS rn
+                FROM PurchaseOrderItems poiC
+                INNER JOIN PurchaseOrders poC ON poC.id = poiC.poId
+                INNER JOIN ProductUnits puC ON puC.id = poiC.productUnitId
+                WHERE poC.status = 'Received'
+            ) childLatest ON childLatest.productId = pc.childProductId AND childLatest.rn = 1
             WHERE pc.parentProductId = p.id
-        ) comboStock
+        ) comboCost
+
         WHERE
     (@status IS NULL OR p.status = @status)
     AND (
@@ -193,12 +202,12 @@ exports.getProductDetail = async (id) => {
                 puBase.id AS baseUnitId,
                 puBase.barcode AS barcode,
                 puBase.salePrice AS salePrice,
-                ISNULL(latestCost.costPrice, 0) AS costPrice,
-                ISNULL(s.minThreshold, 0) AS minThreshold,
                 CASE
-                    WHEN p.isCombo = 1 THEN ISNULL(comboStock.stockQuantity, 0)
-                    ELSE ISNULL(s.quantityOnHand, 0)
-                END AS stockQuantity
+                    WHEN p.isCombo = 1 THEN ISNULL(comboCost.costPrice, 0)
+                    ELSE ISNULL(latestCost.costPrice, 0)
+                END AS costPrice,
+                ISNULL(s.minThreshold, 0) AS minThreshold,
+                ISNULL(s.quantityOnHand, 0) AS stockQuantity
             FROM Products p
             LEFT JOIN Categories c
                 ON c.id = p.categoryId
@@ -219,12 +228,21 @@ exports.getProductDetail = async (id) => {
                 ORDER BY po.createdAt DESC, poi.id DESC
             ) latestCost
             OUTER APPLY (
-                SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
+                SELECT ISNULL(SUM(pc.quantity * ISNULL(childLatest.costPrice, 0)), 0) AS costPrice
                 FROM ProductCombos pc
-                LEFT JOIN InventoryStocks cs
-                    ON cs.productId = pc.childProductId
+                LEFT JOIN (
+                    SELECT
+                        puC.productId,
+                        CAST(ROUND(poiC.costPrice / NULLIF(CAST(puC.conversionFactor AS DECIMAL(15,3)), 0), 0) AS DECIMAL(15,0)) AS costPrice,
+                        ROW_NUMBER() OVER (PARTITION BY puC.productId ORDER BY poC.createdAt DESC, poiC.id DESC) AS rn
+                    FROM PurchaseOrderItems poiC
+                    INNER JOIN PurchaseOrders poC ON poC.id = poiC.poId
+                    INNER JOIN ProductUnits puC ON puC.id = poiC.productUnitId
+                    WHERE poC.status = 'Received'
+                ) childLatest ON childLatest.productId = pc.childProductId AND childLatest.rn = 1
                 WHERE pc.parentProductId = p.id
-            ) comboStock
+            ) comboCost
+
             WHERE p.id = @id
         `);
 

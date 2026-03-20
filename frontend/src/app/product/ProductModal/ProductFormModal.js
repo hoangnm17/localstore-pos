@@ -32,7 +32,10 @@ function buildInitialState(initialData, productType) {
             status: initialData.status || 'Selling',
             productType: initialData.isCombo ? 'combo' : 'regular',
             saleMode: initialData.allowDecimalQuantity ? 'weight' : 'piece',
-            pricingMode: 'manual'
+            pricingMode: 'manual',
+            initialStock: 0,
+            correctedStock: initialData.stockQuantity ?? 0,
+            stockQuantity: initialData.stockQuantity ?? 0
         };
     }
 
@@ -48,7 +51,10 @@ function buildInitialState(initialData, productType) {
         status: 'Selling',
         productType,
         saleMode: 'piece',
-        pricingMode: productType === 'combo' ? 'auto' : 'manual'
+        pricingMode: productType === 'combo' ? 'auto' : 'manual',
+        initialStock: 0,
+        correctedStock: '',
+        stockQuantity: 0
     };
 }
 
@@ -344,7 +350,13 @@ function ProductFormModal({
             allowDecimalQuantity: isCombo ? false : form.saleMode === 'weight',
             comboItems: isCombo
                 ? comboRows.map((r) => ({ childProductId: r.childProductId, quantity: r.quantityBase }))
-                : []
+                : [],
+            initialStock: isCombo ? Number(form.initialStock || 0) : 0,
+            correctedStock: isCombo &&
+                String(form.correctedStock).trim() !== '' &&
+                Number(form.correctedStock) !== Number(form.stockQuantity)
+                ? Number(form.correctedStock)
+                : null
         });
     };
 

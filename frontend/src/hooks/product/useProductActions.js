@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
     addComboItem,
+    assembleCombo,
     createProduct,
     createProductUnit,
     deleteProductUnit,
@@ -9,6 +10,7 @@ import {
     removeComboItem,
     startSellingProduct,
     stopSellingProduct,
+    updateComboStock,
     updateProduct,
     updateProductUnit
 } from '../../services/Product/product.service';
@@ -145,7 +147,9 @@ function useProductActions({
                 if (payload.isCombo && desiredComboItems.length > 0) {
                     await syncComboItems(createdProductId, [], desiredComboItems);
                 }
-
+                if (payload.isCombo && Number(payload.initialStock) > 0) {
+                    await assembleCombo(createdProductId, Number(payload.initialStock));
+                }
                 closeProductFormModal();
                 await loadProducts();
 
@@ -165,7 +169,12 @@ function useProductActions({
             if (payload.isCombo) {
                 await syncComboItems(editingProductId, currentComboItems, desiredComboItems);
             }
-
+            if (payload.isCombo && payload.correctedStock !== null && payload.correctedStock >= 0) {
+                await updateComboStock(editingProductId, payload.correctedStock);
+            }
+            if (payload.isCombo && Number(payload.initialStock) > 0) {
+                await assembleCombo(editingProductId, Number(payload.initialStock));
+            }
             closeProductFormModal();
             await loadProducts();
 
