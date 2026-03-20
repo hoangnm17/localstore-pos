@@ -2,23 +2,25 @@ import { useState, useEffect, useMemo } from "react";
 import { formatCurrency } from "utils/formatters";
 import { getVoucherByCode, getPromotions } from "services/crm.service";
 
-const POINT_RATE = 100;
+const POINT_RATE = 100; // 1 point = 100đ
 
 export default function OrderDiscount({
   subtotal = 0,
   customer = null,
   onChange = () => { }
 }) {
+
   const safeSubtotal = useMemo(() => Number(subtotal) || 0, [subtotal]);
 
   const [voucherCode, setVoucherCode] = useState("");
   const [voucher, setVoucher] = useState(null);
-  const [error, setError] = useState(null);
 
   const [promotions, setPromotions] = useState([]);
   const [promotion, setPromotion] = useState(null);
 
   const [pointUsed, setPointUsed] = useState(0);
+
+  /* ================= LOAD PROMOTIONS ================= */
 
   useEffect(() => {
     const loadPromotions = async () => {
@@ -33,31 +35,32 @@ export default function OrderDiscount({
     loadPromotions();
   }, []);
 
+  /* ================= CHECK VOUCHER ================= */
+
   const handleCheckVoucher = async () => {
     const code = voucherCode.trim();
     if (!code) return;
 
-    setError(null);
-
     try {
-      const res = await getVoucherByCode(code, safeSubtotal);
+      const res = await getVoucherByCode(code);
 
       if (!res?.data) {
-        setError("Voucher không hợp lệ");
+        alert("Voucher không hợp lệ");
         setVoucher(null);
         return;
       }
 
       setVoucher(res.data);
-      setVoucherCode("");
     } catch (err) {
       console.error("Voucher error", err);
-      const errMsg = err.response?.data?.message || "Không kiểm tra được voucher";
-      setError(errMsg);
-      setVoucher(null);
+      alert("Không kiểm tra được voucher");
     }
   };
 
+  /* ================= COMPUTE DISCOUNT (POS ORDER) =================
+     Order: Voucher -> Promotion -> Points
+     And never exceed subtotal
+  ================================================================ */
 
   const voucherDiscount = useMemo(() => {
     if (!voucher) return 0;
@@ -93,6 +96,7 @@ export default function OrderDiscount({
     return Math.max(safeSubtotal - voucherDiscount - promotionDiscount, 0);
   }, [safeSubtotal, voucherDiscount, promotionDiscount]);
 
+  // Compute point discount with remaining cap + convert back to actualPointUsed
   const { pointDiscount, actualPointUsed } = useMemo(() => {
     const maxPoints = Number(customer?.loyaltyPoints || 0);
 
@@ -111,10 +115,12 @@ export default function OrderDiscount({
     };
   }, [pointUsed, customer?.loyaltyPoints, remainingAfterVoucherPromo]);
 
+  // Keep input pointUsed in sync with actualPointUsed (auto reduce when remaining becomes 0)
   useEffect(() => {
     if (pointUsed !== actualPointUsed) {
       setPointUsed(actualPointUsed);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actualPointUsed]);
 
   const totalDiscount = useMemo(() => {
@@ -125,6 +131,8 @@ export default function OrderDiscount({
     return Math.max(safeSubtotal - totalDiscount, 0);
   }, [safeSubtotal, totalDiscount]);
 
+  /* ================= EMIT ================= */
+
   useEffect(() => {
     onChange({
       pointUsed: actualPointUsed,
@@ -134,6 +142,8 @@ export default function OrderDiscount({
       finalAmount
     });
   }, [actualPointUsed, voucher, promotion, totalDiscount, finalAmount, onChange]);
+
+  /* ================= UI HANDLERS ================= */
 
   const handlePointInput = (val) => {
     const maxPoints = Number(customer?.loyaltyPoints || 0);
@@ -152,32 +162,28 @@ export default function OrderDiscount({
     setVoucherCode("");
     setVoucher(null);
     setPointUsed(0);
-    setError(null);
   };
 
   return (
-    <div className="border rounded-4 p-3 bg-white">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="fw-bold">Giảm giá & Ưu đãi</div>
+    <div className="border rounded-4 p-3">
+
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="fw-semibold">Giảm giá</div>
         <button className="btn btn-sm btn-outline-secondary" onClick={clearAll}>
           Xóa áp dụng
         </button>
       </div>
 
-      {error && (
-        <div className="alert alert-danger py-2 px-3 small d-flex justify-content-between align-items-center mb-3">
-          <span>{error}</span>
-          <button type="button" className="btn-close" style={{ fontSize: '0.5rem' }} onClick={() => setError(null)}></button>
-        </div>
-      )}
-
+      {/* POINT */}
       <div className="mb-3">
         <div className="fw-semibold mb-1">Điểm tích lũy</div>
+
         {customer ? (
           <>
             <div className="small text-muted mb-2">
               Bạn có {customer.loyaltyPoints || 0} điểm
             </div>
+
             <div className="d-flex gap-2">
               <input
                 type="number"
@@ -188,31 +194,38 @@ export default function OrderDiscount({
                 disabled={remainingAfterVoucherPromo <= 0}
                 onChange={(e) => handlePointInput(e.target.value)}
               />
+
               <div className="text-danger fw-semibold d-flex align-items-center">
                 -{formatCurrency(pointDiscount)}
               </div>
             </div>
+
+            {remainingAfterVoucherPromo <= 0 && (
+              <div className="small text-muted mt-1">
+                Đơn đã được giảm hết, không cần dùng điểm.
+              </div>
+            )}
           </>
         ) : (
           <div className="small text-muted">Chọn khách hàng để dùng điểm.</div>
         )}
       </div>
 
+      {/* VOUCHER */}
       <div className="mb-3">
         <div className="fw-semibold mb-2">Voucher</div>
+
         <div className="d-flex gap-2 mb-2">
           <input
-            className={`form-control ${error ? 'is-invalid' : ''}`}
+            className="form-control"
             placeholder="Nhập mã voucher"
             value={voucherCode}
-            onChange={(e) => {
-                setVoucherCode(e.target.value);
-                if(error) setError(null);
-            }}
+            onChange={(e) => setVoucherCode(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleCheckVoucher();
             }}
           />
+
           <button className="btn btn-primary" onClick={handleCheckVoucher}>
             Áp dụng
           </button>
@@ -226,9 +239,11 @@ export default function OrderDiscount({
                 -{formatCurrency(voucherDiscount)}
               </small>
             </div>
+
             <button
               className="btn btn-sm btn-outline-danger"
               onClick={() => setVoucher(null)}
+              title="Bỏ voucher"
             >
               X
             </button>
@@ -243,6 +258,7 @@ export default function OrderDiscount({
             -{formatCurrency(totalDiscount)}
           </span>
         </div>
+
         <div className="d-flex justify-content-between fw-bold">
           <span>Thanh toán</span>
           <span>{formatCurrency(finalAmount)}</span>

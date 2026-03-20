@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/axiosInstance';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import CashHandover from './CashHandover';
+import { useShiftReminder } from '../../hooks/useShiftReminder';
 
 const getMonday = (d) => {
     const date = new Date(d);
@@ -46,6 +47,7 @@ const MySchedule = () => {
     const { showNotification } = useNotification();
     const [loading, setLoading] = useState(true);
     const [currentMonday, setCurrentMonday] = useState(getMonday(new Date()));
+    useShiftReminder();
 
     const [staffInfo, setStaffInfo] = useState(null);
     const [schedules, setSchedules] = useState([]);

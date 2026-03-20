@@ -17,19 +17,40 @@ module.exports.assignShift = async (staffId, shiftId, workDate, counterId) => {
     const pool = await connectDB();
     const shiftInfo = await pool.request()
         .input('shiftId', sql.Int, shiftId)
-        .query(`SELECT name, startTime, endTime FROM Shifts WHERE id = @shiftId`);
+        .query(`
+            SELECT 
+                name, startTime, endTime, 
+                CONVERT(VARCHAR(5), startTime, 108) AS startStr 
+            FROM Shifts WHERE id = @shiftId
+        `);
     const shift = shiftInfo.recordset[0];
+
+    if (shift) {
+        const nowVN = new Date(Date.now() + 7 * 3600 * 1000);
+        const todayStr = nowVN.toISOString().split('T')[0];
+        const currentTime = nowVN.toISOString().split('T')[1].substring(0, 5);
+
+        const wDateStr = new Date(workDate).toISOString().split('T')[0];
+
+        if (wDateStr < todayStr) {
+            throw new Error("Không được phân công ca làm việc vào ngày trong quá khứ!");
+        }
+
+        if (wDateStr === todayStr && currentTime >= shift.startStr) {
+            throw new Error("Ca làm việc này đã quá giờ bắt đầu hôm nay, không thể giao ca!");
+        }
+    }
 
     const counterIdValue = counterId != null ? counterId : null;
 
     await pool.request()
-        .input('staffId',sql.BigInt, staffId)
-        .input('shiftId',sql.Int, shiftId || null)
-        .input('workDate',sql.Date,workDate)
-        .input('counterId',sql.BigInt, counterIdValue)
-        .input('snapStart',sql.Time, shift ? shift.startTime : null)
-        .input('snapEnd',sql.Time, shift ? shift.endTime : null)
-        .input('snapName',sql.NVarChar(50), shift ? shift.name : null)
+        .input('staffId', sql.BigInt, staffId)
+        .input('shiftId', sql.Int, shiftId || null)
+        .input('workDate', sql.Date, workDate)
+        .input('counterId', sql.BigInt, counterIdValue)
+        .input('snapStart', sql.Time, shift ? shift.startTime : null)
+        .input('snapEnd', sql.Time, shift ? shift.endTime : null)
+        .input('snapName', sql.NVarChar(50), shift ? shift.name : null)
         .query(`
             INSERT INTO WorkSchedules
               (staffId, shiftId, workDate, counterId, status,
@@ -41,13 +62,14 @@ module.exports.assignShift = async (staffId, shiftId, workDate, counterId) => {
     return true;
 };
 
+
 // Kiểm tra nhân viên đã có ca này trong ngày chưa
 module.exports.checkExisting = async (staffId, shiftId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
-        .input('staffId',sql.BigInt,staffId)
-        .input('shiftId',sql.Int,shiftId)
-        .input('workDate',sql.Date,workDate)
+        .input('staffId', sql.BigInt, staffId)
+        .input('shiftId', sql.Int, shiftId)
+        .input('workDate', sql.Date, workDate)
         .query(`
             SELECT id FROM WorkSchedules
             WHERE staffId = @staffId
@@ -61,9 +83,9 @@ module.exports.checkExisting = async (staffId, shiftId, workDate) => {
 module.exports.checkCounterConflict = async (counterId, shiftId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
-        .input('counterId',sql.BigInt, counterId)
-        .input('shiftId',sql.Int,shiftId)
-        .input('workDate',sql.Date,workDate)
+        .input('counterId', sql.BigInt, counterId)
+        .input('shiftId', sql.Int, shiftId)
+        .input('workDate', sql.Date, workDate)
         .query(`
             SELECT ws.id, s.fullName
             FROM WorkSchedules ws
@@ -79,7 +101,7 @@ module.exports.checkCounterConflict = async (counterId, shiftId, workDate) => {
 module.exports.getDailyHours = async (staffId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
-        .input('staffId',  sql.BigInt, staffId)
+        .input('staffId', sql.BigInt, staffId)
         .input('workDate', sql.Date, workDate)
         .query(`
             SELECT ISNULL(SUM(
@@ -105,9 +127,9 @@ module.exports.getDailyHours = async (staffId, workDate) => {
 module.exports.getWeeklyHours = async (staffId, weekStart, weekEnd) => {
     const pool = await connectDB();
     const result = await pool.request()
-        .input('staffId',sql.BigInt, staffId)
-        .input('weekStart',sql.Date,   weekStart)
-        .input('weekEnd',sql.Date,   weekEnd)
+        .input('staffId', sql.BigInt, staffId)
+        .input('weekStart', sql.Date, weekStart)
+        .input('weekEnd', sql.Date, weekEnd)
         .query(`
             SELECT ISNULL(SUM(
                 CASE WHEN Eff.effEnd < Eff.effStart 
@@ -189,4 +211,22 @@ module.exports.getWeeklySchedule = async (startDate, endDate) => {
             ORDER BY r.name, s.fullName, ws.workDate
         `);
     return result.recordset;
+};
+// Lấy thông tin lịch làm việc theo id
+module.exports.getScheduleById = async (scheduleId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('id', sql.Int, scheduleId)
+        .query(`
+            SELECT 
+                ws.id, 
+                ws.workDate, 
+                ws.shiftId,
+                CONVERT(VARCHAR(5), ws.snapshotStartTime, 108) AS snapshotStartTime,
+                CONVERT(VARCHAR(5), sh.startTime, 108) AS startTime
+            FROM WorkSchedules ws
+            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.id = @id
+        `);
+    return result.recordset[0];
 };

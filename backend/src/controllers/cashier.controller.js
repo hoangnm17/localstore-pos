@@ -63,6 +63,37 @@ module.exports.submitHandover = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu thông tin kết ca!" });
         }
 
+        const scheduleTimes = await cashierModel.getScheduleTimes(scheduleId);
+        if (!scheduleTimes) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy dữ liệu ca làm việc này!" });
+        }
+
+        const { dateStr, startStr, endStr, deadlineStr } = scheduleTimes;
+
+        const startDT = new Date(`${dateStr}T${startStr}:00`);
+        const endDT = new Date(`${dateStr}T${endStr}:00`);
+        const deadlineDT = new Date(`${dateStr}T${deadlineStr}:00`);
+
+        if (endDT < startDT) {
+            endDT.setDate(endDT.getDate() + 1);
+            deadlineDT.setDate(deadlineDT.getDate() + 1);
+        }
+
+        const now = new Date();
+
+        if (now > deadlineDT) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Bàn giao thất bại! Đã quá giờ cho phép chốt ca bàn giao." 
+            });
+        } 
+        if (now < endDT) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Chưa hết thời gian làm! Bạn chỉ được bàn giao khi ca làm việc đã kết thúc." 
+            });
+        }
+
         await cashierModel.createHandover({
             scheduleId,
             openingCash: parseFloat(openingCash),
@@ -72,10 +103,12 @@ module.exports.submitHandover = async (req, res) => {
         });
 
         return res.json({ success: true, message: "Bàn giao tiền mặt thành công!" });
+        
     } catch (err) {
         return res.status(500).json({ success: false, message: "Lỗi kết ca: " + err.message });
     }
 };
+
 
 module.exports.getHandoverReport = async (req, res) => {
     try {
