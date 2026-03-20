@@ -53,8 +53,6 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
 
   let actualPointUsed = 0;
 
-  /* ===== VOUCHER ===== */
-
   if (discount?.voucherId) {
 
     const voucher = await voucherModel.getVoucherById(discount.voucherId);
@@ -81,8 +79,6 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
 
     totalDiscount += voucherDiscount;
   }
-
-  /* ===== PROMOTION ===== */
 
   if (discount?.promotionId) {
 
@@ -113,8 +109,6 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
     totalDiscount += promotionDiscount;
   }
 
-  /* ===== POINT ===== */
-
   if (discount?.pointUsed > 0) {
 
     if (!customerId)
@@ -128,25 +122,14 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
     if (discount.pointUsed > customer.loyaltyPoints)
       throw new Error("Cannot use loyalty point over current point!");
 
-    const rawPointDiscount =
-      discount.pointUsed * POINT_EXCHANGE;
+    const rawPointDiscount = discount.pointUsed * loyaltyConfig.POINT_EXCHANGE;
 
-    const remaining =
-      totalAmount - totalDiscount;
-
-    pointDiscount =
-      Math.min(rawPointDiscount, remaining);
-
-    actualPointUsed =
-      Math.floor(pointDiscount / POINT_EXCHANGE);
-
-    pointDiscount =
-      actualPointUsed * POINT_EXCHANGE;
-
+    const remaining = totalAmount - totalDiscount;
+    pointDiscount = Math.min(rawPointDiscount, remaining);
+    actualPointUsed = Math.floor(pointDiscount / loyaltyConfig.POINT_EXCHANGE);
+    pointDiscount = actualPointUsed * loyaltyConfig.POINT_EXCHANGE;
     totalDiscount += pointDiscount;
   }
-
-  /* ===== FINAL ===== */
 
   const finalAmount =
     Math.max(totalAmount - totalDiscount, 0);
@@ -189,8 +172,6 @@ const generateQR = ({ invoiceId, finalAmount, expiresAt }) => {
   };
 };
 
-/* ================= CORE: PAYMENT SUCCESS ================= */
-// 🔥 FIX: gom toàn bộ logic thành công vào 1 chỗ
 const handlePaymentSuccess = async ({
   transaction,
   invoice,
@@ -219,8 +200,7 @@ const handlePaymentSuccess = async ({
     await voucherModel.increaseUsage(transaction, voucherId);
   }
 
-  const earnedPoints =
-    Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
+  const earnedPoints = Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
 
   if (earnedPoints > 0 && invoice.customerId) {
     await customerPointLogService.adjustPoints(
@@ -241,7 +221,6 @@ const handlePaymentSuccess = async ({
 
   await invoiceModel.updateStatus(transaction, invoiceId, "PAID");
 
-  // 🔥 FIX: luôn emit SSE
   sseService.send({
     type: "PAYMENT_SUCCESS",
     invoiceId,
@@ -255,7 +234,6 @@ const handlePaymentSuccess = async ({
   };
 };
 
-/* ================= CASH ================= */
 const payCash = async (id, { payment }) => {
   return runInTransaction(async (transaction) => {
     const invoice = await getEditableInvoice(transaction, id);
@@ -339,7 +317,6 @@ const payCash = async (id, { payment }) => {
   });
 };
 
-/* ================= CREATE QR ================= */
 const createQR = async (invoiceId, discount = {}) => {
   return runInTransaction(async (transaction) => {
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
@@ -388,7 +365,7 @@ const createQR = async (invoiceId, discount = {}) => {
 
     if (
       existingPayment &&
-      invoice.status === "PENDING" &&
+      existingPayment.status === "PENDING" &&
       invoice.expiresAt &&
       new Date() < new Date(invoice.expiresAt) &&
       Number(existingPayment.amount) === finalAmount
@@ -428,8 +405,6 @@ const createQR = async (invoiceId, discount = {}) => {
       Date.now() + loyaltyConfig.EXPIRE_MINUTES * 60 * 1000
     );
 
-    console.log(Date.now());
-    
     await invoiceModel.updateStatus(transaction, invoiceId, "PENDING");
     await invoiceModel.updateInvoiceExpire(transaction, invoiceId, expiresAt);
 
@@ -440,7 +415,6 @@ const createQR = async (invoiceId, discount = {}) => {
   });
 };
 
-/* ================= CONFIRM ================= */
 const confirmPayment = async (payload) => {
   return runInTransaction(async (transaction) => {
     const transferAmount = Number(
@@ -481,22 +455,6 @@ const confirmPayment = async (payload) => {
     if (invoice.status !== "PENDING")
       throw new Error("Invoice is not awaiting payment");
 
-    if (invoice.expiresAt && new Date() > new Date(invoice.expiresAt)) {
-      await invoiceModel.updateStatus(transaction, invoiceId, "EXPIRED");
-
-      const payment = await paymentModel.findLatestPendingPayment(transaction, invoiceId);
-
-      if (payment) {
-        await paymentModel.updatePaymentStatus(
-          transaction,
-          payment.id,
-          "EXPIRED"
-        );
-      }
-
-      throw new Error("QR expired");
-    }
-
     const expectedAmount = Number(
       invoice.finalAmount || invoice.totalAmount
     );
@@ -516,17 +474,25 @@ const confirmPayment = async (payload) => {
         return { paid: true, duplicated: true, invoiceId };
     }
 
-    const payment = await paymentModel.findLatestPendingPayment(
-      transaction,
-      invoiceId
-    );
+    const payment = await paymentModel.findLatestPendingPayment(transaction, invoiceId);
+    if (!payment) {
+      payment = await paymentModel.findLatestPayment(transaction, invoiceId);
+    }
 
-    if (!payment) throw new Error("No pending payment");
+    if (!payment) throw new Error("No payment found");
+
+    if (payment.status === "SUCCESS" || payment.status === "LATE") {
+      return { paid: true, duplicated: true, invoiceId };
+    }
+
+    const isExpired = invoice.expiresAt && new Date() > new Date(invoice.expiresAt);
+
+    const status = isExpired ? "LATE" : "SUCCESS";
 
     await paymentModel.updatePaymentSuccess(
       transaction,
       payment.id,
-      "SUCCESS",
+      status,
       transactionId
     );
 
@@ -539,12 +505,12 @@ const confirmPayment = async (payload) => {
     return {
       paid: true,
       invoiceId,
+      late: isExpired,
       amount: expectedAmount,
     };
   });
 };
 
-/* ================= CANCEL ================= */
 const cancelPendingPayment = async (invoiceId) => {
   return runInTransaction(async (transaction) => {
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {

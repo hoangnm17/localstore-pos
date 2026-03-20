@@ -118,7 +118,7 @@ const updateInvoiceItems = async (id, { items }) => {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            const unitPrice = product.salePrice;
+            const unitPrice = item.unitPrice;
             const lineTotal = unitPrice * item.quantity;
             const baseQuantity = item.quantity * product.conversionFactor;
 

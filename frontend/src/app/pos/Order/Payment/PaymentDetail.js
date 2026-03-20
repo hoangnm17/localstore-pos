@@ -10,13 +10,12 @@ const PaymentDetail = ({
 
   return (
     <div
-      className="p-4 bg-white border-top shadow-lg position-relative"
+      className="p-2 bg-white border-top shadow-lg position-relative"
       style={{ 
         borderRadius: "24px 24px 0 0",
-        zIndex: 10 // Đảm bảo luôn nằm trên các item khác khi scroll
+        zIndex: 10
       }}
     >
-      {/* Thanh trang trí nhỏ ở trên cùng (Handle bar) - tạo cảm giác hiện đại */}
       <div className="d-flex justify-content-center mb-3">
         <div style={{ width: '40px', height: '4px', backgroundColor: '#e9ecef', borderRadius: '2px' }}></div>
       </div>
@@ -31,32 +30,24 @@ const PaymentDetail = ({
         </span>
       </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-3 px-1">
-        <span className="text-muted fw-medium">Giảm giá</span>
-        <span className="text-success fw-medium">- 0đ</span>
-      </div>
-
       <hr className="my-3 opacity-50" />
 
-      {/* Tổng thanh toán */}
       <div className="d-flex justify-content-between align-items-end mb-4 px-1">
         <div>
-          <h6 className="fw-bold mb-1 text-dark text-uppercase" style={{ fontSize: '0.8rem', letterSpacing: '0.5px' }}>
+          <h6 className="fw-bold mb-1 text-dark text-uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.5px' }}>
             Tổng cộng
           </h6>
-          <div className="text-muted small">Đã bao gồm VAT (nếu có)</div>
         </div>
         <div className="text-end">
           <h3
             className="fw-black mb-0 text-primary transition-all"
-            style={{ fontSize: "2rem", lineHeight: '1' }}
+            style={{ fontSize: "1.7rem", lineHeight: '1' }}
           >
             {formatCurrency(total)}
           </h3>
         </div>
       </div>
 
-      {/* Nút thanh toán */}
       <button
         disabled={isEmpty}
         onClick={onOpenPayment}
@@ -66,8 +57,8 @@ const PaymentDetail = ({
             : "btn-pay-gradient text-white"
         }`}
         style={{
-          fontSize: "1.15rem",
-          height: "64px",
+          fontSize: "1rem",
+          height: "55px",
         }}
       >
         {isEmpty ? (
@@ -78,20 +69,10 @@ const PaymentDetail = ({
         ) : (
           <>
             <i className="bi bi-shield-check fs-4"></i>
-            THANH TOÁN (F8)
+            THANH TOÁN (F2)
           </>
         )}
       </button>
-
-      {/* Footer nhỏ dưới nút */}
-      {!isEmpty && (
-        <div className="text-center mt-3">
-           <span className="text-muted small">
-             <i className="bi bi-info-circle me-1"></i>
-             Kiểm tra kỹ đơn hàng trước khi bấm thanh toán
-           </span>
-        </div>
-      )}
 
       <style jsx>{`
         .fw-black { font-weight: 900; }

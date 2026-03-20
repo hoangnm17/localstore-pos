@@ -3,8 +3,6 @@ import { safeParse } from "utils/safeParse";
 export const useOrderItems = () => {
 
   const addItem = (items, product) => {
-    console.log("ITGEM",items)
-    console.log("PRODUCT", product)
     const existed = items.find(
       p =>
         p.productId === product.productId &&
@@ -28,7 +26,6 @@ export const useOrderItems = () => {
         activeId: existed.id
       };
     }
-
     const newItem = {
       id: crypto.randomUUID(),
       productId: Number(product.productId),
@@ -41,7 +38,6 @@ export const useOrderItems = () => {
       factor: product.factor,
       unitType: product.unitType,
     };
-    console.log("DAY LA ITEM", newItem);
     
     return {
       items: [...items, newItem],

@@ -151,7 +151,6 @@ export default function OrderDiscount({
   const clearAll = () => {
     setVoucherCode("");
     setVoucher(null);
-    setPromotion(null);
     setPointUsed(0);
     setError(null);
   };
@@ -235,42 +234,6 @@ export default function OrderDiscount({
             </button>
           </div>
         )}
-      </div>
-
-      <div className="mb-3">
-        <div className="fw-semibold mb-2">Khuyến mãi</div>
-        {promotions.length === 0 && (
-          <div className="small text-muted">Không có khuyến mãi khả dụng.</div>
-        )}
-        {promotions.map((p) => {
-          const raw =
-            (p.type || "").toLowerCase() === "percent"
-              ? Math.floor((safeSubtotal * (Number(p.value) || 0)) / 100)
-              : Number(p.value) || 0;
-
-          const remaining = Math.max(safeSubtotal - voucherDiscount, 0);
-          const displayDiscount = Math.min(raw, remaining);
-
-          return (
-            <div
-              key={p.id}
-              className={`border rounded p-2 mb-2 d-flex justify-content-between align-items-center ${promotion?.id === p.id ? "border-primary bg-light" : ""}`}
-            >
-              <div>
-                <div className="fw-semibold">{p.name}</div>
-                <small className="text-danger">
-                  -{formatCurrency(displayDiscount)}
-                </small>
-              </div>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => setPromotion(promotion?.id === p.id ? null : p)}
-              >
-                {promotion?.id === p.id ? "Bỏ" : "Áp dụng"}
-              </button>
-            </div>
-          );
-        })}
       </div>
 
       <div className="border-top pt-2">

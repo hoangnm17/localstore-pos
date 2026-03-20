@@ -45,7 +45,6 @@ const OrderItem = ({
     }
     onChangeQty(item.id, currentQty);
   };
-
   return (
     <tr className="border-top align-middle">
       <td className="text-start">
