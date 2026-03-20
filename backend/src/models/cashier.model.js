@@ -259,3 +259,20 @@ module.exports.getHandoverReport = async (
         summary: result.recordsets[2][0],
     };
 };
+module.exports.getScheduleTimes = async (scheduleId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('scheduleId', sql.Int, scheduleId)
+        .query(`
+            SELECT 
+                CONVERT(VARCHAR(10), ws.workDate, 120) as dateStr,
+                CONVERT(VARCHAR(5), ISNULL(ws.snapshotStartTime, sh.startTime), 108) as startStr,
+                CONVERT(VARCHAR(5), ISNULL(ws.snapshotEndTime, sh.endTime), 108) as endStr,
+                CONVERT(VARCHAR(5), ISNULL(sh.checkOutDeadline, sh.endTime), 108) as deadlineStr
+            FROM WorkSchedules ws
+            JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.id = @scheduleId
+        `);
+
+    return result.recordset[0] || null; 
+};
