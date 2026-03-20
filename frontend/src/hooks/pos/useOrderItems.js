@@ -26,10 +26,9 @@ export const useOrderItems = () => {
         activeId: existed.id
       };
     }
-
     const newItem = {
       id: crypto.randomUUID(),
-      productId: product.productId,
+      productId: Number(product.productId),
       productName: product.productName,
       productUnitId: product.productUnitId,
       unitPrice: product.unitPrice,
@@ -39,7 +38,6 @@ export const useOrderItems = () => {
       factor: product.factor,
       unitType: product.unitType,
     };
-    console.log("DAY LA ITEM", newItem);
     
     return {
       items: [...items, newItem],

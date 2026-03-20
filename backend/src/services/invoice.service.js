@@ -77,7 +77,6 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            // Lấy chiết khấu từ chương trình khuyến mãi
             const discountData = await promotionModel.getDiscountByProduct({
                 productId: item.productId,
                 productUnitId: item.productUnitId
@@ -106,7 +105,7 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
                 productId: item.productId,
                 productName: product.name,
                 quantity: item.quantity,
-                unitPrice, // Lưu giá sau khi giảm
+                unitPrice,
                 lineTotal,
                 productUnitId: item.productUnitId,
                 unitName: product.unitName,
@@ -119,7 +118,6 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
             finalAmount: totalAmount - totalDiscount,
         });
 
-        // Nếu có khuyến mãi chung, cập nhật thêm vào bảng Invoices
         if (totalDiscount > 0) {
             await invoiceModel.updateInvoiceDiscount(transaction, invoiceId, null, totalDiscount);
         }
@@ -138,35 +136,15 @@ const updateInvoiceItems = async (id, { items }) => {
 
         let totalAmount = 0;
         let totalDiscount = 0;
-
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            // Tính chiết khấu
-            const discountData = await promotionModel.getDiscountByProduct({
-                productId: item.productId,
-                productUnitId: item.productUnitId
-            });
-
-            let unitPrice = product.salePrice;
-            let itemDiscount = 0;
-
-            if (discountData && discountData.promotionId) {
-                if (discountData.discountPercent > 0) {
-                    itemDiscount = (unitPrice * discountData.discountPercent) / 100;
-                } else if (discountData.discountAmount > 0) {
-                    itemDiscount = discountData.discountAmount;
-                }
-                unitPrice = Math.max(0, unitPrice - itemDiscount);
-            }
-
+            const unitPrice = item.unitPrice;
             const lineTotal = unitPrice * item.quantity;
             const baseQuantity = item.quantity * product.conversionFactor;
 
-            totalAmount += (product.salePrice * item.quantity);
-            totalDiscount += (itemDiscount * item.quantity);
-
+            totalAmount += lineTotal;
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId: id,
                 productId: item.productId,
@@ -178,6 +156,7 @@ const updateInvoiceItems = async (id, { items }) => {
                 unitName: product.unitName,
                 baseQuantity,
             });
+
         }
 
         await invoiceModel.updateAmounts(transaction, id, {
@@ -195,6 +174,23 @@ const updateInvoiceItems = async (id, { items }) => {
 
 };
 
+const getEditableInvoice = async (transaction, id) => {
+
+    const invoice = await invoiceModel.getInvoiceById(
+        transaction,
+        id,
+        { forUpdate: true }
+    );
+
+    if (!invoice)
+        throw new Error("Invoice not found");
+
+    if (["PAID", "CANCELLED"].includes(invoice.status))
+        throw new Error("Cannot update this invoice");
+
+    return invoice;
+};
+
 const cancelInvoice = async (id) => {
 
     return runInTransaction(async (transaction) => {
@@ -207,6 +203,16 @@ const cancelInvoice = async (id) => {
             "CANCELLED"
         );
 
+        // const existingPayment = await invoiceModel.getPaymentByInvoiceId(transaction, id);
+
+        // if (existingPayment) {
+        //     await paymentModel.updatePayment(transaction, {
+        //         invoiceId: id,
+        //         amount: existingPayment.amount,
+        //         paymentMethod: existingPayment.paymentMethod,
+        //         status: "CANCELLED",
+        //     });
+        // }
         return { cancelled: true };
 
     });
@@ -220,12 +226,16 @@ const getDraftInvoices = async () => {
 const getInvoiceDetail = async (id) => {
     const data = await invoiceModel.getInvoiceDetail(id);
     if (!data) throw new Error("Invoice not found");
+    const totalAmount = data.items.reduce((total, item) => {
+        return total + Number(item.lineTotal || 0);
+    }, 0);
 
     return {
         id: Number(data.id),
         invoiceCode: data.invoiceCode,
         createdAt: data.createdAt,
         finalAmount: Number(data.finalAmount) || 0,
+        totalAmount: totalAmount,
         status: data.status,
         customerId: data.customerId ? Number(data.customerId) : null,
         customerName: data.customerName,
@@ -242,8 +252,7 @@ const getInvoiceDetail = async (id) => {
                 unitPrice: Number(item.unitPrice) || 0,
                 lineTotal: Number(item.lineTotal) || 0,
                 factor: factor,
-                quantityOnHand: Math.floor(
-                    (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
+                quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1
                 )
             };
         })

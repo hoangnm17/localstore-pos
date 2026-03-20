@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import api from "services/axiosInstance";
 import { formatCurrency } from "utils/formatters";
 import ReturnDetail from "./ReturnDetail";
+import useTitle from "hooks/common/useTitle";
 
 const STATUS_OPTIONS = [
   { label: "Đang chờ", value: "Pending", color: "warning" },
@@ -10,6 +11,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ReturnList() {
+  useTitle("Danh sách hoàn hàng")
   const [returns, setReturns] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,7 @@ export default function ReturnList() {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const roleName = currentUser?.roleName;
 
+  
   const fetchReturns = useCallback(async () => {
     try {
       setLoading(true);

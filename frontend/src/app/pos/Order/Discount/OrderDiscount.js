@@ -7,9 +7,8 @@ const POINT_RATE = 100; // 1 point = 100đ
 export default function OrderDiscount({
   subtotal = 0,
   customer = null,
-  onChange = () => { }
+  onChange = () => {}
 }) {
-
   const safeSubtotal = useMemo(() => Number(subtotal) || 0, [subtotal]);
 
   const [voucherCode, setVoucherCode] = useState("");
@@ -19,6 +18,9 @@ export default function OrderDiscount({
   const [promotion, setPromotion] = useState(null);
 
   const [pointUsed, setPointUsed] = useState(0);
+
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   /* ================= LOAD PROMOTIONS ================= */
 
@@ -39,28 +41,42 @@ export default function OrderDiscount({
 
   const handleCheckVoucher = async () => {
     const code = voucherCode.trim();
-    if (!code) return;
+
+    if (!code) {
+      setError("Vui lòng nhập mã voucher");
+      return;
+    }
+
+    if (safeSubtotal <= 0) {
+      setError("Đơn hàng chưa có sản phẩm");
+      return;
+    }
+
+    if (loading) return;
 
     try {
-      const res = await getVoucherByCode(code);
+      setLoading(true);
+
+      const res = await getVoucherByCode(code, safeSubtotal);
 
       if (!res?.data) {
-        alert("Voucher không hợp lệ");
+        setError("Voucher không hợp lệ");
         setVoucher(null);
         return;
       }
 
       setVoucher(res.data);
+      setError("");
     } catch (err) {
       console.error("Voucher error", err);
-      alert("Không kiểm tra được voucher");
+      setError(err?.response?.data?.message || "Không kiểm tra được voucher");
+      setVoucher(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ================= COMPUTE DISCOUNT (POS ORDER) =================
-     Order: Voucher -> Promotion -> Points
-     And never exceed subtotal
-  ================================================================ */
+  /* ================= COMPUTE DISCOUNT ================= */
 
   const voucherDiscount = useMemo(() => {
     if (!voucher) return 0;
@@ -93,10 +109,12 @@ export default function OrderDiscount({
   }, [promotion, safeSubtotal, voucherDiscount]);
 
   const remainingAfterVoucherPromo = useMemo(() => {
-    return Math.max(safeSubtotal - voucherDiscount - promotionDiscount, 0);
+    return Math.max(
+      safeSubtotal - voucherDiscount - promotionDiscount,
+      0
+    );
   }, [safeSubtotal, voucherDiscount, promotionDiscount]);
 
-  // Compute point discount with remaining cap + convert back to actualPointUsed
   const { pointDiscount, actualPointUsed } = useMemo(() => {
     const maxPoints = Number(customer?.loyaltyPoints || 0);
 
@@ -105,7 +123,10 @@ export default function OrderDiscount({
 
     const rawDiscount = safePoints * POINT_RATE;
 
-    const appliedDiscount = Math.min(rawDiscount, remainingAfterVoucherPromo);
+    const appliedDiscount = Math.min(
+      rawDiscount,
+      remainingAfterVoucherPromo
+    );
 
     const used = Math.floor(appliedDiscount / POINT_RATE);
 
@@ -115,16 +136,17 @@ export default function OrderDiscount({
     };
   }, [pointUsed, customer?.loyaltyPoints, remainingAfterVoucherPromo]);
 
-  // Keep input pointUsed in sync with actualPointUsed (auto reduce when remaining becomes 0)
   useEffect(() => {
     if (pointUsed !== actualPointUsed) {
       setPointUsed(actualPointUsed);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actualPointUsed]);
 
   const totalDiscount = useMemo(() => {
-    return Math.min(voucherDiscount + promotionDiscount + pointDiscount, safeSubtotal);
+    return Math.min(
+      voucherDiscount + promotionDiscount + pointDiscount,
+      safeSubtotal
+    );
   }, [voucherDiscount, promotionDiscount, pointDiscount, safeSubtotal]);
 
   const finalAmount = useMemo(() => {
@@ -141,7 +163,14 @@ export default function OrderDiscount({
       totalDiscount,
       finalAmount
     });
-  }, [actualPointUsed, voucher, promotion, totalDiscount, finalAmount, onChange]);
+  }, [
+    actualPointUsed,
+    voucher,
+    promotion,
+    totalDiscount,
+    finalAmount,
+    onChange
+  ]);
 
   /* ================= UI HANDLERS ================= */
 
@@ -161,16 +190,20 @@ export default function OrderDiscount({
   const clearAll = () => {
     setVoucherCode("");
     setVoucher(null);
-    setPromotion(null);
     setPointUsed(0);
+    setError("");
   };
+
+  /* ================= UI ================= */
 
   return (
     <div className="border rounded-4 p-3">
-
       <div className="d-flex justify-content-between align-items-center mb-2">
         <div className="fw-semibold">Giảm giá</div>
-        <button className="btn btn-sm btn-outline-secondary" onClick={clearAll}>
+        <button
+          className="btn btn-sm btn-outline-secondary"
+          onClick={clearAll}
+        >
           Xóa áp dụng
         </button>
       </div>
@@ -193,7 +226,9 @@ export default function OrderDiscount({
                 min={0}
                 max={customer.loyaltyPoints || 0}
                 disabled={remainingAfterVoucherPromo <= 0}
-                onChange={(e) => handlePointInput(e.target.value)}
+                onChange={(e) =>
+                  handlePointInput(e.target.value)
+                }
               />
 
               <div className="text-danger fw-semibold d-flex align-items-center">
@@ -208,7 +243,9 @@ export default function OrderDiscount({
             )}
           </>
         ) : (
-          <div className="small text-muted">Chọn khách hàng để dùng điểm.</div>
+          <div className="small text-muted">
+            Chọn khách hàng để dùng điểm.
+          </div>
         )}
       </div>
 
@@ -221,21 +258,38 @@ export default function OrderDiscount({
             className="form-control"
             placeholder="Nhập mã voucher"
             value={voucherCode}
-            onChange={(e) => setVoucherCode(e.target.value)}
+            onChange={(e) => {
+              setVoucherCode(e.target.value);
+              setError("");
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleCheckVoucher();
             }}
           />
 
-          <button className="btn btn-primary" onClick={handleCheckVoucher}>
-            Áp dụng
+          <button
+            className="btn btn-primary"
+            onClick={handleCheckVoucher}
+            disabled={loading}
+          >
+            {loading ? "Đang kiểm tra..." : "Áp dụng"}
           </button>
         </div>
 
+        {/* ERROR */}
+        {error && (
+          <div className="text-danger small mb-2">
+            {error}
+          </div>
+        )}
+
+        {/* VOUCHER INFO */}
         {voucher && (
           <div className="border rounded p-2 bg-light d-flex justify-content-between align-items-center">
             <div>
-              <div className="fw-semibold">{voucher.code}</div>
+              <div className="fw-semibold">
+                {voucher.code}
+              </div>
               <small className="text-danger">
                 -{formatCurrency(voucherDiscount)}
               </small>
@@ -244,65 +298,11 @@ export default function OrderDiscount({
             <button
               className="btn btn-sm btn-outline-danger"
               onClick={() => setVoucher(null)}
-              title="Bỏ voucher"
             >
               X
             </button>
           </div>
         )}
-      </div>
-
-      {/* PROMOTIONS */}
-      <div className="mb-3">
-        <div className="fw-semibold mb-2">Khuyến mãi</div>
-
-        {promotions.length === 0 && (
-          <div className="small text-muted">Không có khuyến mãi khả dụng.</div>
-        )}
-
-        {promotions
-          .filter(p => {
-              // Nếu khuyến mãi này đã được tính trực tiếp vào từng sản phẩm rồi thì không hiện ở đây nữa
-              const isAppliedToItems = (id) => {
-                  // Bạn có thể thêm logic kiểm tra ở đây, nhưng đơn giản nhất là 
-                  // chỉ hiện những KM không phải loại áp lên Sản phẩm/Danh mục cụ thể 
-                  // Hoặc nếu bạn muốn thủ công, hãy để người dùng chọn.
-                  return false; 
-              };
-              return !isAppliedToItems(p.id);
-          })
-          .map((p) => {
-          const raw =
-            (p.type || "").toLowerCase() === "percent"
-              ? Math.floor((safeSubtotal * (Number(p.value) || 0)) / 100)
-              : Number(p.value) || 0;
-
-          // Display computed with remaining after voucher (same as actual calc)
-          const remaining = Math.max(safeSubtotal - voucherDiscount, 0);
-          const displayDiscount = Math.min(raw, remaining);
-
-          return (
-            <div
-              key={p.id}
-              className={`border rounded p-2 mb-2 d-flex justify-content-between align-items-center ${promotion?.id === p.id ? "border-primary bg-light" : ""
-                }`}
-            >
-              <div>
-                <div className="fw-semibold">{p.name}</div>
-                <small className="text-danger">
-                  -{formatCurrency(displayDiscount)}
-                </small>
-              </div>
-
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => setPromotion(promotion?.id === p.id ? null : p)}
-              >
-                {promotion?.id === p.id ? "Bỏ" : "Áp dụng"}
-              </button>
-            </div>
-          );
-        })}
       </div>
 
       {/* SUMMARY */}
