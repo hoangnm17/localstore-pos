@@ -264,7 +264,7 @@ function AdjustmentDetail() {
                   </td>
 
                   <td className="text-end px-3 py-3 fw-medium">
-                    {formatQuantityWithUnit(item.actualLargest, item.actualRemainder, item.unitName)} <span>{item.unitName}</span>
+                    {formatQuantityWithUnit(item.actualLargest, item.actualRemainder, item.unitName)}
                   </td>
 
                   <td className="text-end px-3 py-3">

@@ -21,11 +21,18 @@ function updateAdjustmentStatus(id, status) {
   );
 }
 
+function checkProductConflict(productId) {
+  return api.get("/inventory/adjustments/check-product", {
+    params: { productId }
+  });
+}
+
 const adjustmentService = {
   getAdjustments,
   getAdjustmentDetail,
   createAdjustment,
-  updateAdjustmentStatus
+  updateAdjustmentStatus,
+  checkProductConflict
 };
 
 export default adjustmentService;
