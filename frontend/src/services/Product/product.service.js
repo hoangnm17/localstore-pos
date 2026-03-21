@@ -33,6 +33,8 @@ export const getPriceHistory = async (productId) => api.get(`/price-history/${pr
 export const getComboItems = async (productId) => api.get(`/products/${productId}/combos`);
 export const addComboItem = async (productId, payload) => api.post(`/products/${productId}/combos`, payload);
 export const removeComboItem = async (productId, comboItemId) => api.delete(`/products/${productId}/combos/${comboItemId}`);
+export const assembleCombo = async (productId, quantity) => api.post(`/products/${productId}/combos/assemble`, { quantity });
+export const updateComboStock = async (productId, quantity) => api.patch(`/products/${productId}/combos/stock`, { quantity });
 
 export const getProductWithBarcode = async (barcode) => {
   const res = await api.get(`/products/barcode/${barcode}`);
@@ -57,9 +59,10 @@ export const getAllProducts = async ({ page = 1, limit = 20, search = '', status
 export const uploadImage = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
-  console.log('Calling upload API:', api.defaults.baseURL + '/upload/image'); // ✅ thêm dòng này
+  console.log('Calling upload API:', api.defaults.baseURL + '/upload/image'); //thêm dòng này
   const res = await api.post('/upload/image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return res.data;
 };
+
