@@ -5,8 +5,6 @@ const OrderItemList = ({ orderItems, increase, decrease, remove, activeItemId, o
     <div className="bg-white rounded shadow-sm overflow-hidden">
 
       <table className="table align-middle mb-0">
-
-        {/* HEADER */}
         <thead
           className="table-light"
           style={{
@@ -17,7 +15,7 @@ const OrderItemList = ({ orderItems, increase, decrease, remove, activeItemId, o
         >
           <tr>
             <th className="text-start">Sản phẩm</th>
-            <th className="text-center">Đơn vị</th>
+            <th className="text-start">Đơn vị</th>
             <th className="text-end">Giá</th>
             <th className="text-center">Số lượng</th>
             <th className="text-end">Thành tiền</th>
@@ -25,20 +23,16 @@ const OrderItemList = ({ orderItems, increase, decrease, remove, activeItemId, o
           </tr>
         </thead>
 
-        {/* BODY */}
         <tbody>
 
           {orderItems.length === 0 ? (
             <tr>
               <td colSpan="5">
                 <div className="text-center py-5 text-muted">
-
                   <i className="bi bi-cart-x fs-2"></i>
-
                   <p className="mt-2 mb-0 fw-semibold">
                     Đơn hàng chưa có sản phẩm
                   </p>
-
                   <small>Hãy chọn sản phẩm để bắt đầu</small>
 
                 </div>

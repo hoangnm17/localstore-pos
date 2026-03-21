@@ -103,4 +103,7 @@ router.get("/product-units/:productUnitId/suppliers", protect(PERMISSIONS.CREATE
 // SEARCH product units
 router.get("/product-units/search", inventoryController.searchProductUnits);
 
+// CHECK PRODUCT IN PENDING ADJUSTMENT
+router.get("/adjustments/check-product", adjustController.checkProduct);
+
 module.exports = router;

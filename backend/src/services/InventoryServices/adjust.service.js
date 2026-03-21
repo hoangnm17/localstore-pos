@@ -66,9 +66,14 @@ const getAdjustmentDetail = async (adjustmentId) => {
     return data;
 };
 
+const checkProductInPending = async (productId) => {
+    return await inventoryAdjustmentModel.checkProductInPending(productId);
+};
+
 module.exports = {
     createAdjustment,
     updateStatus,
     getAdjustments,
-    getAdjustmentDetail
+    getAdjustmentDetail,
+    checkProductInPending
 };

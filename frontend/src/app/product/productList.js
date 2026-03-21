@@ -37,6 +37,8 @@ function ProductList() {
     const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
 
+
+
     const { categories } = useProductCategories();
 
     const {
@@ -400,6 +402,8 @@ function ProductList() {
                                                                 Trạng thái
                                                             </button>
                                                         </li>
+
+
                                                     </ul>
                                                 </div>
                                             </td>

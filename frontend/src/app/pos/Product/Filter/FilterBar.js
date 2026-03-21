@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import useDebounce from "hooks/common/useDebounce";
 
-const ITEMS_PER_PAGE = 4;
-
 export default function FilterBar({
   keyword,
   onKeywordChange,
@@ -13,16 +11,16 @@ export default function FilterBar({
   focusSignal,
 }) {
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
-  const [categoryPage, setCategoryPage] = useState(0);
-
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
 
   const debouncedKeyword = useDebounce(displayKeyword, 500);
 
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
+    if (focusSignal) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
   }, [focusSignal]);
 
   useEffect(() => {
@@ -33,46 +31,46 @@ export default function FilterBar({
     onKeywordChange(debouncedKeyword);
   }, [debouncedKeyword, onKeywordChange]);
 
-  // reset page khi categories thay đổi
-  useEffect(() => {
-    setCategoryPage(0);
-  }, [categories]);
-
-  // danh sách category hiển thị (4 cái)
-  const visibleCategories = categories.slice(
-    categoryPage * ITEMS_PER_PAGE,
-    (categoryPage + 1) * ITEMS_PER_PAGE
-  );
-
-  const maxPage = Math.ceil(categories.length / ITEMS_PER_PAGE) - 1;
+  const handleScroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 200; 
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <div className="filter-bar-container w-100 mb-4">
-      <div className="search-wrapper position-relative mb-4">
-        <div className="input-group shadow-sm rounded-pill overflow-hidden border-0">
-          <span className="input-group-text bg-light border-0 ps-3">
+      {/* Search Input */}
+      <div className="search-wrapper mb-3">
+        <div className="input-group shadow-sm rounded-pill overflow-hidden border">
+          <span className="input-group-text bg-white border-0 ps-3">
             <i className="bi bi-search text-primary"></i>
           </span>
           <input
             ref={inputRef}
             type="text"
-            className="form-control border-0 bg-light py-2"
+            className="form-control border-0 py-2"
             placeholder="Tìm tên sản phẩm hoặc mã vạch..."
             value={displayKeyword}
             onChange={(e) => setDisplayKeyword(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                e.stopPropagation();
                 addItem(displayKeyword);
               }
             }}
-            style={{ fontSize: "1rem", boxShadow: "none" }}
+            style={{ boxShadow: "none" }}
           />
           {displayKeyword && (
             <button
-              className="btn bg-light border-0 text-secondary"
-              onClick={() => setDisplayKeyword("")}
+              className="btn bg-white border-0 text-secondary"
+              onClick={() => {
+                setDisplayKeyword("");
+                inputRef.current?.focus();
+              }}
             >
               <i className="bi bi-x-lg"></i>
             </button>
@@ -80,65 +78,82 @@ export default function FilterBar({
         </div>
       </div>
 
-      <div className="category-scroll-container position-relative d-flex align-items-center">
+      {/* Category Navigation - CHỐNG ĐÈ NHAU */}
+      <div className="d-flex align-items-center gap-2">
+        {/* Nút Trái */}
         <button
-          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute start-0"
-          onClick={() => setCategoryPage(prev => Math.max(prev - 1, 0))}
-          disabled={categoryPage === 0}
-          style={{ zIndex: 2, left: "-15px" }}
+          className="btn btn-outline-primary rounded-circle d-none d-md-flex align-items-center justify-content-center flex-shrink-0"
+          onClick={() => handleScroll("left")}
+          style={{ width: "38px", height: "38px" }}
         >
           <i className="bi bi-chevron-left"></i>
         </button>
 
+        {/* Danh sách cuộn */}
         <div
           ref={scrollRef}
-          className="category-list d-flex gap-2 overflow-hidden no-scrollbar pb-2"
+          className="category-scroll-viewport d-flex gap-2 overflow-hidden no-scrollbar py-1"
+          style={{ scrollBehavior: "smooth" }}
         >
           <button
             className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${
               !selectedCategory
-                ? "btn-primary shadow"
-                : "btn-outline-secondary border-light-subtle"
+                ? "btn-primary shadow-sm"
+                : "btn-outline-secondary border-light-subtle text-uppercase"
             }`}
             onClick={() => onSelectCategory(null)}
           >
             TẤT CẢ
           </button>
 
-          {visibleCategories.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
-              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${
+              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all text-uppercase ${
                 selectedCategory?.id === cat.id
-                  ? "btn-primary shadow"
+                  ? "btn-primary shadow-sm"
                   : "btn-outline-secondary border-light-subtle"
               }`}
               onClick={() => onSelectCategory(cat)}
             >
-              {cat.name.toUpperCase()}
+              {cat.name}
             </button>
           ))}
         </div>
 
+        {/* Nút Phải */}
         <button
-          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute end-0"
-          onClick={() =>
-            setCategoryPage(prev =>
-              prev < maxPage ? prev + 1 : prev
-            )
-          }
-          disabled={categoryPage === maxPage}
-          style={{ zIndex: 2, right: "-15px" }}
+          className="btn btn-outline-primary rounded-circle d-none d-md-flex align-items-center justify-content-center flex-shrink-0"
+          onClick={() => handleScroll("right")}
+          style={{ width: "38px", height: "38px" }}
         >
           <i className="bi bi-chevron-right"></i>
         </button>
       </div>
 
       <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .transition-all { transition: all 0.25s ease-in-out; }
-        .btn-outline-secondary:hover { background-color: #f8f9fa; color: #0d6efd; }
-        .category-list { padding: 5px; }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .category-scroll-viewport {
+          flex: 1; /* Để danh sách chiếm trọn không gian ở giữa */
+        }
+        .transition-all {
+          transition: all 0.2s ease;
+        }
+        .btn-outline-secondary {
+          color: #6c757d;
+          background: #fff;
+        }
+        .btn-outline-secondary:hover {
+          background-color: #f8f9fa;
+          border-color: #0d6efd;
+          color: #0d6efd;
+        }
       `}</style>
     </div>
   );

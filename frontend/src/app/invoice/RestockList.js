@@ -5,14 +5,16 @@ import {
   approveRestock,
   rejectRestock,
 } from "services/Return/return.service";
+import useTitle from "hooks/common/useTitle";
 
 const RestockList = () => {
   const [items, setItems] = useState([]);
-  const [statusFilter, setStatusFilter] = useState("Pending"); 
+  const [statusFilter, setStatusFilter] = useState("Pending");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  useTitle("Nhập kho hàng hoàn trả")
   const pageSize = 8;
   const { showNotification } = useNotification();
 
@@ -20,9 +22,9 @@ const RestockList = () => {
     setLoading(true);
     try {
       const result = await getItems(statusFilter, page, pageSize);
-      
+
       if (result?.success) {
-        const apiData = result.data; 
+        const apiData = result.data;
         setItems(apiData.data || []);
         setTotal(apiData.total || 0);
       }
@@ -42,13 +44,13 @@ const RestockList = () => {
     try {
       const apiCall = isApproved ? approveRestock : rejectRestock;
       const response = await apiCall(item.id);
-      
+
       if (response.status === 200 || response.data?.success) {
         showNotification(
-          `${isApproved ? "Đã duyệt" : "Đã từ chối"}: ${item.productName}`, 
+          `${isApproved ? "Đã duyệt" : "Đã từ chối"}: ${item.productName}`,
           "success"
         );
-        fetchItems(); 
+        fetchItems();
       }
     } catch (error) {
       const msg = error.response?.data?.message || "Thao tác thất bại";
@@ -84,9 +86,9 @@ const RestockList = () => {
         <div className="grid">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="skeleton-card">
-               <div className="skeleton-header"></div>
-               <div className="skeleton-line"></div>
-               <div className="skeleton-line short"></div>
+              <div className="skeleton-header"></div>
+              <div className="skeleton-line"></div>
+              <div className="skeleton-line short"></div>
             </div>
           ))}
         </div>
@@ -116,14 +118,14 @@ const RestockList = () => {
                 <div className="info-row">
                   <span>Mã hoàn: <strong>#{item.returnId}</strong></span>
                 </div>
-                
+
                 {/* HIỂN THỊ UNIT NAME VÀ QUANTITY */}
                 <div className="stats-row" style={{ marginTop: '12px', display: 'flex', gap: '10px' }}>
                   <div className="stat-box" style={{ flex: 1 }}>
                     <label>Số lượng</label>
-                    <span className="value">{item.quantity} <small style={{fontSize: '12px', fontWeight: 'normal'}}>{item.unitName}</small></span>
+                    <span className="value">{item.quantity} <small style={{ fontSize: '12px', fontWeight: 'normal' }}>{item.unitName}</small></span>
                   </div>
-                  
+
                   {/* HIỂN THỊ BASE QUANTITY (QUY ĐỔI) */}
                   <div className="stat-box" style={{ flex: 1 }}>
                     <label>Quy đổi</label>
@@ -197,5 +199,5 @@ const RestockList = () => {
     </div>
   );
 };
- 
+
 export default RestockList;

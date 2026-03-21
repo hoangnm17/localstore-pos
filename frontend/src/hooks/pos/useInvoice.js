@@ -39,10 +39,6 @@ export const useInvoiceTabs = () => {
     setActiveInvoiceId(id);
   };
 
-  /* =====================================================
-     LOAD DRAFTS ON MOUNT
-  ===================================================== */
-
   useEffect(() => {
     const loadDrafts = async () => {
       try {
@@ -131,7 +127,7 @@ export const useInvoiceTabs = () => {
 
 
   const updateInvoiceItems = async (invoiceId, newItems = []) => {
-
+    
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
 
@@ -223,7 +219,7 @@ export const useInvoiceTabs = () => {
             )
           );
         }
-      }, 1000);
+      }, 500);
     }
   };
 

@@ -13,10 +13,12 @@ router.put('/:id', protect(PERMISSIONS.UPDATE_PRODUCT), productController.update
 router.delete('/:id', protect(PERMISSIONS.DELETE_PRODUCT), productController.deleteProduct);
 router.patch('/:id/start-selling', protect(PERMISSIONS.UPDATE_PRODUCT), productController.startSellingProduct);
 // router.get('/barcode/:barcode', productController.getProductWithBarcode);
-
 // Combo routes
 router.get('/:productId/combos', protect(PERMISSIONS.VIEW_PRODUCT), comboController.getComboItems);
+router.get('/:productId/combos/cost-price', protect(PERMISSIONS.VIEW_PRODUCT), comboController.getComboCostPrice);
 router.post('/:productId/combos', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.addComboItem);
+router.post('/:productId/combos/assemble', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.assembleCombo);
+router.patch('/:productId/combos/stock', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.updateComboStock);
 router.delete('/:productId/combos/:comboItemId', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.removeComboItem);
 
 module.exports = router;

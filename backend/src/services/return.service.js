@@ -114,7 +114,7 @@ exports.approveReturn = async (user, returnId) => {
             approveBy: user.id,
             approvedAt: new Date(),
         });
-
+        await returnItemModel.updateRestockApprovedByReturnId(transaction, returnId, "Pending");
         return { returnId: Number(returnId), status: "Approved" };
     });
 };

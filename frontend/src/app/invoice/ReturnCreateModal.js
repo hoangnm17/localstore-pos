@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import BaseModal from "components/common/BaseModal";
 import { formatCurrency } from "utils/formatters";
+import api from "services/axiosInstance";
 
 export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
   const [reason, setReason] = useState("");
@@ -22,327 +23,175 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
   const totalRefund = useMemo(() => {
     return (invoice?.items || []).reduce((sum, it) => {
       const q = Number(qtyMap[it.id] || 0);
-      const unit = Number(it.unitPrice || 0);
-      return sum + q * unit;
+      return sum + q * Number(it.unitPrice || 0);
     }, 0);
   }, [invoice, qtyMap]);
 
-  const setQty = (itemId, value) => {
-    // clamp 0..max
-    const max = maxMap[itemId] ?? 0;
-    const n = Number(value);
+  const setQty = (id, value) => {
+    const max = maxMap[id] || 0;
+    const n = parseInt(value);
     const safe = Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : 0;
-
-    setQtyMap((prev) => ({ ...prev, [itemId]: safe }));
+    setQtyMap((prev) => ({ ...prev, [id]: safe }));
   };
 
   const handleSubmit = async () => {
     setErrMsg("");
-
     const items = (invoice?.items || [])
-      .map((it) => {
-        const qty = Number(qtyMap[it.id] || 0);
-        if (qty <= 0) return null;
+      .map((it) => ({
+        invoiceItemId: it.id,
+        productId: it.productId,
+        quantity: Number(qtyMap[it.id] || 0),
+        unitPrice: it.unitPrice,
+      }))
+      .filter((it) => it.quantity > 0);
 
-        return {
-          invoiceItemId: it.id,
-          productId: it.productId,
-          quantity: qty,
-          unitPrice: it.unitPrice,
-        };
-      })
-      .filter(Boolean);
+    if (!items.length) return setErrMsg("Vui lòng chọn ít nhất một sản phẩm để hoàn");
+    if (!reason.trim()) return setErrMsg("Vui lòng nhập lý do hoàn trả");
 
-    if (!items.length) {
-      setErrMsg("Vui lòng chọn ít nhất 1 sản phẩm để hoàn.");
-      return;
-    }
-
-    if (!reason.trim()) {
-      setErrMsg("Vui lòng nhập lý do hoàn.");
-      return;
-    }
-
-    const payload = {
-      invoiceId: invoice.id,
-      reason: reason.trim(),
-      items,
-    };
-
+    const payload = { invoiceId: invoice.id, reason: reason.trim(), items };
     setSubmitting(true);
     try {
-      //   const res = await api.post("/returns", payload).then((r) => r.data);
-
+      const res = await api.post("/returns", payload).then(r => r.data);
       onCreated?.(res);
       onClose?.();
     } catch (err) {
-      console.error(err);
-      setErrMsg(err?.response?.data?.message || "Tạo đơn hoàn thất bại.");
+      setErrMsg(err?.response?.data?.message || "Lỗi hệ thống khi tạo đơn hoàn");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <BaseModal onClose={onClose} maxWidth="900px" disableClose={submitting}>
-      <div className="return-modal">
-
-        {/* HEADER */}
-        <div className="return-header">
-
-          <div>
-            <h5 className="fw-bold mb-1">Tạo đơn hoàn</h5>
-
-            <div className="text-muted small">
-              Hóa đơn:
-              <span className="invoice-code ms-1">
-                {invoice?.invoiceCode}
-              </span>
+    <BaseModal onClose={onClose} maxWidth="900px">
+      <div className="bg-white rounded-4 overflow-hidden shadow-lg">
+        {/* Header Section */}
+        <div className="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
+          <div className="d-flex align-items-center">
+            <div className="bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+              <i className="bi bi-arrow-return-left text-primary fs-4"></i>
+            </div>
+            <div>
+              <h5 className="mb-0 fw-bold text-dark">Tạo Đơn Hoàn Tiền</h5>
+              <small className="text-muted">
+                Hóa đơn: <span className="fw-bold text-primary">#{invoice?.invoiceCode}</span> • {new Date().toLocaleDateString('vi-VN')}
+              </small>
             </div>
           </div>
-
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            <i className="bi bi-x-lg me-1" />
-            Đóng
+          <button className="btn btn-light rounded-circle p-2 lh-1" onClick={onClose}>
+            <i className="bi bi-x-lg"></i>
           </button>
-
         </div>
 
-        {/* BODY */}
-        <div className="return-body">
-
+        {/* Content Section */}
+        <div className="p-4 bg-light">
           {errMsg && (
-            <div className="alert alert-danger">{errMsg}</div>
+            <div className="alert alert-danger border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center">
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              {errMsg}
+            </div>
           )}
 
-          {/* TABLE */}
-          <div className="return-table">
-
-            <table className="table align-middle mb-0">
-
-              <thead>
-                <tr>
-                  <th>Sản phẩm</th>
-                  <th className="text-end">Đơn giá</th>
-                  <th className="text-center" style={{ width: 150 }}>
-                    SL hoàn
-                  </th>
-                  <th className="text-end">Tiền hoàn</th>
-                </tr>
-              </thead>
-
-              <tbody>
-
-                {(invoice?.items || []).map((it) => {
-
-                  const max = maxMap[it.id] ?? 0;
-                  const qty = qtyMap[it.id] ?? 0;
-
-                  const refund =
-                    (Number(it.unitPrice || 0) * Number(qty || 0)) || 0;
-
-                  return (
-                    <tr key={it.id}>
-
-                      <td>
-
-                        <div className="fw-semibold">
-                          {it.name}
-                        </div>
-
-                        <small className="text-muted">
-                          Đã mua: {max}
-                        </small>
-
-                      </td>
-
-                      <td className="text-end">
-                        {formatCurrency(it.unitPrice || 0)}
-                      </td>
-
-                      <td className="text-center">
-
-                        <input
-                          type="number"
-                          min={0}
-                          max={max}
-                          className="form-control qty-input"
-                          value={qty}
-                          disabled={submitting || max === 0}
-                          onChange={(e) => setQty(it.id, e.target.value)}
-                        />
-
-                        <div className="text-muted small">
-                          max {max}
-                        </div>
-
-                      </td>
-
-                      <td className="text-end fw-semibold text-danger">
-                        {formatCurrency(refund)}
-                      </td>
-
-                    </tr>
-                  );
-
-                })}
-
-                {(invoice?.items || []).length === 0 && (
+          {/* Table Card */}
+          <div className="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
                   <tr>
-                    <td colSpan={4} className="text-center text-muted py-4">
-                      Không có sản phẩm
-                    </td>
+                    <th className="ps-4 border-0 text-secondary small text-uppercase fw-bold py-3">Sản phẩm</th>
+                    <th className="text-center border-0 text-secondary small text-uppercase fw-bold py-3">Đơn giá</th>
+                    <th className="text-center border-0 text-secondary small text-uppercase fw-bold py-3" style={{ width: '180px' }}>Số lượng trả</th>
+                    <th className="text-end pe-4 border-0 text-secondary small text-uppercase fw-bold py-3">Thành tiền</th>
                   </tr>
-                )}
-
-              </tbody>
-
-            </table>
-
+                </thead>
+                <tbody>
+                  {(invoice?.items || []).map((it) => {
+                    const qty = qtyMap[it.id] || 0;
+                    return (
+                      <tr key={it.id} className={qty > 0 ? "table-primary table-opacity-10" : ""}>
+                        <td className="ps-4 py-3">
+                          <div className="fw-bold text-dark">{it.name}</div>
+                          <small className="text-muted">Tối đa cho phép: {maxMap[it.id]}</small>
+                        </td>
+                        <td className="text-center text-secondary">{formatCurrency(it.unitPrice)}</td>
+                        <td>
+                          {/* Custom Quantity Spinner using BS5 classes */}
+                          <div className="input-group input-group-sm justify-content-center">
+                            <button 
+                              className="btn btn-outline-secondary border-secondary-subtle px-3" 
+                              onClick={() => setQty(it.id, qty - 1)}
+                              disabled={qty <= 0}
+                            >−</button>
+                            <span className="input-group-text bg-white border-secondary-subtle px-3 fw-bold" style={{ minWidth: '45px', justifyContent: 'center' }}>
+                              {qty}
+                            </span>
+                            <button 
+                              className="btn btn-outline-secondary border-secondary-subtle px-3" 
+                              onClick={() => setQty(it.id, qty + 1)}
+                              disabled={qty >= maxMap[it.id]}
+                            >+</button>
+                          </div>
+                        </td>
+                        <td className="text-end pe-4 fw-bold text-dark">
+                          {formatCurrency(qty * it.unitPrice)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* FOOT INFO */}
-
-          <div className="row g-3 mt-2">
-
-            <div className="col-12 col-md-8">
-
-              <label className="form-label fw-semibold">
-                Lý do hoàn
-              </label>
-
-              <textarea
-                className="form-control"
-                rows={3}
-                placeholder="Ví dụ: Khách đổi ý / Sản phẩm lỗi..."
-                value={reason}
-                disabled={submitting}
-                onChange={(e) => setReason(e.target.value)}
-              />
-
-            </div>
-
-            <div className="col-12 col-md-4">
-
-              <div className="refund-summary">
-
-                <div className="text-muted small">
-                  Tổng tiền hoàn
-                </div>
-
-                <div className="refund-amount">
-                  {formatCurrency(totalRefund)}
-                </div>
-
-                <div className="text-muted small mt-1">
-                  Số tiền có thể thay đổi theo quy tắc hoàn
-                </div>
-
+          <div className="row g-4">
+            {/* Reason Section */}
+            <div className="col-lg-7">
+              <div className="bg-white p-4 rounded-4 shadow-sm h-100">
+                <label className="form-label fw-bold text-dark small text-uppercase mb-3">Lý do hoàn trả sản phẩm</label>
+                <textarea
+                  className="form-control border-light-subtle bg-light shadow-none rounded-3"
+                  rows={4}
+                  placeholder="Mô tả chi tiết lý do (hàng lỗi, sai mẫu...)"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
               </div>
-
             </div>
 
+            {/* Summary Section */}
+            <div className="col-lg-5">
+              <div className="card border-0 bg-primary text-white p-4 rounded-4 shadow-sm h-100">
+                <div className="d-flex justify-content-between mb-2 opacity-75">
+                  <span>Tổng sản phẩm hoàn:</span>
+                  <span className="fw-bold">{Object.values(qtyMap).reduce((a, b) => a + b, 0)}</span>
+                </div>
+                <hr className="my-3 opacity-25" />
+                <div className="mt-auto">
+                  <div className="small opacity-75 mb-1 text-uppercase fw-bold">Tổng tiền hoàn trả</div>
+                  <div className="h2 fw-bold mb-0">{formatCurrency(totalRefund)}</div>
+                </div>
+              </div>
+            </div>
           </div>
-
         </div>
 
-        {/* FOOTER */}
-
-        <div className="return-footer">
-
-          <button
-            className="btn btn-outline-secondary"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            Hủy
+        {/* Footer Section */}
+        <div className="p-4 bg-white border-top d-flex justify-content-end gap-2">
+          <button className="btn btn-link text-decoration-none text-muted fw-bold px-4" onClick={onClose}>
+            Hủy bỏ
           </button>
-
-          <button
-            className="btn btn-primary"
+          <button 
+            className="btn btn-primary rounded-3 px-5 fw-bold shadow-sm"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || totalRefund === 0}
           >
-            {submitting ? "Đang tạo..." : "Tạo đơn hoàn"}
+            {submitting ? (
+              <span className="spinner-border spinner-border-sm me-2"></span>
+            ) : (
+              <i className="bi bi-check2-circle me-2"></i>
+            )}
+            Xác nhận tạo đơn
           </button>
-
         </div>
-
-        <style>{`
-
-.return-modal{
-background:white;
-border-radius:14px;
-overflow:hidden;
-box-shadow:0 10px 28px rgba(0,0,0,0.08);
-}
-
-.return-header{
-padding:18px 22px;
-border-bottom:1px solid #eee;
-display:flex;
-justify-content:space-between;
-align-items:center;
-background:#fafafa;
-}
-
-.invoice-code{
-font-weight:600;
-color:#0d6efd;
-}
-
-.return-body{
-padding:22px;
-}
-
-.return-table{
-border:1px solid #eee;
-border-radius:10px;
-overflow:hidden;
-margin-bottom:18px;
-}
-
-.return-table thead{
-background:#f8f9fa;
-}
-
-.return-table tbody tr:hover{
-background:#fafafa;
-}
-
-.qty-input{
-width:80px;
-text-align:center;
-margin:auto;
-}
-
-.refund-summary{
-border:1px solid #eee;
-border-radius:12px;
-padding:16px;
-background:#fafafa;
-}
-
-.refund-amount{
-font-size:26px;
-font-weight:700;
-color:#dc3545;
-}
-
-.return-footer{
-padding:16px 22px;
-border-top:1px solid #eee;
-display:flex;
-justify-content:flex-end;
-gap:10px;
-}
-
-`}</style>
-
       </div>
     </BaseModal>
   );

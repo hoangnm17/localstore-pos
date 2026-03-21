@@ -4,6 +4,7 @@ import BaseModal from "components/common/BaseModal";
 import AlertMessage from "components/common/AlertMessage";
 import { isValidPhone, isNotEmpty } from "utils/validators";
 import { useNotification } from "components/global/Notification/NotificationContext";
+import useTitle from "hooks/common/useTitle";
 
 export default function CustomerCreateModal({ phone, onClose, onCreated }) {
   const [form, setForm] = useState({ name: "", phone: phone || "" });
@@ -14,6 +15,7 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
   const nameRef = useRef(null);
   const phoneRef = useRef(null);
 
+  useTitle("Thêm khách hàng")
   useEffect(() => {
     setForm((prev) => ({ ...prev, phone: phone || "" }));
   }, [phone]);

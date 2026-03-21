@@ -9,18 +9,16 @@ const promotionModel = require("../models/promotion.model");
 const customerModel = require("../models/customer.model");
 const sseService = require("./sse.service");
 const socketService = require("./socket.service");
-const loyaltyConfig = require("../constants/loyalty")
+const loyaltyConfig = require("../constants/loyalty");
 
 const getEditableInvoice = async (transaction, id) => {
-
   const invoice = await invoiceModel.getInvoiceById(
     transaction,
     id,
     { forUpdate: true }
   );
 
-  if (!invoice)
-    throw new Error("Invoice not found");
+  if (!invoice) throw new Error("Invoice not found");
 
   if (["PAID", "CANCELLED"].includes(invoice.status))
     throw new Error("Cannot update this invoice");
@@ -45,27 +43,7 @@ const runInTransaction = async (callback) => {
   }
 };
 
-const getBankConfig = () => {
-  return {
-    bankCode: process.env.BANK_CODE || "BIDV",
-    accountNumber: process.env.BANK_ACCOUNT || "96247HNM17",
-    accountName: process.env.ACCOUNT_NAME || "NGUYEN MINH HOANG",
-    template: process.env.SEPAY_QR_TEMPLATE || "compact2",
-  };
-};
-
 const validateDiscount = async (customerId, discount, totalAmount) => {
-
-  if (!discount || Object.keys(discount).length === 0) {
-    return {
-      finalAmount: totalAmount,
-      totalDiscount: 0,
-      pointDiscount: 0,
-      voucherDiscount: 0,
-      promotionDiscount: 0,
-      actualPointUsed: 0
-    };
-  }
 
   let totalDiscount = 0;
 
@@ -144,21 +122,12 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
     if (discount.pointUsed > customer.loyaltyPoints)
       throw new Error("Cannot use loyalty point over current point!");
 
-    const rawPointDiscount =
-      discount.pointUsed * loyaltyConfig.POINT_EXCHANGE;
+    const rawPointDiscount = discount.pointUsed * loyaltyConfig.POINT_EXCHANGE;
 
-    const remaining =
-      totalAmount - totalDiscount;
-
-    pointDiscount =
-      Math.min(rawPointDiscount, remaining);
-
-    actualPointUsed =
-      Math.floor(pointDiscount / loyaltyConfig.POINT_EXCHANGE);
-
-    pointDiscount =
-      actualPointUsed * loyaltyConfig.POINT_EXCHANGE;
-
+    const remaining = totalAmount - totalDiscount;
+    pointDiscount = Math.min(rawPointDiscount, remaining);
+    actualPointUsed = Math.floor(pointDiscount / loyaltyConfig.POINT_EXCHANGE);
+    pointDiscount = actualPointUsed * loyaltyConfig.POINT_EXCHANGE;
     totalDiscount += pointDiscount;
   }
 
@@ -175,19 +144,108 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
   };
 };
 
+const getBankConfig = () => {
+  return {
+    bankCode: process.env.BANK_CODE || "BIDV",
+    accountNumber: process.env.BANK_ACCOUNT || "96247HNM17",
+    accountName: process.env.ACCOUNT_NAME || "NGUYEN MINH HOANG",
+    template: process.env.SEPAY_QR_TEMPLATE || "compact2",
+  };
+};
+
+const generateQR = ({ invoiceId, finalAmount, expiresAt }) => {
+  const { bankCode, accountNumber, accountName, template } = getBankConfig();
+
+  const content = `POS-${invoiceId}`;
+
+  const url =
+    `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png` +
+    `?amount=${encodeURIComponent(finalAmount)}` +
+    `&addInfo=${encodeURIComponent(content)}` +
+    `&accountName=${encodeURIComponent(accountName)}`;
+
+  return {
+    url,
+    content,
+    finalAmount,
+    expiresAt,
+  };
+};
+
+const handlePaymentSuccess = async ({
+  transaction,
+  invoice,
+  method,
+}) => {
+  const invoiceId = invoice.id;
+
+  const items = await invoiceModel.getInvoiceItems(transaction, invoiceId);
+  if (!items.length) throw new Error("Invoice has no items");
+
+  const finalAmount = Number(invoice.finalAmount || invoice.totalAmount);
+  const pointUsed = Number(invoice.usedPoints || 0);
+  const voucherId = invoice.voucherId || null;
+
+  if (pointUsed > 0 && invoice.customerId) {
+    await customerPointLogService.adjustPoints(
+      transaction,
+      invoice.customerId,
+      invoiceId,
+      -pointUsed,
+      "REDEEM"
+    );
+  }
+
+  if (voucherId) {
+    await voucherModel.increaseUsage(transaction, voucherId);
+  }
+
+  const earnedPoints = Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
+
+  if (earnedPoints > 0 && invoice.customerId) {
+    await customerPointLogService.adjustPoints(
+      transaction,
+      invoice.customerId,
+      invoiceId,
+      earnedPoints,
+      "EARN"
+    );
+  }
+
+  const updatedStocks = await inventoryService.deductStock(
+    transaction,
+    items
+  );
+
+  socketService.emitInventoryUpdate(updatedStocks);
+
+  await invoiceModel.updateStatus(transaction, invoiceId, "PAID");
+
+  sseService.send({
+    type: "PAYMENT_SUCCESS",
+    invoiceId,
+    method,
+    amount: finalAmount,
+  });
+
+  return {
+    invoiceId,
+    finalAmount,
+  };
+};
+
 const payCash = async (id, { payment }) => {
-
   return runInTransaction(async (transaction) => {
-
     const invoice = await getEditableInvoice(transaction, id);
+
+    if (invoice.status === "PAID")
+      throw new Error("Invoice already paid");
 
     if (payment?.method !== "CASH")
       throw new Error("Invalid payment method");
 
-    const invoiceItems = await invoiceModel.getInvoiceItems(transaction, id);
-
-    if (!invoiceItems.length)
-      throw new Error("Cannot pay empty invoice");
+    const items = await invoiceModel.getInvoiceItems(transaction, id);
+    if (!items.length) throw new Error("Cannot pay empty invoice");
 
     let totalAmount = invoice.totalAmount;
     let finalAmount = totalAmount;
@@ -199,20 +257,18 @@ const payCash = async (id, { payment }) => {
     let actualPointUsed = 0;
 
     if (payment?.discount) {
+      const result = await validateDiscount(
+        invoice.customerId,
+        payment.discount,
+        totalAmount
+      );
 
-      const discountResult =
-        await validateDiscount(
-          invoice.customerId,
-          payment.discount,
-          totalAmount
-        );
-
-      totalDiscount = discountResult.totalDiscount;
-      finalAmount = discountResult.finalAmount;
-      pointDiscount = discountResult.pointDiscount;
-      promotionDiscount = discountResult.promotionDiscount;
-      voucherDiscount = discountResult.voucherDiscount;
-      actualPointUsed = discountResult.actualPointUsed;
+      totalDiscount = result.totalDiscount;
+      finalAmount = result.finalAmount;
+      pointDiscount = result.pointDiscount;
+      promotionDiscount = result.promotionDiscount;
+      voucherDiscount = result.voucherDiscount;
+      actualPointUsed = result.actualPointUsed;
     }
 
     const payAmount = Number(payment.amount ?? finalAmount);
@@ -223,76 +279,13 @@ const payCash = async (id, { payment }) => {
     if (payAmount < finalAmount)
       throw new Error("Payment amount is not enough");
 
-    await paymentModel.updatePaymentCancel(
-      transaction,
-      id,
-      "FAILED"
-    );
-
-    /* ================= CREATE / UPDATE PAYMENT ================= */
-
-    const existingPayment =
-      await invoiceModel.getPaymentByInvoiceId(transaction, id);
-
-    if (!existingPayment) {
-
-      await invoiceModel.insertPayment(transaction, {
-        invoiceId: id,
-        paymentMethod: "CASH",
-        amount: finalAmount,
-        status: "SUCCESS"
-      });
-
-    } else {
-
-      await paymentModel.updatePayment(transaction, {
-        invoiceId: id,
-        amount: finalAmount,
-        status: "SUCCESS",
-        paymentMethod: "CASH",
-        transactionId: "CASH"
-      });
-
-    }
-
-    /* ================= APPLY DISCOUNT EFFECT ================= */
-
-    if (actualPointUsed > 0 && invoice.customerId) {
-
-      await customerPointLogService.adjustPoints(
-        transaction,
-        invoice.customerId,
-        id,
-        -actualPointUsed,
-        "REDEEM"
-      );
-    }
-
-    if (payment.discount?.voucherId) {
-
-      await voucherModel.increaseUsage(
-        transaction,
-        payment.discount.voucherId
-      );
-    }
-
-    /* ================= EARN POINT ================= */
-
-    const earnedPoints =
-      Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
-
-    if (earnedPoints > 0 && invoice.customerId) {
-
-      await customerPointLogService.adjustPoints(
-        transaction,
-        invoice.customerId,
-        id,
-        earnedPoints,
-        "EARN"
-      );
-    }
-
-    /* ================= UPDATE INVOICE ================= */
+    await paymentModel.insertPayment(transaction, {
+      invoiceId: id,
+      paymentMethod: "CASH",
+      amount: finalAmount,
+      status: "SUCCESS",
+      transactionId: "CASH-" + Date.now(),
+    });
 
     await invoiceModel.updateInvoiceDiscount(
       transaction,
@@ -307,48 +300,39 @@ const payCash = async (id, { payment }) => {
 
     await invoiceModel.updateAmounts(transaction, id, {
       totalAmount,
-      finalAmount
+      finalAmount,
     });
 
-    /* ================= STOCK ================= */
-
-    const updatedStocks = await inventoryService.deductStock(
+    await handlePaymentSuccess({
       transaction,
-      invoiceItems
-    );
-
-    socketService.emitInventoryUpdate(updatedStocks);
-
-    await invoiceModel.updateStatus(transaction, id, "PAID");
+      invoice: { ...invoice, finalAmount },
+      method: "CASH",
+    });
 
     return {
       paid: true,
       finalAmount,
-      totalDiscount
+      totalDiscount,
     };
-
   });
 };
 
 const createQR = async (invoiceId, discount = {}) => {
-  console.log("INOIVE", invoiceId);
-
   return runInTransaction(async (transaction) => {
-
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
       forUpdate: true,
     });
 
     if (!invoice) throw new Error("Invoice not found");
 
-    if (["PAID", "CANCELLED"].includes(invoice.status)) {
+    if (["PAID", "CANCELLED"].includes(invoice.status))
       throw new Error("Cannot create QR for this invoice");
-    }
 
     const items = await invoiceModel.getInvoiceItems(transaction, invoiceId);
     if (!items.length) throw new Error("Cannot pay empty invoice");
 
     const totalAmount = Number(invoice.totalAmount || 0);
+
     let finalAmount = totalAmount;
     let promotionDiscount = 0;
     let voucherDiscount = 0;
@@ -376,40 +360,29 @@ const createQR = async (invoiceId, discount = {}) => {
 
     if (finalAmount <= 0) throw new Error("Invalid invoice amount");
 
-    const existingPayment = await invoiceModel.getPaymentByInvoiceId(
-      transaction,
-      invoiceId
-    );
-
-    const oldAmount = Number(existingPayment?.amount || 0);
+    const existingPayment =
+      await paymentModel.findLatestPendingPayment(transaction, invoiceId);
 
     if (
       existingPayment &&
-      invoice.status === "PENDING" &&
+      existingPayment.status === "PENDING" &&
       invoice.expiresAt &&
       new Date() < new Date(invoice.expiresAt) &&
-      oldAmount === finalAmount
+      Number(existingPayment.amount) === finalAmount
     ) {
-      const { bankCode, accountNumber, accountName, template } = getBankConfig();
-      const content = `POS-${invoiceId}`;
-
-      const qrUrl =
-        `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png` +
-        `?amount=${encodeURIComponent(oldAmount)}` +
-        `&addInfo=${encodeURIComponent(content)}` +
-        `&accountName=${encodeURIComponent(accountName)}`;
-
       return {
         pending: true,
         reuse: true,
-        qr: {
-          url: qrUrl,
-          content,
-          amount: oldAmount,
+        qr: generateQR({
+          invoiceId,
+          finalAmount,
           expiresAt: invoice.expiresAt,
-        }
+        }),
       };
     }
+
+    await paymentModel.cancelPendingPayments(transaction, invoiceId);
+
     await invoiceModel.updateInvoiceDiscount(
       transaction,
       invoiceId,
@@ -421,73 +394,29 @@ const createQR = async (invoiceId, discount = {}) => {
       pointDiscount
     );
 
-    if (!existingPayment) {
-      await invoiceModel.insertPayment(transaction, {
-        invoiceId,
-        paymentMethod: "BANK_TRANSFER",
-        amount: finalAmount,
-        status: "PENDING",
-      });
-    } else {
-      if (existingPayment.status === "SUCCESS") {
-        throw new Error("Invoice already paid");
-      }
+    await paymentModel.insertPayment(transaction, {
+      invoiceId,
+      paymentMethod: "BANK_TRANSFER",
+      amount: finalAmount,
+      status: "PENDING",
+    });
 
-      await paymentModel.updatePayment(transaction, {
-        invoiceId,
-        amount: finalAmount,
-        status: "PENDING",
-      });
-    }
-
-    const expiresAt = new Date(Date.now() + loyaltyConfig.EXPIRE_MINUTES * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + loyaltyConfig.EXPIRE_MINUTES * 60 * 1000
+    );
 
     await invoiceModel.updateStatus(transaction, invoiceId, "PENDING");
     await invoiceModel.updateInvoiceExpire(transaction, invoiceId, expiresAt);
 
-    /* ===== GENERATE QR ===== */
-    const { bankCode, accountNumber, accountName, template } = getBankConfig();
-
-    const content = `POS-${invoiceId}`;
-
-    const qrUrl =
-      `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png` +
-      `?amount=${encodeURIComponent(finalAmount)}` +
-      `&addInfo=${encodeURIComponent(content)}` +
-      `&accountName=${encodeURIComponent(accountName)}`;
-
     return {
       invoiceId,
-      invoiceCode: invoice.invoiceCode,
-      totalAmount,
-      finalAmount,
-      paymentMethod: "BANK_TRANSFER",
-
-      qr: {
-        url: qrUrl,
-        content,
-        amount: finalAmount,
-        expiresAt,
-      },
-      discount: {
-        promotionId,
-        voucherId,
-        promotionDiscount,
-        voucherDiscount,
-        pointUsed,
-        pointDiscount,
-        totalDiscount:
-          promotionDiscount +
-          voucherDiscount +
-          pointDiscount,
-      },
+      qr: generateQR({ invoiceId, finalAmount, expiresAt }),
     };
   });
 };
 
 const confirmPayment = async (payload) => {
   return runInTransaction(async (transaction) => {
-
     const transferAmount = Number(
       payload.transferAmount ??
       payload.amount ??
@@ -507,200 +436,108 @@ const confirmPayment = async (payload) => {
       payload.transaction_id ??
       null;
 
-    if (!content) {
-      throw new Error("Missing transfer content");
-    }
+    if (!content) throw new Error("Missing transfer content");
 
     const match = content.match(/POS-(\d+)/i);
-    if (!match) {
-      throw new Error("Invalid transfer content");
-    }
+    if (!match) throw new Error("Invalid transfer content");
 
     const invoiceId = Number(match[1]);
+
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
       forUpdate: true,
     });
 
-    if (!invoice) {
-      throw new Error("Invoice not found");
-    }
+    if (!invoice) throw new Error("Invoice not found");
 
-    if (invoice.status === "PAID") {
+    if (invoice.status === "PAID")
       return { paid: true, duplicated: true, invoiceId };
-    }
 
-    if (invoice.status !== "PENDING") {
+    if (invoice.status !== "PENDING")
       throw new Error("Invoice is not awaiting payment");
-    }
 
-    if (invoice.expiresAt && new Date() > new Date(invoice.expiresAt)) {
-      await invoiceModel.updateStatus(transaction, invoiceId, "FAILED");
-      await paymentModel.updatePaymentStatus(
-        transaction,
-        invoiceId,
-        "FAILED"
-      );
+    const expectedAmount = Number(
+      invoice.finalAmount || invoice.totalAmount
+    );
 
-      throw new Error("QR expired");
-    }
+    if (!Number.isFinite(transferAmount) || transferAmount <= 0)
+      throw new Error("Invalid transfer amount");
+
+    if (transferAmount < expectedAmount)
+      throw new Error("Transfer amount is not enough");
 
     if (transactionId) {
       const existed = await paymentModel.findByTransactionId(
         transaction,
         transactionId
       );
-
-      if (existed) {
+      if (existed)
         return { paid: true, duplicated: true, invoiceId };
-      }
     }
 
-    const payment = await invoiceModel.getPaymentByInvoiceId(
-      transaction,
-      invoiceId
-    );
+    const payment = await paymentModel.findLatestPendingPayment(transaction, invoiceId);
+    if (!payment) {
+      payment = await paymentModel.findLatestPayment(transaction, invoiceId);
+    }
 
-    if (payment && payment.status === "SUCCESS") {
+    if (!payment) throw new Error("No payment found");
+
+    if (payment.status === "SUCCESS" || payment.status === "LATE") {
       return { paid: true, duplicated: true, invoiceId };
     }
 
-    if (!invoice.finalAmount) {
-      throw new Error("Invoice amount not finalized");
-    }
+    const isExpired = invoice.expiresAt && new Date() > new Date(invoice.expiresAt);
 
-    const expectedAmount = Number(invoice.finalAmount || invoice.totalAmount);
+    const status = isExpired ? "LATE" : "SUCCESS";
 
-    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
-      throw new Error("Invalid transfer amount");
-    }
-
-    if (transferAmount < expectedAmount) {
-      throw new Error("Transfer amount is not enough");
-    }
-
-    if (!payment) {
-
-      await invoiceModel.insertPayment(transaction, {
-        invoiceId,
-        paymentMethod: "BANK_QR",
-        amount: expectedAmount,
-        status: "SUCCESS",
-        transactionId,
-      });
-
-    } else {
-
-      await paymentModel.updatePaymentStatus(
-        transaction,
-        invoiceId,
-        "SUCCESS",
-        transactionId
-      );
-
-    }
-
-    const invoiceItems = await invoiceModel.getInvoiceItems(
+    await paymentModel.updatePaymentSuccess(
       transaction,
-      invoiceId
+      payment.id,
+      status,
+      transactionId
     );
 
-    if (!invoiceItems.length) {
-      throw new Error("Invoice has no items");
-    }
-
-    const pointUsed = Number(invoice.usedPoints || 0);
-    const voucherId = invoice.voucherId || null;
-
-    const finalAmount = expectedAmount;
-
-    if (pointUsed > 0 && invoice.customerId) {
-
-      await customerPointLogService.adjustPoints(
-        transaction,
-        invoice.customerId,
-        invoiceId,
-        -pointUsed,
-        "REDEEM"
-      );
-
-    }
-
-    if (voucherId) {
-      await voucherModel.increaseUsage(transaction, voucherId);
-    }
-
-    const earnedPoints = Math.floor(finalAmount / loyaltyConfig.EARN_POINT_EXCHANGE);
-
-    if (earnedPoints > 0 && invoice.customerId) {
-
-      await customerPointLogService.adjustPoints(
-        transaction,
-        invoice.customerId,
-        invoiceId,
-        earnedPoints,
-        "EARN"
-      );
-
-    }
-
-    const updatedStocks = await inventoryService.deductStock(
+    await handlePaymentSuccess({
       transaction,
-      invoiceItems
-    );
-
-    socketService.emitInventoryUpdate(updatedStocks);
-
-    await invoiceModel.updateStatus(
-      transaction,
-      invoiceId,
-      "PAID"
-    );
-
-
-    sseService.send({
-      type: "PAYMENT_SUCCESS",
-      invoiceId,
+      invoice,
       method: "BANK_TRANSFER",
-      amount: finalAmount,
     });
 
     return {
       paid: true,
       invoiceId,
-      amount: finalAmount,
+      late: isExpired,
+      amount: expectedAmount,
     };
-
   });
 };
 
 const cancelPendingPayment = async (invoiceId) => {
   return runInTransaction(async (transaction) => {
-
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
       forUpdate: true,
     });
 
+    if (!invoice) throw new Error("Invoice not found");
+
+    if (invoice.status === "PAID")
+      throw new Error("Cannot cancel paid invoice");
+
     await invoiceModel.updateInvoiceExpire(transaction, invoiceId, null);
 
-    if (!invoice) {
-      throw new Error("Invoice not found");
-    }
-
-    if (invoice.status === "PAID") {
-      throw new Error("Cannot cancel paid invoice");
-    }
-
-    await paymentModel.updatePaymentCancel(
+    const payment = await paymentModel.findLatestPendingPayment(
       transaction,
-      invoiceId,
-      "FAILED"
+      invoiceId
     );
 
-    await invoiceModel.updateStatus(
-      transaction,
-      invoiceId,
-      "UNPAID"
-    );
+    if (payment) {
+      await paymentModel.updatePaymentStatus(
+        transaction,
+        payment.id,
+        "CANCELLED"
+      );
+    }
+
+    await invoiceModel.updateStatus(transaction, invoiceId, "UNPAID");
 
     return { success: true };
   });

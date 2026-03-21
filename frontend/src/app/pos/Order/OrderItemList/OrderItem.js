@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { formatCurrency } from "utils/formatters";
 import { safeParse } from "utils/safeParse";
+import { formatQuantityInput } from "utils/quantityValidator";
 
 const OrderItem = ({
   item,
@@ -14,7 +15,6 @@ const OrderItem = ({
   const displayName = item.name ? item.name : item.productName;
   const qty = safeParse(item.quantity);
   const lineTotal = item.unitPrice * qty;
-
   const qtyRef = useRef(null);
 
   useEffect(() => {
@@ -28,35 +28,11 @@ const OrderItem = ({
 
   const handleChange = (e) => {
     const { value } = e.target;
-    let formattedValue = value;
-
-    if (item.unitType === "PIECE") {
-      formattedValue = value.replace(/\D/g, "");
-    } else {
-      formattedValue = value.replace(/[^0-9.]/g, "");
-      const parts = formattedValue.split(".");
-      if (parts.length > 2) {
-        formattedValue = parts[0] + "." + parts.slice(1).join("");
-      }
-    }
-
-    if (formattedValue === "" || formattedValue === ".") {
-      onChangeQty(item.id, formattedValue);
-      return;
-    }
-
-    let number = parseFloat(formattedValue);
-    if (number > item.quantityOnHand) {
-      number = item.quantityOnHand;
-      formattedValue = number.toString();
-    }
-    if (number < 0) {
-      number = 0;
-      formattedValue = "0";
-    }
-    const finalValue = (item.unitType === "WEIGHT" && formattedValue.includes("."))
-      ? formattedValue
-      : number;
+    const finalValue = formatQuantityInput(
+      value,
+      item.unitType,
+      item.quantityOnHand
+    );
 
     onChangeQty(item.id, finalValue);
   };
@@ -67,19 +43,12 @@ const OrderItem = ({
     if (currentQty <= 0) {
       currentQty = 1;
     }
-
     onChangeQty(item.id, currentQty);
   };
-
   return (
     <tr className="border-top align-middle">
       <td className="text-start">
         <div className="fw-semibold">{displayName}</div>
-        {(item.variant || item.code) && (
-          <small className="text-muted">
-            {item.code} {item.variant ? `| ${item.variant}` : ""}
-          </small>
-        )}
       </td>
 
       <td>
@@ -88,12 +57,10 @@ const OrderItem = ({
         </span>
       </td>
 
-      {/* UNIT PRICE */}
       <td className="text-end text-muted">
         {formatCurrency(item.unitPrice)}
       </td>
 
-      {/* QUANTITY CONTROL */}
       <td className="text-center">
         <div className="d-inline-flex align-items-center border rounded overflow-hidden">
           <button
