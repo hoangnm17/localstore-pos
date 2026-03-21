@@ -207,33 +207,12 @@ function AdjustmentDetail() {
                 <th className="text-end px-4 py-4 fw-semibold">Tồn thực tế</th>
                 <th className="text-end px-4 py-4 fw-semibold">Chênh lệch</th>
               </tr>
-            ) : (
-              data.items.map((item, idx) => (
-                <tr key={idx} className={idx % 2 === 0 ? "bg-body-tertiary" : ""}>
-                  <td className="text-center py-3 fw-medium">{idx + 1}</td>
-                  <td className="ps-3 pe-2 py-3 fw-medium">{item.code}</td>
-                  <td className="ps-3 pe-2 py-3">{item.name}</td>
-                  <td className="text-end px-3 py-3 fw-medium">
-                    {formatQuantityWithUnit(item.systemLargest, item.systemRemainder, item.unitName)}
-                  </td>
-
-                  <td className="text-end px-3 py-3 fw-medium">
-                    {formatQuantityWithUnit(item.actualLargest, item.actualRemainder, item.unitName)}
-                  </td>
-
-                  <td className="text-end px-3 py-3">
-                    <span
-                      className={`fw-bold px-3 py-2 rounded fs-5 d-inline-block ${
-                        item.difference > 0
-                          ? "text-success bg-success-subtle"
-                          : item.difference < 0
-                          ? "text-danger bg-danger-subtle"
-                          : "text-secondary bg-secondary-subtle"
-                      }`}
-                      style={{ minWidth: "100px", textAlign: "center" }}
-                    >
-                      {formatDifference(item.difference)} <span>{item.baseUnit}</span>
-                    </span>
+            </thead>
+            <tbody>
+              {!data.items?.length ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-5 text-muted fs-5 fst-italic">
+                    Không có sản phẩm nào trong phiếu điều chỉnh này
                   </td>
                 </tr>
               ) : (
