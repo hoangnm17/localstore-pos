@@ -3,6 +3,7 @@ const { connectDB } = require("../config/database");
 const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
 const promotionModel = require("../models/promotion.model");
+const paymentModel = require("../models/payment.model")
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -73,6 +74,7 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
         let totalAmount = 0;
         let totalDiscount = 0;
 
+
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
@@ -87,18 +89,17 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
 
             if (discountData && discountData.promotionId) {
                 if (discountData.discountPercent > 0) {
-                    itemDiscount = (unitPrice * discountData.discountPercent) / 100;
+                    itemDiscount = Math.round((unitPrice * discountData.discountPercent / 100) * 1000) / 1000;
                 } else if (discountData.discountAmount > 0) {
                     itemDiscount = discountData.discountAmount;
                 }
-                unitPrice = Math.max(0, unitPrice - itemDiscount);
+                unitPrice = Math.max(0, Math.round((unitPrice - itemDiscount) * 1000) / 1000);
             }
+            const lineTotal = Math.round((unitPrice * item.quantity) * 1000) / 1000;
+            const baseQuantity = Math.round((item.quantity * product.conversionFactor) * 1000) / 1000;
 
-            const lineTotal = unitPrice * item.quantity;
-            const baseQuantity = item.quantity * product.conversionFactor;
-
-            totalAmount += (product.salePrice * item.quantity);
-            totalDiscount += (itemDiscount * item.quantity);
+            totalAmount = Math.round((totalAmount + lineTotal) * 1000) / 1000;
+            totalDiscount = Math.round((totalDiscount + (itemDiscount * item.quantity)) * 1000) / 1000;
 
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId,
@@ -115,7 +116,7 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
 
         await invoiceModel.updateAmounts(transaction, invoiceId, {
             totalAmount,
-            finalAmount: totalAmount - totalDiscount,
+            finalAmount: Math.round((totalAmount - totalDiscount) * 1000) / 1000,
         });
 
         if (totalDiscount > 0) {
@@ -141,10 +142,10 @@ const updateInvoiceItems = async (id, { items }) => {
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
             const unitPrice = item.unitPrice;
-            const lineTotal = unitPrice * item.quantity;
-            const baseQuantity = item.quantity * product.conversionFactor;
+            const lineTotal = Math.round((unitPrice * item.quantity) * 1000) / 1000;
+            const baseQuantity = Math.round((item.quantity * product.conversionFactor) * 1000) / 1000;
 
-            totalAmount += lineTotal;
+            totalAmount = Math.round((totalAmount + lineTotal) * 1000) / 1000;
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId: id,
                 productId: item.productId,
@@ -158,10 +159,10 @@ const updateInvoiceItems = async (id, { items }) => {
             });
 
         }
-
+        console.log(totalAmount)
         await invoiceModel.updateAmounts(transaction, id, {
             totalAmount,
-            finalAmount: totalAmount - totalDiscount
+            finalAmount: Math.round((totalAmount - totalDiscount) * 1000) / 1000
         });
 
         if (totalDiscount > 0) {
@@ -203,16 +204,16 @@ const cancelInvoice = async (id) => {
             "CANCELLED"
         );
 
-        // const existingPayment = await invoiceModel.getPaymentByInvoiceId(transaction, id);
+        const existingPayment = await invoiceModel.getPaymentByInvoiceId(transaction, id);
 
-        // if (existingPayment) {
-        //     await paymentModel.updatePayment(transaction, {
-        //         invoiceId: id,
-        //         amount: existingPayment.amount,
-        //         paymentMethod: existingPayment.paymentMethod,
-        //         status: "CANCELLED",
-        //     });
-        // }
+        if (existingPayment) {
+            await paymentModel.updatePayment(transaction, {
+                invoiceId: id,
+                amount: existingPayment.amount,
+                paymentMethod: existingPayment.paymentMethod,
+                status: "CANCELLED",
+            });
+        }
         return { cancelled: true };
 
     });
@@ -227,7 +228,8 @@ const getInvoiceDetail = async (id) => {
     const data = await invoiceModel.getInvoiceDetail(id);
     if (!data) throw new Error("Invoice not found");
     const totalAmount = data.items.reduce((total, item) => {
-        return total + Number(item.lineTotal || 0);
+        const lineTotal = Number(item.lineTotal || 0);
+        return Math.round((total + lineTotal) * 1000) / 1000;
     }, 0);
 
     return {
@@ -252,8 +254,7 @@ const getInvoiceDetail = async (id) => {
                 unitPrice: Number(item.unitPrice) || 0,
                 lineTotal: Number(item.lineTotal) || 0,
                 factor: factor,
-                quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1
-                )
+                quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
             };
         })
     };
