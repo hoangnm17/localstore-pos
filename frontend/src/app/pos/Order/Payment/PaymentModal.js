@@ -5,7 +5,6 @@ import PaymentMethodSelector from "./PaymentModal/PaymentMethodSelector";
 import CashPayment from "./PaymentModal/CashPayment";
 import BankPayment from "./PaymentModal/BankPayment";
 import OrderDiscount from "../Discount/OrderDiscount";
-import useHotkeys from "hooks/pos/useHotKeys";
 import useTitle from "hooks/common/useTitle";
 import { POS_HOTKEYS } from "config/HotKey";
 
@@ -14,12 +13,13 @@ export default function PaymentModal({
   total = 0,
   customer = null,
   qr = null,
-  onClose = () => {},
-  onConfirm = () => {},
-  onBankPaid = () => {},
-  onCancelBank = () => {},
+  onClose = () => { },
+  onConfirm = () => { },
+  onBankPaid = () => { },
+  onCancelBank = () => { },
 }) {
   useTitle("Thanh toán");
+
 
   const [method, setMethod] = useState("CASH");
   const [discount, setDiscount] = useState(null);
@@ -33,21 +33,24 @@ export default function PaymentModal({
 
   const finalAmount = safeDiscount.finalAmount ?? safeTotal;
 
-  useHotkeys({
-    [POS_HOTKEYS.CASH_PAY]: () => setMethod("CASH"),
-    [POS_HOTKEYS.BANK_PAY]: () => setMethod("BANK"),
-  });
-
   useEffect(() => {
     setInternalQr(null);
   }, [finalAmount]);
 
+  const [prevMethod, setPrevMethod] = useState("CASH");
+
   useEffect(() => {
-  if (method === "CASH") {
-    setInternalQr(null);
-    onCancelBank?.(orderId);
-  }
-}, [method]);
+    if (
+      prevMethod === "BANK" &&
+      method === "CASH" &&
+      internalQr
+    ) {
+      onCancelBank?.(orderId);
+      setInternalQr(null);
+    }
+
+    setPrevMethod(method);
+  }, [method, prevMethod, internalQr, orderId]);
 
   useEffect(() => {
     if (method !== "BANK" || internalQr || finalAmount <= 0) return;
@@ -105,6 +108,23 @@ export default function PaymentModal({
       discount: safeDiscount,
     });
   }, [onConfirm, orderId, finalAmount, safeDiscount]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName;
+      if (tag === "TEXTAREA") return;
+
+      if (safeTotal <= 0) return;
+
+      if (e.key === "F4") {
+        e.preventDefault();
+        setMethod((prev) => (prev === "CASH" ? "BANK" : "CASH"));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [safeTotal, onClose]);
 
   return (
     <BaseModal onClose={onClose}>

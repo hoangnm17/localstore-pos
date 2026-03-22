@@ -14,6 +14,9 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
 
   if (!invoice) return null;
 
+  // Tính toán số tiền giảm giá
+  const discountAmount = (invoice.totalAmount || 0) - (invoice.finalAmount || 0);
+
   return (
     <BaseModal onClose={onClose} maxWidth="420px">
       <style>{`
@@ -40,7 +43,7 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
         .item-table { width: 100%; margin-top: 10px; border-collapse: collapse; }
         .item-table th { text-align: left; font-size: 10px; border-bottom: 1px solid #000; padding-bottom: 5px; }
         .grand-total { font-size: 16px; font-weight: bold; margin-top: 8px; padding-top: 8px; border-top: 1.5px solid #000; }
-        .qr-mock { width: 80px; height: 80px; border: 1px solid #000; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+        .discount-row { color: #000; font-style: italic; }
       `}</style>
 
       <div className="bill-wrapper">
@@ -67,6 +70,7 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
             <div style={{fontSize: '10px', color: '#666'}}>Khách hàng:</div>
             <div className="fw-bold">{invoice.customerName || "Khách lẻ"}</div>
             {invoice.customerPhone && <div className="small">{invoice.customerPhone}</div>}
+            <div style={{fontSize: '9px', marginTop: '4px'}}>Thu ngân: {invoice.staffName}</div>
           </div>
 
           <table className="item-table">
@@ -93,24 +97,35 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
 
           <div className="divider"></div>
 
-          <div className="d-flex justify-content-between">
+          {/* CHI TIẾT THANH TOÁN */}
+          <div className="d-flex justify-content-between mb-1">
             <span>Tiền hàng:</span>
             <span>{formatCurrency(invoice.totalAmount)}</span>
           </div>
+
+          {/* CHỈ HIỆN NẾU CÓ GIẢM GIÁ */}
+          {discountAmount > 0 && (
+            <div className="d-flex justify-content-between mb-1 discount-row">
+              <span>Chiết khấu:</span>
+              <span>-{formatCurrency(discountAmount)}</span>
+            </div>
+          )}
+
           <div className="d-flex justify-content-between grand-total">
             <span>TỔNG CỘNG:</span>
             <span>{formatCurrency(invoice.finalAmount)}</span>
           </div>
 
           <div className="text-center mt-4">
-            <div className="fw-bold mt-2">CẢM ƠN QUÝ KHÁCH!</div>
+            <div className="fw-bold">CẢM ƠN QUÝ KHÁCH!</div>
+            <div style={{fontSize: '10px'}}>Hẹn gặp lại quý khách</div>
           </div>
         </div>
       </div>
 
       <div className="p-3 d-print-none text-center bg-white border-top">
          <button className="btn btn-primary fw-bold px-4 shadow-sm" onClick={() => window.print()}>
-           <i className="bi bi-printer me-2"></i>IN LẠI
+            <i className="bi bi-printer me-2"></i>IN LẠI
          </button>
          <button className="btn btn-light ms-2" onClick={onClose}>Đóng</button>
       </div>

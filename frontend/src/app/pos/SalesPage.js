@@ -8,6 +8,7 @@ import useTitle from "hooks/common/useTitle";
 import { useNavigate } from "react-router-dom";
 import { logout } from "services/Auth/auth.service";
 import { POS_HOTKEYS } from "config/HotKey";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 export default function SalesHome() {
   const {
@@ -35,6 +36,7 @@ export default function SalesHome() {
     calculateTotalQuantity,
   } = useOrderItems();
 
+  const { showNotification } = useNotification();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -50,22 +52,36 @@ export default function SalesHome() {
   const [focusSignal, setFocusSignal] = useState(0);
 
   const isModalOpen = openPaymentSignal > 0;
-  useHotkeys(
-    {
-      [POS_HOTKEYS.NEXT_INVOICE_TAB]: goToNextInvoice,
-      [POS_HOTKEYS.PREV_INVOICE_TAB]: goToPrevInvoice,
-      [POS_HOTKEYS.NEW_INVOICE_TAB]: createInvoiceTab,
-      [POS_HOTKEYS.CLOSE_INVOICE_TAB]: () => {
-        if (activeInvoiceId) closeTab(activeInvoiceId);
-      },
-      [POS_HOTKEYS.CLEAR_ACTIVE_ITEM]: () => setActiveItemId(null),
-      [POS_HOTKEYS.OPEN_PAYMENT]: () => {
-        if (!activeInvoice?.items?.length) return;
-        setOpenPaymentSignal((s) => s + 1);
-      },
-    },
-    { enabled: !isModalOpen }
-  );
+
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (e.key === "ArrowRight") goToNextInvoice();
+        else goToPrevInvoice();
+        return;
+      }
+
+      if (e.key === "F2") {
+        e.preventDefault();
+        createInvoiceTab();
+      }
+
+      if (e.ctrlKey && e.key === "Delete") {
+        e.preventDefault();
+        if (invoices.length > 1) {
+          closeTab(activeInvoiceId);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [invoices.length, activeInvoiceId, goToNextInvoice, goToPrevInvoice]);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -77,11 +93,33 @@ export default function SalesHome() {
 
   const handleAddItem = (product) => {
     if (!activeInvoice) return;
-    const result = addItem(activeInvoice.items, product);
+
+    const oldItems = activeInvoice.items;
+    const result = addItem(oldItems, product);
+
+    const affectedItem = result.items.find(
+      (it) => it.productId === Number(product.productId || product.id) &&
+        it.productUnitId === Number(product.productUnitId || product.selectedUnit?.unitId)
+    );
+
+    const oldItem = oldItems.find(
+      (it) => it.productId === Number(product.productId || product.id) &&
+        it.productUnitId === Number(product.productUnitId || product.selectedUnit?.unitId)
+    );
+
+    if (oldItem && affectedItem && affectedItem.quantity <= oldItem.quantity) {
+      showNotification(`Sản phẩm [${affectedItem.productName}] đã đạt giới hạn tồn kho!`, "warning");
+      return;
+    }
+
     updateInvoiceItems(activeInvoice.id, result.items);
     setActiveItemId(result.activeId);
-    setFocusSignal((prev) => prev + 1);
+
+    showNotification(`Đã thêm ${affectedItem?.productName || 'sản phẩm'}`, "success");
+
+    window.dispatchEvent(new Event("RE_FOCUS_SEARCH"));
   };
+
   const handleIncrease = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, increase(activeInvoice.items, id)); };
   const handleDecrease = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, decrease(activeInvoice.items, id)); };
   const handleRemove = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, remove(activeInvoice.items, id)); };
@@ -107,28 +145,26 @@ export default function SalesHome() {
   const total = calculateTotal(activeInvoice?.items || []);
   const totalQuantity = calculateTotalQuantity(activeInvoice?.items || []);
 
-  // MÀN HÌNH TRUY CẬP BỊ TỪ CHỐI
-  if (accessError) {
-    return (
-      <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-        <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
-          <i className="bi bi-exclamation-triangle-fill"></i>
-        </div>
-        <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
-        <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
-          {accessError}
-        </p>
-        <button
-          className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm"
-          onClick={() => window.location.href = '/my-schedule'}
-        >
-          <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
-        </button>
-      </div>
-    );
-  }
+  // if (accessError) {
+  //   return (
+  //     <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+  //       <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
+  //         <i className="bi bi-exclamation-triangle-fill"></i>
+  //       </div>
+  //       <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
+  //       <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
+  //         {accessError}
+  //       </p>
+  //       <button
+  //         className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm"
+  //         onClick={() => window.location.href = '/my-schedule'}
+  //       >
+  //         <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
-  // MÀN HÌNH ĐANG TẢI
   if (!activeInvoice) {
     return (
       <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-white">
@@ -168,7 +204,6 @@ export default function SalesHome() {
           </button>
         </div>
 
-        {/* USER MENU */}
         <div className="ms-auto position-relative" ref={menuRef}>
           <button className={`btn border-0 d-flex align-items-center gap-2 px-3 py-2 rounded-3 ${showMenu ? "bg-primary-subtle" : ""}`} onClick={() => setShowMenu(!showMenu)}>
             <div className="text-end d-none d-sm-block">
@@ -197,9 +232,7 @@ export default function SalesHome() {
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA */}
       <main className="d-flex flex-grow-1 overflow-hidden">
-        {/* SIDEBAR ORDER (40%) */}
         <aside className="d-flex flex-column border-end bg-white glass-effect shadow-sm" style={{ flex: "0 0 40%", zIndex: 5 }}>
           <Order
             key={activeInvoice.id}
@@ -222,9 +255,12 @@ export default function SalesHome() {
           />
         </aside>
 
-        {/* PRODUCT GRID (60%) */}
         <section className="d-flex flex-column bg-light" style={{ flex: "0 0 60%" }}>
-          <Product addItem={handleAddItem} focusSignal={focusSignal} />
+          <Product
+            addItem={handleAddItem}
+            invoiceId={activeInvoiceId}
+            isModalOpen={isModalOpen}
+          />
         </section>
       </main>
 

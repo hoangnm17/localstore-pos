@@ -13,6 +13,20 @@ export const getProducts = async ({ page = 1, limit = 20, search = '', status = 
   });
 };
 
+export const getBarcodeProducts = async ({ page = 1, limit = 20, search = '', status = 'Selling', categoryId = null } = {}) => {
+  const params = { page, limit, status };
+  if (search) params.search = search;
+  if (categoryId) params.categoryId = categoryId;
+  const res = await api.get('/products/pos/barcode', {
+    params,
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
+  });
+  return res.data
+};
+
 export const getProduct = async (id) => api.get(`/products/${id}`);
 export const createProduct = async (payload) => api.post('/products', payload);
 export const updateProduct = async (id, payload) => api.put(`/products/${id}`, payload);
