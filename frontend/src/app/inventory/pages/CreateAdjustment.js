@@ -49,11 +49,12 @@ const CreateAdjustment = () => {
       const isInPending = res.data.data.isInPending;
 
       if (isInPending) {
-        const confirmAdd = window.confirm(
-          `Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn có chắc muốn thêm không?`
-        );
+        // const confirmAdd = window.confirm(
+        //   `Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn có chắc muốn thêm không?`
+        // );
+        alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`)
 
-        if (!confirmAdd) 
+        // if (!confirmAdd) 
         return;                                                                 
       } 
 
@@ -295,22 +296,24 @@ const CreateAdjustment = () => {
                   className="list-group mt-3"
                   style={{ maxHeight: 300, overflowY: "auto" }}
                 >
-                  {searchResults.map((item) => (
-                    <button
-                      key={item.id}
-                      className="list-group-item list-group-item-action d-flex justify-content-between"
-                      onClick={() => handleAddProduct(item)}
-                    >
-                      <div>
-                        <div className="fw-bold">{item.name}</div>
-                        <small className="text-muted">
-                          Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
-                        </small>
-                      </div>
+                  {searchResults
+                    .filter(item => !adjustmentItems.some(i => i.id === item.id))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        className="list-group-item list-group-item-action d-flex justify-content-between"
+                        onClick={() => handleAddProduct(item)}
+                      >
+                        <div>
+                          <div className="fw-bold">{item.name}</div>
+                          <small className="text-muted">
+                            Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
+                          </small>
+                        </div>
 
-                      <span className="badge bg-primary">Thêm</span>
-                    </button>
-                  ))}
+                        <span className="badge bg-primary">Thêm</span>
+                      </button>
+                    ))}
                 </div>
               )}
             </div>
