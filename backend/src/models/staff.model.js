@@ -137,10 +137,8 @@ module.exports.update = async (id, data) => {
             .query("SELECT userId FROM Staff WHERE id = @sid");
         const userId = staffRes.recordset[0].userId;
         let passwordUpdateSQL = "";
-        if (data.newPassword && data.newPassword.trim() !== "") {
-            const bcrypt = require("bcryptjs");
-            const hashedPassword = await bcrypt.hash(data.newPassword, 10);
-            request.input('ph', sql.VarChar, hashedPassword);
+        if (data.hashedPassword) {
+            request.input('ph', sql.VarChar, data.hashedPassword);
             passwordUpdateSQL = ", passwordHash = @ph";
         }
 
@@ -176,14 +174,6 @@ module.exports.getStaffByPhone = async (phone) => {
     return result.recordset[0];
 };
 
-module.exports.getStaffByFullName = async (fullName) => {
-    const pool = await connectDB();
-    const result = await pool.request()
-        .input('fn', sql.NVarChar, fullName)
-        .query("SELECT id FROM Staff WHERE fullName = @fn");
-    return result.recordset[0];
-};
-
 module.exports.getStaffByEmail = async (email) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -203,14 +193,37 @@ module.exports.getStaffByUsername = async (username) => {
         `);
     return result.recordset[0];
 };
-module.exports.getStaffByEmailForUpdate = async (email) => {
+module.exports.getStaffByEmailForUpdate = async (email, currentStaffId) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('em', sql.VarChar, email)
-        .query("SELECT id FROM Staff WHERE email = @em");
+        .input('id', sql.BigInt, parseInt(currentStaffId))
+        .query("SELECT id FROM Staff WHERE email = @em AND id != @id");
     return result.recordset[0];
 };
 
+module.exports.getStaffByPhoneForUpdate = async (phone, currentStaffId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('p', sql.VarChar, phone)
+        .input('id', sql.BigInt, parseInt(currentStaffId))
+        .query("SELECT id FROM Staff WHERE phoneNumber = @p AND id != @id");
+    return result.recordset[0];
+};
+
+module.exports.getStaffByUsernameForUpdate = async (username, currentStaffId) => {
+    const pool = await connectDB();
+    const staffRes = await pool.request()
+        .input('sid', sql.BigInt, parseInt(currentStaffId))
+        .query("SELECT userId FROM Staff WHERE id = @sid");
+    const currentUserId = staffRes.recordset[0].userId;
+
+    const result = await pool.request()
+        .input('un', sql.VarChar, username)
+        .input('uid', sql.Int, parseInt(currentUserId))
+        .query("SELECT id FROM Users WHERE username = @un AND id != @uid");
+    return result.recordset[0];
+};
 module.exports.getStaffByUserId = async (userId) => {
     const pool = await connectDB();
     const result = await pool.request()
