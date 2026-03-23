@@ -92,10 +92,13 @@ exports.assembleCombo = async (productId, quantity) => {
         return await comboModel.assembleCombo(productId, qty);
     } catch (err) {
         if (err.message?.startsWith('INSUFFICIENT_STOCK:')) {
-            const [, childId, needed, available] = err.message.split(':');
-            throw new Error(
-                `Không đủ tồn kho sản phẩm con (id: ${childId}). Cần ${needed}, hiện có ${available}.`
-            );
+            const match = err.message.match(/^INSUFFICIENT_STOCK:\d+:(.+):([\.\d]+):([\.\d]+)$/);
+            if (match) {
+                const [, childName, needed, available] = match;
+                throw new Error(
+                    `Không đủ tồn kho sản phẩm con "${childName}". Cần ${needed}, hiện có ${available}.`
+                );
+            }
         }
         throw err;
     }
@@ -104,7 +107,7 @@ exports.assembleCombo = async (productId, quantity) => {
 exports.updateComboStock = async (productId, newQuantity) => {
     const qty = Number(newQuantity);
     if (Number.isNaN(qty) || qty < 0) {
-        throw new Error('Số lượng tồn kho không hợp lệ.');
+        throw new Error('Số lượng tồn kho không được nhỏ hơn 0.');
     }
 
     const parent = await productModel.getProductById(productId);
@@ -115,10 +118,13 @@ exports.updateComboStock = async (productId, newQuantity) => {
         return await comboModel.updateComboStock(productId, qty);
     } catch (err) {
         if (err.message?.startsWith('INSUFFICIENT_STOCK:')) {
-            const [, childId, needed, available] = err.message.split(':');
-            throw new Error(
-                `Không đủ tồn kho sản phẩm con (id: ${childId}). Cần ${needed}, hiện có ${available}.`
-            );
+            const match = err.message.match(/^INSUFFICIENT_STOCK:\d+:(.+):([\.\d]+):([\.\d]+)$/);
+            if (match) {
+                const [, childName, needed, available] = match;
+                throw new Error(
+                    `Không đủ tồn kho sản phẩm con "${childName}". Cần ${needed}, hiện có ${available}.`
+                );
+            }
         }
         throw err;
     }

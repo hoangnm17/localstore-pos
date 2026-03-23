@@ -52,7 +52,7 @@ const Sidebar = () => {
             title: 'Sản phẩm', icon: 'bi-box-fill', id: 'products',
             roles: ['Manager', 'Warehouse'],
             children: [
-                { title: 'Danh mục sản phẩm', path: '/categories' },
+                { title: 'Danh mục sản phẩm', path: '/categories/list' },
                 { title: 'Danh sách sản phẩm', path: '/products/list' }
             ]
         },
