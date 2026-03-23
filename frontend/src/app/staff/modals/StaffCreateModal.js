@@ -7,10 +7,10 @@ import api from '../../../services/axiosInstance';
 const StaffCreateModal = ({ onClose, onSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    
-    const [errors, setErrors] = useState({}); 
+
+    const [errors, setErrors] = useState({});
     const [errorMsg, setErrorMsg] = useState('');
-    
+
     const { showNotification } = useNotification();
     const [roleList, setRoleList] = useState([]);
 
@@ -36,16 +36,27 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     }, []);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === "baseSalary") {
+            let pureNumber = value.replace(/\D/g, "");
+            if (!pureNumber) {
+                setFormData({ ...formData, baseSalary: "" });
+            } else {
+                let formatted = Number(pureNumber).toLocaleString("vi-VN");
+                setFormData({ ...formData, baseSalary: formatted });
+            }
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
         setErrors(prev => ({ ...prev, [e.target.name]: '' }));
         setErrorMsg('');
     };
 
     const validateForm = () => {
-        const e = {}; 
-        const nameRegex    = /^[\p{L}]+([\s\p{L}]+)*$/u;
-        const emailRegex   = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-        const phoneRegex   = /^0[35789][0-9]{8}$/;
+        const e = {};
+        const nameRegex = /^[\p{L}]+([\s\p{L}]+)*$/u;
+        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        const phoneRegex = /^0[35789][0-9]{8}$/;
         const usernameRegex = /^[a-zA-Z0-9_]{4,30}$/;
 
         const name = formData.fullName.trim();
@@ -64,9 +75,9 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         if (!formData.roleId) e.roleId = 'Vui lòng chọn vai trò!';
         if (!formData.createdAt) e.createdAt = 'Vui lòng chọn ngày vào làm!';
 
-        const salary = Number(formData.baseSalary);
-        if (isNaN(salary) || salary < 0) e.baseSalary = 'Lương cơ bản không được âm!';
-        else if (salary > 100_000_000) e.baseSalary = 'Lương cơ bản tối đa 100 triệu!';
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        if (isNaN(pureSalary) || pureSalary < 0) e.baseSalary = 'Lương cơ bản không hợp lệ!';
+        else if (pureSalary > 100000000) e.baseSalary = 'Lương cơ bản tối đa 100 triệu!';
 
         const un = formData.username.trim();
         if (!un) e.username = 'Tên đăng nhập không được để trống!';
@@ -75,18 +86,20 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         if (!formData.password || formData.password.length < 6) e.password = 'Mật khẩu phải từ 6 ký tự trở lên!';
 
         setErrors(e);
-        return Object.keys(e).length === 0; 
+        return Object.keys(e).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        if (!validateForm()) return; 
+
+        if (!validateForm()) return;
 
         setLoading(true);
         setErrorMsg('');
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        const payloadToSend = { ...formData, baseSalary: pureSalary };
         try {
-            const res = await api.post('/staff', formData);
+            const res = await api.post('/staff', payloadToSend);
             if (res.data?.success) {
                 showNotification('Tạo nhân viên thành công!', 'success');
                 onSuccess();
@@ -94,13 +107,18 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
             }
             setErrorMsg(res.message ?? res.data?.message ?? 'Đã có lỗi xảy ra!');
         } catch (error) {
-            setErrorMsg(error.response?.data?.message || error.message || 'Không thể kết nối tới server!');
+            console.log("CHI TIẾT LỖI TỪ API MÀN TẠO MỚI:", error);
+            const serverMsg = error?.response?.data?.message
+                || error?.data?.message
+                || error?.message
+                || 'Không thể kết nối tới server!';
+            setErrorMsg(serverMsg);
         } finally {
             setLoading(false);
         }
     };
 
-    const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
+    const leftStyle = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
     const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0' };
 
     return (
@@ -129,31 +147,31 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                     <h6 className="fw-bold text-primary mb-3">
                                         <i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân
                                     </h6>
-                                    
+
                                     <div className="mb-3">
                                         <label className="small fw-bold">Họ và tên <span className="text-danger">*</span></label>
-                                        <input type="text" name="fullName" 
+                                        <input type="text" name="fullName"
                                             className={`form-control ${errors.fullName ? 'is-invalid' : ''}`}
                                             placeholder="Nguyễn Văn A" onChange={handleChange} />
                                         {errors.fullName && <div className="invalid-feedback">{errors.fullName}</div>}
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Email liên lạc <span className="text-danger">*</span></label>
-                                        <input type="email" name="email" 
+                                        <input type="email" name="email"
                                             className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                                             placeholder="abc@gmail.com" onChange={handleChange} />
                                         {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Số điện thoại <span className="text-danger">*</span></label>
-                                        <input type="text" name="phoneNumber" 
+                                        <input type="text" name="phoneNumber"
                                             className={`form-control ${errors.phoneNumber ? 'is-invalid' : ''}`}
                                             placeholder="0901234567" maxLength={11} onChange={handleChange} />
                                         {errors.phoneNumber && <div className="invalid-feedback">{errors.phoneNumber}</div>}
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Ngày vào làm</label>
-                                        <input type="date" name="createdAt" 
+                                        <input type="date" name="createdAt"
                                             className={`form-control ${errors.createdAt ? 'is-invalid' : ''}`}
                                             value={formData.createdAt} onChange={handleChange} />
                                         {errors.createdAt && <div className="invalid-feedback">{errors.createdAt}</div>}
@@ -168,8 +186,8 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                     <div className="row">
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
-                                            <select name="roleId" 
-                                                className={`form-select ${errors.roleId ? 'is-invalid' : ''}`} 
+                                            <select name="roleId"
+                                                className={`form-select ${errors.roleId ? 'is-invalid' : ''}`}
                                                 onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
                                                 {roleList.map(role => (
@@ -196,9 +214,9 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Lương cơ bản (VNĐ)</label>
-                                            <input type="number" name="baseSalary" 
+                                            <input type="text" name="baseSalary"
                                                 className={`form-control ${errors.baseSalary ? 'is-invalid' : ''}`}
-                                                min="0" max="100000000" placeholder="0" onChange={handleChange} />
+                                                value={formData.baseSalary} onChange={handleChange} />
                                             {errors.baseSalary && <div className="invalid-feedback">{errors.baseSalary}</div>}
                                         </div>
                                     </div>
@@ -206,11 +224,11 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                         <label className="small fw-bold">
                                             Tên đăng nhập <span className="text-danger">*</span>
                                         </label>
-                                        <input type="text" name="username" 
+                                        <input type="text" name="username"
                                             className={`form-control ${errors.username ? 'is-invalid' : ''}`}
                                             placeholder="VD: nhanvien01" onChange={handleChange} />
-                                        {errors.username 
-                                            ? <div className="invalid-feedback">{errors.username}</div> 
+                                        {errors.username
+                                            ? <div className="invalid-feedback">{errors.username}</div>
                                             : <small className="text-muted">4-30 ký tự, chỉ a-z, 0-9, dấu _</small>
                                         }
                                     </div>
@@ -218,7 +236,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                         <label className="small fw-bold">Mật khẩu <span className="text-danger">*</span></label>
                                         <div className="input-group">
                                             <input type={showPassword ? 'text' : 'password'}
-                                                name="password" 
+                                                name="password"
                                                 className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                                                 placeholder="Tối thiểu 6 ký tự" onChange={handleChange} />
                                             <button className="btn btn-outline-secondary" type="button"

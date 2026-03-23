@@ -47,7 +47,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                         phoneNumber: s.phoneNumber || '',
                         roleId: s.roleId?.toString() || '',
                         salaryType: s.salaryType || 'hourly',
-                        baseSalary: s.baseSalary || 0,
+                        baseSalary: s.baseSalary ? Number(s.baseSalary).toLocaleString("vi-VN") : "",
                         isActive: s.isActive || 'active',
                         employmentStatus: s.employmentStatus || 'working',
                         createdAt: s.createdAt ? s.createdAt.split('T')[0] : '',
@@ -63,13 +63,24 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     }, [staffId]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === "baseSalary") {
+            let pureNumber = value.replace(/\D/g, "");
+            if (!pureNumber) {
+                setFormData({ ...formData, baseSalary: "" });
+            } else {
+                let formatted = Number(pureNumber).toLocaleString("vi-VN");
+                setFormData({ ...formData, baseSalary: formatted });
+            }
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
         setErrorMsg('');
     };
 
     const validate = () => {
-        const nameRegex     = /^[\p{L}]+([\s\p{L}]+)*$/u;
-        const phoneRegex    = /^0[35789][0-9]{8}$/;
+        const nameRegex = /^[\p{L}]+([\s\p{L}]+)*$/u;
+        const phoneRegex = /^0[35789][0-9]{8}$/;
         const usernameRegex = /^[a-zA-Z0-9_]{4,30}$/;
 
         if (originalData) {
@@ -89,9 +100,9 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
         if (!formData.roleId) return { msg: 'Vui lòng chọn vai trò!', type: 'danger' };
         if (!formData.createdAt) return { msg: 'Vui lòng chọn ngày vào làm!', type: 'danger' };
 
-        const salary = Number(formData.baseSalary);
-        if (isNaN(salary) || salary < 0) return { msg: 'Lương cơ bản không được âm!', type: 'danger' };
-        if (salary > 100_000_000) return { msg: 'Lương cơ bản không hợp lệ (tối đa 100 triệu)!', type: 'danger' };
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        if (isNaN(pureSalary) || pureSalary < 0) return { msg: 'Lương cơ bản không được âm!', type: 'danger' };
+        if (pureSalary > 100000000) return { msg: 'Lương cơ bản không hợp lệ (tối đa 100 triệu)!', type: 'danger' };
 
         const un = formData.username?.trim();
         if (!un) return { msg: 'Tên đăng nhập không được để trống!', type: 'danger' };
@@ -106,12 +117,16 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const err = validate();
-        if (err) { setErrorType(err.type); return setErrorMsg(err.msg); }
-
+        if (err) {
+            setErrorType(err.type);
+            return setErrorMsg(err.msg);
+        }
         setSaving(true);
         setErrorMsg('');
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        const payloadToSend = { ...formData, id: staffId, baseSalary: pureSalary };
         try {
-            const res = await api.put(`/staff/update`, { id: staffId, ...formData });
+            const res = await api.put(`/staff/update`, payloadToSend);
             if (res.data?.success) {
                 showNotification('Cập nhật thông tin nhân viên thành công!', 'success');
                 onSuccess();
@@ -119,11 +134,22 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
             }
             setErrorType('danger');
             setErrorMsg(res.message ?? res.data?.message ?? 'Cập nhật thất bại!');
-        } catch { setErrorMsg('Không thể kết nối tới server!'); }
-        finally { setSaving(false); }
-    };
+        } catch (error) {
+            console.log("CHI TIẾT LỖI TỪ API:", error);
 
-    const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
+            const serverMsg = error?.response?.data?.message
+                || error?.data?.message
+                || error?.message
+                || 'Không thể kết nối tới server!';
+
+            setErrorMsg(serverMsg);
+            setErrorType('danger');
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const leftStyle = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
     const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0' };
 
     if (loading) return (
@@ -225,8 +251,8 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Lương cơ bản</label>
-                                            <input type="number" name="baseSalary" className="form-control"
-                                                value={formData.baseSalary} min="0" max="100000000" onChange={handleChange} />
+                                            <input type="text" name="baseSalary" className="form-control"
+                                                value={formData.baseSalary} placeholder="12.000" onChange={handleChange} />
                                         </div>
                                     </div>
                                     <div className="mb-3">
