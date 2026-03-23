@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import CustomerCreateModal from "app/pos/Order/Customer/CustomerCreateModal";
 import { useCustomerSearch } from "hooks/pos/useCustomerSearch";
-import useHotkeys from "hooks/pos/useHotKeys";
 import { POS_HOTKEYS } from "config/HotKey";
 
 export default function CustomerSearch({
@@ -17,17 +16,6 @@ export default function CustomerSearch({
   useEffect(() => {
     setPhone("");
   }, [invoiceId]);
-
-  useHotkeys({
-    [POS_HOTKEYS.SEARCH_CUSTOMER]: () => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    },
-
-    [POS_HOTKEYS.CREATE_CUSTOMER]: () => {
-      setShowCreate(true);
-    }
-  });
 
   const handlePhoneChange = (e) => {
     const value = e.target.value;
@@ -71,6 +59,20 @@ export default function CustomerSearch({
                 value={phone}
                 onChange={handlePhoneChange}
                 maxLength={11}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (result.length > 0) {
+                      handleSelectCustomer(result[0]);
+                    } else if (phone.length >= 6) {
+                      setShowCreate(true);
+                    }
+                  }
+
+                  if (e.key === "Escape") {
+                    onSelectCustomer(null);
+                    setPhone("");
+                  }
+                }}
               />
               {loading && (
                 <div className="spinner-border spinner-border-sm loader" />

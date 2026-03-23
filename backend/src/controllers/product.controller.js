@@ -102,6 +102,34 @@ exports.getProductWithBarcode = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
     try {
+        const filters = {
+            page: Number(req.query.page) || 1,
+            pageSize: Number(req.query.limit) || 20,
+            search: req.query.search || null,
+            status: req.query.status || 'Selling',
+            categoryId: req.query.categoryId ? Number(req.query.categoryId) : null
+        };
+
+        // Service bây giờ trả về { success, data, pagination }
+        const result = await productService.getAllProducts(filters);
+
+        // Trải kết quả ra response JSON
+        res.status(200).json({
+            success: true,
+            data: result.data,             // Danh sách sản phẩm
+            pagination: result.pagination  // Thông tin số trang, tổng record
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+exports.getBarcodeProducts = async (req, res) => {
+    try {
 
         const filters = {
             page: Number(req.query.page) || 1,
@@ -113,7 +141,7 @@ exports.getAllProducts = async (req, res) => {
                 : null
         };
 
-        const data = await productService.getAllProducts(filters);
+        const data = await productService.getBarcodeProducts(filters);
 
         res.status(200).json({
             success: true,

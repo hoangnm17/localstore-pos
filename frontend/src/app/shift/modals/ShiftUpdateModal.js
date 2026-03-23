@@ -118,15 +118,29 @@ const getDiff = (m1, m2) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const isChanged = 
+      form.name !== (shift.name || '') ||
+      form.startTime !== (shift.startTime || '') ||
+      form.endTime !== (shift.endTime || '') ||
+      form.checkInStart !== (shift.checkInStart || '') ||
+      form.checkInEnd !== (shift.checkInEnd || '') ||
+      form.checkOutDeadline !== (shift.checkOutDeadline || '');
+
+      if (!isChanged) {
+      setErrorMsg('Bạn chưa chỉnh sửa thông tin nào!');
+      return; 
+    }
+
     if (!validate()) return;
     setLoading(true);
     setErrorMsg('');
     try {
       const payload = {
         ...form,
-        checkInStart:     form.checkInStart     || null,
-        checkInEnd:       form.checkInEnd       || null,
-        checkOutDeadline: form.checkOutDeadline || null,
+        checkInStart:form.checkInStart || null,
+        checkInEnd:form.checkInEnd || null,
+        checkOutDeadline:form.checkOutDeadline || null,
       };
       const res = await api.put(`/shifts/${shift.id}`, payload);
 

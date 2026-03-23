@@ -6,6 +6,7 @@ const { protect } = require('../middlewares/protect.middleware');
 const PERMISSIONS = require('../constants/permissions');
 
 router.get('/pos', protect(PERMISSIONS.SELL_POS), productController.getAllProducts);
+router.get("/pos/barcode", protect(PERMISSIONS.SELL_POS), productController.getBarcodeProducts)
 router.get('/', protect(PERMISSIONS.VIEW_PRODUCT), productController.getProducts);
 router.get('/:id', protect(PERMISSIONS.VIEW_PRODUCT), productController.getProductById);
 router.post('/', protect(PERMISSIONS.CREATE_PRODUCT), productController.createProduct);
@@ -20,5 +21,6 @@ router.post('/:productId/combos', protect(PERMISSIONS.UPDATE_PRODUCT), comboCont
 router.post('/:productId/combos/assemble', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.assembleCombo);
 router.patch('/:productId/combos/stock', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.updateComboStock);
 router.delete('/:productId/combos/:comboItemId', protect(PERMISSIONS.UPDATE_PRODUCT), comboController.removeComboItem);
+
 
 module.exports = router;

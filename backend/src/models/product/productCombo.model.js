@@ -82,9 +82,11 @@ exports.assembleCombo = async (productId, quantity) => {
             .query(`
                 SELECT
                     pc.childProductId,
+                    p.name AS childProductName,
                     pc.quantity AS requiredQtyPerCombo,
                     ISNULL(s.quantityOnHand, 0) AS currentStock
                 FROM ProductCombos pc
+                JOIN Products p ON p.id = pc.childProductId
                 LEFT JOIN InventoryStocks s ON s.productId = pc.childProductId
                 WHERE pc.parentProductId = @productId
             `);
@@ -98,7 +100,7 @@ exports.assembleCombo = async (productId, quantity) => {
         for (const child of children) {
             const needed = Number(child.requiredQtyPerCombo) * quantity;
             if (Number(child.currentStock) < needed) {
-                throw new Error(`INSUFFICIENT_STOCK:${child.childProductId}:${needed}:${child.currentStock}`);
+                throw new Error(`INSUFFICIENT_STOCK:${child.childProductId}:${child.childProductName}:${needed}:${child.currentStock}`);
             }
         }
 
@@ -154,11 +156,11 @@ exports.updateComboStock = async (productId, newQuantity) => {
             `);
 
         const currentStock = Number(currentStockResult.recordset[0]?.quantityOnHand || 0);
-        const diff = newQuantity - currentStock; // dương = tăng, âm = giảm
+        const diff = newQuantity - currentStock;
 
         if (Math.abs(diff) < 0.001) {
             await transaction.rollback();
-            return true; // không có gì thay đổi
+            return true;
         }
 
         // Lấy danh sách SP con
@@ -167,9 +169,11 @@ exports.updateComboStock = async (productId, newQuantity) => {
             .query(`
                 SELECT
                     pc.childProductId,
+                    p.name AS childProductName,
                     pc.quantity AS qtyPerCombo,
                     ISNULL(s.quantityOnHand, 0) AS currentStock
                 FROM ProductCombos pc
+                JOIN Products p ON p.id = pc.childProductId
                 LEFT JOIN InventoryStocks s ON s.productId = pc.childProductId
                 WHERE pc.parentProductId = @productId
             `);
@@ -185,14 +189,14 @@ exports.updateComboStock = async (productId, newQuantity) => {
             for (const child of children) {
                 const needed = Number(child.qtyPerCombo) * diff;
                 if (Number(child.currentStock) < needed) {
-                    throw new Error(`INSUFFICIENT_STOCK:${child.childProductId}:${needed}:${child.currentStock}`);
+                    throw new Error(`INSUFFICIENT_STOCK:${child.childProductId}:${child.childProductName}:${needed}:${child.currentStock}`);
                 }
             }
         }
 
         // Điều chỉnh tồn kho SP con theo chiều chênh lệch
         for (const child of children) {
-            const adjustQty = Number(child.qtyPerCombo) * diff; // dương = trừ, âm = cộng lại
+            const adjustQty = Number(child.qtyPerCombo) * diff;
             await new sql.Request(transaction)
                 .input('childProductId', sql.BigInt, child.childProductId)
                 .input('adjustQty', sql.Decimal(15, 3), adjustQty)

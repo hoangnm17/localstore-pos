@@ -44,15 +44,15 @@ const Sidebar = () => {
             title: 'Kho Hàng', icon: 'bi-box-seam-fill', id: 'inventory',
             roles: ['Manager', 'Warehouse'],
             children: [
-                { title: 'Quản lý kho', path: '/inventory/menu'},
+                { title: 'Quản lý kho', path: '/inventory/menu' },
                 { title: 'Nhập kho hàng hoàn trả', path: '/return-items' }
             ]
         },
         {
             title: 'Sản phẩm', icon: 'bi-box-fill', id: 'products',
-            roles: ['Manager','Warehouse'],
+            roles: ['Manager', 'Warehouse'],
             children: [
-                { title: 'Danh mục sản phẩm', path: '/categories' },
+                { title: 'Danh mục sản phẩm', path: '/categories/list' },
                 { title: 'Danh sách sản phẩm', path: '/products/list' }
             ]
         },
@@ -77,12 +77,12 @@ const Sidebar = () => {
             title: 'Báo Cáo', icon: 'bi-bar-chart-line-fill', id: 'reports',
             roles: ['Manager'],
             children: [{ title: 'Báo cáo lương', path: '/salary' },
-                { title: 'Báo cáo bàn giao tiền', path: '/handover-report' },
+            { title: 'Báo cáo bàn giao tiền', path: '/handover-report' },
             ]
         },
         {
             title: 'Lịch Của Tôi', icon: 'bi-calendar-week-fill', path: '/my-schedule',
-            roles: ['Cashier','Manager'] 
+            roles: ['Cashier', 'Manager']
         }
     ];
 

@@ -23,17 +23,6 @@ function ProductPriceHistoryModal({ open, loading, product, histories, onClose }
             width="1100px"
             onClose={onClose}
         >
-            <div className="d-flex flex-wrap gap-2 mb-3">
-                <button
-                    type="button"
-                    className={`btn ${tab === 'sale' ? 'btn-primary' : 'btn-outline-primary'}`}
-                    onClick={() => setTab('sale')}
-                >
-                    <i className="bi bi-cash-coin me-2" />
-                    Lịch sử giá bán
-                </button>
-            </div>
-
             {loading ? (
                 <div className="text-center py-4">Đang tải lịch sử giá...</div>
             ) : tab === 'sale' ? (

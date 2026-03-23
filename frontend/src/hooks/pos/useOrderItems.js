@@ -17,7 +17,7 @@ export const useOrderItems = () => {
         p.id === existed.id
           ? {
             ...p,
-            quantity: Math.min(safeParse(p.quantity) + 1, maxQty)
+            quantity: Math.min(Math.round((safeParse(p.quantity) + 1) * 1000) / 1000, maxQty)
           }
           : p
       );
@@ -26,6 +26,12 @@ export const useOrderItems = () => {
         activeId: existed.id
       };
     }
+
+    let qty = 1;
+    if (product.unitType === "WEIGHT") {
+      qty = product.quantityOnHand < 1 ? product.quantityOnHand : 1; 
+    }
+
     const newItem = {
       id: crypto.randomUUID(),
       productId: Number(product.productId),
@@ -33,7 +39,7 @@ export const useOrderItems = () => {
       productUnitId: product.productUnitId,
       unitPrice: product.unitPrice,
       unitName: product.unitName,
-      quantity: 1,
+      quantity: qty,
       quantityOnHand: product.quantityOnHand,
       factor: product.factor,
       unitType: product.unitType,
@@ -89,10 +95,11 @@ export const useOrderItems = () => {
     );
 
   const calculateTotalQuantity = (items = []) => {
-    return items.reduce(
+    const total = items.reduce(
       (sum, item) => sum + safeParse(item.quantity),
       0
     );
+    return Math.round(total * 1000) / 1000;
   };
 
   return {
