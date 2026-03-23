@@ -9,6 +9,22 @@ export default function BaseModal({
   closeOnOverlay = true,
   disableClose = false,
 }) {
+
+  useEffect(() => {
+    // 1. Khi Modal vừa xuất hiện (Mount): Tăng biến đếm modal toàn cục
+    window.isModalOpen = (window.isModalOpen || 0) + 1;
+
+    return () => {
+      // 2. Khi Modal đóng (Unmount): Giảm biến đếm
+      window.isModalOpen = Math.max(0, (window.isModalOpen || 0) - 1);
+
+      // 3. Nếu không còn Modal nào đang mở trên màn hình, báo cho FilterBar biết
+      if (window.isModalOpen === 0) {
+        window.dispatchEvent(new Event("RE_FOCUS_SEARCH"));
+      }
+    };
+  }, []);
+  
   useEffect(() => {
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";

@@ -95,9 +95,31 @@ const getAdjustmentDetail = async (req, res) => {
     }
 };
 
+const checkProduct = async (req, res) => {
+    try {
+        const { productId } = req.query;
+
+        const exists = await inventoryAdjustmentService.checkProductInPending(productId);
+
+        return res.json({
+            success: true,
+            data: {
+                isInPending: exists
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     createAdjustment,
     updateStatus,
     getAdjustments,
-    getAdjustmentDetail
+    getAdjustmentDetail,
+    checkProduct
 };

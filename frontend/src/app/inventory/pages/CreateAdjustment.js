@@ -39,22 +39,42 @@ const CreateAdjustment = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }; 
 
-  const handleAddProduct = (product) => {
+  const handleAddProduct = async (product) => {
     if (adjustmentItems.some((i) => i.id === product.id)) return;
 
-    setAdjustmentItems([
-      ...adjustmentItems,
-      {
-        ...product,
-        actualLargest: product.systemLargest.toString(),
-        actualRemainder: product.systemRemainder.toString(),
-      },
-    ]);
+    try {
+      const res = await adjustmentService.checkProductConflict(product.id);
+      const isInPending = res.data.data.isInPending;
 
-    setKeyword("");
-    setShowSearchResults(false);
+      if (isInPending) {
+        // const confirmAdd = window.confirm(
+        //   `Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn có chắc muốn thêm không?`
+        // );
+        alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`)
+
+        // if (!confirmAdd) 
+        return;                                                                 
+      } 
+
+      setAdjustmentItems((prev) => [
+        ...prev,
+        {
+          ...product,
+          actualLargest: product.systemLargest.toString(),
+          actualRemainder: product.systemRemainder.toString(),
+          isConflict: isInPending 
+        },
+      ]);
+
+      setKeyword("");
+      setShowSearchResults(false);
+
+    } catch (err) {
+      console.error(err);
+      alert("Không kiểm tra được trạng thái sản phẩm");
+    }
   };
 
   const handleLargestChange = (id, e) => {
@@ -276,22 +296,24 @@ const CreateAdjustment = () => {
                   className="list-group mt-3"
                   style={{ maxHeight: 300, overflowY: "auto" }}
                 >
-                  {searchResults.map((item) => (
-                    <button
-                      key={item.id}
-                      className="list-group-item list-group-item-action d-flex justify-content-between"
-                      onClick={() => handleAddProduct(item)}
-                    >
-                      <div>
-                        <div className="fw-bold">{item.name}</div>
-                        <small className="text-muted">
-                          Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
-                        </small>
-                      </div>
+                  {searchResults
+                    .filter(item => !adjustmentItems.some(i => i.id === item.id))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        className="list-group-item list-group-item-action d-flex justify-content-between"
+                        onClick={() => handleAddProduct(item)}
+                      >
+                        <div>
+                          <div className="fw-bold">{item.name}</div>
+                          <small className="text-muted">
+                            Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
+                          </small>
+                        </div>
 
-                      <span className="badge bg-primary">Thêm</span>
-                    </button>
-                  ))}
+                        <span className="badge bg-primary">Thêm</span>
+                      </button>
+                    ))}
                 </div>
               )}
             </div>
@@ -392,10 +414,10 @@ const CreateAdjustment = () => {
 
                             <span
                               className={`badge ${diff > 0
-                                  ? "bg-success"
-                                  : diff < 0
-                                    ? "bg-danger"
-                                    : "bg-secondary"
+                                ? "bg-success"
+                                : diff < 0
+                                  ? "bg-danger"
+                                  : "bg-secondary"
                                 }`}
                             >
                               {diff > 0 ? "+" : ""}

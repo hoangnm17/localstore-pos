@@ -600,54 +600,47 @@ exports.getAllProducts = async (filters) => {
     const { search, page, pageSize, categoryId, status } = filters;
     const offset = (page - 1) * pageSize;
 
+    // Phần điều kiện lọc chung (để dùng cho cả COUNT và SELECT)
+    const filterConditions = `
+        WHERE [status] = @status
+        AND (
+            @search IS NULL
+            OR [name] LIKE N'%' + @search + '%'
+            OR [code] LIKE '%' + @search + '%'
+            OR [id] IN (
+                SELECT [productId] FROM [ProductUnits] WHERE [barcode] = @search
+            )
+        )
+        ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+    `;
+
     const query = `
         ${categoryId ? `
         WITH CategoryTree AS (
             SELECT id FROM Categories WHERE id = @categoryId
             UNION ALL
-            SELECT c.id
-            FROM Categories c
-            JOIN CategoryTree ct ON c.parentId = ct.id
+            SELECT c.id FROM Categories c JOIN CategoryTree ct ON c.parentId = ct.id
         )` : ``}
 
-        SELECT 
-            p.[id], 
-            p.[name], 
-            p.[code],
-            p.[imageUrl],
-            p.[categoryId],
-            ISNULL(s.[quantityOnHand], 0) AS [stock],
-            s.[minThreshold],
+        -- Query 1: Đếm tổng số lượng sản phẩm thỏa điều kiện
+        SELECT COUNT(*) AS total FROM [Products] ${filterConditions};
 
-            pu.[id] AS [unitId], 
-            pu.[unitName],
-            pu.[conversionFactor] AS [factor],
-            pu.[barcode], 
-            pu.[salePrice] AS [price],
-            pu.[unitType]
+        -- Query 2: Lấy dữ liệu sản phẩm có phân trang
+        SELECT 
+            p.[id], p.[name], p.[code], p.[imageUrl], p.[categoryId],
+            ISNULL(s.[quantityOnHand], 0) AS [stock], s.[minThreshold],
+            pu.[id] AS [unitId], pu.[unitName], pu.[conversionFactor] AS [factor],
+            pu.[barcode], pu.[salePrice] AS [price], pu.[unitType]
         FROM (
             SELECT [id], [name], [code], [categoryId], [imageUrl]
             FROM [Products]
-            WHERE [status] = @status
-            AND (
-                @search IS NULL
-                OR [name] LIKE N'%' + @search + '%'
-                OR [code] LIKE '%' + @search + '%'
-                OR [id] IN (
-                    SELECT [productId]
-                    FROM [ProductUnits]
-                    WHERE [barcode] = @search
-                )
-            )
-            ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+            ${filterConditions}
             ORDER BY [id]
             OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
         ) AS p
-        LEFT JOIN [InventoryStocks] s 
-            ON p.[id] = s.[productId]
-        LEFT JOIN [ProductUnits] pu 
-            ON p.[id] = pu.[productId]
-        ORDER BY p.[id], pu.[conversionFactor]
+        LEFT JOIN [InventoryStocks] s ON p.[id] = s.[productId]
+        LEFT JOIN [ProductUnits] pu ON p.[id] = pu.[productId]
+        ORDER BY p.[id], pu.[conversionFactor];
     `;
 
     const request = new sql.Request();
@@ -658,7 +651,71 @@ exports.getAllProducts = async (filters) => {
     request.input('pageSize', sql.Int, pageSize);
 
     const result = await request.query(query);
-    return result.recordset;
+    
+    return {
+        total: result.recordsets[0][0].total, // Lấy từ query COUNT
+        data: result.recordsets[1]            // Lấy từ query SELECT
+    };
+};
+
+exports.getBarcodeProducts = async (filters) => {
+  const { search, page = 1, pageSize = 10, categoryId, status } = filters;
+
+  if (!search) return null;
+
+  const offset = (page - 1) * pageSize;
+
+  const query = `
+    ${categoryId ? `
+    WITH CategoryTree AS (
+        SELECT id FROM Categories WHERE id = @categoryId
+        UNION ALL
+        SELECT c.id
+        FROM Categories c
+        JOIN CategoryTree ct ON c.parentId = ct.id
+    )` : ``}
+
+    SELECT 
+        p.[id], 
+        p.[name], 
+        p.[code],
+        p.[imageUrl],
+        p.[categoryId],
+        ISNULL(s.[quantityOnHand], 0) AS [stock],
+        s.[minThreshold],
+
+        pu.[id] AS [unitId], 
+        pu.[unitName],
+        pu.[conversionFactor] AS [factor],
+        pu.[barcode], 
+        pu.[salePrice] AS [price],
+        pu.[unitType]
+
+    FROM [ProductUnits] pu
+    JOIN [Products] p ON pu.productId = p.id
+    LEFT JOIN [InventoryStocks] s ON p.id = s.productId
+
+    WHERE pu.[barcode] = @search
+    AND p.[status] = @status
+    ${categoryId ? `AND p.[categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+
+    ORDER BY p.[id], pu.[conversionFactor]
+    OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+  `;
+
+  const request = new sql.Request();
+  request.input("search", sql.VarChar, search);
+  request.input("status", sql.VarChar, status || "Selling");
+  request.input("categoryId", sql.Int, categoryId || null);
+  request.input("offset", sql.Int, offset);
+  request.input("pageSize", sql.Int, pageSize);
+
+  const result = await request.query(query);
+
+  // ❌ Không tìm thấy → return null
+  if (result.recordset.length === 0) return null;
+
+  return result.recordset;
 };
 
 exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {

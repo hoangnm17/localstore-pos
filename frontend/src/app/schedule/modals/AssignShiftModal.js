@@ -22,6 +22,9 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
     const [loading, setLoading] = useState(false);
     const alertRef = useRef(null);
 
+    const [startDate, setStartDate] = useState(cell.workDate);
+    const [endDate, setEndDate] = useState(cell.workDate);
+
     useEffect(() => {
         if (errorMsg && alertRef.current) {
             alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -35,7 +38,33 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
         );
     };
 
+    const getDatesInRange = (startStr, endStr) => {
+        const dates = [];
+        let currDate = new Date(startStr);
+        const lastDate = new Date(endStr);
+        while (currDate <= lastDate) {
+            dates.push(new Date(currDate).toISOString().split('T')[0]);
+            currDate.setDate(currDate.getDate() + 1);
+        }
+        return dates;
+    };
+
     const handleSubmit = async () => {
+        if (!startDate || !endDate) {
+            setErrorMsg('Vui lòng chọn Từ ngày và Đến ngày!');
+            return;
+        }
+        if (startDate > endDate) {
+            setErrorMsg('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc!');
+            return;
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (startDate < todayStr) {
+            setErrorMsg('Ngày bắt đầu không được nằm trong quá khứ!');
+            return;
+        }
+
         if (selectedShiftIds.length === 0) {
             setErrorMsg('Vui lòng chọn ít nhất một ca!');
             return;
@@ -49,36 +78,53 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
         setErrorMsg('');
 
         try {
-            for (const shiftId of selectedShiftIds) {
-                const res = await api.post('/roster', {
-                    staffId:   cell.staffId,
-                    shiftId,
-                    workDate:   cell.workDate,
-                    counterId:  isCashier ? Number(selectedCounterId) : null,
-                });
-                const ok = res.data?.success ?? res.success;
-                if (!ok) {
-                    const msg = res.data?.message || res.message || 'Lỗi phân công!';
-                    setErrorMsg(msg);
-                    setLoading(false);
-                    return;
+            const dates = getDatesInRange(startDate, endDate);
+            let hasError = false;
+            let errorDetails = '';
+            const nowTimeString = new Date().toTimeString().substring(0, 5);
+            for (const d of dates) {
+                for (const shiftId of selectedShiftIds) {
+                    const selectedShift = shifts.find(s => s.id === shiftId);
+                    if (d === todayStr && selectedShift && selectedShift.startTime < nowTimeString) {
+                        hasError = true;
+                        errorDetails += `Không thể phân công ${selectedShift.name} do đã vượt quá giờ hiện tại!\n`;
+                        continue; 
+                    }
+                    try {
+                        const res = await api.post('/roster', {
+                            staffId: cell.staffId,
+                            shiftId,
+                            workDate: d,
+                            counterId: isCashier ? Number(selectedCounterId) : null,
+                        });
+                        const ok = res.data?.success ?? res.success;
+                        if (!ok) {
+                            hasError = true;
+                            errorDetails += `Ngày ${d}: ${res.data?.message || res.message}\n`;
+                        }
+                    } catch (err) {
+                        hasError = true;
+                        errorDetails += `Ngày ${d}: ${err.response?.data?.message || err.message}\n`;
+                    }
                 }
             }
-            showNotification('Phân công ca thành công!', 'success');
-            onSuccess();
+
+            if (hasError) {
+                setErrorMsg( errorDetails);
+                // onSuccess();
+            } else {
+                showNotification('Phân công ca thành công!', 'success');
+                onSuccess();
+            }
         } catch (err) {
-            setErrorMsg(err.response?.data?.message || err.message || 'Lỗi phân công!');
+            setErrorMsg('Lỗi phân công: ' + err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const workDateLabel = new Date(cell.workDate + 'T00:00:00').toLocaleDateString('vi-VN', {
-        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
-    });
-
     return (
-        <BaseModal onClose={onClose} maxWidth="600px" disableClose={loading}>
+        <BaseModal onClose={onClose} maxWidth="650px" disableClose={loading}>
             <div style={{
                 background: '#fff', borderRadius: '20px', overflow: 'hidden',
                 boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
@@ -92,9 +138,9 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                     <div className="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 className="fw-bold m-0" style={{ fontSize: '1rem' }}>
-                                <i className="bi bi-calendar-plus-fill me-2" />Phân Công Ca Làm Việc
+                                <i className="bi bi-calendar-plus-fill me-2" />Phân Công
                             </h5>
-                            <small className="opacity-75">Chọn ca và quầy phù hợp</small>
+                            <small className="opacity-75">Chọn ngày, ca và quầy phù hợp</small>
                         </div>
                         <button onClick={onClose} disabled={loading}
                             style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer' }}>
@@ -103,21 +149,21 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                     </div>
                 </div>
 
-                {/* Body */}
+
                 <div style={{ padding: '20px 28px', overflowY: 'auto', flex: 1 }}>
 
-                    {/* Alert*/}
+
                     {errorMsg && (
                         <div ref={alertRef} className="mb-3">
-                            <AlertMessage type="danger" message={errorMsg} />
+                            <AlertMessage type="danger" message={<span style={{ whiteSpace: 'pre-line' }}>{errorMsg}</span>} />
                         </div>
                     )}
 
-                    {/* box nhân viên + ngày */}
+
                     <div style={{
                         background: '#f8fafc', border: '1px solid #e2e8f0',
                         borderRadius: '14px', padding: '14px 18px', marginBottom: '18px',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px'
                     }}>
                         <div>
                             <div className="small fw-bold text-secondary text-uppercase"
@@ -132,13 +178,34 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                                 {isCashier ? 'THU NGÂN' : 'THỦ KHO'}
                             </span>
                         </div>
-                        <div className="text-end">
-                            <div className="small fw-bold text-secondary text-uppercase"
-                                style={{ letterSpacing: '0.7px', fontSize: '0.72rem' }}>
-                                Ngày làm việc
+
+                        {/* chọn ngày làm*/}
+                        <div className="d-flex gap-3 align-items-center" style={{ flexGrow: 1, justifyContent: 'flex-end' }}>
+                            <div>
+                                <label className="small fw-bold text-secondary text-uppercase d-block mb-1"
+                                    style={{ letterSpacing: '0.7px', fontSize: '0.72rem' }}>
+                                    Từ ngày
+                                </label>
+                                <input
+                                    type="date"
+                                    className="form-control form-control-sm"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    style={{ borderRadius: '8px', border: '1px solid #cbd5e1', color: '#2563eb', fontWeight: 'bold' }}
+                                />
                             </div>
-                            <div className="fw-bold" style={{ color: '#2563eb', fontSize: '0.95rem' }}>
-                                {workDateLabel}
+                            <div>
+                                <label className="small fw-bold text-secondary text-uppercase d-block mb-1"
+                                    style={{ letterSpacing: '0.7px', fontSize: '0.72rem' }}>
+                                    Đến ngày
+                                </label>
+                                <input
+                                    type="date"
+                                    className="form-control form-control-sm"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    style={{ borderRadius: '8px', border: '1px solid #cbd5e1', color: '#2563eb', fontWeight: 'bold' }}
+                                />
                             </div>
                         </div>
                     </div>

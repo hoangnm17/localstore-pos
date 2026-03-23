@@ -289,9 +289,26 @@ const getAdjustmentDetail = async (adjustmentId) => {
     };
 };
 
+const checkProductInPending = async (productId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("productId", sql.BigInt, productId)
+        .query(`
+            SELECT TOP 1 ia.id
+            FROM InventoryAdjustmentItems iai
+            JOIN InventoryAdjustments ia 
+                ON iai.adjustmentId = ia.id
+            WHERE ia.status = 'Pending'
+            AND iai.productId = @productId
+        `);
+    return result.recordset.length > 0;
+};
+
 module.exports = {
     createAdjustmentWithItems,
     updateStatusTransaction,
     getAdjustments,
-    getAdjustmentDetail
+    getAdjustmentDetail,
+    checkProductInPending
 };

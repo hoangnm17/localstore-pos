@@ -32,15 +32,29 @@ export default function CashPayment({ total, onConfirm }) {
     setCustomerPay(raw);
   };
 
-  useHotkeys({
-    [POS_HOTKEYS.CASH_FULL_AMOUNT]: () => {
-      setCustomerPay(String(total));
-    },
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "F9") {
+        e.preventDefault();
+        setCustomerPay(String(total));
+      }
+    };
 
-    [POS_HOTKEYS.CONFIRM_PAYMENT]: () => {
-      handleSubmit();
-    },
-  });
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [total]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [customerPayNumber, total]);
 
   const handleSubmit = () => {
     if (customerPayNumber < total) return;
@@ -65,6 +79,12 @@ export default function CashPayment({ total, onConfirm }) {
           className="form-control form-control-lg fw-bold text-primary pe-5"
           value={formatNumber(customerPay)}
           onChange={handleChange}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault(); 
+              handleSubmit();
+            }
+          }}
         />
 
         {customerPay && (

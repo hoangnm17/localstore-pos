@@ -122,13 +122,31 @@ const PurchaseOrderCreate = () => {
       price: selectedSupplier.price || 0,
     };
 
+    // setItems(prev => {
+    //   const existing = prev.find(i => i.productUnitId === newItem.productUnitId);
+    //   if (existing) {
+    //     return prev.map(i =>
+    //       i.productUnitId === newItem.productUnitId ? { ...i, quantity: i.quantity + newItem.quantity } : i
+    //     );
+    //   }
+    //   return [...prev, newItem];
+    // });
+
     setItems(prev => {
-      const existing = prev.find(i => i.productUnitId === newItem.productUnitId);
+      const existing = prev.find(i =>
+        i.productUnitId === newItem.productUnitId &&
+        i.supplierId === newItem.supplierId
+      );
+
       if (existing) {
         return prev.map(i =>
-          i.productUnitId === newItem.productUnitId ? { ...i, quantity: i.quantity + newItem.quantity } : i
+          i.productUnitId === newItem.productUnitId &&
+            i.supplierId === newItem.supplierId
+            ? { ...i, quantity: i.quantity + newItem.quantity }
+            : i
         );
       }
+    
       return [...prev, newItem];
     });
 
@@ -141,8 +159,12 @@ const PurchaseOrderCreate = () => {
     setQuantity(1);
   };
 
-  const removeItem = (productUnitId) => {
-    setItems(prev => prev.filter(i => i.productUnitId !== productUnitId));
+  const removeItem = (productUnitId, supplierId) => {
+    setItems(prev =>
+      prev.filter(i =>
+        !(i.productUnitId === productUnitId && i.supplierId === supplierId)
+      )
+    );
   };
 
   const updateQuantity = (productUnitId, delta) => {
@@ -344,7 +366,7 @@ const PurchaseOrderCreate = () => {
                             <td>
                               <button
                                 className="btn btn-sm btn-outline-danger rounded-circle"
-                                onClick={() => removeItem(item.productUnitId)}
+                                onClick={() => removeItem(item.productUnitId, item.supplierId)}
                               >
                                 <i className="bi bi-trash"></i>
                               </button>

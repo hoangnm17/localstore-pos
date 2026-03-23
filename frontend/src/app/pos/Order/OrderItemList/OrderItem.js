@@ -10,21 +10,11 @@ const OrderItem = ({
   remove,
   activeItemId,
   onChangeQty,
-  focusSignal,
 }) => {
   const displayName = item.name ? item.name : item.productName;
   const qty = safeParse(item.quantity);
   const lineTotal = item.unitPrice * qty;
   const qtyRef = useRef(null);
-
-  useEffect(() => {
-    if (activeItemId === item.id && qtyRef.current) {
-      requestAnimationFrame(() => {
-        qtyRef.current.focus();
-        qtyRef.current.select();
-      });
-    }
-  }, [activeItemId, focusSignal]);
 
   const handleChange = (e) => {
     const { value } = e.target;

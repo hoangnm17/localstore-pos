@@ -3,18 +3,18 @@ import FilterBar from "./Filter/FilterBar";
 import ProductList from "./ProductList/ProductList";
 import Pagination from "components/Pagination/Pagination";
 import { getAllCategories } from "services/Category/category.service";
-import { getAllProducts } from "services/Product/product.service";
+import { getBarcodeProducts, getAllProducts } from "services/Product/product.service";
 import ScanBarcode from "components/pos/Sale/ScanBarcode";
 import { useNotification } from "components/global/Notification/NotificationContext";
 import { getSocket } from "utils/socket";
 import { POS_HOTKEYS } from "config/HotKey";
-import useHotkeys from "hooks/pos/useHotKeys";
+
 
 const PAGE_CONFIG = {
   ITEMS_PER_PAGE: 10,
 };
 
-export default function Product({ addItem, focusSignal }) {
+export default function Product({ addItem, isModalOpen }) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -51,20 +51,12 @@ export default function Product({ addItem, focusSignal }) {
 
   }, []);
 
-  useHotkeys({
-    [POS_HOTKEYS.OPEN_SCAN]: () => {
-      const tag = document.activeElement.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-
-      setShowScan(true);
-    },
-  });
-
   const handleAddItem = (product, unit) => {
     if (unit.stock <= 0) {
-      showNotification(`Sản phẩm [${unit?.unitName || 'Đơn vị'}] đã hết hàng!`, "error");
+      showNotification(`Sản phẩm [${product.name || 'Đơn vị'} - ${unit?.unitName}] đã hết hàng!`, "error");
       return;
     }
+    
     addItem({
       productId: Number(product.id),
       productUnitId: Number(unit.unitId),
@@ -75,13 +67,11 @@ export default function Product({ addItem, focusSignal }) {
       factor: unit.factor,
       unitType: unit.unitType,
     });
-
-    showNotification(`Đã thêm ${product.name} - (${unit.unitName})`, "success");
   };
 
   const handleBarcode = async (barcode) => {
     try {
-      const res = await getAllProducts({
+      const res = await getBarcodeProducts({
         search: barcode,
         page: 1,
         limit: 1
@@ -90,6 +80,7 @@ export default function Product({ addItem, focusSignal }) {
       if (res?.success && res.data.length > 0) {
         const product = res.data[0];
         const matchedUnit = product.units?.find(u => u.barcode === barcode);
+        console.log(res);
 
         if (matchedUnit) {
           handleAddItem(product, matchedUnit);
@@ -127,31 +118,20 @@ export default function Product({ addItem, focusSignal }) {
 
   const fetchProductList = async () => {
     setLoading(true);
-
     try {
-
       const res = await getAllProducts({
         page: currentPage,
         limit: PAGE_CONFIG.ITEMS_PER_PAGE,
         search: search || "",
         categoryId: selectedCategory?.id || null,
       });
+
       if (res.success) {
-        const allProducts = res.data || []
-        const start = (currentPage - 1) * PAGE_CONFIG.ITEMS_PER_PAGE;
-        const end = start + PAGE_CONFIG.ITEMS_PER_PAGE;
-
-        const paginated = allProducts.slice(start, end);
-
-        setProducts(paginated);
-        setTotalPages(
-          Math.ceil(allProducts.length / PAGE_CONFIG.ITEMS_PER_PAGE)
-        );
+        setProducts(res.data || []);
+        setTotalPages(res.pagination.totalPages || 1);
       }
-
-
     } catch (err) {
-      console.error("Fetch products error:", err);
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -162,11 +142,11 @@ export default function Product({ addItem, focusSignal }) {
   }, [search, selectedCategory]);
 
   return (
-    <div className="d-flex flex-column bg-light" style={{ height: "100vh", overflow: "hidden" }}>
-      <div className="container-fluid flex-grow-1 d-flex flex-column py-3 overflow-hidden">
+    <div className="d-flex flex-column bg-light h-100 overflow-hidden">
+      <div className="container-fluid flex-grow-1 d-flex flex-column py-2 overflow-hidden">
         <div className="card border-0 shadow-sm rounded-4 d-flex flex-column flex-grow-1 overflow-hidden">
 
-          <div className="card-header bg-white border-0 pt-4 px-4 flex-shrink-0">
+          <div className="card-header bg-white border-0 pt-3 px-3 flex-shrink-0">
             <FilterBar
               keyword={search}
               onKeywordChange={setSearch}
@@ -174,15 +154,15 @@ export default function Product({ addItem, focusSignal }) {
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
               addItem={handleBarcode}
-              focusSignal={focusSignal}
+              preventFocus={isModalOpen}
             />
           </div>
 
-          <div className="card-body px-4 flex-grow-1 overflow-auto custom-scrollbar">
+
+          <div className="card-body px-3 flex-grow-1 overflow-auto custom-scrollbar" style={{ minHeight: 0 }}>
             {loading ? (
               <div className="d-flex flex-column align-items-center justify-content-center h-100">
                 <div className="spinner-border text-primary" role="status"></div>
-                <span className="mt-2 text-muted">Đang tải...</span>
               </div>
             ) : products.length > 0 ? (
               <ProductList
@@ -190,9 +170,9 @@ export default function Product({ addItem, focusSignal }) {
                 onSelect={handleAddItem}
               />
             ) : (
-              <div className="h-100 d-flex flex-column align-items-center justify-content-center">
-                <i className="bi bi-search fs-1 text-muted opacity-25"></i>
-                <p className="text-secondary mt-2">Không tìm thấy sản phẩm</p>
+              <div className="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                <i className="bi bi-box-seam fs-1 opacity-25"></i>
+                <p>Không có sản phẩm nào</p>
               </div>
             )}
           </div>
