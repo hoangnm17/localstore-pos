@@ -49,12 +49,7 @@ const CreateAdjustment = () => {
       const isInPending = res.data.data.isInPending;
 
       if (isInPending) {
-        // const confirmAdd = window.confirm(
-        //   `Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn có chắc muốn thêm không?`
-        // );
         alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`)
-
-        // if (!confirmAdd) 
         return;                                                                 
       } 
 
