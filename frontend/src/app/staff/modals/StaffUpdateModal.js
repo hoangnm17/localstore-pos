@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
+import { updateStaff, getStaffRoles, getStaffDetail } from '../../../services/Staff/staff.service';
 
 const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(true);
@@ -23,9 +23,9 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     useEffect(() => {
         const fetchRoles = async () => {
             try {
-                const res = await api.get('/staff/roles');
-                if (res.data?.success) {
-                    setRoleList(res.data.data);
+                const res = await getStaffRoles();
+                if (res?.success) {
+                    setRoleList(res.data);
                 }
             } catch (error) {
                 console.error("Lỗi khi tải danh sách vai trò", error);
@@ -37,9 +37,9 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     useEffect(() => {
         const fetchStaffData = async () => {
             try {
-                const res = await api.get(`/staff/detail`, { params: { id: staffId } });
-                if (res.data?.success) {
-                    const s = res.data.data;
+                const res = await getStaffDetail(staffId);
+                if (res?.success) {
+                    const s = res.data;
                     const data = {
                         username: s.username || '',
                         fullName: s.fullName || '',
@@ -126,8 +126,8 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
         const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
         const payloadToSend = { ...formData, id: staffId, baseSalary: pureSalary };
         try {
-            const res = await api.put(`/staff/update`, payloadToSend);
-            if (res.data?.success) {
+            const res = await updateStaff(payloadToSend); 
+            if (res?.success) {
                 showNotification('Cập nhật thông tin nhân viên thành công!', 'success');
                 onSuccess();
                 return;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
-import api from '../../../services/axiosInstance';
+import { getStaffDetail } from '../../../services/Staff/staff.service';
 
 const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
     const [loading, setLoading] = useState(true);
@@ -9,9 +9,9 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
     useEffect(() => {
         const fetchStaffData = async () => {
             try {
-                const res = await api.get(`/staff/detail`, { params: { id: staffId } });
-                if (res.data?.success && res.data?.data) {
-                    const s = res.data.data;
+                const res = await getStaffDetail(staffId);
+                if (res?.success && res?.data) {
+                    const s = res.data;
                     setData({ ...s, createdAt: s.createdAt ? s.createdAt.split('T')[0] : '' });
                 }
             } catch (err) { console.error('Lỗi tải chi tiết:', err); }

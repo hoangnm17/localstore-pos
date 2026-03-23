@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
+import { createStaff, getStaffRoles } from '../../../services/Staff/staff.service';
 
 const StaffCreateModal = ({ onClose, onSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
@@ -24,9 +24,9 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     useEffect(() => {
         const fetchRoles = async () => {
             try {
-                const res = await api.get('/staff/roles');
-                if (res.data?.success) {
-                    setRoleList(res.data.data);
+                const res = await getStaffRoles(); 
+                if (res?.success) {
+                    setRoleList(res.data);
                 }
             } catch (error) {
                 console.error("Lỗi khi tải danh sách vai trò", error);
@@ -99,8 +99,8 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
         const payloadToSend = { ...formData, baseSalary: pureSalary };
         try {
-            const res = await api.post('/staff', payloadToSend);
-            if (res.data?.success) {
+            const res = await createStaff(payloadToSend); 
+            if (res?.success) {
                 showNotification('Tạo nhân viên thành công!', 'success');
                 onSuccess();
                 return;
