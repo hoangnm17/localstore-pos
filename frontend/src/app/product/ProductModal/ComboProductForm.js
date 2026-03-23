@@ -346,7 +346,7 @@ export default function ComboProductForm({
 
                             <div className="row g-3">
                                 <div className="col-md-4">
-                                    <label className="form-label fw-semibold">Đính chính tồn kho thực tế</label>
+                                    <label className="form-label fw-semibold">Cập nhật tồn kho</label>
                                     <input
                                         className="form-control"
                                         type="number"
