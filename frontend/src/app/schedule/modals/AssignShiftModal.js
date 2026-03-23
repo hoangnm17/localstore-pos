@@ -81,9 +81,15 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
             const dates = getDatesInRange(startDate, endDate);
             let hasError = false;
             let errorDetails = '';
-
+            const nowTimeString = new Date().toTimeString().substring(0, 5);
             for (const d of dates) {
                 for (const shiftId of selectedShiftIds) {
+                    const selectedShift = shifts.find(s => s.id === shiftId);
+                    if (d === todayStr && selectedShift && selectedShift.startTime < nowTimeString) {
+                        hasError = true;
+                        errorDetails += `Không thể phân công ${selectedShift.name} do đã vượt quá giờ hiện tại!\n`;
+                        continue; 
+                    }
                     try {
                         const res = await api.post('/roster', {
                             staffId: cell.staffId,
@@ -104,8 +110,8 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
             }
 
             if (hasError) {
-                setErrorMsg('Tiến trình hoàn tất nhưng có một số lỗi:\n' + errorDetails);
-                onSuccess();
+                setErrorMsg( errorDetails);
+                // onSuccess();
             } else {
                 showNotification('Phân công ca thành công!', 'success');
                 onSuccess();
@@ -143,17 +149,17 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                     </div>
                 </div>
 
-              
+
                 <div style={{ padding: '20px 28px', overflowY: 'auto', flex: 1 }}>
 
-                
+
                     {errorMsg && (
                         <div ref={alertRef} className="mb-3">
                             <AlertMessage type="danger" message={<span style={{ whiteSpace: 'pre-line' }}>{errorMsg}</span>} />
                         </div>
                     )}
 
-                   
+
                     <div style={{
                         background: '#f8fafc', border: '1px solid #e2e8f0',
                         borderRadius: '14px', padding: '14px 18px', marginBottom: '18px',
