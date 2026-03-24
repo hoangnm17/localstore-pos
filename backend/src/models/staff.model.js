@@ -62,11 +62,11 @@ module.exports.create = async (data) => {
         const request = new sql.Request(transaction);
 
         const userRes = await request
-            .input('u',sql.VarChar,data.username)
-            .input('ph',sql.VarChar,data.hashedPassword)
-            .input('r',sql.Int,parseInt(data.roleId))
-            .input('ia',sql.VarChar,data.status || 'active')
-            .input('ca',sql.DateTime2,new Date(data.createdAt))
+            .input('u', sql.VarChar, data.username)
+            .input('ph', sql.VarChar, data.hashedPassword)
+            .input('r', sql.Int, parseInt(data.roleId))
+            .input('ia', sql.VarChar, data.status || 'active')
+            .input('ca', sql.DateTime2, new Date(data.createdAt))
             .query(`
                 INSERT INTO Users (roleId, username, passwordHash, isActive, createdAt)
                 OUTPUT INSERTED.id
@@ -75,14 +75,14 @@ module.exports.create = async (data) => {
 
         const newUserId = userRes.recordset[0].id;
         await request
-            .input('uid',sql.Int,newUserId)
-            .input('fn',sql.NVarChar,data.fullName)
-            .input('pn',sql.VarChar,data.phoneNumber)
-            .input('em',sql.VarChar,data.email)
-            .input('st',sql.VarChar,data.salaryType)
-            .input('bs',sql.Decimal(15,2), parseFloat(data.baseSalary) || 0)
-            .input('es',sql.VarChar,'working')
-            .input('ca2',sql.DateTime2,new Date(data.createdAt))
+            .input('uid', sql.Int, newUserId)
+            .input('fn', sql.NVarChar, data.fullName)
+            .input('pn', sql.VarChar, data.phoneNumber)
+            .input('em', sql.VarChar, data.email)
+            .input('st', sql.VarChar, data.salaryType)
+            .input('bs', sql.Decimal(15, 2), parseFloat(data.baseSalary) || 0)
+            .input('es', sql.VarChar, 'working')
+            .input('ca2', sql.DateTime2, new Date(data.createdAt))
             .query(`
                 INSERT INTO Staff (userId, fullName, phoneNumber, email, salaryType, baseSalary, employmentStatus, createdAt)
                 VALUES (@uid, @fn, @pn, @em, @st, @bs, @es, @ca2)
@@ -122,11 +122,11 @@ module.exports.update = async (id, data) => {
         const request = new sql.Request(transaction);
         await request
             .input('id', sql.BigInt, parseInt(id))
-            .input('fn', sql.NVarChar,data.fullName)
-            .input('pn', sql.VarChar,data.phoneNumber)
-            .input('em', sql.VarChar,data.email || '')
-            .input('st', sql.VarChar,data.salaryType)
-            .input('bs', sql.Decimal(15,2), parseFloat(data.baseSalary) || 0)
+            .input('fn', sql.NVarChar, data.fullName)
+            .input('pn', sql.VarChar, data.phoneNumber)
+            .input('em', sql.VarChar, data.email || '')
+            .input('st', sql.VarChar, data.salaryType)
+            .input('bs', sql.Decimal(15, 2), parseFloat(data.baseSalary) || 0)
             .query(`
                 UPDATE Staff SET 
                     fullName= @fn,phoneNumber= @pn,email= @em,salaryType= @st,baseSalary= @bs WHERE id = @id
@@ -143,10 +143,10 @@ module.exports.update = async (id, data) => {
         }
 
         await request
-            .input('uid',sql.Int,userId)
-            .input('r',sql.Int, parseInt(data.roleId))
-            .input('ia',sql.VarChar,data.isActive || 'active')
-            .input('un',sql.VarChar,data.username)
+            .input('uid', sql.Int, userId)
+            .input('r', sql.Int, parseInt(data.roleId))
+            .input('ia', sql.VarChar, data.isActive || 'active')
+            .input('un', sql.VarChar, data.username)
             .query(`
                 UPDATE Users SET roleId = @r,isActive= @ia,username= @un ${passwordUpdateSQL} WHERE id = @uid
             `);
@@ -228,6 +228,14 @@ module.exports.getStaffByUserId = async (userId) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('userId', sql.Int, userId)
-        .query("SELECT s.* FROM Staff s WHERE s.userId = @userId");
+        .query(`
+            SELECT s.*, 
+                   u.isActive, u.roleId, u.username,
+                   r.name as roleName
+            FROM Staff s
+            JOIN Users u ON s.userId = u.id
+            JOIN Roles r ON u.roleId = r.id
+            WHERE s.userId = @userId
+        `);
     return result.recordset[0];
 };
