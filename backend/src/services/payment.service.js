@@ -134,11 +134,45 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
   };
 };
 
+const processInventory = async (transaction, invoiceItems) => {
+  const groupedItems = {};
+
+  for (const item of invoiceItems) {
+    const productId = Number(item.productId);
+    const baseQty = Number(item.baseQuantity || 0);
+
+    if (!groupedItems[productId]) {
+      groupedItems[productId] = 0;
+    }
+
+    groupedItems[productId] += baseQty;
+  }
+
+  const finalItems = Object.keys(groupedItems).map((productId) => ({
+    productId: Number(productId),
+    baseQuantity: groupedItems[productId],
+  }));
+
+  const updatedStocks = await inventoryService.deductStock(
+    transaction,
+    finalItems
+  );
+
+  socketService.emitInventoryUpdate(updatedStocks);
+
+  return updatedStocks;
+};
+
+
 const payCash = async (id, { payment }) => {
 
   return runInTransaction(async (transaction) => {
 
     const invoice = await getEditableInvoice(transaction, id);
+
+    if (invoice.status === "PAID") {
+      throw new Error("Invoice already paid");
+    }
 
     if (payment?.method !== "CASH")
       throw new Error("Invalid payment method");
@@ -258,14 +292,10 @@ const payCash = async (id, { payment }) => {
       finalAmount
     });
 
-    /* ================= STOCK ================= */
-
-    const updatedStocks = await inventoryService.deductStock(
+    const updatedStocks = await processInventory(
       transaction,
       invoiceItems
     );
-
-    socketService.emitInventoryUpdate(updatedStocks);
 
     await invoiceModel.updateStatus(transaction, id, "PAID");
 
@@ -565,12 +595,11 @@ const confirmPayment = async (payload) => {
 
     }
 
-    const updatedStocks = await inventoryService.deductStock(
+    /* ================= STOCK ================= */
+    const updatedStocks = await processInventory(
       transaction,
       invoiceItems
     );
-
-    socketService.emitInventoryUpdate(updatedStocks);
 
     await invoiceModel.updateStatus(
       transaction,

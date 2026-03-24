@@ -254,6 +254,7 @@ const getInvoiceDetail = async (id) => {
                 unitPrice: Number(item.unitPrice) || 0,
                 lineTotal: Number(item.lineTotal) || 0,
                 factor: factor,
+                productStock: item.quantityOnHand,
                 quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
             };
         })
