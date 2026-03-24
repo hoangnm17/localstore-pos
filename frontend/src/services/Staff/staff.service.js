@@ -34,3 +34,16 @@ export const resignStaff = async (id) => {
     const res = await api.put('/staff/resign', { id });
     return res.data;
 };
+
+export const resetStaffPassword = async (userId) => {
+    const res = await api.put('/staff/reset-password', { userId });
+    return res.data;
+};
+export const getMyProfile = async () => {
+    const res = await api.get('/staff/my-profile');
+    return res.data; 
+};
+export const changeMyPassword = async (data) => {
+    const res = await api.put('/staff/change-password', data);
+    return res.data;
+};
