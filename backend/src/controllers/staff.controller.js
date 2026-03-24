@@ -76,3 +76,45 @@ module.exports.updateStaff = async (req, res) => {
     }
 };
 
+module.exports.resetPassword = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        await staffService.resetPassword(userId);
+        return res.json({ 
+            success: true,
+             message: "Đã Reset mật khẩu của nhân viên về '123456'. Hãy nhắc người đó đổi mật khẩu khi đăng nhập." 
+            });
+    } catch (err) {
+        return res.status(400).json({
+             success: false, message: err.message 
+            });
+    }
+};
+
+module.exports.getMyProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const profile = await staffService.getMyProfile(userId);
+        return res.json({ 
+            success: true, data: profile });
+    } catch (err) {
+        return res.status(400).json({ 
+            success: false, message: err.message });
+    }
+};
+
+module.exports.changePassword = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { oldPassword, newPassword } = req.body;
+        await staffService.changePassword(userId, oldPassword, newPassword);
+        return res.json({ 
+            success: true, 
+            message: "Đổi mật khẩu thành công. Tài khoản đã được bảo mật!" 
+        });
+    } catch (err) {
+        return res.status(400).json({
+             success: false, message: err.message 
+            });
+    }
+};
