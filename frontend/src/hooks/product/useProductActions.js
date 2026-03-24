@@ -142,7 +142,12 @@ function useProductActions({
 
             if (productFormState.mode === 'create') {
                 const response = await createProduct(basicPayload);
-                createdProductId = response.data?.id;
+
+                if (response.data?.success === false) {
+                    throw new Error(response.data?.message || 'Tạo sản phẩm thất bại.');
+                }
+
+                createdProductId = response.data?.data?.id ?? response.data?.id;
 
                 if (payload.isCombo && desiredComboItems.length > 0) {
                     await syncComboItems(createdProductId, [], desiredComboItems);
@@ -164,7 +169,10 @@ function useProductActions({
             const editingProductId = productFormState.product.id;
             const currentComboItems = productFormState.product?.comboItems || [];
 
-            await updateProduct(editingProductId, basicPayload);
+            const updateResponse = await updateProduct(editingProductId, basicPayload);
+            if (updateResponse.data?.success === false) {
+                throw new Error(updateResponse.data?.message || 'Cập nhật sản phẩm thất bại.');
+            }
 
             if (payload.isCombo) {
                 await syncComboItems(editingProductId, currentComboItems, desiredComboItems);
@@ -195,7 +203,7 @@ function useProductActions({
                 return;
             }
 
-            showNotification(error.response?.data?.message || 'Lưu sản phẩm thất bại.', 'error');
+            showNotification(error.response?.data?.message || error.message || 'Lưu sản phẩm thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
