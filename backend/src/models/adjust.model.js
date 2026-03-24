@@ -26,6 +26,22 @@ const createAdjustmentWithItems = async (staffId, reason, items) => {
 
     try {
         await transaction.begin();
+        const productIds = items.map(i => i.productId);
+
+        const pendingCheck = await new sql.Request(transaction)
+            .query(`
+                SELECT DISTINCT iai.productId
+                FROM InventoryAdjustmentItems iai
+                JOIN InventoryAdjustments ia 
+                    ON iai.adjustmentId = ia.id
+                WHERE ia.status = 'Pending'
+                AND iai.productId IN (${productIds.join(",")})
+            `);
+
+        if (pendingCheck.recordset.length > 0) {
+            const list = pendingCheck.recordset.map(i => i.productId).join(", ");
+            throw new Error(`Các sản phẩm đang nằm trong phiếu Pending: ${list}`);
+        }
 
         const adjustmentResult = await new sql.Request(transaction)
             .input("createdBy", sql.BigInt, staffId)
@@ -39,7 +55,7 @@ const createAdjustmentWithItems = async (staffId, reason, items) => {
         const adjustmentId = adjustmentResult.recordset[0].id;
 
         for (let item of items) {
-            // 1. Lấy systemQuantity hiện tại (snapshot)
+
             const stockResult = await new sql.Request(transaction)
                 .input("productId", sql.BigInt, item.productId)
                 .query(`
@@ -54,16 +70,17 @@ const createAdjustmentWithItems = async (staffId, reason, items) => {
 
             const systemQuantity = stockResult.recordset[0].quantityOnHand;
 
-            // 2. Lấy unit lớn nhất
             const largestInfo = await getLargestUnitInfo(transaction, item.productId);
             if (!largestInfo) {
                 throw new Error(`Không tìm thấy đơn vị sản phẩm cho productId ${item.productId}`);
             }
 
             const conversionFactor = largestInfo.conversionFactor;
-            const actualQuantity = (item.actualLargest || 0) * conversionFactor + (item.actualRemainder || 0);
 
-            // 3. Insert (lưu base unit)
+            const actualQuantity =
+                (item.actualLargest || 0) * conversionFactor +
+                (item.actualRemainder || 0);
+
             await new sql.Request(transaction)
                 .input("adjustmentId", sql.Int, adjustmentId)
                 .input("productId", sql.BigInt, item.productId)

@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
+import useTitle from "../../../hooks/common/useTitle";
 
 const CreateAdjustment = () => {
+  useTitle("Tạo phiếu điều chỉnh tồn kho");
   const navigate = useNavigate();
 
   const [keyword, setKeyword] = useState("");
@@ -49,12 +51,7 @@ const CreateAdjustment = () => {
       const isInPending = res.data.data.isInPending;
 
       if (isInPending) {
-        // const confirmAdd = window.confirm(
-        //   `Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn có chắc muốn thêm không?`
-        // );
         alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`)
-
-        // if (!confirmAdd) 
         return;                                                                 
       } 
 

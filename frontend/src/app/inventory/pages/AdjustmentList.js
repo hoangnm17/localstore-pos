@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
+import useTitle from "../../../hooks/common/useTitle";
 
 function AdjustmentList() {
+    useTitle("Danh sách phiếu điều chỉnh kho");
     const [data, setData] = useState([]);
     const [status, setStatus] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -20,6 +26,7 @@ function AdjustmentList() {
 
     useEffect(() => {
         window.scrollTo(0, 0);
+        setCurrentPage(1); // reset page khi filter đổi
         fetchData();
     }, [status, fromDate, toDate]);
 
@@ -64,6 +71,14 @@ function AdjustmentList() {
             year: "numeric",
         });
     };
+
+    // pagination logic
+    const totalPages = Math.ceil(data.length / itemsPerPage);
+
+    const paginatedData = data.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     return (
         <div className="container-fluid py-4 px-md-4">
@@ -112,8 +127,6 @@ function AdjustmentList() {
                                 <h5 className={`fw-bold mb-1 text-${item.color}`}>
                                     {item.title}
                                 </h5>
-                                {/* Nếu có số lượng đơn, thêm ở đây */}
-                                {/* <small className="text-muted">15 đơn</small> */}
                             </div>
                         </div>
                     </div>
@@ -195,46 +208,102 @@ function AdjustmentList() {
                             Không tìm thấy đơn điều chỉnh nào phù hợp với bộ lọc
                         </div>
                     ) : (
-                        <table className="table table-hover align-middle mb-0">
-                            <thead className="table-light">
-                                <tr>
-                                    <th className="ps-4 py-4">ID</th>
-                                    <th className="py-4">Lý do</th>
-                                    <th className="py-4">Người tạo</th>
-                                    <th className="py-4">Ngày tạo</th>
-                                    <th className="py-4">Trạng thái</th>
-                                    <th className="py-4">Người xử lý</th>
-                                    <th className="py-4">Ngày xử lý</th>
-                                    <th className="text-center py-4 pe-4">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody className="fs-6 lh-lg">
-                                {data.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="ps-4 py-4 fw-medium">#{item.id}</td>
-                                        <td className="py-4 text-truncate" style={{ maxWidth: "240px" }} title={item.reason}>
-                                            {item.reason || "—"}
-                                        </td>
-                                        <td className="py-4">{item.createdByName || "—"}</td>
-                                        <td className="py-4">{formatDate(item.createdAt)}</td>
-                                        <td className="py-4">
-                                            <StatusBadge status={item.status} />
-                                        </td>
-                                        <td className="py-4">{item.processedByName || "—"}</td>
-                                        <td className="py-4">{formatDate(item.processedAt)}</td>
-                                        <td className="text-center py-4 pe-4">
-                                            <button
-                                                className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 mx-auto px-3 py-2"
-                                                onClick={() => navigate(`/inventory/requests/adjust/${item.id}`)}
-                                            >
-                                                <i className="bi bi-eye"></i>
-                                                Xem
-                                            </button>
-                                        </td>
+                        <>
+                            <table className="table table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th className="ps-4 py-4">ID</th>
+                                        <th className="py-4">Lý do</th>
+                                        <th className="py-4">Người tạo</th>
+                                        <th className="py-4">Ngày tạo</th>
+                                        <th className="py-4">Trạng thái</th>
+                                        <th className="py-4">Người xử lý</th>
+                                        <th className="py-4">Ngày xử lý</th>
+                                        <th className="text-center py-4 pe-4">Hành động</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="fs-6 lh-lg">
+                                    {paginatedData.map((item) => (
+                                        <tr key={item.id}>
+                                            <td className="ps-4 py-4 fw-medium">#{item.id}</td>
+                                            <td className="py-4 text-truncate" style={{ maxWidth: "240px" }} title={item.reason}>
+                                                {item.reason || "—"}
+                                            </td>
+                                            <td className="py-4">{item.createdByName || "—"}</td>
+                                            <td className="py-4">{formatDate(item.createdAt)}</td>
+                                            <td className="py-4">
+                                                <StatusBadge status={item.status} />
+                                            </td>
+                                            <td className="py-4">{item.processedByName || "—"}</td>
+                                            <td className="py-4">{formatDate(item.processedAt)}</td>
+                                            <td className="text-center py-4 pe-4">
+                                                <button
+                                                    className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 mx-auto px-3 py-2"
+                                                    onClick={() => navigate(`/inventory/requests/adjust/${item.id}`)}
+                                                >
+                                                    <i className="bi bi-eye"></i>
+                                                    Xem
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination */}
+                            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top flex-wrap gap-2">
+
+                                <small className="text-muted">
+                                    Tổng {data.length} đơn
+                                </small>
+
+                                <div className="d-flex align-items-center gap-2">
+
+                                    {/* Prev */}
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => prev - 1)}
+                                    >
+                                        <i className="bi bi-chevron-left"></i>
+                                    </button>
+
+                                    {/* Input page */}
+                                    <div className="d-flex align-items-center gap-1">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={totalPages || 1}
+                                            value={currentPage}
+                                            onChange={(e) => {
+                                                let value = Number(e.target.value);
+
+                                                if (!value) return;
+
+                                                if (value < 1) value = 1;
+                                                if (value > totalPages) value = totalPages;
+
+                                                setCurrentPage(value);
+                                            }}
+                                            className="form-control form-control-sm text-center"
+                                            style={{ width: "60px" }}
+                                        />
+
+                                        <span>/ {totalPages || 1}</span>
+                                    </div>
+
+                                    {/* Next */}
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary"
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        onClick={() => setCurrentPage(prev => prev + 1)}
+                                    >
+                                        <i className="bi bi-chevron-right"></i>
+                                    </button>
+
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

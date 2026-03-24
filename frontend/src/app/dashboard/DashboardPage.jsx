@@ -177,7 +177,7 @@ const DashboardPage = () => {
                                     <span>Đơn nhập chờ xử lý:</span>
                                     <span className="fw-bold">{data.inventory.newPO}</span>
                                 </div>
-                                <button className="card-action-btn" onClick={() => navigate('/inventory')}>
+                                <button className="card-action-btn" onClick={() => navigate('/inventory/menu')}>
                                     Quản lý kho hàng <ChevronRight size={16} />
                                 </button>
                             </div>

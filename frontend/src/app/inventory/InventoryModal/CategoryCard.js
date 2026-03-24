@@ -74,7 +74,7 @@ function CategoryCard({ category, onView }) {
 
             {/* Optional: subtle footer or indicator */}
             <div className="card-footer bg-transparent border-0 text-center py-2 small text-muted">
-                <i className="bi bi-arrow-right-circle me-1"></i> Nhấn để xem sản phẩm
+                <i className="bi bi-arrow-right-circle me-1"></i> Xem sản phẩm
             </div>
         </div>
     );

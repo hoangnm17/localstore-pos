@@ -52,7 +52,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
-          {salesRoute}
+        {salesRoute}
       </Route>
 
       <Route path="/Error" element={<Forbidden />} />

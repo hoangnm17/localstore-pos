@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import useTitle from "../../../hooks/common/useTitle";
 
 const PurchaseOrderList = () => {
+  useTitle("Danh sách đơn đặt hàng");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 

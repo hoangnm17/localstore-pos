@@ -5,9 +5,9 @@ import ProtectedRoute from './protected.route';
 const CategoryRoutes = (
     <Route element={<ProtectedRoute requiredFeatures={['VIEW_CATEGORY']} />}>
         <Route
-            path="/categories/*"
+            path="/categories/list"
             element={
-                    <CategoryPage />
+                <CategoryPage />
             }
         />
     </Route>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import problematicService from "../../../services/Inventory/problematicService";
 import ProblematicDetailModal from "../InventoryModal/ProblematicDetailModal";
 import ProblematicCreateModal from "../InventoryModal/ProblematicCreateModal";
+import useTitle from "../../../hooks/common/useTitle";
 
 function ProblematicPage() {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -10,6 +11,7 @@ function ProblematicPage() {
     user?.features?.includes("PROCESS_PROBLEMATIC") || false;
 
   const navigate = useNavigate();
+  useTitle("Các vấn đề của kho");
 
   const [reports, setReports] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
