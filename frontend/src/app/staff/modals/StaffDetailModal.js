@@ -6,6 +6,15 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
 
+    const getVietnameseRole = (roleName) => {
+        if (!roleName) return '';
+        const roleMap = {
+            'manager': 'Quản lý',
+            'cashier': 'Thu ngân',
+            'warehouse': 'Thủ Kho',
+        };
+        return roleMap[roleName.toLowerCase()] || roleName;
+    };
     useEffect(() => {
         const fetchStaffData = async () => {
             try {
@@ -108,7 +117,7 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                                 <InfoRow label="Vai trò" icon="bi-shield-check">
                                     <div className="mt-1">
                                         <span className="badge px-3 py-2 fs-6 rounded-pill" style={{ background: roleBadgeColor }}>
-                                            {data?.roleName}
+                                            {getVietnameseRole(data?.roleName)}
                                         </span>
                                     </div>
                                 </InfoRow>

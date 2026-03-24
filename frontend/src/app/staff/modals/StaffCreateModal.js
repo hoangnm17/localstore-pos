@@ -20,7 +20,15 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         isActive: 'active', password: '',
         createdAt: new Date().toISOString().split('T')[0]
     });
-
+    const getVietnameseRole = (roleName) => {
+        if (!roleName) return '';
+        const roleMap = {
+            'manager': 'Quản lý',
+            'cashier': 'Thu ngân',
+            'warehouse': 'Thủ Kho',
+        };
+        return roleMap[roleName.toLowerCase()] || roleName;
+    };
     useEffect(() => {
         const fetchRoles = async () => {
             try {
@@ -191,7 +199,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                                 onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
                                                 {roleList.map(role => (
-                                                    <option key={role.id} value={role.id}>{role.name}</option>
+                                                    <option key={role.id} value={role.id}>{getVietnameseRole(role.name)}</option>
                                                 ))}
                                             </select>
                                             {errors.roleId && <div className="invalid-feedback">{errors.roleId}</div>}
