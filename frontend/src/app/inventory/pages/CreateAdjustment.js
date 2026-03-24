@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
+import useTitle from "../../../hooks/common/useTitle";
 
 const CreateAdjustment = () => {
+  useTitle("Tạo phiếu điều chỉnh tồn kho");
   const navigate = useNavigate();
 
   const [keyword, setKeyword] = useState("");

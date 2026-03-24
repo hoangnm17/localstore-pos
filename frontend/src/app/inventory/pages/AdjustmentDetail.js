@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import adjustmentService from "../../../services/Inventory/adjustmentService";
+import useTitle from "../../../hooks/common/useTitle";
 
 function AdjustmentDetail() {
+  useTitle("Chi tiết phiếu điều chỉnh kho");
   const user = JSON.parse(localStorage.getItem("user"));
   const canProcess = user?.features?.includes("PROCESS_ADJUST");
 

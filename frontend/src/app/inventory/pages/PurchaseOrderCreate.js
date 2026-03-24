@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import Select from "react-select";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import productStockService from "../../../services/Inventory/productStockService";
+import useTitle from "../../../hooks/common/useTitle";
 
 const PurchaseOrderCreate = () => {
   const navigate = useNavigate();
-
+  useTitle("Tạo đơn đặt hàng");
   const [note, setNote] = useState("");
   const [items, setItems] = useState([]);
 

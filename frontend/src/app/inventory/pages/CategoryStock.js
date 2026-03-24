@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import categoryService from "../../../services/Inventory/categoryStockService";
 import CategoryCard from "../InventoryModal/CategoryCard.js";
+import useTitle from "../../../hooks/common/useTitle";
 
 function CategoryStock() {
+  useTitle("Tồn kho theo danh mục");
   const [categories, setCategories] = useState([]);
 
   // search

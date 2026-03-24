@@ -4,8 +4,10 @@ import purchaseOrderService from "../../../services/Inventory/purchaseOrderServi
 import supplierService from "../../../services/Inventory/supplierService";
 import PurchaseOrderActions from "../InventoryModal/PurchaseOrderAction";
 import SupplierDetailModal from "../InventoryModal/SupplierDetailModal";
+import useTitle from "../../../hooks/common/useTitle";
 
 const PurchaseOrderDetail = () => {
+  useTitle("Chi tiết đơn đặt hàng");
   const user = JSON.parse(localStorage.getItem("user"));
   const canUpdatePO = user?.features?.includes("UPDATE_PURCHASE_ORDER");
   const canReceivePO = user?.features?.includes("RECEIVE_PURCHASE_ORDER");
