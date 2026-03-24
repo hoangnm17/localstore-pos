@@ -19,6 +19,7 @@ import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
 import restockRoute from "./restock.route"
 import returnRoute from "./return.route"
+import profileRoute from "./profile.route";
 
 const AppRoutes = () => {
   return (
@@ -55,6 +56,11 @@ const AppRoutes = () => {
         {salesRoute}
       </Route>
 
+      <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier', 'Warehouse']} />}>
+        <Route element={<AppLayout />}>
+        {profileRoute}
+        </Route>
+      </Route>
       <Route path="/Error" element={<Forbidden />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>
