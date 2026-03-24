@@ -1,4 +1,5 @@
 const staffModel = require("../models/staff.model");
+const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 
 module.exports.getStaffList = async () => {
@@ -93,4 +94,38 @@ module.exports.updateStaff = async (id, data) => {
         isActive: data.isActive || 'active',
         hashedPassword 
     });
+};
+
+module.exports.resetPassword = async (userId) => {
+    if (!userId)
+         throw new Error
+        ("Chưa xác định được Tài khoản nhân viên!");
+    
+    const defaultHash = await bcrypt.hash("123456", 10);
+    await userModel.changeUserPassword(userId, defaultHash, true);
+    return true;
+};
+
+module.exports.getMyProfile = async (userId) => {
+    const profile = await staffModel.getStaffByUserId(userId);
+    if (!profile) 
+        throw new Error
+        ("Không tìm thấy thông tin hồ sơ của bạn trên hệ thống!");
+    return profile;
+};
+
+module.exports.changePassword = async (userId, oldPassword, newPassword) => {
+    if (!oldPassword || !newPassword) 
+        throw new Error
+        ("Vui lòng nhập cả mật khẩu cũ và mới!");
+    
+    const user = await userModel.findById(userId);
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch) 
+        throw new Error
+        ("Mật khẩu cũ không chính xác!");
+    
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await userModel.changeUserPassword(userId, newHash, false);
+    return true;
 };
