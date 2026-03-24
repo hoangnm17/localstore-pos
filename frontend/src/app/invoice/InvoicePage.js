@@ -138,7 +138,7 @@ export default function InvoicesPage() {
                   return (
                     <tr key={inv.id}>
                       <td className="ps-4 fw-bold text-primary">#{inv.invoiceCode}</td>
-                      <td className="text-muted small">{new Date(inv.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td className="text-muted small">{new Date(inv.createdAt.replace('Z', '')).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td>{inv.customerName || <span className="text-muted italic small">Khách lẻ</span>}</td>
                       <td className="text-end fw-bold">{formatCurrency(inv.finalAmount)}</td>
                       <td className="text-center">
@@ -201,6 +201,7 @@ export default function InvoicesPage() {
       {selectedInvoice && !showReturnModal && (
         <BillModal invoice={selectedInvoice} autoPrint={autoPrint} onClose={() => setSelectedInvoice(null)} />
       )}
+      
       {showReturnModal && selectedInvoice && (
         <ReturnCreateModal
           invoice={selectedInvoice}

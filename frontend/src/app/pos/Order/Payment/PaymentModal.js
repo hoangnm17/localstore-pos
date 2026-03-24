@@ -71,24 +71,19 @@ export default function PaymentModal({
         setLoadingQr(false);
       }
     };
-
     const timer = setTimeout(initQR, 100);
     return () => clearTimeout(timer);
   }, [method, internalQr, finalAmount, orderId, safeDiscount, onConfirm]);
 
   useEffect(() => {
     if (!internalQr || method !== "BANK") return;
-
     const es = new EventSource(`${process.env.REACT_APP_API_BASE_URL}/sse`);
-
     es.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-
         if (payload?.type === "PAYMENT_SUCCESS") {
           onBankPaid(payload);
         }
-
       } catch (err) {
         console.error("SSE Parse Error:", err);
       }
@@ -128,7 +123,17 @@ export default function PaymentModal({
 
   return (
     <BaseModal onClose={onClose}>
-      <div className="bg-white rounded-4 shadow overflow-hidden" style={{ width: "980px", maxWidth: "95vw" }}>
+      <div
+        /* Thêm class mx-auto để căn giữa trục ngang */
+        className="bg-white rounded-4 shadow overflow-hidden mx-auto"
+        style={{
+          width: "980px",
+          maxWidth: "95vw",
+          /* Đảm bảo không có margin lạ từ Bootstrap đè lên */
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}
+      >
         <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
           <h6 className="fw-bold mb-0">Thanh toán đơn hàng #{orderId}</h6>
           <button className="btn-close" onClick={onClose} />
@@ -144,7 +149,9 @@ export default function PaymentModal({
                 <div className="small text-muted mb-1">Tổng cần thanh toán</div>
                 <div className="h2 fw-bold text-primary mb-0">{formatCurrency(finalAmount)}</div>
                 {safeDiscount.totalDiscount > 0 && (
-                  <div className="small text-danger mt-1">Đã giảm: -{formatCurrency(safeDiscount.totalDiscount)}</div>
+                  <div className="small text-danger mt-1">
+                    Đã giảm: -{formatCurrency(safeDiscount.totalDiscount)}
+                  </div>
                 )}
               </div>
 
@@ -160,7 +167,6 @@ export default function PaymentModal({
                     qr={internalQr}
                     total={finalAmount}
                     loading={loadingQr}
-                    expiresAt={internalQr?.expiresAt}
                   />
                 )}
               </div>

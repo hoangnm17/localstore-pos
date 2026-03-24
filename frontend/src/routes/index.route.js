@@ -40,14 +40,14 @@ const AppRoutes = () => {
           {InventoryRoutes}
           {ProductRoutes}
           {CategoryRoutes}
+          {restockRoute}
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         <Route element={<AppLayout />}>
           {InvoiceRoutes}
-          {cashierRoute}
-          {restockRoute}
+          {cashierRoute}  
           {returnRoute}
         </Route>
       </Route>

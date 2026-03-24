@@ -37,6 +37,7 @@ export const useOrderItems = () => {
       productId: Number(product.productId),
       productName: product.productName,
       productUnitId: product.productUnitId,
+      productStock: product.productStock,
       unitPrice: product.unitPrice,
       unitName: product.unitName,
       quantity: qty,
@@ -44,7 +45,6 @@ export const useOrderItems = () => {
       factor: product.factor,
       unitType: product.unitType,
     };
-    
     return {
       items: [...items, newItem],
       activeId: newItem.id
