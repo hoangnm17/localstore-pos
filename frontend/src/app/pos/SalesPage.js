@@ -25,6 +25,7 @@ export default function SalesHome() {
     goToNextInvoice,
     goToPrevInvoice,
     accessError,
+    updateSearchText,
   } = useInvoiceTabs();
 
   const {
@@ -97,30 +98,48 @@ export default function SalesHome() {
     const oldItems = activeInvoice.items;
     const result = addItem(oldItems, product);
 
-    const affectedItem = result.items.find(
-      (it) => it.productId === Number(product.productId || product.id) &&
-        it.productUnitId === Number(product.productUnitId || product.selectedUnit?.unitId)
+    const sameProductItems = result.items.filter(
+      (it) => Number(it.productId) === Number(product.productId || product.id)
     );
 
-    const oldItem = oldItems.find(
-      (it) => it.productId === Number(product.productId || product.id) &&
-        it.productUnitId === Number(product.productUnitId || product.selectedUnit?.unitId)
-    );
+    const totalRequestedQuantity = sameProductItems.reduce((total, item) => {
+      const itemFactor = item.factor || 1;
+      return total + (Number(item.quantity) * itemFactor);
+    }, 0);
 
-    if (oldItem && affectedItem && affectedItem.quantity <= oldItem.quantity) {
-      showNotification(`Sản phẩm [${affectedItem.productName}] đã đạt giới hạn tồn kho!`, "warning");
+    const stockLimit = product.productStock || 0;
+
+    if (totalRequestedQuantity > stockLimit) {
+      const currentQtyInCart = totalRequestedQuantity - (product.factor || 1); // Số lượng trước khi cộng thêm phát này
+      showNotification(
+        `Không đủ tồn kho! Tổng nhập quy đổi: ${totalRequestedQuantity}, Kho chỉ còn: ${stockLimit}`,
+        "warning"
+      );
       return;
     }
 
     updateInvoiceItems(activeInvoice.id, result.items);
     setActiveItemId(result.activeId);
 
-    showNotification(`Đã thêm ${affectedItem?.productName || 'sản phẩm'}`, "success");
-
+    showNotification(`Đã thêm ${product.productName}`, "success");
     window.dispatchEvent(new Event("RE_FOCUS_SEARCH"));
   };
 
-  const handleIncrease = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, increase(activeInvoice.items, id)); };
+  const handleIncrease = (id) => {
+    if (!activeInvoice) return;
+
+    const targetItem = activeInvoice.items.find(it => it.id === id);
+    if (!targetItem) return;
+
+    const sameProductItems = activeInvoice.items.filter(it => it.productId === targetItem.productId);
+    const totalConvertedQty = sameProductItems.reduce((sum, it) => sum + (it.quantity * (it.factor || 1)), 0);
+
+    if (totalConvertedQty + (targetItem.factor || 1) > targetItem.productStock) {
+      showNotification(`Không thể tăng! Đã đạt giới hạn tồn kho tổng (${targetItem.productStock})`, "warning");
+      return;
+    }
+    updateInvoiceItems(activeInvoice.id, increase(activeInvoice.items, id));
+  };
   const handleDecrease = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, decrease(activeInvoice.items, id)); };
   const handleRemove = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, remove(activeInvoice.items, id)); };
   const handleSelectCustomer = async (customer) => {
@@ -128,44 +147,62 @@ export default function SalesHome() {
       try { await updateInvoiceCustomer(activeInvoice.id, customer); } catch (e) { console.error(e); }
     }
   };
-  const handleChangeQty = (id, quantity) => {
+const handleChangeQty = (id, quantity) => {
     if (!activeInvoice) return;
+
     const newItems = activeInvoice.items.map(it => {
       if (it.id !== id) return it;
-      if (quantity === "" || quantity === ".") return { ...it, quantity };
+
+      if (quantity === "" || quantity === "." || (typeof quantity === 'string' && quantity.endsWith('.'))) {
+        return { ...it, quantity };
+      }
+
       let num = parseFloat(quantity);
       if (isNaN(num)) return it;
-      const maxQty = it.quantityOnHand ?? Infinity;
-      num = Math.max(0, Math.min(num, maxQty));
-      return { ...it, quantity: num };
+
+      const otherItemsQty = activeInvoice.items
+        .filter(item => item.productId === it.productId && item.id !== id)
+        .reduce((sum, item) => sum + (Number(item.quantity) * (item.factor || 1)), 0);
+
+      const remainingStock = it.productStock - otherItemsQty;
+      const maxQtyForThisUnit = remainingStock / (it.factor || 1);
+
+      if (num > maxQtyForThisUnit) {
+        num = maxQtyForThisUnit;
+        return { ...it, quantity: num };
+      }
+
+      if (num < 0) num = 0;
+      return { ...it, quantity: quantity }; 
     });
+
     updateInvoiceItems(activeInvoice.id, newItems);
   };
 
   const total = calculateTotal(activeInvoice?.items || []);
   const totalQuantity = calculateTotalQuantity(activeInvoice?.items || []);
 
-  // if (accessError) {
-  //   return (
-  //     <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-  //       <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
-  //         <i className="bi bi-exclamation-triangle-fill"></i>
-  //       </div>
-  //       <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
-  //       <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
-  //         {accessError}
-  //       </p>
-  //       <button
-  //         className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm"
-  //         onClick={() => window.location.href = '/my-schedule'}
-  //       >
-  //         <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
-  //       </button>
-  //     </div>
-  //   );
-  // }
+  if (accessError) {
+    return (
+      <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+        <div className="text-danger mb-4" style={{ fontSize: '5rem', lineHeight: 1 }}>
+          <i className="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h2 className="fw-bold text-dark mb-3">Truy Cập Bị Từ Chối</h2>
+        <p className="text-muted fs-5 text-center px-4" style={{ maxWidth: '600px', whiteSpace: 'pre-line' }}>
+          {accessError}
+        </p>
+        <button
+          className="btn btn-primary mt-4 px-4 py-3 fw-bold rounded-3 shadow-sm"
+          onClick={() => window.location.href = '/my-schedule'}
+        >
+          <i className="bi bi-arrow-left me-2"></i> Quay lại trang chủ
+        </button>
+      </div>
+    );
+  }
 
-  if (!activeInvoice) {
+  if (!activeInvoice && invoices.length === 0) {
     return (
       <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-white">
         <div className="spinner-grow text-primary mb-3" style={{ width: "3rem", height: "3rem" }} role="status"></div>
@@ -173,6 +210,8 @@ export default function SalesHome() {
       </div>
     );
   }
+
+  if (!activeInvoice) return null;
 
   return (
     <div className="vh-100 d-flex flex-column overflow-hidden bg-light text-dark">
@@ -233,7 +272,7 @@ export default function SalesHome() {
       </header>
 
       <main className="d-flex flex-grow-1 overflow-hidden">
-        <aside className="d-flex flex-column border-end bg-white glass-effect shadow-sm" style={{ flex: "0 0 40%", zIndex: 5 }}>
+        <aside className="d-flex flex-column border-end bg-white glass-effect shadow-sm" style={{ flex: "0 0 45%", zIndex: 5 }}>
           <Order
             key={activeInvoice.id}
             orderId={activeInvoice.id}
@@ -255,11 +294,13 @@ export default function SalesHome() {
           />
         </aside>
 
-        <section className="d-flex flex-column bg-light" style={{ flex: "0 0 60%" }}>
+        <section className="d-flex flex-column bg-light" style={{ flex: "0 0 55%" }}>
           <Product
             addItem={handleAddItem}
             invoiceId={activeInvoiceId}
             isModalOpen={isModalOpen}
+            searchText={activeInvoice?.searchText || ""}
+            onSearchChange={(txt) => updateSearchText(activeInvoiceId, txt)}
           />
         </section>
       </main>
@@ -267,7 +308,6 @@ export default function SalesHome() {
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Chrome Tabs Style */
         .chrome-tab {
           height: 38px;
           background: #e9ecef;

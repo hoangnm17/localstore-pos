@@ -32,7 +32,8 @@ export const useInvoiceTabs = () => {
     items: [],
     status: "LOCAL",
     isSaving: false,
-    itemsLoaded: true
+    itemsLoaded: true,
+    searchText: "",
   });
 
   const setAsActive = (id) => {
@@ -45,7 +46,7 @@ export const useInvoiceTabs = () => {
         const res = await invoiceGetDrafts();
         if (res && res.success === false) {
           showNotification(res.message
-             || "Lỗi truy cập ca làm việc!", "error");
+            || "Lỗi truy cập ca làm việc!", "error");
           const local = createLocalInvoice();
           setInvoices([local]);
           setAsActive(local.id);
@@ -65,7 +66,8 @@ export const useInvoiceTabs = () => {
           ...inv,
           items: [],
           itemsLoaded: false,
-          isSaving: false
+          isSaving: false,
+          searchText: "",
         }));
 
         setInvoices(formatted);
@@ -74,8 +76,8 @@ export const useInvoiceTabs = () => {
       } catch (err) {
         console.error("Load drafts failed:", err);
         const errorMsg =
-         err.response?.data?.message 
-         || "Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!";
+          err.response?.data?.message
+          || "Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!";
         showNotification(errorMsg, "error");
         setAccessError(errorMsg);
         // const local = createLocalInvoice();
@@ -86,6 +88,17 @@ export const useInvoiceTabs = () => {
 
     loadDrafts();
   }, []);
+
+  const updateSearchText = (invoiceId, text) => {
+    console.log(text)
+    setInvoices(prev =>
+      prev.map(inv =>
+        inv.id === invoiceId
+          ? { ...inv, searchText: text }
+          : inv
+      )
+    );
+  };
 
   const activeInvoice = invoices.find(i => i.id === activeInvoiceId) || null;
 
@@ -127,7 +140,7 @@ export const useInvoiceTabs = () => {
 
 
   const updateInvoiceItems = async (invoiceId, newItems = []) => {
-    
+
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
 
@@ -154,14 +167,16 @@ export const useInvoiceTabs = () => {
 
         if (res && res.success === false) {
           showNotification(res.message || "Bạn đang ngồi sai Quầy!", "error");
-          setInvoices(prev => 
-            prev.map(inv => 
-              inv.id === invoiceId ? 
-              { ...inv, 
-                isSaving: false, 
-                items: [] }
-                 : inv
-                ));
+          setInvoices(prev =>
+            prev.map(inv =>
+              inv.id === invoiceId ?
+                {
+                  ...inv,
+                  isSaving: false,
+                  items: []
+                }
+                : inv
+            ));
           return;
         }
         const newDbId = res?.data?.id;
@@ -280,27 +295,37 @@ export const useInvoiceTabs = () => {
   const handlePaymentSuccess = useCallback((invoiceId) => {
     showNotification("Thanh toán thành công!", "success");
 
-    let nextActiveId = null;
     setInvoices((prev) => {
+      // 1. Lọc bỏ hóa đơn vừa thanh toán
       const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
 
+      // 2. Tìm hóa đơn tiếp theo hoặc tạo mới
       const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
 
+      let finalInvoices;
+      let nextId;
+
       if (nextUnpaid) {
-        nextActiveId = nextUnpaid.id;
-        return remaining;
+        finalInvoices = remaining;
+        nextId = nextUnpaid.id;
+      } else {
+        const local = createLocalInvoice();
+        finalInvoices = [...remaining, local];
+        nextId = local.id;
       }
 
-      const local = createLocalInvoice();
-      nextActiveId = local.id;
-      return [...remaining, local];
-    });
+      // 3. CẬP NHẬT ID NGAY TRONG CALLBACK CỦA SETSTATE
+      // Việc này đảm bảo khi React kết thúc đợt update này, cả 2 state đều khớp nhau
+      setActiveInvoiceId(nextId);
 
-    if (nextActiveId) setActiveInvoiceId(nextActiveId);
+      return finalInvoices;
+    });
   }, [showNotification]);
 
   const pay = async (paymentInfo) => {
-    if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
+    if (!activeInvoice || activeInvoice.status !== "UNPAID") {
+      return { ignored: true };
+    }
     const invoiceId = activeInvoice.id;
 
     try {
@@ -316,6 +341,7 @@ export const useInvoiceTabs = () => {
         return { pending: true, qr };
       }
     } catch (err) {
+      console.log("ĐĂƯAUDBƯAUB")
       showNotification("Thanh toán thất bại!", "error");
       throw err;
     }
@@ -408,5 +434,6 @@ export const useInvoiceTabs = () => {
     goToNextInvoice,
     goToPrevInvoice,
     accessError,
+    updateSearchText,
   };
 };

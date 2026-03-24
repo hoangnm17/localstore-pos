@@ -10,16 +10,24 @@ export default function FilterBar({
   addItem,
   preventFocus,
   allProducts = [],
-  onFilteredResults, // Callback để trả về danh sách sản phẩm sau khi phân trang cho component cha
+  onFilteredResults,
 }) {
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
   const inputRef = useRef(null);
 
-  // --- LOGIC PHÂN TRANG CATEGORY ---
   const [catPage, setCatPage] = useState(0);
-  const catsPerPage = 5; // Số lượng category hiển thị mỗi lần
+  const catsPerPage = 4;
 
-  // Chia nhỏ mảng categories
+  useEffect(() => {
+    setDisplayKeyword(keyword);
+  }, [keyword]);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setDisplayKeyword(val);
+    onKeywordChange(val);
+  };
+
   const visibleCategories = useMemo(() => {
     const start = catPage * catsPerPage;
     return categories.slice(start, start + catsPerPage);
@@ -44,7 +52,6 @@ export default function FilterBar({
     
     const slicedItems = filtered.slice(firstIndex, lastIndex);
     
-    // Gửi dữ liệu đã lọc về cho Component hiển thị (List sản phẩm)
     if (onFilteredResults) onFilteredResults(slicedItems);
 
     return {
@@ -53,7 +60,6 @@ export default function FilterBar({
     };
   }, [allProducts, selectedCategory, debouncedKeyword, prodPage, onFilteredResults]);
 
-  // Reset trang sản phẩm khi đổi tiêu chí lọc
   useEffect(() => {
     setProdPage(1);
   }, [selectedCategory, debouncedKeyword]);
@@ -92,11 +98,12 @@ export default function FilterBar({
             className="form-control border-0 py-2"
             placeholder="Tìm tên hoặc mã vạch..."
             value={displayKeyword}
-            onChange={(e) => setDisplayKeyword(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 addItem(displayKeyword);
                 setDisplayKeyword("");
+                onKeywordChange("");
               }
             }}
           />
