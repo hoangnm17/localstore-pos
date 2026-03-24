@@ -597,11 +597,10 @@ exports.getProductWithBarcode = async (barcode) => {
 };
 
 exports.getAllProducts = async (filters) => {
-    const { search, page, pageSize, categoryId, status } = filters;
+    const { search, page = 1, pageSize = 10, categoryId, status } = filters;
     const offset = (page - 1) * pageSize;
 
-    // Phần điều kiện lọc chung (để dùng cho cả COUNT và SELECT)
-    const filterConditions = `
+    const baseFilter = `
         WHERE [status] = @status
         AND (
             @search IS NULL
@@ -614,27 +613,39 @@ exports.getAllProducts = async (filters) => {
         ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
     `;
 
-    const query = `
-        ${categoryId ? `
+    const categoryCTE = categoryId ? `
         WITH CategoryTree AS (
             SELECT id FROM Categories WHERE id = @categoryId
             UNION ALL
-            SELECT c.id FROM Categories c JOIN CategoryTree ct ON c.parentId = ct.id
-        )` : ``}
+            SELECT c.id 
+            FROM Categories c 
+            JOIN CategoryTree ct ON c.parentId = ct.id
+        )
+    ` : ``;
 
-        -- Query 1: Đếm tổng số lượng sản phẩm thỏa điều kiện
-        SELECT COUNT(*) AS total FROM [Products] ${filterConditions};
+    const query = `
+        -- Query 1: COUNT
+        ${categoryCTE}
+        SELECT COUNT(*) AS total 
+        FROM [Products]
+        ${baseFilter};
 
-        -- Query 2: Lấy dữ liệu sản phẩm có phân trang
+        -- Query 2: SELECT DATA
+        ${categoryCTE}
         SELECT 
             p.[id], p.[name], p.[code], p.[imageUrl], p.[categoryId],
-            ISNULL(s.[quantityOnHand], 0) AS [stock], s.[minThreshold],
-            pu.[id] AS [unitId], pu.[unitName], pu.[conversionFactor] AS [factor],
-            pu.[barcode], pu.[salePrice] AS [price], pu.[unitType]
+            ISNULL(s.[quantityOnHand], 0) AS [stock], 
+            s.[minThreshold],
+            pu.[id] AS [unitId], 
+            pu.[unitName], 
+            pu.[conversionFactor] AS [factor],
+            pu.[barcode], 
+            pu.[salePrice] AS [price], 
+            pu.[unitType]
         FROM (
             SELECT [id], [name], [code], [categoryId], [imageUrl]
             FROM [Products]
-            ${filterConditions}
+            ${baseFilter}
             ORDER BY [id]
             OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
         ) AS p
@@ -651,10 +662,10 @@ exports.getAllProducts = async (filters) => {
     request.input('pageSize', sql.Int, pageSize);
 
     const result = await request.query(query);
-    
+
     return {
-        total: result.recordsets[0][0].total, // Lấy từ query COUNT
-        data: result.recordsets[1]            // Lấy từ query SELECT
+        total: result.recordsets[0][0].total,
+        data: result.recordsets[1]
     };
 };
 

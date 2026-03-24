@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import supplierService from "../../../services/Inventory/supplierService";
 import CreateSupplierModal from "../InventoryModal/CreateSupplierModal";
 import EditSupplierModal from "../InventoryModal/EditSupplierModal";
+import useTitle from "../../../hooks/common/useTitle";
 
 function SupplierList() {
+  useTitle("Quản lý nhà cung cấp");
   const user = JSON.parse(localStorage.getItem("user"));
   const canUpdateSupplier = user?.features?.includes("UPDATE_SUPPLIER");
 

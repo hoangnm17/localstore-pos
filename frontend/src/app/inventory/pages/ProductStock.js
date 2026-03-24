@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 import UpdateMinThresholdModal from "../InventoryModal/UpdateMinThreshold";
+import useTitle from "../../../hooks/common/useTitle";
 
 function ProductStock() {
+  useTitle("Tồn kho sản phẩm");
   const user = JSON.parse(localStorage.getItem("user"));
   const canUpdateLowStock = user?.features?.includes("EDIT_LOWSTOCK");
 

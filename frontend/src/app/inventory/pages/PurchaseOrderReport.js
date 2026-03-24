@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import SummaryCard from "../InventoryModal/SummaryCard";
+import useTitle from "../../../hooks/common/useTitle";
 
 // Chart.js imports
 import {
@@ -27,6 +28,7 @@ ChartJS.register(
 );
 
 function PurchaseOrderReport() {
+  useTitle("Báo cáo đơn đặt hàng");
   const navigate = useNavigate();
   const now = new Date();
 

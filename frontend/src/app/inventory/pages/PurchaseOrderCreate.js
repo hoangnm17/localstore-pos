@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import Select from "react-select";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import productStockService from "../../../services/Inventory/productStockService";
+import useTitle from "../../../hooks/common/useTitle";
 
 const PurchaseOrderCreate = () => {
   const navigate = useNavigate();
-
+  useTitle("Tạo đơn đặt hàng");
   const [note, setNote] = useState("");
   const [items, setItems] = useState([]);
 
@@ -167,15 +168,19 @@ const PurchaseOrderCreate = () => {
     );
   };
 
-  const updateQuantity = (productUnitId, delta) => {
-    setItems(prev =>
-      prev.map(i => {
-        if (i.productUnitId !== productUnitId) return i;
-        const newQty = Math.max(1, i.quantity + delta);
-        return { ...i, quantity: newQty };
-      })
-    );
-  };
+  const updateQuantity = (productUnitId, supplierId, delta) => {
+  setItems(prev =>
+    prev.map(i => {
+      if (
+        i.productUnitId !== productUnitId ||
+        i.supplierId !== supplierId
+      ) return i;
+
+      const newQty = Math.max(1, i.quantity + delta);
+      return { ...i, quantity: newQty };
+    })
+  );
+};
 
   const totalAmount = useMemo(() => {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -333,7 +338,7 @@ const PurchaseOrderCreate = () => {
                       {items.map(item => {
                         const total = item.price * item.quantity;
                         return (
-                          <tr key={item.productUnitId}>
+                          <tr key={`${item.productUnitId}-${item.supplierId}`}>
                             <td>
                               <div className="fw-semibold">{item.productName}</div>
                               <small className="text-muted">Đơn vị: {item.unitName}</small>
@@ -346,7 +351,7 @@ const PurchaseOrderCreate = () => {
                               <div className="d-flex align-items-center justify-content-center gap-2">
                                 <button type="button"
                                   className="btn btn-sm btn-outline-secondary rounded-circle"
-                                  onClick={() => updateQuantity(item.productUnitId, -1)}
+                                  onClick={() => updateQuantity(item.productUnitId, item.supplierId, -1)}
                                   disabled={item.quantity <= 1}
                                 >
                                   -
@@ -354,7 +359,7 @@ const PurchaseOrderCreate = () => {
                                 <span className="fw-bold px-3">{item.quantity}</span>
                                 <button type="button"
                                   className="btn btn-sm btn-outline-secondary rounded-circle"
-                                  onClick={() => updateQuantity(item.productUnitId, 1)}
+                                  onClick={() => updateQuantity(item.productUnitId, item.supplierId, 1)}
                                 >
                                   +
                                 </button>

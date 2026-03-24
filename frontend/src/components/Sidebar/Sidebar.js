@@ -125,7 +125,7 @@ const Sidebar = () => {
                 {menuItems.map((item) => (
                     <div key={item.title}>
                         <div
-                            className={`menu-item ${location.pathname.includes(item.path || item.id) ? 'active' : ''}`}
+                            className={`menu-item ${(item.path && location.pathname.includes(item.path)) || (item.children && item.children.some(c => location.pathname.includes(c.path))) ? 'active' : ''}`}
                             onClick={() => item.children ? toggleSubMenu(item.id) : navigate(item.path)}
                         >
                             <i className={`bi ${item.icon}`}></i>
@@ -142,12 +142,19 @@ const Sidebar = () => {
                         {!isCollapsed && item.children && openMenus[item.id] && (
                             <div className="sub-menu-list">
                                 {item.children.map(child => (
-                                    <div key={child.title} className="sub-item" onClick={() => navigate(child.path)}>
+                                    <div
+                                        key={child.title}
+                                        className={`sub-item ${location.pathname.includes(child.path) ? 'active-sub' : ''}`}
+                                        onClick={() => navigate(child.path)}
+                                        style={location.pathname.includes(child.path) ? { color: '#0d6efd', fontWeight: 'bold' } : {}}
+                                    >
                                         • {child.title}
                                     </div>
                                 ))}
                             </div>
                         )}
+
+
                     </div>
                 ))}
             </div>

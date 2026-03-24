@@ -300,7 +300,9 @@ export const useInvoiceTabs = () => {
   }, [showNotification]);
 
   const pay = async (paymentInfo) => {
-    if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
+    if (!activeInvoice || activeInvoice.status !== "UNPAID") {
+      return { ignored: true };
+    }
     const invoiceId = activeInvoice.id;
 
     try {
