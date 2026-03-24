@@ -83,6 +83,12 @@ const Sidebar = () => {
         {
             title: 'Lịch Của Tôi', icon: 'bi-calendar-week-fill', path: '/my-schedule',
             roles: ['Cashier', 'Manager']
+        },
+        {
+            title: 'Hồ Sơ Của Tôi', 
+            icon: 'bi-person-badge-fill', 
+            path: '/my-profile',
+            roles: ['Manager', 'Cashier', 'Warehouse'] 
         }
     ];
 
