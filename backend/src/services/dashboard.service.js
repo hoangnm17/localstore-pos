@@ -25,14 +25,24 @@ class DashboardService {
             WHERE quantityOnHand <= minThreshold
         `);
 
-        // 4. Revenue Stats
+        // 4. Revenue Stats (Tính doanh thu thực tế = Hóa đơn - Hoàn trả)
         const revenueStats = await pool.request().query(`
             SELECT 
-                ISNULL(SUM(CASE WHEN CAST(createdAt AS DATE) = CAST(GETDATE() AS DATE) THEN finalAmount ELSE 0 END), 0) as todayRevenue,
-                ISNULL(SUM(CASE WHEN createdAt >= DATEADD(day, -7, GETDATE()) THEN finalAmount ELSE 0 END), 0) as weekRevenue,
-                ISNULL(SUM(CASE WHEN createdAt >= DATEADD(month, -1, GETDATE()) THEN finalAmount ELSE 0 END), 0) as monthRevenue
-            FROM Invoices
-            WHERE status != 'CANCELLED'
+                (
+                    (SELECT ISNULL(SUM(finalAmount), 0) FROM Invoices WHERE status != 'CANCELLED' AND CAST(createdAt AS DATE) = CAST(GETDATE() AS DATE))
+                    - 
+                    (SELECT ISNULL(SUM(totalRefundAmount), 0) FROM Returns WHERE status = 'Approve' AND CAST(createdAt AS DATE) = CAST(GETDATE() AS DATE))
+                ) as todayRevenue,
+                (
+                    (SELECT ISNULL(SUM(finalAmount), 0) FROM Invoices WHERE status != 'CANCELLED' AND createdAt >= DATEADD(day, -7, GETDATE()))
+                    - 
+                    (SELECT ISNULL(SUM(totalRefundAmount), 0) FROM Returns WHERE status = 'Approve' AND createdAt >= DATEADD(day, -7, GETDATE()))
+                ) as weekRevenue,
+                (
+                    (SELECT ISNULL(SUM(finalAmount), 0) FROM Invoices WHERE status != 'CANCELLED' AND createdAt >= DATEADD(month, -1, GETDATE()))
+                    - 
+                    (SELECT ISNULL(SUM(totalRefundAmount), 0) FROM Returns WHERE status = 'Approve' AND createdAt >= DATEADD(month, -1, GETDATE()))
+                ) as monthRevenue
         `);
 
         // 5. Payment Methods
@@ -60,15 +70,22 @@ class DashboardService {
             ORDER BY createdAt DESC
         `);
 
-        // 8. Chart Data
+        // 8. Chart Data (Doanh thu thực tế theo giờ = Hóa đơn - Hoàn trả)
         const chartRes = await pool.request().query(`
             SELECT 
-                FORMAT(createdAt, 'HH:00') as time,
-                SUM(finalAmount) as amount
-            FROM Invoices
-            WHERE createdAt >= CAST(GETDATE() AS DATE) AND status != 'CANCELLED'
-            GROUP BY FORMAT(createdAt, 'HH:00')
-            ORDER BY time
+                t.time,
+                SUM(t.amount) as amount
+            FROM (
+                SELECT FORMAT(createdAt, 'HH:00') as time, finalAmount as amount
+                FROM Invoices
+                WHERE createdAt >= CAST(GETDATE() AS DATE) AND status != 'CANCELLED'
+                UNION ALL
+                SELECT FORMAT(createdAt, 'HH:00') as time, -totalRefundAmount as amount
+                FROM Returns
+                WHERE createdAt >= CAST(GETDATE() AS DATE) AND status = 'Approve'
+            ) t
+            GROUP BY t.time
+            ORDER BY t.time
         `);
 
         return {
