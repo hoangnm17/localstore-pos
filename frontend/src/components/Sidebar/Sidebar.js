@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 import { logout } from '../../services/Auth/auth.service';
+import { attendanceService } from '../../services/Attendance/attendance.service';
+import { useNotification } from '../global/Notification/NotificationContext';
 
 const Sidebar = () => {
+    const { showNotification } = useNotification();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [openMenus, setOpenMenus] = useState({});
     const navigate = useNavigate();
@@ -21,6 +24,28 @@ const Sidebar = () => {
 
     const toggleSubMenu = (menu) => {
         setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
+    };
+
+    const handleLogoutClick = async () => {
+        if (roleName === 'Manager') {
+            setShowModal(true);
+            return;
+        }
+        try {
+            const res = await attendanceService.checkWorking();
+            if (res?.success && res.data) {
+                const nowStr = new Date().toTimeString().substring(0, 5);
+                if (res.data.endTime && nowStr < res.data.endTime) {
+                    showNotification("Chưa hết giờ làm, không thể đăng xuất ra khỏi hệ thống!", "error");
+                    return;
+                }
+                showNotification("Bạn đang trong ca làm việc. Vui lòng kết ca trước khi đăng xuất!", "error");
+                return;
+            }
+            setShowModal(true);
+        } catch (e) {
+            setShowModal(true);
+        }
     };
 
     const allMenuItems = [
@@ -82,13 +107,13 @@ const Sidebar = () => {
         },
         {
             title: 'Lịch Của Tôi', icon: 'bi-calendar-week-fill', path: '/my-schedule',
-            roles: ['Cashier', 'Manager']
+            roles: ['Cashier', 'Warehouse']
         },
         {
-            title: 'Hồ Sơ Của Tôi', 
-            icon: 'bi-person-badge-fill', 
+            title: 'Hồ Sơ Của Tôi',
+            icon: 'bi-person-badge-fill',
             path: '/my-profile',
-            roles: ['Manager', 'Cashier', 'Warehouse'] 
+            roles: ['Manager', 'Cashier', 'Warehouse']
         }
     ];
 
@@ -167,7 +192,7 @@ const Sidebar = () => {
 
             {/* Logout Footer */}
             <>
-                <div className="sidebar-footer" onClick={() => setShowModal(true)}>
+                <div className="sidebar-footer" onClick={handleLogoutClick}>
                     <i className="bi bi-box-arrow-right fs-4"></i>
                     {!isCollapsed && <span>ĐĂNG XUẤT</span>}
                 </div>
