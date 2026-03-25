@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/axiosInstance';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
+import { useAuth } from '../../hooks/useAuth';
+import { attendanceService } from '../../services/Attendance/attendance.service';
 import CashHandover from './CashHandover';
 import { useShiftReminder } from '../../hooks/useShiftReminder';
 
@@ -45,10 +47,10 @@ const getShiftStyle = (id) => shiftColors[(id - 1) % shiftColors.length] || shif
 
 const MySchedule = () => {
     const { showNotification } = useNotification();
+    const { roleName } = useAuth();
+
     const [loading, setLoading] = useState(true);
     const [currentMonday, setCurrentMonday] = useState(getMonday(new Date()));
-    useShiftReminder();
-
     const [staffInfo, setStaffInfo] = useState(null);
     const [schedules, setSchedules] = useState([]);
     const [showHandover, setShowHandover] = useState(false);
@@ -62,6 +64,20 @@ const MySchedule = () => {
     const endDate = formatDate(weekDates[6]);
     const todayStr = formatDate(new Date());
 
+    const mapByDate = {};
+    let totalWeekHours = 0;
+
+    schedules.forEach(sc => {
+        const dStr = sc.workDate.split('T')[0];
+        if (!mapByDate[dStr]) mapByDate[dStr] = [];
+        mapByDate[dStr].push(sc);
+        totalWeekHours += calcHours(sc.startTime, sc.endTime);
+    });
+
+    const todayShifts = mapByDate[todayStr] || [];
+    const activeShift = todayShifts.find(sc => sc.scheduleStatus === 'working');
+
+    useShiftReminder(activeShift);
     const fetchMySchedule = useCallback(async () => {
         setLoading(true);
         try {
@@ -84,16 +100,6 @@ const MySchedule = () => {
     const prevWeek = () => { const d = new Date(currentMonday); d.setDate(d.getDate() - 7); setCurrentMonday(d); };
     const nextWeek = () => { const d = new Date(currentMonday); d.setDate(d.getDate() + 7); setCurrentMonday(d); };
 
-    const mapByDate = {};
-    let totalWeekHours = 0;
-
-    schedules.forEach(sc => {
-        const dStr = sc.workDate.split('T')[0];
-        if (!mapByDate[dStr]) mapByDate[dStr] = [];
-        mapByDate[dStr].push(sc);
-        totalWeekHours += calcHours(sc.startTime, sc.endTime);
-    });
-
     const isOver48 = totalWeekHours > 48;
 
     return (
@@ -104,7 +110,7 @@ const MySchedule = () => {
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h3 className="fw-bold m-0 text-dark">Lịch Làm Việc Cá Nhân</h3>
-                        <p className="m-0 mt-2 text-secondary">Xem ca làm việc và thực hiện bàn giao kết ca.</p>
+                        <p className="m-0 mt-2 text-secondary">Xem ca làm việc.</p>
                     </div>
                     <div className="d-flex align-items-center gap-2 p-1 bg-white rounded-pill shadow-sm border border-light">
                         <button className="btn btn-sm btn-light rounded-pill fw-bold px-3 text-secondary" onClick={prevWeek}>
@@ -121,18 +127,89 @@ const MySchedule = () => {
                     </div>
                 </div>
 
-                {/* Staff Info & Nút Action */}
+                {/* Staff Info & Nút Action THÔNG MINH */}
                 <div className="card border-0 shadow-sm rounded-4 p-3 mb-4 d-flex flex-row justify-content-between align-items-center">
                     <div className="fw-bold text-secondary" style={{ fontSize: '1rem' }}>
                         <i className="bi bi-person-badge-fill me-2 text-primary" />
                         Nhân viên: <span className="text-dark">{staffInfo ? staffInfo.fullName : (loading ? 'Đang tải...' : '')}</span>
                     </div>
-                    <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
-                        style={{ borderRadius: '8px', background: '#6366f1', border: 'none' }}
-                        onClick={() => setShowHandover(true)}
-                        disabled={loading || !staffInfo}>
-                        <i className="bi bi-wallet2" /> Bàn Giao Tiền Mặt
-                    </button>
+
+                    {/* VÙNG QUAN TRỌNG: Lọc Điều Kiện Bật Nút Ra Về */}
+                    {(() => {
+                        const todayShifts = mapByDate[todayStr] || [];
+                        const activeShift = todayShifts.find(sc => sc.scheduleStatus === 'working');
+                        // MANAGER: Nếu đang có ca working → bắt buộc kết ca (handover)
+                        if (roleName === 'Manager') {
+                            if (!activeShift) {
+                                return (
+                                    <button className="btn btn-secondary fw-bold px-4 py-2 opacity-50" disabled>
+                                        Không Có Ca Hôm Nay
+                                    </button>
+                                );
+                            }
+                            return (
+                                <button
+                                    className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+                                    style={{ borderRadius: '8px', background: '#6366f1', border: 'none' }}
+                                    onClick={() => setShowHandover(true)}
+                                    disabled={loading || !staffInfo}
+                                >
+                                    <i className="bi bi-wallet2" /> Kết Ca & Bàn Giao
+                                </button>
+                            );
+                        }
+                        // WAREHOUSE: Nếu đang làm → hiện nút Kết Ca Ra Về
+                        if (roleName === 'Warehouse') {
+                            if (!activeShift) {
+                                return (
+                                    <button className="btn btn-secondary fw-bold px-4 py-2 opacity-50" disabled>
+                                        Đang Chờ Vào Ca
+                                    </button>
+                                );
+                            }
+                            return (
+                                <button
+                                    className="btn btn-danger text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+                                    style={{ borderRadius: '8px', border: 'none' }}
+                                    disabled={loading || !staffInfo}
+                                    onClick={async () => {
+                                        try {
+                                            const res = await attendanceService.simpleCheckOut(activeShift.scheduleId);
+                                            if (res.success) {
+                                                showNotification(res.data?.message || 'Tan ca thành công!', 'success');
+                                                fetchMySchedule();
+                                            } else {
+                                                showNotification(res.message || 'Lỗi kết ca!', 'error');
+                                            }
+                                        } catch (error) {
+                                            showNotification(error.response?.data?.message || error.message || 'Lỗi!', 'error');
+                                        }
+                                    }}
+                                >
+                                    <i className="bi bi-box-arrow-right" /> Kết Ca Ra Về
+                                </button>
+                            );
+                        }
+
+                        // CASHIER: Logic cũ giữ nguyên
+                        if (!activeShift) {
+                            return (
+                                <button className="btn btn-secondary fw-bold px-4 py-2 opacity-50" disabled>
+                                    Đang Chờ Vào Ca
+                                </button>
+                            );
+                        }
+                        return (
+                            <button
+                                className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+                                style={{ borderRadius: '8px', background: '#6366f1', border: 'none' }}
+                                onClick={() => setShowHandover(true)}
+                                disabled={loading || !staffInfo}
+                            >
+                                <i className="bi bi-wallet2" /> Bàn Giao Tiền Két
+                            </button>
+                        );
+                    })()}
                 </div>
 
                 {/* Bảng Lịch */}
@@ -196,12 +273,22 @@ const MySchedule = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="text-center py-3 align-top">
+                                        {/* <td className="text-center py-3 align-top">
                                             <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isOver48 ? '#dc2626' : '#2563eb' }}>
                                                 {isOver48 && <i className="bi bi-exclamation-triangle-fill me-1 text-warning" />}
                                                 {formatHours(totalWeekHours)}
                                             </span>
+                                        </td> */}
+                                        <td className="text-center py-3 align-top">
+                                            {(roleName === 'Manager' || roleName === 'Warehouse')
+                                                ? <span className="text-secondary fw-bold" style={{ fontSize: '0.85rem' }}>HÀNH CHÍNH</span>
+                                                : <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isOver48 ? '#dc2626' : '#2563eb' }}>
+                                                    {isOver48 && <i className="bi bi-exclamation-triangle-fill me-1 text-warning" />}
+                                                    {formatHours(totalWeekHours)}
+                                                </span>
+                                            }
                                         </td>
+
                                         {weekDates.map((d, i) => {
                                             const dStr = formatDate(d);
                                             const isToday = dStr === todayStr;
