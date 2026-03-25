@@ -7,7 +7,7 @@ import Pagination from '../../components/Pagination/Pagination';
 import SalaryHeader from './components/SalaryHeader';
 import SalaryDetailModal from './modals/SalaryDetailModal';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 10;
 
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 const formatVNDRaw = (num) => Math.round(num || 0).toString();
@@ -22,7 +22,7 @@ const formatHours = (decimalHours) => {
 const exportToCSV = (data, month, year) => {
     if (!data || data.length === 0) return;
 
-    const headers = ['STT', 'Họ và tên', 'Vai trò', 'Hình thức lương', 'Tổng công / Giờ', 'Mức lương cơ sở (VND)', 'Khấu trừ (VND)', 'Thực lĩnh (VND)', 'Ghi chú'];
+    const headers = ['STT', 'Họ và tên', 'Vai trò', 'Hình thức lương', 'Tổng công / Giờ', 'Mức lương cơ sở (VND)', 'Phạt', 'Thực lĩnh', 'Ghi chú'];
 
     const rows = data.map((row, idx) => {
         const isHourly = row.salaryType === 'hourly';
