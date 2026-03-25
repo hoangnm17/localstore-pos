@@ -20,6 +20,10 @@ const CreateAdjustment = () => {
   // State mới để theo dõi sản phẩm có chênh lệch = 0
   const [zeroDiffErrors, setZeroDiffErrors] = useState(new Set());
 
+
+  const isSingleUnit = (item) => !item.largestConversionFactor || item.largestConversionFactor === 1;
+
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const delay = setTimeout(() => {
@@ -47,37 +51,65 @@ const CreateAdjustment = () => {
   };
 
   const handleAddProduct = async (product) => {
-    if (adjustmentItems.some((i) => i.id === product.id)) return;
+  if (adjustmentItems.some((i) => i.id === product.id)) return;
 
-    try {
-      const res = await adjustmentService.checkProductConflict(product.id);
-      const isInPending = res.data.data.isInPending;
+  try {
+    const res = await adjustmentService.checkProductConflict(product.id);
+    const isInPending = res.data.data.isInPending;
 
-      if (isInPending) {
-        alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`);
-        return;
-      }
-
-      setAdjustmentItems((prev) => [
-        ...prev,
-        {
-          ...product,
-          actualLargest: product.systemLargest.toString(),
-          actualRemainder: product.systemRemainder.toString(),
-          isConflict: isInPending,
-        },
-      ]);
-
-      setKeyword("");
-      setShowSearchResults(false);
-    } catch (err) {
-      console.error(err);
-      alert("Không kiểm tra được trạng thái sản phẩm");
+    if (isInPending) {
+      alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`);
+      return;
     }
-  };
+
+    const singleUnit =
+      !product.largestConversionFactor || product.largestConversionFactor === 1;
+
+    const isDecimalSingle =
+      singleUnit && product.allowDecimalQuantity;
+
+    setAdjustmentItems((prev) => [
+      ...prev,
+      {
+        ...product,
+
+        actualLargest: isDecimalSingle
+          ? product.quantityOnHand.toString()
+          : product.systemLargest.toString(),
+
+        actualRemainder: singleUnit
+          ? "0"
+          : product.systemRemainder.toString(),
+
+        isConflict: isInPending,
+      },
+    ]);
+
+    setKeyword("");
+    setShowSearchResults(false);
+  } catch (err) {
+    console.error(err);
+    alert("Không kiểm tra được trạng thái sản phẩm");
+  }
+};
 
   const handleLargestChange = (id, e) => {
-    let val = e.target.value.replace(/[^0-9]/g, "");
+    const item = adjustmentItems.find((i) => i.id === id);
+    const isDecimalSingle =
+      isSingleUnit(item) && item.allowDecimalQuantity;
+
+    let val = e.target.value;
+
+    if (isDecimalSingle) {
+      val = val.replace(/[^0-9.]/g, "");
+      const parts = val.split(".");
+      if (parts.length > 2) {
+        val = parts[0] + "." + parts.slice(1).join("");
+      }
+    } else {
+      val = val.replace(/[^0-9]/g, "");
+    }
+
     if (val === "") val = "0";
 
     setAdjustmentItems((prev) =>
@@ -86,7 +118,6 @@ const CreateAdjustment = () => {
       )
     );
 
-    // Xóa lỗi nếu người dùng đang sửa
     setZeroDiffErrors((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
@@ -144,24 +175,41 @@ const CreateAdjustment = () => {
   };
 
   const calculateDifference = (item) => {
+    const isDecimalSingle =
+      isSingleUnit(item) && item.allowDecimalQuantity;
+
+    if (isDecimalSingle) {
+      return (
+        (Number(item.actualLargest) || 0) -
+        (Number(item.quantityOnHand) || 0)
+      );
+    }
+
     const conv = Number(item.largestConversionFactor) || 1;
+
     const actual =
       (Number(item.actualLargest) || 0) * conv +
-      (Number(item.actualRemainder) || 0);
+      (isSingleUnit(item) ? 0 : (Number(item.actualRemainder) || 0));
 
     return actual - (Number(item.quantityOnHand) || 0);
   };
 
   const formatSystemQuantity = (item) => {
-    const largest = Number(item.systemLargest) || 0;
-    const remainder = Number(item.systemRemainder) || 0;
-    const unit = item.largestUnitName || item.baseUnit || "Đơn vị";
+  const unit = item.largestUnitName || "Đơn Vị";
 
-    if (largest > 0)
-      return `${largest.toLocaleString()} ${unit}${remainder ? ` + ${remainder} lẻ` : ""}`;
+  const isDecimalSingle =
+    isSingleUnit(item) && item.allowDecimalQuantity;
 
-    return remainder ? `${remainder} lẻ` : "0";
-  };
+  if (isDecimalSingle) {
+    return `${item.quantityOnHand} ${unit}`;
+  }
+
+  if (isSingleUnit(item)) {
+    return `${item.systemLargest} ${unit}`;
+  }
+
+  return `${item.systemLargest} ${unit} + ${item.systemRemainder} lẻ`;
+};
 
   const summary = useMemo(() => {
     let increase = 0;
@@ -400,34 +448,51 @@ const CreateAdjustment = () => {
                           </td>
 
                           <td>
-                            <div className="d-flex gap-2 justify-content-end">
-                              <div className="input-group input-group-sm" style={{ width: 120 }}>
-                                <input
-                                  type="text"
-                                  className="form-control text-end"
-                                  value={item.actualLargest}
-                                  onChange={(e) => handleLargestChange(item.id, e)}
-                                />
-                                <span className="input-group-text">{unit}</span>
-                              </div>
+                            {(() => {
+                              const singleUnit =
+                                !item.largestConversionFactor || item.largestConversionFactor === 1;
 
-                              <div className="input-group input-group-sm" style={{ width: 120 }}>
-                                <input
-                                  type="text"
-                                  className="form-control text-end"
-                                  value={item.actualRemainder}
-                                  onChange={(e) => handleRemainderChange(item.id, e)}
-                                />
-                                <span className="input-group-text">lẻ</span>
-                              </div>
-                            </div>
+                              return (
+                                <>
+                                  <div className="d-flex gap-2 justify-content-end">
+                                    {/* Input đơn vị chính */}
+                                    <div
+                                      className="input-group input-group-sm"
+                                      style={{ width: singleUnit ? 200 : 120 }}
+                                    >
+                                      <input
+                                        type="text"
+                                        inputMode={item.allowDecimalQuantity ? "decimal" : "numeric"}
+                                        className="form-control text-end"
+                                        value={item.actualLargest}
+                                        onChange={(e) => handleLargestChange(item.id, e)}
+                                      />
+                                      <span className="input-group-text">{unit}</span>
+                                    </div>
 
-                            {hasZeroDiffError && (
-                              <div className="text-danger mt-2 small text-end">
-                                <i className="bi bi-exclamation-circle-fill me-1"></i>
-                                Số lượng thực tế đang bằng số lượng tồn trên hệ thống.
-                              </div>
-                            )}
+                                    {/* Chỉ hiện nếu có đơn vị lẻ */}
+                                    {!singleUnit && (
+                                      <div className="input-group input-group-sm" style={{ width: 120 }}>
+                                        <input
+                                          type="text"
+                                          className="form-control text-end"
+                                          value={item.actualRemainder}
+                                          onChange={(e) => handleRemainderChange(item.id, e)}
+                                        />
+                                        <span className="input-group-text">lẻ</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {hasZeroDiffError && (
+                                    <div className="text-danger mt-2 small text-end">
+                                      <i className="bi bi-exclamation-circle-fill me-1"></i>
+                                      Số lượng thực tế đang bằng số lượng tồn trên hệ thống.
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </td>
 
                           <td className="text-end">
