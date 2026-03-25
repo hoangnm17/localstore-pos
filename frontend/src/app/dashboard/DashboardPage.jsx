@@ -209,11 +209,11 @@ const DashboardPage = () => {
                                 </div>
                                 <div className="info-item">
                                     <span>Chuyển khoản:</span>
-                                    <span className="fw-bold text-success">{data.payments.bank_transfer}</span>
+                                    <span className="fw-bold text-success">{formatMoney(data.payments.bank_transfer)}</span>
                                 </div>
                                 <div className="info-item">
                                     <span>Tiền mặt (Toàn ngày):</span>
-                                    <span className="fw-bold text-warning">{data.payments.cash}</span>
+                                    <span className="fw-bold text-warning">{formatMoney(data.payments.cash)}</span>
                                 </div>
                                 
                                 {currentShiftCash && (
