@@ -5,10 +5,11 @@ import { useNotification } from '../../components/global/Notification/Notificati
 import useDebounce from '../../hooks/common/useDebounce';
 
 import ShiftCreateModal from './modals/ShiftCreateModal';
-import ShiftUpdateModal from './modals/ShiftUpdateModal';
+import ShiftDetailModal from './modals/ShiftDetailModal';
+// import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const ShiftList = () => {
   const [shifts, setShifts] = useState([]);
@@ -40,7 +41,8 @@ const ShiftList = () => {
   useEffect(() => { setPage(1); }, [searchTerm, filterStatus]);
 
   const openCreate = () => setModalType('create');
-  const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
+  const openDetail = (s) => { setSelectedShift(s); setModalType('detail'); };
+  // const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
   const openToggle = (s) => { setSelectedShift(s); setModalType('toggle'); };
   const closeModal = () => { setModalType(null); setSelectedShift(null); };
   const handleSuccess = useCallback(() => { closeModal(); fetchShifts(); }, [fetchShifts]);
@@ -74,15 +76,15 @@ const ShiftList = () => {
   ];
   const getColor = (idx) => shiftColors[idx % shiftColors.length];
 
-const getDuration = (start, end) => {
+  const getDuration = (start, end) => {
     if (!start || !end) return '—';
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     let mins = (eh * 60 + em) - (sh * 60 + sm);
     if (mins < 0) {
-        mins += 1440;
+      mins += 1440;
     }
-    if (mins === 0) return '—'; 
+    if (mins === 0) return '—';
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
@@ -91,7 +93,7 @@ const getDuration = (start, end) => {
   return (
     <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
       <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
-        
+
         {/* HEADER */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
@@ -228,18 +230,17 @@ const getDuration = (start, end) => {
                           </span>
                         </td>
                         <td className="text-center">
-                          <div className="d-flex justify-content-center align-items-center gap-1">
+                          <div className="d-flex justify-content-center align-items-center gap-2">
                             <button
-                              className="btn btn-sm btn-outline-primary"
-                              style={{ borderRadius: '8px', width: '34px' }}
-                              title="Chỉnh sửa"
-                              disabled={!isActive}
-                              onClick={() => openUpdate(shift)}
+                              className="btn btn-sm btn-outline-info"
+                              style={{ borderRadius: '8px', width: '34px', height: '34px', padding: 0 }}
+                              title="Xem chi tiết"
+                              onClick={() => openDetail(shift)}
                             >
-                              <i className="bi bi-pencil-fill" />
+                              <i className="bi bi-eye-fill" style={{ fontSize: '1rem', lineHeight: '34px' }} />
                             </button>
 
-                            <div className="form-check form-switch m-0"
+                            <div className="form-check form-switch m-0 ms-2"
                               title={isActive ? 'Ngừng sử dụng' : 'Kích hoạt'}>
                               <input
                                 className="form-check-input"
@@ -269,7 +270,8 @@ const getDuration = (start, end) => {
       </div>
 
       {modalType === 'create' && <ShiftCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
-      {modalType === 'update' && selectedShift && <ShiftUpdateModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
+      {modalType === 'detail' && selectedShift && <ShiftDetailModal shift={selectedShift} onClose={closeModal} />}
+      {/* {modalType === 'update' && selectedShift && <ShiftUpdateModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />} */}
       {modalType === 'toggle' && selectedShift && <ShiftToggleModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
     </div>
   );
