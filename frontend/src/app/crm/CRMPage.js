@@ -10,13 +10,19 @@ import {
 
 } from '../../services/crm.service';
 
+import {
+    User, Target, Ticket, BarChart3,
+    Plus, Edit, Trash2, ClipboardList,
+    Search, Save, X, Eye, Star, Cart,
+    ShoppingBag, History, FileText, LayoutList
+} from 'lucide-react';
+
 // ─── Hằng số ───────────────────────────────────────────────────────────────
 const TABS = [
-    { key: 'customers', label: <><i className="bi bi-people-fill me-2"></i> Khách hàng</> },
-    { key: 'promotions', label: <><i className="bi bi-percent me-2"></i> Khuyến mãi</> },
-    { key: 'vouchers', label: <><i className="bi bi-ticket-perforated-fill me-2"></i> Voucher</> },
-
-    { key: 'report', label: <><i className="bi bi-bar-chart-fill me-2"></i> Báo cáo</> },
+    { key: 'customers', label: <><User size={16} className="me-2" />Khách hàng</> },
+    { key: 'promotions', label: <><Target size={16} className="me-2" />Khuyến mãi</> },
+    { key: 'vouchers', label: <><Ticket size={16} className="me-2" />Voucher</> },
+    { key: 'report', label: <><BarChart3 size={16} className="me-2" />Báo cáo</> },
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
 const PROMOTION_TYPES = ['Percent', 'Amount', 'BuyXGetY'];
@@ -93,12 +99,12 @@ function Pagination({ page, totalPages, onPageChange }) {
     if (!totalPages || totalPages <= 1) return null;
     const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
     return (
-        <div className="crm-pagination">
-            <button className="page-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}><i className="bi bi-chevron-left"></i></button>
+        <div className="crm-pagination d-flex justify-content-center gap-1 mt-3">
+            <button className="page-btn btn btn-sm btn-light border" onClick={() => onPageChange(page - 1)} disabled={page === 1}><i className="bi bi-chevron-left"></i></button>
             {pages.map(p => (
-                <button key={p} className={`page-btn ${p === page ? 'active' : ''}`} onClick={() => onPageChange(p)}>{p}</button>
+                <button key={p} className={`page-btn btn btn-sm ${p === page ? 'btn-primary' : 'btn-light border'}`} onClick={() => onPageChange(p)}>{p}</button>
             ))}
-            <button className="page-btn" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}><i className="bi bi-chevron-right"></i></button>
+            <button className="page-btn btn btn-sm btn-light border" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}><i className="bi bi-chevron-right"></i></button>
         </div>
     );
 }
@@ -306,7 +312,7 @@ function CustomersTab() {
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
-                        <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Điểm ⭐</th><th>Tổng chi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                        <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Điểm</th><th>Tổng chi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                         <tbody>
                             {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
                                 customers.map(c => (
@@ -317,10 +323,16 @@ function CustomersTab() {
                                         <td>{fmtMoney(c.totalSpending)}</td>
                                         <td><StatusBadge s={c.status} /></td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setDetailTarget(c)}><i className="bi bi-eye"></i></button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={() => setDeleteTarget(c)}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xem chi tiết" style={{ width: 32, height: 32 }} onClick={() => setDetailTarget(c)}>
+                                                    <Eye size={18} className="text-primary" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={() => setDeleteTarget(c)}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -390,7 +402,7 @@ function PromotionsTab() {
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
-            setShowModal(false); 
+            setShowModal(false);
             fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
@@ -417,10 +429,16 @@ function PromotionsTab() {
                                         <td className="promo-value-cell">{p.type === 'Percent' ? `${p.value}%` : fmtMoney(p.value)}</td>
                                         <td><StatusBadge s={p.status} /></td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setItemsTarget(p)}><i className="bi bi-journal-list"></i></button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { await deletePromotion(p.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sản phẩm áp dụng" style={{ width: 32, height: 32 }} onClick={() => setItemsTarget(p)}>
+                                                    <LayoutList size={18} className="text-primary" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center edit" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center del" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => { if (window.confirm('Xóa khuyến mãi này?')) { await deletePromotion(p.id); fetchData(); } }}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -468,23 +486,57 @@ function PromotionItemsManager({ promotionId }) {
     };
 
     return (
-        <div>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <select className="form-input" style={{ width: 140 }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}><option value="product">Sản phẩm (ID)</option><option value="category">Danh mục (ID)</option></select>
-                <input className="form-input" placeholder="Nhập ID..." value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} />
-                <button className="btn-primary" onClick={add}><i className="bi bi-plus-lg me-1"></i> Thêm</button>
+        <div className="promotion-items-manager">
+            <div className="p-3 mb-3 border rounded bg-light d-flex align-items-end gap-3">
+                <div className="flex-grow-1">
+                    <label className="form-label mb-1 fw-bold small text-muted">Loại đối tượng</label>
+                    <select className="form-select shadow-sm" style={{ fontSize: 13 }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                        <option value="product">Sản phẩm (ID)</option>
+                        <option value="category">Danh mục (ID)</option>
+                    </select>
+                </div>
+                <div className="flex-grow-1">
+                    <label className="form-label mb-1 fw-bold small text-muted">Mã định danh (ID)</label>
+                    <div className="input-group shadow-sm">
+                        <span className="input-group-text bg-white"><Search size={16} className="text-muted" /></span>
+                        <input className="form-control" style={{ fontSize: 13 }} placeholder="Nhập ID số..." type="number" value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} />
+                    </div>
+                </div>
+                <button className="btn btn-primary d-flex align-items-center gap-2 px-3 shadow-sm" style={{ height: 38 }} onClick={add}>
+                    <Plus size={18} /> Thêm
+                </button>
             </div>
-            <table className="crm-table">
-                <thead><tr><th>Sản phẩm/Danh mục</th><th>Thao tác</th></tr></thead>
-                <tbody>
-                    {items.map(item => (
-                        <tr key={item.id}>
-                            <td>{item.productName || item.categoryName || `ID: ${item.productId || item.categoryId}`}</td>
-                            <td><button className="btn-icon del" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}><i className="bi bi-trash3"></i></button></td>
+
+            <div className="table-responsive border rounded bg-white">
+                <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                        <tr style={{ fontSize: 12 }}>
+                            <th className="ps-3 py-3">TÊN SẢN PHẨM / DANH MỤC</th>
+                            <th className="text-end pe-4 py-3">THAO TÁC</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {items.length === 0 ? (
+                            <tr><td colSpan="2" className="text-center py-4 text-muted small">Chưa có sản phẩm nào được áp dụng</td></tr>
+                        ) : items.map(item => (
+                            <tr key={item.id}>
+                                <td className="ps-3 py-2">
+                                    {item.productName || item.categoryName ? (
+                                        <div className="fw-semibold text-dark">{item.productName || item.categoryName}</div>
+                                    ) : (
+                                        <span className="badge bg-secondary-subtle text-secondary px-2">Mã ID: {item.productId || item.categoryId}</span>
+                                    )}
+                                </td>
+                                <td className="text-end pe-4 py-2">
+                                    <button className="btn btn-link text-danger p-0" title="Gỡ bỏ" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}>
+                                        <Trash2 size={18} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
@@ -529,7 +581,7 @@ function VouchersTab() {
         try {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
-            setShowModal(false); 
+            setShowModal(false);
             fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
@@ -557,9 +609,13 @@ function VouchersTab() {
                                         <td>{v.currentUsage}/{v.maxUsage}</td>
                                         <td className="text-muted">{fmtDate(v.expiryDate)}</td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { await deleteVoucher(v.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => { if (window.confirm('Xóa voucher này?')) { await deleteVoucher(v.id); fetchData(); } }}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
