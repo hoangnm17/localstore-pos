@@ -95,7 +95,7 @@ CREATE TABLE [WorkSchedules] (
     [staffId] BIGINT NOT NULL,
     [shiftId] INT NOT NULL,
     [workDate] DATE NOT NULL,
-    [counterId] BIGINT NULL,
+    -- [counterId] BIGINT NULL,
     [checkInTime] DATETIME2 NULL,
     [checkOutTime] DATETIME2 NULL,
     [workedHours] FLOAT DEFAULT 0,
@@ -104,7 +104,7 @@ CREATE TABLE [WorkSchedules] (
     
     CONSTRAINT [FK_Schedule_Staff] FOREIGN KEY ([staffId]) REFERENCES [Staff]([id]),
     CONSTRAINT [FK_Schedule_Shift] FOREIGN KEY ([shiftId]) REFERENCES [Shifts]([id]),
-    CONSTRAINT [FK_Schedule_Counter] FOREIGN KEY ([counterId]) REFERENCES [Counters]([id]),
+    -- CONSTRAINT [FK_Schedule_Counter] FOREIGN KEY ([counterId]) REFERENCES [Counters]([id]),
     CONSTRAINT [CK_Schedule_Status] CHECK ([status] IN ('assigned', 'working', 'completed', 'absent', 'late')),
     CONSTRAINT [UQ_Staff_Schedule] UNIQUE ([staffId], [shiftId], [workDate])
 );
@@ -911,8 +911,30 @@ GO
 
 
 /* =========================================
-   DONE
+   Update mới nhất
 ========================================= */
+ALTER TABLE Users
+ADD requirePasswordChange BIT DEFAULT 1;
+-- Cập nhật tất cả user cũ về 0 để hệ thống hiện tại không bị lỗi chặn đăng nhập
+UPDATE Users SET requirePasswordChange = 0;
+------------------
+select * from WorkSchedules
+ALTER TABLE [WorkSchedules]
+ADD [attendanceRecord] VARCHAR(255) DEFAULT 'OnTime',
+    [penaltyAmount] DECIMAL(15,2) DEFAULT 0;
+-------------------
+ALTER TABLE [WorkSchedules] 
+DROP CONSTRAINT [FK_Schedule_Counter];
+ALTER TABLE [WorkSchedules] 
+DROP COLUMN [counterId];
+
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotStartTime];
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotEndTime];
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotShiftName];
+=========================================
 PRINT 'Migration completed successfully';
 
 -- END OF SCRIPT
