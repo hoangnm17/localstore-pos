@@ -107,7 +107,6 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
                         <div>
                             <div className="fw-bold" style={{ fontSize: '0.88rem', color: '#0f172a' }}>{staff.fullName}</div>
 
-                            {/* ĐÃ MỞ KHÓA CHO 3 LOẠI CHỨC VỤ CA/WH/MG */}
                             <span className={`badge rounded-pill mt-1 text-uppercase ${isCashier ? 'bg-primary' : isWarehouse ? 'bg-secondary' : 'bg-danger'}`} style={{ fontSize: '0.65rem' }}>
                                 {isCashier ? 'THU NGÂN' : isWarehouse ? 'KHO' : 'QUẢN LÝ'}
                             </span>
