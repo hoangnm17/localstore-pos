@@ -60,28 +60,6 @@ module.exports.createShift = async (data) => {
   return result.recordset[0].id;
 };
 
-module.exports.updateShift = async (id, data) => {
-  const pool = await connectDB();
-  await pool.request()
-    .input('id', sql.Int, id)
-    .input('name', sql.NVarChar, data.name)
-    .input('startTime', sql.VarChar, formatTimeToSQL(data.startTime))
-    .input('endTime', sql.VarChar, formatTimeToSQL(data.endTime))
-    .input('checkInStart', sql.VarChar, data.checkInStart ? formatTimeToSQL(data.checkInStart) : null)
-    .input('checkInEnd', sql.VarChar, data.checkInEnd ? formatTimeToSQL(data.checkInEnd) : null)
-    .input('checkOutDeadline', sql.VarChar, data.checkOutDeadline ? formatTimeToSQL(data.checkOutDeadline) : null)
-    .query(`
-      UPDATE Shifts 
-      SET name = @name, 
-          startTime = @startTime, 
-          endTime = @endTime,
-          checkInStart = @checkInStart,
-          checkInEnd = @checkInEnd,
-          checkOutDeadline = @checkOutDeadline
-      WHERE id = @id
-    `);
-  return true;
-};
 
 module.exports.toggleShift = async (id) => {
   const pool = await connectDB();
@@ -132,25 +110,4 @@ module.exports.checkDuplicateName = async (name, excludeId = null) => {
   if (excludeId) request.input('excludeId', sql.Int, excludeId);
   const result = await request.query(query);
   return result.recordset[0];
-};
-
-module.exports.checkTimeConflict = async (startTime, endTime, excludeId = null) => {
-  const pool = await connectDB();
-  let query = `
-    SELECT id, name,
-           CONVERT(VARCHAR(5), startTime, 108) as startTime,
-           CONVERT(VARCHAR(5), endTime, 108) as endTime
-    FROM Shifts 
-    WHERE (startTime < @endTime AND endTime > @startTime)
-      AND isActive = 1
-      AND name != N'Ca Quản Lý'
-
-  `;
-  if (excludeId) query += ` AND id != @excludeId`;
-  const request = pool.request()
-    .input('startTime', sql.VarChar, formatTimeToSQL(startTime))
-    .input('endTime', sql.VarChar, formatTimeToSQL(endTime));
-  if (excludeId) request.input('excludeId', sql.Int, excludeId);
-  const result = await request.query(query);
-  return result.recordset;
 };
