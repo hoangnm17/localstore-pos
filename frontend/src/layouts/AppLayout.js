@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar/Sidebar';
 import Header from '../components/Header/Header';
 import ForceChangePasswordModal from '../app/auth/modals/ForceChangePasswordModal';
+import AutoCheckInModal from 'components/global/Notification/AutoCheckInModal/AutoCheckInModal';
 
 function AppLayout() {
     let requireChange = false;
@@ -18,7 +19,7 @@ function AppLayout() {
     }
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-            
+            <AutoCheckInModal /> 
             {requireChange && <ForceChangePasswordModal />}
             <Sidebar />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
