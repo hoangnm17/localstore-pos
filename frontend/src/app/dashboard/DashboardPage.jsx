@@ -53,8 +53,7 @@ const DashboardPage = () => {
         revenue: { todayRevenue: 0, weekRevenue: 0, monthRevenue: 0 },
         payments: { total: 0, bank_transfer: 0, cash: 0 },
         inventory: { lowStock: 0, newPO: 0, newAdjustments: 0 },
-        chartData: [{ time: '08:00', amount: 0 }],
-        campaign: { activeName: 'Không có' }
+        chartData: [{ time: '08:00', amount: 0 }]
     };
 
     if (loading) {
@@ -195,10 +194,6 @@ const DashboardPage = () => {
                                 <div className="info-item">
                                     <span>KM đang chạy:</span>
                                     <span className="fw-bold text-danger">{data.summary.totalPromotions}</span>
-                                </div>
-                                <div className="info-item">
-                                    <span>Sự kiện Active:</span>
-                                    <span className="fw-bold text-success" style={{ fontSize: 13 }}>{data.campaign.activeName}</span>
                                 </div>
                             </div>
                         </div>

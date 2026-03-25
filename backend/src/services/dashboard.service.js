@@ -63,12 +63,7 @@ class DashboardService {
                 (SELECT ISNULL(SUM(currentUsage), 0) FROM Vouchers) as usedVouchers
         `);
 
-        // 7. Active Marketing Event
-        const eventRes = await pool.request().query(`
-            SELECT name FROM MarketingEvents 
-            WHERE status = 'Active' AND GETDATE() BETWEEN startTime AND endTime
-            ORDER BY createdAt DESC
-        `);
+
 
         // 8. Chart Data (Doanh thu thực tế theo giờ = Hóa đơn - Hoàn trả)
         const chartRes = await pool.request().query(`
@@ -107,9 +102,7 @@ class DashboardService {
                 bank_transfer: paymentStats.recordset[0].bank_transfer || 0,
                 cash: paymentStats.recordset[0].cash || 0
             },
-            campaign: {
-                activeName: eventRes.recordset[0]?.name || 'Không có sự kiện nào'
-            },
+
             chartData: chartRes.recordset.length > 0 ? chartRes.recordset : [
                 { time: '08:00', amount: 0 },
                 { time: '12:00', amount: 0 },
