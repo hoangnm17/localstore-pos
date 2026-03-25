@@ -3,7 +3,7 @@ const userModel = require('../models/user.model');
 const roleModel = require('../models/role.model');
 const staffModel = require('../models/staff.model');
 const dotenv = require('dotenv');
-const { COUNTER_ID } = require('../config/pos.config');
+// const { COUNTER_ID } = require('../config/pos.config');
 dotenv.config();
 
 const verifyToken = async (req, res, next) => {
@@ -31,13 +31,12 @@ const verifyToken = async (req, res, next) => {
 
         const permissions = await roleModel.getPermissionsByRoleId(user.roleId);
 
-        // Lấy Staff.id tương ứng với Users.id để dùng cho changedBy trong lịch sử giá
         const staff = await staffModel.getStaffByUserId(user.id);
 
         req.user = {
             id: user.id,
             staffId: staff ? staff.id : null,
-            counterId: COUNTER_ID,
+            // counterId: COUNTER_ID,
             roleId: user.roleId,
             permissions: permissions.map(p => p.featureKey)
         };
