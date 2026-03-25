@@ -15,6 +15,7 @@ const DashboardPage = () => {
     // States cho dữ liệu thật 
     const [summary, setSummary] = useState(null);
     const [categoryStock, setCategoryStock] = useState([]); // State cho tồn kho theo danh mục
+    const [totalSelling, setTotalSelling] = useState(0); // State cho sản phẩm đang kinh doanh
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
 
@@ -56,9 +57,22 @@ const DashboardPage = () => {
         }
     };
 
+    // Hàm gọi API lấy sản phẩm đang kinh doanh (POS)
+    const fetchSellingProducts = async () => {
+        try {
+            const res = await api.get('/products/pos'); 
+            if (res.data.success) {
+                setTotalSelling(res.data.data.length || 0);
+            }
+        } catch (error) {
+            console.error("Lỗi lấy sản phẩm kinh doanh:", error);
+        }
+    };
+
     useEffect(() => {
         fetchDashboardData();
-        fetchInventoryData(); // Gọi hàm lấy tồn kho
+        fetchInventoryData();
+        fetchSellingProducts();
     }, []);
 
     // Fallback data dùng cho UI rỗng hoặc chưa load xong
@@ -96,7 +110,7 @@ const DashboardPage = () => {
 
                 <div className="dashboard-content">
                     <div className="filter-section">
-                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); }}>
+                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); fetchSellingProducts(); }}>
                             Làm mới dữ liệu <ChevronRight size={14} />
                         </button>
                     </div>
@@ -123,8 +137,8 @@ const DashboardPage = () => {
                                 <div className="stat-card green-card">
                                     <div className="stat-info">
                                         <span className="stat-label">Danh mục: {data.summary.totalCategories}</span>
-                                        <span className="stat-value">{data.summary.totalProducts}</span>
-                                        <span className="stat-sub">Sản phẩm đang kinh doanh</span>
+                                        <span className="stat-value">{totalSelling}</span>
+                                        <span className="stat-sub">Sản phẩm đang kinh doanh (POS)</span>
                                     </div>
                                     <List className="stat-icon" size={32} />
                                 </div>
@@ -185,8 +199,8 @@ const DashboardPage = () => {
                             <div className="info-card red-card">
                                 <h4>Tồn kho theo danh mục</h4>
                                 {categoryStock.map(cat => (
-                                    <div className="info-item" key={cat.id}>
-                                        <span>{cat.name}:</span>
+                                    <div className="info-item" key={cat.categoryId}>
+                                        <span>{cat.categoryName}:</span>
                                         <span className="fw-bold">{cat.totalProducts} SP</span>
                                     </div>
                                 ))}
