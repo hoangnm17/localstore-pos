@@ -3,7 +3,11 @@ import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
 import api from '../../../services/axiosInstance';
-
+const roleClass = {
+    Cashier: 'bg-primary',
+    Warehouse: 'bg-success',
+    Manager: 'bg-warning'
+};
 const shiftColors = [
     { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
     { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
@@ -14,10 +18,9 @@ const shiftColors = [
 ];
 const getShiftStyle = (id) => shiftColors[(id - 1) % shiftColors.length];
 
-const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSuccess }) => {
+const AssignShiftModal = ({ cell, shifts, onClose, onSuccess }) => {
     const { showNotification } = useNotification();
     const [selectedShiftIds, setSelectedShiftIds] = useState([]);
-    const [selectedCounterId, setSelectedCounterId] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [loading, setLoading] = useState(false);
     const alertRef = useRef(null);
@@ -69,10 +72,6 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
             setErrorMsg('Vui lòng chọn ít nhất một ca!');
             return;
         }
-        if (isCashier && !selectedCounterId) {
-            setErrorMsg('Vui lòng chọn quầy cho thu ngân!');
-            return;
-        }
 
         setLoading(true);
         setErrorMsg('');
@@ -88,14 +87,13 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                     if (d === todayStr && selectedShift && selectedShift.startTime < nowTimeString) {
                         hasError = true;
                         errorDetails += `Không thể phân công ${selectedShift.name} do đã vượt quá giờ hiện tại!\n`;
-                        continue; 
+                        continue;
                     }
                     try {
                         const res = await api.post('/roster', {
                             staffId: cell.staffId,
                             shiftId,
                             workDate: d,
-                            counterId: isCashier ? Number(selectedCounterId) : null,
                         });
                         const ok = res.data?.success ?? res.success;
                         if (!ok) {
@@ -110,7 +108,7 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
             }
 
             if (hasError) {
-                setErrorMsg( errorDetails);
+                setErrorMsg(errorDetails);
                 // onSuccess();
             } else {
                 showNotification('Phân công ca thành công!', 'success');
@@ -173,9 +171,11 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                             <div className="fw-bold" style={{ fontSize: '1.05rem', color: '#0f172a' }}>
                                 {cell.fullName}
                             </div>
-                            <span className={`badge rounded-pill mt-1 ${isCashier ? 'bg-primary' : 'bg-secondary'}`}
-                                style={{ fontSize: '0.7rem' }}>
-                                {isCashier ? 'THU NGÂN' : 'THỦ KHO'}
+                            <span
+                                className={`badge rounded-pill mt-1 ${roleClass[cell.roleName] || 'bg-secondary'}`}
+                                style={{ fontSize: '0.7rem' }}
+                            >
+                                {cell.roleName === 'Cashier' ? 'Thu ngân' : cell.roleName === 'Warehouse' ? 'Nhân viên kho' : 'Quản lý'}
                             </span>
                         </div>
 
@@ -260,38 +260,6 @@ const AssignShiftModal = ({ cell, shifts, counters, isCashier, onClose, onSucces
                             })}
                         </div>
                     </div>
-
-                    {/* Chọn quầy */}
-                    {isCashier && (
-                        <div style={{
-                            background: '#f0fdf4', border: '1px solid #bbf7d0',
-                            borderRadius: '12px', padding: '14px 16px',
-                        }}>
-                            <div className="fw-bold text-success mb-2" style={{ fontSize: '0.85rem' }}>
-                                <i className="bi bi-shop me-2" />Chọn quầy thanh toán
-                                <span className="text-danger ms-1">*</span>
-                            </div>
-                            <select
-                                className="form-select form-select-sm border-0 bg-white"
-                                style={{ borderRadius: '10px', fontWeight: 600 }}
-                                value={selectedCounterId}
-                                onChange={e => { setSelectedCounterId(e.target.value); setErrorMsg(''); }}
-                            >
-                                <option value="">-- Chọn quầy --</option>
-                                {counters.map(c => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.counterName} ({c.counterCode})
-                                    </option>
-                                ))}
-                            </select>
-                            {counters.length === 0 && (
-                                <small className="text-warning d-block mt-1">
-                                    <i className="bi bi-exclamation-triangle me-1" />
-                                    Không có quầy nào đang hoạt động
-                                </small>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer */}
