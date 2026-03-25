@@ -6,8 +6,8 @@ import {
     getPromotions, getPromotionById, createPromotion, updatePromotion, deletePromotion,
     addPromotionItem, removePromotionItem,
     getVouchers, createVoucher, updateVoucher, deleteVoucher,
-    getPromotionReport, getVoucherReport,
-    getEvents, createEvent, updateEvent, deleteEvent
+    getPromotionReport, getVoucherReport
+
 } from '../../services/crm.service';
 
 // ─── Hằng số ───────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ const TABS = [
     { key: 'customers', label: <><i className="bi bi-people-fill me-2"></i> Khách hàng</> },
     { key: 'promotions', label: <><i className="bi bi-percent me-2"></i> Khuyến mãi</> },
     { key: 'vouchers', label: <><i className="bi bi-ticket-perforated-fill me-2"></i> Voucher</> },
-    { key: 'events', label: <><i className="bi bi-calendar-event-fill me-2"></i> Sự kiện</> },
+
     { key: 'report', label: <><i className="bi bi-bar-chart-fill me-2"></i> Báo cáo</> },
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
@@ -25,12 +25,7 @@ const PAGE_SIZE = 10;
 const DEFAULT_CUSTOMER = { name: '', phone: '', status: 'Active' };
 const DEFAULT_PROMOTION = { name: '', type: 'Percent', value: '', startDate: '', endDate: '', status: 'Active' };
 const DEFAULT_VOUCHER = { code: '', value: '', type: 'Fixed', minOrderValue: 0, maxUsage: 100, startDate: '', expiryDate: '', status: 'Active' };
-const DEFAULT_EVENT = { name: '', description: '', startTime: '', endTime: '', privilegeType: 'multiplier_points', privilegeValue: 2, minRank: 'None', status: 'Active' };
-const EVENT_PRIVILEGE_TYPES = [
-    { key: 'multiplier_points', label: 'Nhân hệ số điểm' },
-    { key: 'extra_discount', label: 'Giảm giá thêm (%)' },
-    { key: 'free_gift', label: 'Tặng quà đi kèm' }
-];
+
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
@@ -385,10 +380,18 @@ function PromotionsTab() {
             return;
         }
 
+        if (form.startDate && form.endDate) {
+            if (new Date(form.startDate) > new Date(form.endDate)) {
+                setAlertMsg("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
+                return;
+            }
+        }
+
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
-            setShowModal(false); fetchData();
+            setShowModal(false); 
+            fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
             setAlertMsg(errorText);
@@ -511,10 +514,23 @@ function VouchersTab() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSave = async () => {
+        if (!form.code || !form.code.trim()) {
+            setAlertMsg("Mã Voucher không được để trống!");
+            return;
+        }
+
+        if (form.startDate && form.expiryDate) {
+            if (new Date(form.startDate) > new Date(form.expiryDate)) {
+                setAlertMsg("Ngày bắt đầu không được lớn hơn ngày hết hạn!");
+                return;
+            }
+        }
+
         try {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
-            setShowModal(false); fetchData();
+            setShowModal(false); 
+            fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
             setAlertMsg(errorText);
@@ -560,6 +576,7 @@ function VouchersTab() {
                         <div className="form-group"><label>Mã Voucher</label><input className="form-input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} /></div>
                         <div className="form-group"><label>Giá trị</label><input className="form-input" type="number" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} /></div>
                         <div className="form-group"><label>Đơn tối thiểu</label><input className="form-input" type="number" value={form.minOrderValue} onChange={e => setForm({ ...form, minOrderValue: e.target.value })} /></div>
+                        <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
                         <div className="form-group"><label>Ngày hết hạn</label><input className="form-input" type="date" value={form.expiryDate} onChange={e => setForm({ ...form, expiryDate: e.target.value })} /></div>
                     </div>
                 </Modal>
@@ -569,123 +586,7 @@ function VouchersTab() {
     );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  Events Tab
-// ═══════════════════════════════════════════════════════════════════════════
-function EventsTab() {
-    const [events, setEvents] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
-    const [showModal, setShowModal] = useState(false);
-    const [editTarget, setEditTarget] = useState(null);
-    const [form, setForm] = useState(DEFAULT_EVENT);
-    const [alertMsg, setAlertMsg] = useState('');
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await getEvents({ page, limit: PAGE_SIZE });
-            setEvents(res?.data || []);
-            setTotal(res?.total || 0);
-        } catch { } finally { setLoading(false); }
-    }, [page]);
-
-    useEffect(() => { fetchData(); }, [fetchData]);
-
-    const handleSave = async () => {
-        if (!form.name || !form.name.trim()) {
-            setAlertMsg("Tên sự kiện không được để trống!");
-            return;
-        }
-        try {
-            if (editTarget) await updateEvent(editTarget.id, form);
-            else await createEvent(form);
-            setShowModal(false); fetchData();
-        } catch (e) {
-            const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
-            setAlertMsg(errorText);
-        }
-    };
-
-    return (
-        <>
-            <div className="glass-panel">
-                <div className="toolbar">
-                    <span className="total-badge">{total} sự kiện</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_EVENT); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Tạo sự kiện mới</button>
-                </div>
-                <div className="crm-table-container">
-                    <table className="crm-table">
-                        <thead><tr><th>Tên sự kiện</th><th>Đặc quyền</th><th>Giá trị</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-                        <tbody>
-                            {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
-                                events.map(ev => (
-                                    <tr key={ev.id}>
-                                        <td><strong>{ev.name}</strong><br /><small className="text-muted">{ev.description}</small></td>
-                                        <td><TypeBadge t={EVENT_PRIVILEGE_TYPES.find(p => p.key === ev.privilegeType)?.label || ev.privilegeType} /></td>
-                                        <td style={{ fontWeight: 700, color: '#facc15' }}>{ev.privilegeValue}{ev.privilegeType === 'extra_discount' ? '%' : 'x'}</td>
-                                        <td className="text-muted" style={{ fontSize: 12 }}>
-                                            {fmtDate(ev.startTime)} - {fmtDate(ev.endTime)}
-                                        </td>
-                                        <td><StatusBadge s={ev.status} /></td>
-                                        <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...ev, startTime: toInputDate(ev.startTime), endTime: toInputDate(ev.endTime) }); setEditTarget(ev); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { if (window.confirm('Xóa sự kiện này?')) { await deleteEvent(ev.id); fetchData(); } }}><i className="bi bi-trash3"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
-            </div>
-            {showModal && (
-                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa sự kiện</> : <><i className="bi bi-calendar-plus me-2"></i> Tạo sự kiện</>} onClose={() => setShowModal(false)} onSubmit={handleSave} wide>
-                    <div className="form-grid">
-                        <div className="form-group form-full"><label>Tên sự kiện *</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-                        <div className="form-group form-full"><label>Mô tả ngắn</label><textarea className="form-input" style={{ height: 60, paddingTop: 8 }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-                        <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} /></div>
-                        <div className="form-group"><label>Kết thúc</label><input className="form-input" type="date" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} /></div>
-                        <div className="form-group"><label>Loại đặc quyền</label>
-                            <select className="form-input" value={form.privilegeType} onChange={e => setForm({ ...form, privilegeType: e.target.value })}>
-                                {EVENT_PRIVILEGE_TYPES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>
-                                {form.privilegeType === 'extra_discount' ? 'Tỉ lệ giảm giá thêm (%)' :
-                                    form.privilegeType === 'multiplier_points' ? 'Hệ số nhân điểm (lần)' :
-                                        'Tên quà tặng kèm'}
-                            </label>
-                            <input
-                                className="form-input"
-                                type={form.privilegeType === 'free_gift' ? 'text' : 'number'}
-                                value={form.privilegeValue}
-                                onChange={e => setForm({ ...form, privilegeValue: e.target.value })}
-                                placeholder={
-                                    form.privilegeType === 'extra_discount' ? 'Ví dụ: 10 (%)' :
-                                        form.privilegeType === 'multiplier_points' ? 'Ví dụ: 2 (lần)' :
-                                            'Ví dụ: Tặng 1 mũ bảo hiểm cao cấp'
-                                }
-                            />
-                        </div>
-                        <div className="form-group"><label>Trạng thái</label>
-                            <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                                <option value="Active">Hoạt động</option>
-                                <option value="Inactive">Tạm dừng</option>
-                            </select>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
-        </>
-    );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Report Tab
@@ -755,7 +656,7 @@ const CRMPage = () => {
                 {activeTab === 'customers' && <CustomersTab />}
                 {activeTab === 'promotions' && <PromotionsTab />}
                 {activeTab === 'vouchers' && <VouchersTab />}
-                {activeTab === 'events' && <EventsTab />}
+
                 {activeTab === 'report' && <ReportTab />}
             </main>
         </div>
