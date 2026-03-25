@@ -10,7 +10,7 @@ export default function NotificationContainer({
         position: "fixed",
         top: 20,
         right: 20,
-        zIndex: 9999,
+        zIndex: 999999,
         display: "flex",
         flexDirection: "column",
         gap: "10px",
