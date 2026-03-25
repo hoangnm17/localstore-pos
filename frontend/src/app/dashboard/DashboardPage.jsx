@@ -5,7 +5,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-    Search, Bell, User, ChevronRight, Users, List
+    Search, Bell, User, ChevronRight, Users, List, Wallet
 } from 'lucide-react';
 import api from '../../services/axiosInstance';
 
@@ -16,6 +16,7 @@ const DashboardPage = () => {
     const [summary, setSummary] = useState(null);
     const [categoryStock, setCategoryStock] = useState([]); // State cho tồn kho theo danh mục
     const [totalSelling, setTotalSelling] = useState(0); // State cho sản phẩm đang kinh doanh
+    const [currentShiftCash, setCurrentShiftCash] = useState(null); // State cho tiền mặt ca hiện tại
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
 
@@ -45,7 +46,6 @@ const DashboardPage = () => {
         }
     };
 
-    // Hàm gọi API lấy tồn kho theo danh mục
     const fetchInventoryData = async () => {
         try {
             const res = await api.get('/inventory/categories?limit=5'); 
@@ -57,7 +57,6 @@ const DashboardPage = () => {
         }
     };
 
-    // Hàm gọi API lấy sản phẩm đang kinh doanh (POS)
     const fetchSellingProducts = async () => {
         try {
             const res = await api.get('/products/pos'); 
@@ -69,10 +68,33 @@ const DashboardPage = () => {
         }
     };
 
+    // Hàm lấy tiền mặt ca làm việc hiện tại
+    const fetchCurrentShiftCash = async () => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            // 1. Lấy danh sách ca cần chốt để tìm ca hiện tại
+            const shiftRes = await api.get(`/cashier/handover/pending?workDate=${today}`);
+            if (shiftRes.data.success && shiftRes.data.data.length > 0) {
+                const currentShift = shiftRes.data.data[0]; // Lấy ca đầu tiên phát hiện được
+                // 2. Lấy tiền mặt hệ thống của ca đó
+                const cashRes = await api.get(`/cashier/handover/system-cash?scheduleId=${currentShift.scheduleId}`);
+                if (cashRes.data.success) {
+                    setCurrentShiftCash({
+                        amount: cashRes.data.data.systemCash,
+                        shiftName: currentShift.shiftName
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Lỗi lấy tiền mặt ca hiện tại:", error);
+        }
+    };
+
     useEffect(() => {
         fetchDashboardData();
         fetchInventoryData();
         fetchSellingProducts();
+        fetchCurrentShiftCash();
     }, []);
 
     // Fallback data dùng cho UI rỗng hoặc chưa load xong
@@ -110,7 +132,7 @@ const DashboardPage = () => {
 
                 <div className="dashboard-content">
                     <div className="filter-section">
-                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); fetchSellingProducts(); }}>
+                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); fetchSellingProducts(); fetchCurrentShiftCash(); }}>
                             Làm mới dữ liệu <ChevronRight size={14} />
                         </button>
                     </div>
@@ -190,9 +212,19 @@ const DashboardPage = () => {
                                     <span className="fw-bold text-success">{data.payments.bank_transfer}</span>
                                 </div>
                                 <div className="info-item">
-                                    <span>Tiền mặt:</span>
+                                    <span>Tiền mặt (Toàn ngày):</span>
                                     <span className="fw-bold text-warning">{data.payments.cash}</span>
                                 </div>
+                                
+                                {currentShiftCash && (
+                                    <div className="info-item" style={{ marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.4)', borderRadius: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#be185d' }}>
+                                            <Wallet size={14} />
+                                            <span>Tiền mặt trong két ({currentShiftCash.shiftName}):</span>
+                                        </div>
+                                        <span className="fw-bold" style={{ fontSize: 15, color: '#be185d' }}>{formatMoney(currentShiftCash.amount)}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Tồn kho theo danh mục dùng API mới */}
