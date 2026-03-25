@@ -332,9 +332,9 @@ const getInvoiceDetail = async (id) => {
   const invoice = invoiceResult.recordset[0];
   if (!invoice) return null;
 
-const itemsResult = await pool.request()
-  .input("invoiceId", sql.Int, id)
-  .query(`
+  const itemsResult = await pool.request()
+    .input("invoiceId", sql.Int, id)
+    .query(`
     SELECT 
       ii.id,
       ii.productId,
@@ -439,8 +439,8 @@ const getInvoiceId = async (transaction, id) => {
 };
 
 const getStaffAndSchedule = async (userId) => {
-    const pool = await connectDB();
-    const staffRes = await pool.request()
+  const pool = await connectDB();
+  const staffRes = await pool.request()
     .input('uid', sql.Int, userId)
     .query(`
       SELECT s.id, r.name as roleName 
@@ -449,54 +449,36 @@ const getStaffAndSchedule = async (userId) => {
         JOIN Roles r ON u.roleId = r.id
         WHERE s.userId = @uid
       `);
-    if (!staffRes.recordset.length) return null;
-    
-    const staffId = staffRes.recordset[0].id;
-    const roleName = staffRes.recordset[0].roleName;
-    const schedRes = await pool.request()
+  if (!staffRes.recordset.length) return null;
+
+  const staffId = staffRes.recordset[0].id;
+  const roleName = staffRes.recordset[0].roleName;
+  const schedRes = await pool.request()
     .input('sid', sql.BigInt, staffId)
     .query(`
-        SELECT TOP 1 ws.id, ws.counterId, c.counterName 
-        FROM WorkSchedules ws LEFT JOIN Counters c ON ws.counterId = c.id
+        SELECT TOP 1 ws.id, ws.status 
+        FROM WorkSchedules ws 
         WHERE ws.staffId = @sid 
           AND ws.workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
-          AND ws.status IN ('working', 'assigned')
-        ORDER BY ws.status DESC
+          AND ws.status = 'working'
     `);
-    
-    return { staffId,roleName, schedule: schedRes.recordset[0] || null };
+
+  return { staffId, roleName, schedule: schedRes.recordset[0] || null };
 };
 
 const getCounterName = async (counterId) => {
-    const pool = await connectDB();
-    const res = await pool.request()
+  const pool = await connectDB();
+  const res = await pool.request()
     .input('cid', sql.BigInt, counterId)
     .query(`SELECT counterName FROM Counters WHERE id = @cid`);
-    return res.recordset[0]?.counterName || 'Quầy';
+  return res.recordset[0]?.counterName || 'Quầy';
 };
 
 const checkInSchedule = async (scheduleId) => {
-    const pool = await connectDB();
-    await pool.request()
+  const pool = await connectDB();
+  await pool.request()
     .input('id', sql.Int, scheduleId)
     .query(`UPDATE WorkSchedules SET status = 'working' WHERE id = @id`);
-};
-
-const createManagerSchedule = async (staffId, counterId, counterName) => {
-    const pool = await connectDB();
-    await pool.request()
-        .input('sid', sql.BigInt, staffId)
-        .input('cid', sql.BigInt, counterId)
-        .input('cname', sql.NVarChar, 'Ca HC - ' + counterName)
-        .query(`
-            DECLARE @shiftId INT = (SELECT TOP 1 id FROM Shifts WHERE name = N'Ca Quản Lý');
-            IF @shiftId IS NULL BEGIN
-                INSERT INTO Shifts (name, startTime, endTime, isActive) VALUES (N'Ca Quản Lý', '08:00', '18:00', 1);
-                SET @shiftId = SCOPE_IDENTITY();
-            END
-            INSERT INTO WorkSchedules (staffId, shiftId, workDate, counterId, status, snapshotStartTime, snapshotEndTime, snapshotShiftName)
-            VALUES (@sid, @shiftId, CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE), @cid, 'working', '08:00', '18:00', @cname);
-        `);
 };
 
 const updateInvoiceExpire = async (transaction, invoiceId, expiresAt) => {
@@ -536,6 +518,5 @@ module.exports = {
   getStaffAndSchedule,
   getCounterName,
   checkInSchedule,
-  createManagerSchedule,
   updateInvoiceExpire,
 };
