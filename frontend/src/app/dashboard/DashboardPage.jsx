@@ -14,16 +14,13 @@ const DashboardPage = () => {
 
     // States cho dữ liệu thật 
     const [summary, setSummary] = useState(null);
+    const [categoryStock, setCategoryStock] = useState([]); // State cho tồn kho theo danh mục
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
 
     const formatMoney = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
-
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
 
     const fetchDashboardData = async () => {
         setLoading(true);
@@ -46,6 +43,23 @@ const DashboardPage = () => {
             setLoading(false);
         }
     };
+
+    // Hàm gọi API lấy tồn kho theo danh mục
+    const fetchInventoryData = async () => {
+        try {
+            const res = await api.get('/inventory/categories?limit=5'); 
+            if (res.data.success) {
+                setCategoryStock(res.data.data.categories || []);
+            }
+        } catch (error) {
+            console.error("Lỗi lấy tồn kho:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
+        fetchInventoryData(); // Gọi hàm lấy tồn kho
+    }, []);
 
     // Fallback data dùng cho UI rỗng hoặc chưa load xong
     const data = summary || {
@@ -82,7 +96,7 @@ const DashboardPage = () => {
 
                 <div className="dashboard-content">
                     <div className="filter-section">
-                        <button className="filter-chip active" onClick={fetchDashboardData}>
+                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); }}>
                             Làm mới dữ liệu <ChevronRight size={14} />
                         </button>
                     </div>
@@ -167,17 +181,17 @@ const DashboardPage = () => {
                                 </div>
                             </div>
 
+                            {/* Tồn kho theo danh mục dùng API mới */}
                             <div className="info-card red-card">
-                                <div className="info-item">
-                                    <span>Sắp hết hàng:</span>
-                                    <span className="fw-bold" style={{ color: '#f87171' }}>{data.inventory.lowStock}</span>
-                                </div>
-                                <div className="info-item">
-                                    <span>Đơn nhập chờ xử lý:</span>
-                                    <span className="fw-bold">{data.inventory.newPO}</span>
-                                </div>
-                                <button className="card-action-btn" onClick={() => navigate('/inventory/menu')}>
-                                    Quản lý kho hàng <ChevronRight size={16} />
+                                <h4>Tồn kho theo danh mục</h4>
+                                {categoryStock.map(cat => (
+                                    <div className="info-item" key={cat.id}>
+                                        <span>{cat.name}:</span>
+                                        <span className="fw-bold">{cat.totalProducts} SP</span>
+                                    </div>
+                                ))}
+                                <button className="card-action-btn" onClick={() => navigate('/inventory')}>
+                                    Xem chi tiết kho <ChevronRight size={16} />
                                 </button>
                             </div>
 
