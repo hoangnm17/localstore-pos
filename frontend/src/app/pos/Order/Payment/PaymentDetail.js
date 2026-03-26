@@ -69,7 +69,7 @@ const PaymentDetail = ({
         ) : (
           <>
             <i className="bi bi-shield-check fs-4"></i>
-            THANH TOÁN (F2)
+            THANH TOÁN (F12)
           </>
         )}
       </button>
