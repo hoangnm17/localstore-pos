@@ -75,23 +75,6 @@ export default function PaymentModal({
     return () => clearTimeout(timer);
   }, [method, internalQr, finalAmount, orderId, safeDiscount, onConfirm]);
 
-  useEffect(() => {
-    if (!internalQr || method !== "BANK") return;
-    const es = new EventSource(`${process.env.REACT_APP_API_BASE_URL}/sse`);
-    es.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload?.type === "PAYMENT_SUCCESS") {
-          onBankPaid(payload);
-        }
-      } catch (err) {
-        console.error("SSE Parse Error:", err);
-      }
-    };
-
-    return () => es.close();
-  }, [internalQr, method, onBankPaid]);
-
   const handleConfirmCash = useCallback((payload = {}) => {
     console.log(payload, safeDiscount);
 

@@ -24,6 +24,7 @@ export default function Order({
   onChangeQty,
   focusSignal,
   openPaymentSignal,
+  status,
 }) {
   const [showPayment, setShowPayment] = useState(false);
   const [qrData, setQrData] = useState(null);
@@ -35,6 +36,13 @@ export default function Order({
   useEffect(() => {
     setQrData(null);
   }, [orderId]);
+
+  useEffect(() => {
+    const currentInvoice = orderItems.find(it => it.orderId === orderId);
+    if (status === "PAID" && !showBill) {
+      fetchAndShowBill(orderId);
+    }
+  }, [status, orderId]);
 
   useEffect(() => {
     if (openPaymentSignal > 0 && orderItems.length > 0) {

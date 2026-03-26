@@ -29,7 +29,7 @@ export const useOrderItems = () => {
 
     let qty = 1;
     if (product.unitType === "WEIGHT") {
-      qty = product.quantityOnHand < 1 ? product.quantityOnHand : 1; 
+      qty = product.quantityOnHand < 1 ? product.quantityOnHand : 1;
     }
 
     const newItem = {
@@ -51,16 +51,16 @@ export const useOrderItems = () => {
     };
   };
 
+  const round = (num) => Math.round(num * 1000) / 1000;
+
   const increase = (items, id) => {
     let changed = false;
 
     const updated = items.map(item => {
       if (item.id !== id) return item;
 
-      const newQty = Math.min(
-        safeParse(item.quantity) + 1,
-        item.quantityOnHand
-      );
+      const current = safeParse(item.quantity);
+      const newQty = round(Math.min(current + 1, item.quantityOnHand));
 
       if (newQty !== item.quantity) {
         changed = true;
@@ -73,17 +73,25 @@ export const useOrderItems = () => {
     return changed ? updated : items;
   };
 
-  const decrease = (items, id) =>
-    items.map(item => {
+  const decrease = (items, id) => {
+    let changed = false;
+
+    const updated = items.map(item => {
       if (item.id !== id) return item;
 
       const current = safeParse(item.quantity);
+      const newQty = round(Math.max(current - 1, 1));
 
-      return {
-        ...item,
-        quantity: current > 1 ? current - 1 : 1
-      };
+      if (newQty !== item.quantity) {
+        changed = true;
+        return { ...item, quantity: newQty };
+      }
+
+      return item;
     });
+
+    return changed ? updated : items;
+  };
 
   const remove = (items, id) =>
     items.filter(item => item.id !== id);

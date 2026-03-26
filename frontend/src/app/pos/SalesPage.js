@@ -26,6 +26,7 @@ export default function SalesHome() {
     goToPrevInvoice,
     accessError,
     updateSearchText,
+    handleFinishOrder
   } = useInvoiceTabs();
 
   const {
@@ -53,6 +54,27 @@ export default function SalesHome() {
   const [focusSignal, setFocusSignal] = useState(0);
 
   const isModalOpen = openPaymentSignal > 0;
+
+  useEffect(() => {
+    const es = new EventSource(`${process.env.REACT_APP_API_BASE_URL}/sse`);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload?.type === "PAYMENT_SUCCESS") {
+          handlePaymentSuccess(payload);
+        }
+      } catch (err) {
+        console.error("SSE Parse Error:", err);
+      }
+    };
+
+    es.onerror = () => {
+      console.warn("SSE Lost connection. Reconnecting...");
+    };
+
+    return () => es.close();
+  }, [handlePaymentSuccess]);
 
 
   useEffect(() => {
@@ -147,7 +169,7 @@ export default function SalesHome() {
       try { await updateInvoiceCustomer(activeInvoice.id, customer); } catch (e) { console.error(e); }
     }
   };
-const handleChangeQty = (id, quantity) => {
+  const handleChangeQty = (id, quantity) => {
     if (!activeInvoice) return;
 
     const newItems = activeInvoice.items.map(it => {
@@ -173,7 +195,7 @@ const handleChangeQty = (id, quantity) => {
       }
 
       if (num < 0) num = 0;
-      return { ...it, quantity: quantity }; 
+      return { ...it, quantity: quantity };
     });
 
     updateInvoiceItems(activeInvoice.id, newItems);
@@ -220,20 +242,23 @@ const handleChangeQty = (id, quantity) => {
         <div className="d-flex align-items-end flex-grow-1 overflow-auto no-scrollbar h-100 pt-2 px-2">
           {invoices.map((inv, index) => {
             const isActive = inv.id === activeInvoiceId;
+            const isPaid = inv.status === "PAID"; // Kiểm tra trạng thái mới
             const tabTotal = calculateTotal(inv.items);
+
             return (
               <div
                 key={inv.id}
                 onClick={() => setActiveInvoiceId(inv.id)}
-                className={`chrome-tab d-flex align-items-center gap-2 px-4 ${isActive ? "active" : ""}`}
+                className={`chrome-tab d-flex align-items-center gap-2 px-4 
+        ${isActive ? "active" : ""} 
+        ${isPaid ? "bg-success text-white border-success" : ""}`} // Thêm màu xanh nếu đã thanh toán
               >
-                <i className={`bi ${isActive ? "bi-file-earmark-text-fill" : "bi-file-earmark-text"}`}></i>
+                <i className={`bi ${isPaid ? "bi-check-circle-fill" : (isActive ? "bi-file-earmark-text-fill" : "bi-file-earmark-text")}`}></i>
                 <span className="small fw-bold">
-                  HĐ {index + 1} {tabTotal > 0 && `· ${tabTotal.toLocaleString()}`}
+                  HĐ {index + 1} {isPaid ? "(Đã xong)" : ""}
                 </span>
-                {invoices.length > 1 && (
-                  <i className="bi bi-x-circle-fill close-icon ms-2" onClick={(e) => { e.stopPropagation(); closeTab(inv.id); }}></i>
-                )}
+                {/* Nút đóng Tab luôn hiển thị để thu ngân tự dọn dẹp sau khi in xong */}
+                <i className="bi bi-x-circle-fill close-icon ms-2" onClick={(e) => { e.stopPropagation(); closeTab(inv.id, !isPaid); }}></i>
               </div>
             );
           })}
@@ -286,11 +311,12 @@ const handleChangeQty = (id, quantity) => {
             onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
             onPay={pay}
-            onBankPaid={handlePaymentSuccess}
+            onBankPaid={handleFinishOrder}
             activeItemId={activeItemId}
             onChangeQty={handleChangeQty}
             focusSignal={focusSignal}
             openPaymentSignal={openPaymentSignal}
+            status={activeInvoice.status}
           />
         </aside>
 

@@ -292,35 +292,46 @@ export const useInvoiceTabs = () => {
     }
   };
 
-  const handlePaymentSuccess = useCallback((invoiceId) => {
-    showNotification("Thanh toán thành công!", "success");
+  const handlePaymentSuccess = useCallback((payload) => {
+    const invoiceId = String(payload.invoiceId || payload.orderId || payload.id);
 
     setInvoices((prev) => {
-      // 1. Lọc bỏ hóa đơn vừa thanh toán
-      const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
+      const exists = prev.some(inv => String(inv.id) === invoiceId);
 
-      // 2. Tìm hóa đơn tiếp theo hoặc tạo mới
-      const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
-
-      let finalInvoices;
-      let nextId;
-
-      if (nextUnpaid) {
-        finalInvoices = remaining;
-        nextId = nextUnpaid.id;
-      } else {
-        const local = createLocalInvoice();
-        finalInvoices = [...remaining, local];
-        nextId = local.id;
+      if (!exists) {
+        console.warn(`Không tìm thấy Tab cho hóa đơn #${invoiceId}`);
+        return prev;
       }
 
-      // 3. CẬP NHẬT ID NGAY TRONG CALLBACK CỦA SETSTATE
-      // Việc này đảm bảo khi React kết thúc đợt update này, cả 2 state đều khớp nhau
-      setActiveInvoiceId(nextId);
-
-      return finalInvoices;
+      return prev.map((inv) => {
+        if (String(inv.id) === invoiceId) {
+          return { ...inv, status: "PAID", isSaving: false };
+        }
+        return inv;
+      });
     });
   }, [showNotification]);
+
+  const handleFinishOrder = useCallback((invoiceId) => {
+    showNotification(`Đơn hàng #${invoiceId} đã thanh toán thành công!`, "success");
+    let nextActiveId = null;
+    setInvoices((prev) => {
+      const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
+
+      const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
+
+      if (nextUnpaid) {
+        nextActiveId = nextUnpaid.id;
+        return remaining;
+      }
+
+      const local = createLocalInvoice();
+      nextActiveId = local.id;
+      return [...remaining, local];
+    });
+
+    if (nextActiveId) setActiveInvoiceId(nextActiveId);
+  }, []);
 
   const pay = async (paymentInfo) => {
     if (!activeInvoice || activeInvoice.status !== "UNPAID") {
@@ -435,5 +446,6 @@ export const useInvoiceTabs = () => {
     goToPrevInvoice,
     accessError,
     updateSearchText,
+    handleFinishOrder,
   };
 };
