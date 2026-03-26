@@ -72,17 +72,17 @@ module.exports.toggleShift = async (id) => {
   }
 
   const currentActive = current.recordset[0].isActive;
-const isCurrentlyActive = (currentActive === true 
-  || currentActive === 1);
+  const isCurrentlyActive = (currentActive === true
+    || currentActive === 1);
   // Nếu đang active → sắp deactivate → kiểm tra lịch tương lai
   if (isCurrentlyActive) {
     const futureCheck = await pool.request()
       .input('shiftId', sql.Int, id)
-      .input('today', sql.Date, new Date())
       .query(`
         SELECT COUNT(*) as count 
         FROM WorkSchedules 
-        WHERE shiftId = @shiftId AND workDate >= @today
+        WHERE shiftId = @shiftId 
+          AND workDate > CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
       `);
 
     const count = futureCheck.recordset[0].count;
