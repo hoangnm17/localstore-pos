@@ -143,36 +143,4 @@ export const getVoucherReport = async (params = {}) => {
     return res.data;
 };
 
-// ═══════════════════════════════════════════
-//  MARKETING EVENTS
-// ═══════════════════════════════════════════
 
-export const getEvents = async (params) => {
-    const res = await api.get('/marketing-events', { params });
-    return res.data;
-};
-
-export const getEventById = async (id) => {
-    const res = await api.get(`/marketing-events/${id}`);
-    return res.data;
-};
-
-export const createEvent = async (data) => {
-    const res = await api.post('/marketing-events', data);
-    return res.data;
-};
-
-export const updateEvent = async (id, data) => {
-    const res = await api.put(`/marketing-events/${id}`, data);
-    return res.data;
-};
-
-export const deleteEvent = async (id) => {
-    const res = await api.delete(`/marketing-events/${id}`);
-    return res.data;
-};
-
-export const getActiveEvents = async () => {
-    const res = await api.get('/marketing-events/active');
-    return res.data;
-};

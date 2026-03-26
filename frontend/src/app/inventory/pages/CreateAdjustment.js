@@ -17,6 +17,13 @@ const CreateAdjustment = () => {
   const [saving, setSaving] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // State mới để theo dõi sản phẩm có chênh lệch = 0
+  const [zeroDiffErrors, setZeroDiffErrors] = useState(new Set());
+
+
+  const isSingleUnit = (item) => !item.largestConversionFactor || item.largestConversionFactor === 1;
+
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const delay = setTimeout(() => {
@@ -41,41 +48,68 @@ const CreateAdjustment = () => {
     } finally {
       setLoading(false);
     }
-  }; 
-
-  const handleAddProduct = async (product) => {
-    if (adjustmentItems.some((i) => i.id === product.id)) return;
-
-    try {
-      const res = await adjustmentService.checkProductConflict(product.id);
-      const isInPending = res.data.data.isInPending;
-
-      if (isInPending) {
-        alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`)
-        return;                                                                 
-      } 
-
-      setAdjustmentItems((prev) => [
-        ...prev,
-        {
-          ...product,
-          actualLargest: product.systemLargest.toString(),
-          actualRemainder: product.systemRemainder.toString(),
-          isConflict: isInPending 
-        },
-      ]);
-
-      setKeyword("");
-      setShowSearchResults(false);
-
-    } catch (err) {
-      console.error(err);
-      alert("Không kiểm tra được trạng thái sản phẩm");
-    }
   };
 
+  const handleAddProduct = async (product) => {
+  if (adjustmentItems.some((i) => i.id === product.id)) return;
+
+  try {
+    const res = await adjustmentService.checkProductConflict(product.id);
+    const isInPending = res.data.data.isInPending;
+
+    if (isInPending) {
+      alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`);
+      return;
+    }
+
+    const singleUnit =
+      !product.largestConversionFactor || product.largestConversionFactor === 1;
+
+    const isDecimalSingle =
+      singleUnit && product.allowDecimalQuantity;
+
+    setAdjustmentItems((prev) => [
+      ...prev,
+      {
+        ...product,
+
+        actualLargest: isDecimalSingle
+          ? product.quantityOnHand.toString()
+          : product.systemLargest.toString(),
+
+        actualRemainder: singleUnit
+          ? "0"
+          : product.systemRemainder.toString(),
+
+        isConflict: isInPending,
+      },
+    ]);
+
+    setKeyword("");
+    setShowSearchResults(false);
+  } catch (err) {
+    console.error(err);
+    alert("Không kiểm tra được trạng thái sản phẩm");
+  }
+};
+
   const handleLargestChange = (id, e) => {
-    let val = e.target.value.replace(/[^0-9]/g, "");
+    const item = adjustmentItems.find((i) => i.id === id);
+    const isDecimalSingle =
+      isSingleUnit(item) && item.allowDecimalQuantity;
+
+    let val = e.target.value;
+
+    if (isDecimalSingle) {
+      val = val.replace(/[^0-9.]/g, "");
+      const parts = val.split(".");
+      if (parts.length > 2) {
+        val = parts[0] + "." + parts.slice(1).join("");
+      }
+    } else {
+      val = val.replace(/[^0-9]/g, "");
+    }
+
     if (val === "") val = "0";
 
     setAdjustmentItems((prev) =>
@@ -83,6 +117,12 @@ const CreateAdjustment = () => {
         item.id === id ? { ...item, actualLargest: val } : item
       )
     );
+
+    setZeroDiffErrors((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   };
 
   const handleRemainderChange = (id, e) => {
@@ -93,7 +133,6 @@ const CreateAdjustment = () => {
 
     if (allowDecimal) {
       val = val.replace(/[^0-9.]/g, "");
-
       const parts = val.split(".");
       if (parts.length > 2) {
         val = parts[0] + "." + parts.slice(1).join("");
@@ -117,32 +156,60 @@ const CreateAdjustment = () => {
         item.id === id ? { ...item, actualRemainder: val } : item
       )
     );
+
+    // Xóa lỗi nếu người dùng đang sửa
+    setZeroDiffErrors((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   };
 
   const handleRemove = (id) => {
     setAdjustmentItems((prev) => prev.filter((i) => i.id !== id));
+    setZeroDiffErrors((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   };
 
   const calculateDifference = (item) => {
+    const isDecimalSingle =
+      isSingleUnit(item) && item.allowDecimalQuantity;
+
+    if (isDecimalSingle) {
+      return (
+        (Number(item.actualLargest) || 0) -
+        (Number(item.quantityOnHand) || 0)
+      );
+    }
+
     const conv = Number(item.largestConversionFactor) || 1;
+
     const actual =
       (Number(item.actualLargest) || 0) * conv +
-      (Number(item.actualRemainder) || 0);
+      (isSingleUnit(item) ? 0 : (Number(item.actualRemainder) || 0));
 
     return actual - (Number(item.quantityOnHand) || 0);
   };
 
   const formatSystemQuantity = (item) => {
-    const largest = Number(item.systemLargest) || 0;
-    const remainder = Number(item.systemRemainder) || 0;
-    const unit = item.largestUnitName || item.baseUnit || "Đơn vị";
+  const unit = item.largestUnitName || "Đơn Vị";
 
-    if (largest > 0)
-      return `${largest.toLocaleString()} ${unit}${remainder ? ` + ${remainder} lẻ` : ""
-        }`;
+  const isDecimalSingle =
+    isSingleUnit(item) && item.allowDecimalQuantity;
 
-    return remainder ? `${remainder} lẻ` : "0";
-  };
+  if (isDecimalSingle) {
+    return `${item.quantityOnHand} ${unit}`;
+  }
+
+  if (isSingleUnit(item)) {
+    return `${item.systemLargest} ${unit}`;
+  }
+
+  return `${item.systemLargest} ${unit} + ${item.systemRemainder} lẻ`;
+};
 
   const summary = useMemo(() => {
     let increase = 0;
@@ -161,14 +228,41 @@ const CreateAdjustment = () => {
     };
   }, [adjustmentItems]);
 
+  // Hàm kiểm tra trước khi submit
+  const validateBeforeSubmit = () => {
+    const errors = new Set();
+
+    adjustmentItems.forEach((item) => {
+      const diff = calculateDifference(item);
+      if (diff === 0) {
+        errors.add(item.id);
+      }
+    });
+
+    setZeroDiffErrors(errors);
+
+    if (errors.size > 0) {
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
     const trimmedReason = reason.trim();
 
-    if (!trimmedReason)
+    if (!trimmedReason) {
       return setReasonError("Vui lòng nhập lý do điều chỉnh.");
+    }
 
-    if (adjustmentItems.length === 0)
+    if (adjustmentItems.length === 0) {
       return alert("Vui lòng thêm ít nhất một sản phẩm.");
+    }
+
+    // Kiểm tra chênh lệch trước khi tạo phiếu
+    if (!validateBeforeSubmit()) {
+      return;
+    }
 
     const payload = {
       reason: trimmedReason,
@@ -181,11 +275,9 @@ const CreateAdjustment = () => {
 
     try {
       setSaving(true);
-
       await adjustmentService.createAdjustment(payload);
 
       alert("Tạo phiếu điều chỉnh thành công!");
-
       navigate("/inventory/requests/adjust?status=Pending");
     } catch (err) {
       alert(err.response?.data?.message || "Tạo phiếu thất bại.");
@@ -200,7 +292,6 @@ const CreateAdjustment = () => {
         <div className="col-xl-10">
 
           {/* Header */}
-
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h3 className="fw-bold text-primary d-flex align-items-center gap-2">
               <i className="bi bi-box-seam"></i>
@@ -217,7 +308,6 @@ const CreateAdjustment = () => {
           </div>
 
           {/* Lý do */}
-
           <div className="card shadow-sm border-0 rounded-4 mb-4">
             <div className="card-header bg-primary text-white">
               <i className="bi bi-info-circle me-2"></i>
@@ -247,7 +337,6 @@ const CreateAdjustment = () => {
           </div>
 
           {/* Search */}
-
           <div className="card shadow-sm border-0 rounded-4 mb-4">
             <div className="card-header bg-info text-white">
               <i className="bi bi-search me-2"></i>
@@ -255,7 +344,6 @@ const CreateAdjustment = () => {
             </div>
 
             <div className="card-body">
-
               <div className="input-group">
                 <span className="input-group-text">
                   <i className="bi bi-search"></i>
@@ -307,7 +395,6 @@ const CreateAdjustment = () => {
                             Mã: {item.code} • Tồn: {formatSystemQuantity(item)}
                           </small>
                         </div>
-
                         <span className="badge bg-primary">Thêm</span>
                       </button>
                     ))}
@@ -316,19 +403,15 @@ const CreateAdjustment = () => {
             </div>
           </div>
 
-          {/* GIỎ HÀNG LUÔN HIỂN THỊ */}
-
+          {/* Danh sách sản phẩm */}
           <div className="card shadow-sm border-0 rounded-4">
-
             <div className="card-header bg-dark text-white">
               <i className="bi bi-list-ul me-2"></i>
               Danh sách sản phẩm kiểm kê
             </div>
 
             <div className="table-responsive">
-
               <table className="table table-hover align-middle mb-0">
-
                 <thead className="table-light">
                   <tr>
                     <th>Sản phẩm</th>
@@ -340,26 +423,21 @@ const CreateAdjustment = () => {
                 </thead>
 
                 <tbody>
-
                   {adjustmentItems.length === 0 ? (
-
                     <tr>
                       <td colSpan="5" className="text-center py-5 text-muted">
                         <i className="bi bi-cart-x fs-3 d-block mb-2"></i>
                         Chưa có sản phẩm nào được thêm
                       </td>
                     </tr>
-
                   ) : (
-
                     adjustmentItems.map((item) => {
-
                       const diff = calculateDifference(item);
                       const unit = item.largestUnitName || "ĐV";
+                      const hasZeroDiffError = zeroDiffErrors.has(item.id);
 
                       return (
-                        <tr key={item.id}>
-
+                        <tr key={item.id} className={hasZeroDiffError ? "table-warning" : ""}>
                           <td>
                             <div className="fw-bold">{item.name}</div>
                             <small className="text-muted">{item.code}</small>
@@ -370,45 +448,54 @@ const CreateAdjustment = () => {
                           </td>
 
                           <td>
+                            {(() => {
+                              const singleUnit =
+                                !item.largestConversionFactor || item.largestConversionFactor === 1;
 
-                            <div className="d-flex gap-2 justify-content-end">
+                              return (
+                                <>
+                                  <div className="d-flex gap-2 justify-content-end">
+                                    {/* Input đơn vị chính */}
+                                    <div
+                                      className="input-group input-group-sm"
+                                      style={{ width: singleUnit ? 200 : 120 }}
+                                    >
+                                      <input
+                                        type="text"
+                                        inputMode={item.allowDecimalQuantity ? "decimal" : "numeric"}
+                                        className="form-control text-end"
+                                        value={item.actualLargest}
+                                        onChange={(e) => handleLargestChange(item.id, e)}
+                                      />
+                                      <span className="input-group-text">{unit}</span>
+                                    </div>
 
-                              <div className="input-group input-group-sm" style={{ width: 120 }}>
+                                    {/* Chỉ hiện nếu có đơn vị lẻ */}
+                                    {!singleUnit && (
+                                      <div className="input-group input-group-sm" style={{ width: 120 }}>
+                                        <input
+                                          type="text"
+                                          className="form-control text-end"
+                                          value={item.actualRemainder}
+                                          onChange={(e) => handleRemainderChange(item.id, e)}
+                                        />
+                                        <span className="input-group-text">lẻ</span>
+                                      </div>
+                                    )}
+                                  </div>
 
-                                <input
-                                  type="text"
-                                  className="form-control text-end"
-                                  value={item.actualLargest}
-                                  onChange={(e) => handleLargestChange(item.id, e)}
-                                />
-
-                                <span className="input-group-text">
-                                  {unit}
-                                </span>
-
-                              </div>
-
-                              <div className="input-group input-group-sm" style={{ width: 120 }}>
-
-                                <input
-                                  type="text"
-                                  className="form-control text-end"
-                                  value={item.actualRemainder}
-                                  onChange={(e) => handleRemainderChange(item.id, e)}
-                                />
-
-                                <span className="input-group-text">
-                                  lẻ
-                                </span>
-
-                              </div>
-
-                            </div>
-
+                                  {hasZeroDiffError && (
+                                    <div className="text-danger mt-2 small text-end">
+                                      <i className="bi bi-exclamation-circle-fill me-1"></i>
+                                      Số lượng thực tế đang bằng số lượng tồn trên hệ thống.
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </td>
 
                           <td className="text-end">
-
                             <span
                               className={`badge ${diff > 0
                                 ? "bg-success"
@@ -422,71 +509,49 @@ const CreateAdjustment = () => {
                                 ? Number(diff).toFixed(3)
                                 : diff}
                             </span>
-
                           </td>
 
                           <td className="text-center">
-
                             <button
                               className="btn btn-sm btn-outline-danger"
                               onClick={() => handleRemove(item.id)}
                             >
                               <i className="bi bi-trash"></i>
                             </button>
-
                           </td>
-
                         </tr>
                       );
-
                     })
-
                   )}
-
                 </tbody>
-
               </table>
-
             </div>
-
           </div>
 
-          {/* SUMMARY */}
-
+          {/* Summary & Submit Button */}
           <div className="card shadow-sm border-0 rounded-4 mt-4">
-
             <div className="card-body">
-
               <div className="row align-items-center">
-
                 <div className="col-md-8">
-
                   <div className="d-flex gap-3 flex-wrap">
-
                     <span className="badge bg-primary fs-6 p-2">
                       Tổng sản phẩm: {summary.total}
                     </span>
-
                     <span className="badge bg-success fs-6 p-2">
                       Tăng: {summary.increase}
                     </span>
-
                     <span className="badge bg-danger fs-6 p-2">
                       Giảm: {summary.decrease}
                     </span>
-
                   </div>
-
                 </div>
 
                 <div className="col-md-4 text-end">
-
                   <button
                     className="btn btn-success btn-lg px-4"
                     disabled={saving}
                     onClick={handleSubmit}
                   >
-
                     {saving ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2"></span>
@@ -498,15 +563,10 @@ const CreateAdjustment = () => {
                         Tạo phiếu điều chỉnh
                       </>
                     )}
-
                   </button>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
         </div>
