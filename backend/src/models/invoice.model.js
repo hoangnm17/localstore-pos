@@ -121,12 +121,9 @@ const updateInvoiceCode = async (transaction, invoiceId, invoiceCode) => {
             WHERE id = @invoiceId
         `);
 };
-
 const updateInvoiceDiscount = async (
   transaction,
   invoiceId,
-  promotionId,
-  promotionDiscount = 0,
   voucherId,
   voucherDiscount = 0,
   usedPoints = 0,
@@ -135,23 +132,19 @@ const updateInvoiceDiscount = async (
 
   await new sql.Request(transaction)
     .input("invoiceId", sql.Int, invoiceId)
-    .input("promotionId", sql.Int, promotionId || null)
-    .input("promotionDiscount", sql.Decimal(10, 2), promotionDiscount || 0)
     .input("voucherId", sql.Int, voucherId || null)
     .input("voucherDiscount", sql.Decimal(10, 2), voucherDiscount || 0)
     .input("usedPoints", sql.Int, usedPoints || 0)
     .input("pointDiscount", sql.Decimal(10, 2), pointDiscount || 0)
     .query(`
-            UPDATE Invoices
-            SET
-                promotionId = @promotionId,
-                promotionDiscount = @promotionDiscount,
-                voucherId = @voucherId,
-                voucherDiscount = @voucherDiscount,
-                usedPoints = @usedPoints,
-                pointDiscount = @pointDiscount
-            WHERE id = @invoiceId
-        `);
+      UPDATE Invoices
+      SET
+        voucherId = @voucherId,
+        voucherDiscount = @voucherDiscount,
+        usedPoints = @usedPoints,
+        pointDiscount = @pointDiscount
+      WHERE id = @invoiceId
+    `);
 };
 
 const getInvoiceById = async (transaction, id) => {
@@ -162,6 +155,19 @@ const getInvoiceById = async (transaction, id) => {
       FROM Invoices WITH (UPDLOCK, ROWLOCK)
       WHERE id = @id
       AND status NOT IN ('PAID', 'CANCELLED')
+    `);
+
+  return result.recordset[0] || null;
+};
+
+
+const getInvoice = async (transaction, id) => {
+  const result = await new sql.Request(transaction)
+    .input("id", sql.Int, id)
+    .query(`
+      SELECT id, customerId, status, totalAmount, finalAmount
+      FROM Invoices WITH (UPDLOCK, ROWLOCK)
+      WHERE id = @id
     `);
 
   return result.recordset[0] || null;
@@ -538,4 +544,5 @@ module.exports = {
   checkInSchedule,
   createManagerSchedule,
   updateInvoiceExpire,
+  getInvoice
 };

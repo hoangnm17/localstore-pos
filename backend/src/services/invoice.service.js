@@ -4,6 +4,7 @@ const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
 const promotionModel = require("../models/promotion.model");
 const paymentModel = require("../models/payment.model")
+const returnModel = require("../models/return.model")
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -225,39 +226,150 @@ const getDraftInvoices = async () => {
 };
 
 const getInvoiceDetail = async (id) => {
+    // 1. Lấy invoice
     const data = await invoiceModel.getInvoiceDetail(id);
     if (!data) throw new Error("Invoice not found");
-    const totalAmount = data.items.reduce((total, item) => {
-        const lineTotal = Number(item.lineTotal || 0);
-        return Math.round((total + lineTotal) * 1000) / 1000;
+
+    // 2. Lấy return
+    const returnRaw = await returnModel.getReturnsByInvoiceId(id);
+
+    // 3. Group returns
+    const returnMap = new Map();
+
+    for (const row of returnRaw) {
+        if (!returnMap.has(row.id)) {
+            returnMap.set(row.id, {
+                id: Number(row.id),
+                returnType: row.returnType,
+                refundMethod: row.refundMethod,
+                totalRefundAmount: Number(row.totalRefundAmount) || 0,
+                status: row.status?.toUpperCase(), // 🔥 normalize
+                createdAt: row.createdAt,
+                items: []
+            });
+        }
+
+        if (row.returnItemId) {
+            returnMap.get(row.id).items.push({
+                id: Number(row.returnItemId),
+                invoiceItemId: Number(row.invoiceItemId),
+                productId: Number(row.productId),
+                productName: row.productName,
+                quantity: Number(row.quantity) || 0,
+                refundAmount: Number(row.refundAmount) || 0,
+                unitName: row.unitName,
+                productUnitId: Number(row.productUnitId),
+                baseQuantity: Number(row.baseQuantity) || 0,
+                restockApproved: row.restockApproved
+            });
+        }
+    }
+
+    const returns = Array.from(returnMap.values());
+
+    // 4. Map số lượng đã hoàn
+    const returnedMap = new Map();
+
+    returns.forEach(r => {
+        if (r.status !== "APPROVED") return; // 🔥 chỉ tính hợp lệ
+
+        r.items.forEach(i => {
+            const prev = returnedMap.get(i.invoiceItemId) || 0;
+            returnedMap.set(i.invoiceItemId, prev + i.quantity);
+        });
+    });
+
+    // 5. Tính discount ratio
+    const totalAmountRaw = data.items.reduce(
+        (sum, i) => sum + Number(i.lineTotal || 0),
+        0
+    );
+
+    const finalAmount = Number(data.finalAmount) || 0;
+
+    const totalDiscount = totalAmountRaw - finalAmount;
+
+    const discountRatio =
+        totalAmountRaw > 0 ? totalDiscount / totalAmountRaw : 0;
+
+    // 6. Mapping items (🔥 FIX CHÍNH)
+    const items = data.items.map(item => {
+        const factor = Number(item.factor) || 1;
+        const quantity = Number(item.quantity) || 0;
+        const lineTotal = Number(item.lineTotal) || 0;
+
+        const returnedQty = returnedMap.get(item.id) || 0;
+
+        // 🔥 giá sau giảm
+        const discountedLineTotal = lineTotal * (1 - discountRatio);
+
+        const discountedUnitPrice =
+            quantity > 0 ? discountedLineTotal / quantity : 0;
+
+        return {
+            id: Number(item.id),
+            productId: Number(item.productId),
+            productUnitId: Number(item.productUnitId),
+
+            productName: item.productName,
+            code: item.code,
+
+            quantity,
+
+            unitPrice: Number(item.unitPrice) || 0,
+            discountedUnitPrice: Math.round(discountedUnitPrice), // 👈 QUAN TRỌNG
+
+            lineTotal,
+            discountedLineTotal: Math.round(discountedLineTotal),
+
+            unitName: item.unitName,
+            factor,
+            unitType: item.unitType,
+
+            // tồn kho
+            productStock: Number(item.quantityOnHand) || 0,
+            quantityOnHand: (Number(item.quantityOnHand) || 0) / factor,
+
+            // hoàn trả
+            returnedQuantity: returnedQty,
+            remainingQuantity: quantity - returnedQty
+        };
+    });
+
+    // 7. Tổng tiền (chuẩn hóa lại)
+    const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+
+    // 🔥 chỉ tính refund hợp lệ
+    const totalRefund = returns.reduce((sum, r) => {
+        if (r.status !== "APPROVED") return sum;
+        return sum + r.totalRefundAmount;
     }, 0);
 
+    // 🔥 chống bug refund > finalAmount
+    const safeRefund = Math.min(totalRefund, finalAmount);
+
+    // 8. Final response
     return {
         id: Number(data.id),
         invoiceCode: data.invoiceCode,
         createdAt: data.createdAt,
-        finalAmount: Number(data.finalAmount) || 0,
-        totalAmount: totalAmount,
+
         status: data.status,
+
         customerId: data.customerId ? Number(data.customerId) : null,
         customerName: data.customerName,
+
         staffName: data.staffName,
         counterName: data.counterName,
-        items: data.items.map(item => {
-            const factor = Number(item.factor) || 1;
-            return {
-                ...item,
-                id: Number(item.id),
-                productId: Number(item.productId),
-                productUnitId: Number(item.productUnitId),
-                quantity: Number(item.quantity) || 0,
-                unitPrice: Number(item.unitPrice) || 0,
-                lineTotal: Number(item.lineTotal) || 0,
-                factor: factor,
-                productStock: item.quantityOnHand,
-                quantityOnHand: (Number(item.quantityOnHand) || 0) / (Number(item.factor) || 1)
-            };
-        })
+
+        totalAmount,
+        finalAmount,
+
+        totalDiscount, // 👈 thêm luôn cho FE
+        totalRefund: safeRefund,
+
+        items,
+        returns
     };
 };
 
