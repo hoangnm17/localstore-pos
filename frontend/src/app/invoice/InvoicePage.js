@@ -7,6 +7,7 @@ import BillModal from "components/pos/Sale/Bill";
 import ReturnCreateModal from "app/invoice/ReturnCreateModal";
 import useDebounce from "hooks/common/useDebounce";
 import useTitle from "hooks/common/useTitle";
+import InvoiceDetailModal from "./InvoiceDetailModal";
 
 const STATUS = {
   ALL: "ALL",
@@ -35,14 +36,36 @@ export default function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [autoPrint, setAutoPrint] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const [pagination, setPagination] = useState({
     page: 1, pageSize: 10, totalItems: 0, totalPages: 1
   });
 
   useTitle("Quản lý hóa đơn");
-
   useEffect(() => { setPage(1); }, [debouncedSearch, status]);
+
+  const handleOpenAction = async (id, actionType) => {
+    setLoading(true);
+    try {
+      const res = await invoiceGetDetail(id);
+      if (res?.data) {
+        setSelectedInvoice(res.data);
+        if (actionType === 'VIEW') {
+          setAutoPrint(false);
+          setShowDetailModal(true); // Mở modal chi tiết khi click VIEW
+        }
+        if (actionType === 'PRINT') {
+          setAutoPrint(true);
+          setShowDetailModal(false);
+        }
+        if (actionType === 'RETURN') {
+          setShowReturnModal(true);
+          setShowDetailModal(false);
+        }
+      }
+    } finally { setLoading(false); }
+  };
 
   const params = useMemo(() => {
     const p = { page, pageSize: pagination.pageSize };
@@ -61,19 +84,6 @@ export default function InvoicesPage() {
   };
 
   useEffect(() => { fetchInvoices(); }, [params]);
-
-  const handleOpenAction = async (id, actionType) => {
-    setLoading(true);
-    try {
-      const res = await invoiceGetDetail(id);
-      if (res?.data) {
-        setSelectedInvoice(res.data);
-        if (actionType === 'VIEW') setAutoPrint(false);
-        if (actionType === 'PRINT') setAutoPrint(true);
-        if (actionType === 'RETURN') setShowReturnModal(true);
-      }
-    } finally { setLoading(false); }
-  };
 
   return (
     <div className="bg-light min-vh-100 py-4">
@@ -138,7 +148,7 @@ export default function InvoicesPage() {
                   return (
                     <tr key={inv.id}>
                       <td className="ps-4 fw-bold text-primary">#{inv.invoiceCode}</td>
-                      <td className="text-muted small">{new Date(inv.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td className="text-muted small">{new Date(inv.createdAt.replace('Z', '')).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td>{inv.customerName || <span className="text-muted italic small">Khách lẻ</span>}</td>
                       <td className="text-end fw-bold">{formatCurrency(inv.finalAmount)}</td>
                       <td className="text-center">
@@ -156,13 +166,13 @@ export default function InvoicesPage() {
                             <i className="bi bi-eye"></i>
                           </button>
 
-                          <button
+                          {inv.status === "PAID" && (<button
                             className="btn btn-sm btn-white border-0 px-3 py-1 text-secondary border-end"
                             onClick={() => handleOpenAction(inv.id, 'PRINT')}
                             title="In hóa đơn"
                           >
                             <i className="bi bi-printer"></i>
-                          </button>
+                          </button>)}
 
                           {inv.status === "PAID" && (
                             <button
@@ -198,9 +208,20 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {selectedInvoice && !showReturnModal && (
+      {showDetailModal && selectedInvoice && (
+        <InvoiceDetailModal
+          invoiceId={selectedInvoice.id}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedInvoice(null);
+          }}
+        />
+      )}
+
+      {selectedInvoice && !showDetailModal && !showReturnModal && (
         <BillModal invoice={selectedInvoice} autoPrint={autoPrint} onClose={() => setSelectedInvoice(null)} />
       )}
+
       {showReturnModal && selectedInvoice && (
         <ReturnCreateModal
           invoice={selectedInvoice}

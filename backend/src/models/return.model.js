@@ -55,8 +55,8 @@ exports.getReturns = async (pool, { status, pageSize, offset }) => {
 
 };
 
-exports.getReturnDetail = async (pool, returnId) => {
-
+exports.getReturnDetail = async (returnId) => {
+  const pool = await connectDB();
   const request = new sql.Request(pool);
 
   request.input("returnId", sql.BigInt, returnId);
@@ -120,6 +120,44 @@ exports.getReturnDetail = async (pool, returnId) => {
     }))
   };
 
+};
+
+
+exports.getReturnsByInvoiceId = async (invoiceId) => {
+  const pool = await connectDB();
+
+  const result = await pool.request()
+    .input("invoiceId", sql.BigInt, invoiceId)
+    .query(`
+      SELECT 
+        r.id,
+        r.invoiceId,
+        r.returnType,
+        r.refundMethod,
+        r.totalRefundAmount,
+        r.status,
+        r.createdAt,
+
+        ri.id AS returnItemId,
+        ri.invoiceItemId,
+        ri.productId,
+        ri.productName,
+        ri.quantity,
+        ri.refundAmount,
+        ri.unitName,
+        ri.productUnitId,
+        ri.baseQuantity,
+        ri.restockApproved
+
+      FROM Returns r
+      LEFT JOIN ReturnItems ri 
+        ON r.id = ri.returnId
+
+      WHERE r.invoiceId = @invoiceId
+      ORDER BY r.createdAt DESC
+    `);
+
+  return result.recordset;
 };
 
 exports.createReturn = async (transaction, data) => {

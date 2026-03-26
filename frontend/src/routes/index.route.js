@@ -47,7 +47,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         <Route element={<AppLayout />}>
           {InvoiceRoutes}
-          {cashierRoute}
+          {cashierRoute}  
           {returnRoute}
         </Route>
       </Route>

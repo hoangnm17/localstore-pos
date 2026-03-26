@@ -18,6 +18,8 @@ const PAGE_TITLES = {
     '/salary': 'Báo Cáo Lương',
     '/my-schedule': 'Lịch của tôi',
     '/handover-report':'Báo Cáo Bàn Giao Tiền Mặt',
+    '/returns': 'Quản lý hoàn hàng',
+    '/return-items': 'Nhập kho hàng hoàn trả',
 };
 
 const ROLE_LABELS = {

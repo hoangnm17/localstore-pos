@@ -25,6 +25,44 @@ exports.createReturnItem = async (transaction, returnId, item) => {
     `);
 };
 
+exports.updateItemRefundAmount = async (transaction, returnItemId, refundAmount) => {
+  const request = new sql.Request(transaction);
+
+  request.input("id", sql.Int, returnItemId);
+  request.input("refundAmount", sql.Decimal(18, 3), refundAmount);
+
+  await request.query(`
+    UPDATE ReturnItems
+    SET refundAmount = @refundAmount
+    WHERE id = @id
+  `);
+};
+
+
+exports.getItemsByReturnId = async (transaction, returnId) => {
+  const request = new sql.Request(transaction);
+
+  request.input("returnId", sql.Int, returnId);
+
+  const result = await request.query(`
+    SELECT
+      id,
+      returnId,
+      invoiceItemId,
+      productId,
+      productName,
+      quantity,
+      refundAmount,
+      unitName,
+      productUnitId,
+      baseQuantity,
+      restockApproved
+    FROM ReturnItems
+    WHERE returnId = @returnId
+  `);
+
+  return result.recordset;
+};
 
 exports.getReturnById = async (transaction, id) => {
   const result = await new sql.Request(transaction)
@@ -66,7 +104,7 @@ exports.updateRestockApprovedByReturnId = async (transaction, returnId, restockA
 
 exports.getReturnItems = async (pool, { status, pageSize, offset }) => {
   const request = new sql.Request(pool);
-  
+
   const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
   const result = await request

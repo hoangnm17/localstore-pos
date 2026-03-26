@@ -30,7 +30,7 @@ export default function CustomerCreateModal({ phone, onClose, onCreated }) {
     }
 
     if (!isValidPhone(form.phone)) {
-      setError("Số điện thoại không hợp lệ (10 chữ số)");
+      setError("Số điện thoại không hợp lệ");
       phoneRef.current?.focus();
       return;
     }
