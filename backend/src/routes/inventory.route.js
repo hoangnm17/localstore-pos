@@ -106,4 +106,7 @@ router.get("/product-units/search", inventoryController.searchProductUnits);
 // CHECK PRODUCT IN PENDING ADJUSTMENT
 router.get("/adjustments/check-product", adjustController.checkProduct);
 
+// UPDATE PRODUCT UNIT PRICE
+router.put("/product-units/:productUnitId/price", protect(PERMISSIONS.UPDATE_PRODUCT_UNIT), inventoryController.updateProductUnitPrice);
+
 module.exports = router;
