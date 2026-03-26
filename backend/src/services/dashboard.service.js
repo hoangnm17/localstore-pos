@@ -45,14 +45,15 @@ class DashboardService {
                 ) as monthRevenue
         `);
 
-        // 5. Payment Methods
+        // 5. Payment Methods (Tính tổng số tiền thực tế cho từng phương thức)
         const paymentStats = await pool.request().query(`
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN paymentMethod = 'BANK' THEN 1 ELSE 0 END) as bank_transfer,
-                SUM(CASE WHEN paymentMethod = 'CASH' THEN 1 ELSE 0 END) as cash
+                ISNULL(SUM(CASE WHEN paymentMethod = 'BANK' THEN amount ELSE 0 END), 0) as bank_transfer,
+                ISNULL(SUM(CASE WHEN paymentMethod = 'CASH' THEN amount ELSE 0 END), 0) as cash
             FROM Payments
-            WHERE createdAt >= CAST(GETDATE() AS DATE)
+            WHERE CAST(createdAt AS DATE) = CAST(GETDATE() AS DATE)
+              AND status = 'SUCCESS'
         `);
 
         // 6. CRM Stats
