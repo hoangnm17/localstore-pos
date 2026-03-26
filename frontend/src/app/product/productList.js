@@ -126,7 +126,7 @@ function ProductList() {
 
     return (
         <div className="pm-page">
-            <div className="d-flex flex-wrap justify-content-end align-items-start gap-3 mb-4">
+            {/* <div className="d-flex flex-wrap justify-content-end align-items-start gap-3 mb-4">
                 <div className="d-flex flex-wrap gap-2">
                     <button
                         type="button"
@@ -137,7 +137,7 @@ function ProductList() {
                         Tạo sản phẩm mới
                     </button>
                 </div>
-            </div>
+            </div> */}
 
             <div className="pm-card card">
                 <div className="card-body">
@@ -220,10 +220,14 @@ function ProductList() {
                         </div>
 
                         <div className="col-6 col-md-2">
-                            <div className="d-grid">
-                                <button type="button" className="btn btn-primary" onClick={handleApplySearch}>
-                                    <i className="bi bi-funnel me-2" />
-                                    Lọc
+                            <div className="d-flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => openCreateProductModal('regular')}
+                                >
+                                    <i className="bi bi-plus-circle me-2" />
+                                    Tạo sản phẩm mới
                                 </button>
                             </div>
                         </div>
@@ -272,8 +276,8 @@ function ProductList() {
                                     <th>Kiểu bán</th>
                                     <th>Đơn vị cơ bản</th>
                                     <th>Barcode</th>
-                                    <th>Giá bán</th>
                                     <th>Giá nhập</th>
+                                    <th>Giá bán</th>
                                     <th>Tồn kho</th>
                                     <th>Trạng thái</th>
                                     <th style={{ minWidth: 220 }}>Thao tác</th>
@@ -336,8 +340,8 @@ function ProductList() {
                                             </td>
                                             <td>{product.baseUnit}</td>
                                             <td>{product.barcode || '—'}</td>
-                                            <td>{formatMoney(product.salePrice)}</td>
                                             <td>{formatMoney(product.costPrice)}</td>
+                                            <td>{formatMoney(product.salePrice)}</td>
                                             <td>{formatQuantity(product.stockQuantity, product.allowDecimalQuantity)}</td>
                                             <td>
                                                 {product.status === 'Selling' ? (

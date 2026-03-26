@@ -163,7 +163,14 @@ function ProductDetailModal({
                                                     <td>{unit.isBaseUnit ? 'Có' : 'Không'}</td>
                                                     <td>
                                                         {unit.isBaseUnit ? (
-                                                            <span className="text-muted small">Quản lý tại popup sản phẩm</span>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-outline-warning"
+                                                                onClick={() => onOpenEditUnit(unit)}
+                                                            >
+                                                                <i className="bi bi-pencil-square me-1" />
+                                                                Sửa giá
+                                                            </button>
                                                         ) : (
                                                             <div className="d-flex flex-wrap gap-2">
                                                                 <button
