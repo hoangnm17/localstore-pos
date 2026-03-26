@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNotification } from '../NotificationContext';
 import { attendanceService } from 'services/Attendance/attendance.service';
 
-const formatVND = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "";
-const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
+const formatVND = (num) => {
+    if (num === '' || num === null || num === undefined) return "";
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
 
 const AutoCheckInModal = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
