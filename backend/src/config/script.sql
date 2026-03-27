@@ -64,6 +64,26 @@ GO
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
+
+-- 8. WorkSchedules
+CREATE TABLE [WorkSchedules] (
+    [id] INT IDENTITY(1,1) PRIMARY KEY,
+    [staffId] BIGINT NOT NULL,
+    [shiftId] INT NOT NULL,
+    [workDate] DATE NOT NULL,
+    -- [counterId] BIGINT NULL,
+    [checkInTime] DATETIME2 NULL,
+    [checkOutTime] DATETIME2 NULL,
+    [workedHours] FLOAT DEFAULT 0,
+    [status] VARCHAR(20) DEFAULT 'assigned',
+    [note] NVARCHAR(MAX),
+    
+    CONSTRAINT [FK_Schedule_Staff] FOREIGN KEY ([staffId]) REFERENCES [Staff]([id]),
+    CONSTRAINT [FK_Schedule_Shift] FOREIGN KEY ([shiftId]) REFERENCES [Shifts]([id]),
+    -- CONSTRAINT [FK_Schedule_Counter] FOREIGN KEY ([counterId]) REFERENCES [Counters]([id]),
+    CONSTRAINT [CK_Schedule_Status] CHECK ([status] IN ('assigned', 'working', 'completed', 'absent', 'late')),
+    CONSTRAINT [UQ_Staff_Schedule] UNIQUE ([staffId], [shiftId], [workDate])
+);
 GO
 CREATE TABLE [dbo].[CustomerPointLogs](
 	[id] [bigint] IDENTITY(1,1) NOT NULL,
@@ -1475,3 +1495,39 @@ SELECT u.id,N'Lê Văn Kho','0900000003','warehouse@pos.com','monthly',12000000
 FROM Users u
 WHERE u.username='warehouse@pos.com'
 AND NOT EXISTS (SELECT 1 FROM Staff WHERE userId = u.id);
+
+/* =========================================
+   6. (OPTIONAL) DEFAULT expiresAt NULL SAFE
+========================================= */
+-- Không cần default vì set từ BE
+-- giữ NULL để distinguish chưa tạo QR
+
+
+/* =========================================
+   Update mới nhất
+========================================= */
+ALTER TABLE Users
+ADD requirePasswordChange BIT DEFAULT 1;
+-- Cập nhật tất cả user cũ về 0 để hệ thống hiện tại không bị lỗi chặn đăng nhập
+UPDATE Users SET requirePasswordChange = 0;
+------------------
+select * from WorkSchedules
+ALTER TABLE [WorkSchedules]
+ADD [attendanceRecord] VARCHAR(255) DEFAULT 'OnTime',
+    [penaltyAmount] DECIMAL(15,2) DEFAULT 0;
+-------------------
+ALTER TABLE [WorkSchedules] 
+DROP CONSTRAINT [FK_Schedule_Counter];
+ALTER TABLE [WorkSchedules] 
+DROP COLUMN [counterId];
+
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotStartTime];
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotEndTime];
+ALTER TABLE [WorkSchedules]
+DROP COLUMN [snapshotShiftName];
+=========================================
+PRINT 'Migration completed successfully';
+
+-- END OF SCRIPT

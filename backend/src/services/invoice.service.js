@@ -425,28 +425,15 @@ const syncCounter = async (userId, configCounterId) => {
         throw new Error("Tài khoản chưa được liên kết với nhân viên!");
     const { staffId, roleName, schedule } = data;
 
-    if (schedule) {
-        if (schedule.counterId !== null &&
-            String(schedule.counterId) !== String(configCounterId)) {
-            const machineName = await invoiceModel.getCounterName(configCounterId);
-            const assignedName = schedule.counterName || `Quầy khác`;
+    if (roleName === 'Manager') {
+        return { staffId, counterId: configCounterId };
+    }
 
-            const err = new Error(`
-                Bạn được phân công làm việc tại "${assignedName}"
-                . Không thể bán hàng tại máy của "${machineName}"!`);
-            err.statusCode = 400;
-            throw err;
-        }
-
-        await invoiceModel.checkInSchedule(schedule.id);
-    } else {
-        if (roleName === 'Cashier') {
-            const err = new Error("Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!");
-            err.statusCode = 400;
-            throw err;
-        }
-        const machineName = await invoiceModel.getCounterName(configCounterId);
-        await invoiceModel.createManagerSchedule(staffId, configCounterId, machineName);
+    if (!schedule || schedule.status !== 'working') {
+        const err = new 
+        Error("Bạn chưa nhận ca ngày hôm nay! Vui lòng vào 'Lịch của tôi' để nhận ca trước khi bán hàng.");
+        err.statusCode = 400;
+        throw err;
     }
 
     return { staffId, counterId: configCounterId };

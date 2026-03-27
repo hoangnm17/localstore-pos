@@ -49,19 +49,19 @@ const HandoverReport = () => {
     const [roleFilter, setRoleFilter] = useState('');
     const [searchName, setSearchName] = useState('');
     const [searchShift, setSearchShift] = useState('');
-    const [counterId, setCounterId] = useState('');
+    // const [counterId, setCounterId] = useState('');
     const [page, setPage] = useState(1);
 
     const [data, setData] = useState([]);
     const [summary, setSummary] = useState(null);
     const [pagination, setPagination] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [counters, setCounters] = useState([]);
+    // const [counters, setCounters] = useState([]);
     const [selectedRow, setSelectedRow] = useState(null);
 
     useEffect(() => {
         api.get('/roster/counters').then(res => {
-            if (res.data?.success) setCounters(res.data.data);
+            // if (res.data?.success) setCounters(res.data.data);
         }).catch(() => { });
     }, []);
 
@@ -69,7 +69,7 @@ const HandoverReport = () => {
         setLoading(true);
         try {
             const params = { fromDate, toDate, page, pageSize: PAGE_SIZE };
-            if (counterId) params.counterId = counterId;
+            // if (counterId) params.counterId = counterId;
             if (roleFilter) params.role = roleFilter;
             if (searchName) params.staffName = searchName;
             if (searchShift) params.shiftName = searchShift;
@@ -87,7 +87,7 @@ const HandoverReport = () => {
         } finally {
             setLoading(false);
         }
-    }, [fromDate, toDate, counterId, roleFilter, searchName, searchShift, page, showNotification]);
+    }, [fromDate, toDate, roleFilter, searchName, searchShift, page, showNotification]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -96,7 +96,7 @@ const HandoverReport = () => {
         return () => clearTimeout(timer);
     }, [searchName, searchShift]);
 
-    useEffect(() => { setPage(1); }, [fromDate, toDate, counterId, roleFilter]);
+    useEffect(() => { setPage(1); }, [fromDate, toDate, roleFilter]);
     useEffect(() => { fetchReport(); }, [fetchReport]);
 
     return (
@@ -163,7 +163,7 @@ const HandoverReport = () => {
                             </select>
                         </div>
                         {/* Quầy */}
-                        <div className="col-md-2">
+                        {/* <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Quầy</label>
                             <select className="form-select border-0 bg-light" style={{ borderRadius: '10px' }}
                                 value={counterId} onChange={e => setCounterId(e.target.value)}>
@@ -172,7 +172,7 @@ const HandoverReport = () => {
                                     <option key={c.id} value={c.id}>{c.counterName}</option>
                                 ))}
                             </select>
-                        </div>
+                        </div> */}
                         {/* Tìm tên nhân viên */}
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Tìm nhân viên</label>
@@ -211,7 +211,7 @@ const HandoverReport = () => {
                                                 { label: 'Thời Gian', width: '110px' },
                                                 { label: 'Nhân Viên', width: '160px' },
                                                 { label: 'Ca Làm', width: '130px' },
-                                                { label: 'Quầy', width: '100px' },
+                                                // { label: 'Quầy', width: '100px' },
                                                 { label: 'Tiền Đầu Ca', width: '110px', align: 'right' },
                                                 { label: 'HT Thu (TM)', width: '120px', align: 'right' },
                                                 { label: 'Thực Đếm', width: '110px', align: 'right' },
@@ -270,14 +270,14 @@ const HandoverReport = () => {
                                                         </div>
                                                     </td>
                                                     {/* Quầy */}
-                                                    <td className="px-3" style={{ width: '100px' }}>
+                                                    {/* <td className="px-3" style={{ width: '100px' }}>
                                                         {row.counterName ? (
                                                             <span className="badge bg-secondary-subtle text-secondary border"
                                                                 style={{ fontSize: '0.75rem' }}>
                                                                 <i className="bi bi-shop me-1" />{row.counterName}
                                                             </span>
                                                         ) : <span className="text-muted">—</span>}
-                                                    </td>
+                                                    </td> */}
                                                     {/* Tiền đầu ca */}
                                                     <td className="px-3 text-end" style={{ width: '110px', color: '#475569', fontWeight: 600 }}>
                                                         {formatVND(row.openingCash)}
