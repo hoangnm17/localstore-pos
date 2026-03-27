@@ -8,6 +8,25 @@ const formatHours = (decimalHours) => {
     const m = Math.round((decimalHours - h) * 60);
     return `${h}h ${String(m).padStart(2, '0')}m`;
 };
+
+const translatePenalty = (rawText) => {
+    if (!rawText) return '';
+    let text = rawText;
+
+    text = text.replace(/OnTime,\s*/g, '');
+    text = text.replace(/OnTime\s*[|,]/g, '');
+
+    text = text.replace(/LateIn\[(.*?)\]/g, 'Vào ca muộn lúc $1');
+    text = text.replace(/EarlyOut\[(.*?)\]/g, 'Về sớm lúc $1');
+    text = text.replace(/LateHandover\[(.*?)\]/g, 'Bàn giao tiền quá hạn lúc $1');
+
+    text = text.replace(/\(-(\d+)[dđ]?\)/g, (match, money) => {
+        return `(- ${new Intl.NumberFormat('vi-VN').format(money)} đ)`;
+    });
+
+    return text.trim();
+};
+
 const SalaryDetailModal = ({ row, month, year, onClose }) => {
     if (!row) return null;
 
@@ -83,17 +102,29 @@ const SalaryDetailModal = ({ row, month, year, onClose }) => {
                     )}
 
                     <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2 mt-3">
-                        <span className="text-secondary fw-medium small">Lương gộp (Gross)</span>
+                        <span className="text-secondary fw-medium small">Lương </span>
                         <span className="fw-bold text-success">{formatVND(row.grossSalary)}</span>
                     </div>
 
                     <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                        <span className="text-secondary fw-medium small">Khấu trừ / Phạt</span>
+                        <span className="text-secondary fw-medium small"> Phạt</span>
                         <span className={`fw-bold ${row.deductions > 0 ? 'text-danger' : 'text-muted'}`}>
                             {row.deductions > 0 ? `- ${formatVND(row.deductions)}` : '0 đ'}
                         </span>
                     </div>
+                    <ul className="mb-0 ps-3" style={{ listStyleType: 'disc', lineHeight: '1.6' }}>
+                        {row.penaltyDetails.split(' | ').map((errDetail, idx) => {
+                            if (!errDetail.trim()) return null;
 
+                            const humanText = translatePenalty(errDetail);
+
+                            return (
+                                <li key={idx} className="opacity-75 fw-medium">
+                                    {humanText}
+                                </li>
+                            )
+                        })}
+                    </ul>
                     <div className="mt-4 p-3 rounded-4" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
                         <div className="d-flex justify-content-between align-items-center">
                             <span className="fw-bold text-success fs-6 text-uppercase">THỰC LĨNH</span>

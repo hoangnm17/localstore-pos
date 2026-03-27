@@ -47,9 +47,13 @@ function ProductUnitModal({
         if (!product) return 'Không xác định được sản phẩm.';
         if (!String(form.unitName).trim()) return 'Vui lòng nhập tên đơn vị tính.';
 
-        const conversionFactor = Number(form.conversionFactor);
-        if (Number.isNaN(conversionFactor) || conversionFactor <= 1) {
-            return 'Hệ số quy đổi của unit phụ phải lớn hơn 1.';
+        const isBaseUnit = unit?.conversionFactor === 1;
+
+        if (!isBaseUnit) {
+            const conversionFactor = Number(form.conversionFactor);
+            if (Number.isNaN(conversionFactor) || conversionFactor <= 1) {
+                return 'Hệ số quy đổi của unit phụ phải lớn hơn 1.';
+            }
         }
 
         const salePrice = Number(form.salePrice);
@@ -57,7 +61,7 @@ function ProductUnitModal({
             return 'Giá bán không được để trống và phải lớn hơn 0.';
         }
 
-        if (salePrice <= Number(product.salePrice)) {
+        if (!isBaseUnit && salePrice <= Number(product.salePrice)) {
             return `Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`;
         }
 
@@ -107,7 +111,9 @@ function ProductUnitModal({
             }
         >
             <div className="alert alert-info">
-                Đơn vị cơ bản được quản lý ở trang sản phẩm. Trang này chỉ dùng cho đơn vị phụ.
+                {unit?.conversionFactor === 1
+                    ? 'Đang sửa đơn vị cơ bản. Bạn có thể cập nhật giá bán ở đây.'
+                    : 'Đơn vị cơ bản được quản lý ở trang sản phẩm. Trang này chỉ dùng cho đơn vị phụ.'}
             </div>
 
             <div className="row g-3">
@@ -117,6 +123,7 @@ function ProductUnitModal({
                         className="form-control"
                         value={form.unitName}
                         onChange={(e) => setForm((prev) => ({ ...prev, unitName: e.target.value }))}
+                        disabled={unit?.conversionFactor === 1}
                     />
                 </div>
 
@@ -126,6 +133,7 @@ function ProductUnitModal({
                         className="form-select"
                         value={form.unitType}
                         onChange={(e) => setForm((prev) => ({ ...prev, unitType: e.target.value }))}
+                        disabled={unit?.conversionFactor === 1}
                     >
                         <option value="PIECE">Chiếc, cái, chai, lon,...</option>
                         <option value="WEIGHT">Cân nặng</option>
@@ -141,6 +149,7 @@ function ProductUnitModal({
                         step="0.001"
                         value={form.conversionFactor}
                         onChange={(e) => setForm((prev) => ({ ...prev, conversionFactor: e.target.value }))}
+                        disabled={unit?.conversionFactor === 1}
                     />
                 </div>
 
@@ -162,6 +171,7 @@ function ProductUnitModal({
                         className="form-control"
                         value={form.barcode}
                         onChange={(e) => setForm((prev) => ({ ...prev, barcode: e.target.value }))}
+                        disabled={unit?.conversionFactor === 1}
                     />
                 </div>
             </div>

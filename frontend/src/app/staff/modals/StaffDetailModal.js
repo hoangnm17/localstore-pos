@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
-import api from '../../../services/axiosInstance';
+import { getStaffDetail } from '../../../services/Staff/staff.service';
 
 const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
 
+    const getVietnameseRole = (roleName) => {
+        if (!roleName) return '';
+        const roleMap = {
+            'manager': 'Quản lý',
+            'cashier': 'Thu ngân',
+            'warehouse': 'Thủ Kho',
+        };
+        return roleMap[roleName.toLowerCase()] || roleName;
+    };
     useEffect(() => {
         const fetchStaffData = async () => {
             try {
-                const res = await api.get(`/staff/detail`, { params: { id: staffId } });
-                if (res.data?.success && res.data?.data) {
-                    const s = res.data.data;
+                const res = await getStaffDetail(staffId);
+                if (res?.success && res?.data) {
+                    const s = res.data;
                     setData({ ...s, createdAt: s.createdAt ? s.createdAt.split('T')[0] : '' });
                 }
             } catch (err) { console.error('Lỗi tải chi tiết:', err); }
@@ -108,7 +117,7 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                                 <InfoRow label="Vai trò" icon="bi-shield-check">
                                     <div className="mt-1">
                                         <span className="badge px-3 py-2 fs-6 rounded-pill" style={{ background: roleBadgeColor }}>
-                                            {data?.roleName}
+                                            {getVietnameseRole(data?.roleName)}
                                         </span>
                                     </div>
                                 </InfoRow>

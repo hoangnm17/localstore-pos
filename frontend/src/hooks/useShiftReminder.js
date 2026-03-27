@@ -1,51 +1,40 @@
-import { useEffect, useRef } from 'react';
-import api from '../services/axiosInstance';
+import { useEffect } from 'react';
 import { useNotification } from '../components/global/Notification/NotificationContext';
 
-export const useShiftReminder = () => {
+export const useShiftReminder = (activeShift) => {
     const { showNotification } = useNotification();
-    const notifiedRef = useRef(false);
 
     useEffect(() => {
-        const checkShiftEnding = async () => {
-            if (notifiedRef.current) return;
+        if (!activeShift) return;
 
+        const checkShiftEnding = () => {
             try {
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const shift = activeShift;
+                const [endH, endM] = shift.endTime.split(':').map(Number);
 
-                const res = await api.get(`/cashier/handover/pending?workDate=${todayStr}`);
-                const isSuccess = res.data?.success ?? res.success;
-                const shifts = res.data?.data || res.data;
+                const now = new Date();
+                const endDate = new Date();
+                endDate.setHours(endH, endM, 0, 0);
 
-                if (isSuccess && shifts && shifts.length > 0) {
-                    const shift = shifts[0];
-                    const [endH, endM] = shift.endTime.split(':').map(Number);
-
-                    const now = new Date();
-                    const endDate = new Date();
-                    endDate.setHours(endH, endM, 0, 0);
-
-                    if (endH < now.getHours()) {
-                        endDate.setDate(endDate.getDate() + 1);
-                    }
-
-                    const diffMinutes = (endDate.getTime() - now.getTime()) / 60000;
-
-                    if (diffMinutes > 0 && diffMinutes <= 10.5) {
-                        showNotification(
-                            `Ca làm việc (${shift.shiftName}) sẽ kết thúc sau ${Math.ceil(diffMinutes)} phút. Bạn hãy chuẩn bị để bàn giao!`,
-                            'warning'
-                        );
-                        notifiedRef.current = true;
-                    }
+                if (endH < now.getHours() && endH < 12 && now.getHours() > 12) {
+                    endDate.setDate(endDate.getDate() + 1);
                 }
-            } catch (err) { }
+
+                const diffMinutes = (endDate.getTime() - now.getTime()) / 60000;
+
+                if (diffMinutes > 0 && diffMinutes <= 10) {
+                    showNotification(
+                        `Ca làm việc (${shift.shiftName }) sẽ kết thúc sau ${Math.ceil(diffMinutes)} phút.
+                         Bạn hãy chuẩn bị để kết ca!`,
+                        'warning'
+                    );
+                }
+            } catch (err) { console.error(err); }
         };
 
         const interval = setInterval(checkShiftEnding, 60000);
-        setTimeout(checkShiftEnding, 5000);
+        setTimeout(checkShiftEnding, 1000);
 
         return () => clearInterval(interval);
-    }, [showNotification]);
+    }, [showNotification, activeShift]);
 };

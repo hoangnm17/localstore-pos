@@ -1,10 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { formatCurrency } from "utils/formatters";
-import useHotkeys from "hooks/pos/useHotKeys";
-import { POS_HOTKEYS } from "config/HotKey";
 
 export default function CashPayment({ total, onConfirm }) {
   const [customerPay, setCustomerPay] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -22,14 +21,25 @@ export default function CashPayment({ total, onConfirm }) {
   }, [customerPay]);
 
   const change = useMemo(() => {
-    return customerPayNumber > total
-      ? customerPayNumber - total
-      : 0;
+    return customerPayNumber > total ? customerPayNumber - total : 0;
   }, [customerPayNumber, total]);
 
   const handleChange = (e) => {
     const raw = e.target.value.replace(/\D/g, "");
     setCustomerPay(raw);
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting || customerPayNumber < total) return;
+
+    setIsSubmitting(true);
+    try {
+      await onConfirm({
+        amount: customerPayNumber,
+      });
+    } catch (error) {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -39,7 +49,6 @@ export default function CashPayment({ total, onConfirm }) {
         setCustomerPay(String(total));
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [total]);
@@ -48,69 +57,52 @@ export default function CashPayment({ total, onConfirm }) {
     const handleKeyDown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
+        e.stopPropagation();
         handleSubmit();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [customerPayNumber, total]);
-
-  const handleSubmit = () => {
-    if (customerPayNumber < total) return;
-    onConfirm({
-      amount: customerPayNumber,
-    });
-  };
+    window.addEventListener("keydown", handleKeyDown, true); // Dùng true để capture trước
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [customerPayNumber, total, isSubmitting]);
 
   return (
     <>
-      {/* LABEL */}
       <label className="form-label small fw-bold text-muted">
         TIỀN KHÁCH ĐƯA
       </label>
 
-      {/* INPUT WITH CLEAR BUTTON */}
       <div className="position-relative mb-3">
         <input
           ref={inputRef}
           type="text"
           inputMode="numeric"
+          disabled={isSubmitting} // Khóa input khi đang xử lý
           className="form-control form-control-lg fw-bold text-primary pe-5"
           value={formatNumber(customerPay)}
           onChange={handleChange}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault(); 
-              handleSubmit();
-            }
-          }}
         />
 
-        {customerPay && (
+        {customerPay && !isSubmitting && (
           <button
             type="button"
             className="btn position-absolute top-50 end-0 translate-middle-y me-2 p-1"
             onClick={() => {
               setCustomerPay("");
-              setTimeout(() => {
-                inputRef.current?.focus();
-              }, 0);
+              setTimeout(() => inputRef.current?.focus(), 0);
             }}
-            style={{ lineHeight: 1 }}
           >
             <i className="bi bi-x-circle-fill text-secondary fs-5"></i>
           </button>
         )}
       </div>
 
-      {/* QUICK MONEY */}
       <div className="row g-2 mb-3">
-
         <div className="col-4">
           <button
             type="button"
             className="btn btn-warning w-100 small fw-bold border-0"
+            disabled={isSubmitting}
             onClick={() => setCustomerPay(String(total))}
           >
             Đủ tiền (F9)
@@ -118,43 +110,35 @@ export default function CashPayment({ total, onConfirm }) {
         </div>
       </div>
 
-      {/* CHANGE DISPLAY */}
       <div
-        className={`d-flex justify-content-between align-items-center p-4 rounded-4 mb-4 border ${change > 0
-          ? "bg-success bg-opacity-10 border-success border-opacity-25"
-          : "bg-light border-light"
-          }`}
-        style={{
-          transition: "all 0.2s ease",
-        }}
+        className={`d-flex justify-content-between align-items-center p-4 rounded-4 mb-4 border ${
+          change > 0
+            ? "bg-success bg-opacity-10 border-success border-opacity-25"
+            : "bg-light border-light"
+        }`}
       >
         <div>
-          <div className="small text-muted fw-bold text-uppercase">
-            Tiền thừa
-          </div>
-          <div
-            className={`display-6 fw-bold ${change > 0 ? "text-success" : "text-secondary"
-              }`}
-          >
+          <div className="small text-muted fw-bold text-uppercase">Tiền thừa</div>
+          <div className={`display-6 fw-bold ${change > 0 ? "text-success" : "text-secondary"}`}>
             {formatCurrency(change)}
           </div>
         </div>
-
-        {change > 0 && (
-          <div className="fs-1 text-success opacity-50">
-            <i className="bi bi-cash-coin"></i>
-          </div>
-        )}
       </div>
 
-      {/* CONFIRM BUTTON */}
       <button
         type="button"
         className="btn btn-primary btn-lg w-100 fw-bold shadow"
-        disabled={customerPayNumber < total}
+        disabled={customerPayNumber < total || isSubmitting} // Vô hiệu hóa nút khi đang gửi
         onClick={handleSubmit}
       >
-        XÁC NHẬN
+        {isSubmitting ? (
+          <>
+            <span className="spinner-border spinner-border-sm me-2"></span>
+            ĐANG XỬ LÝ...
+          </>
+        ) : (
+          "XÁC NHẬN (ENTER)"
+        )}
       </button>
     </>
   );

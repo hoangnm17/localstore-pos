@@ -6,7 +6,7 @@ import PaymentModal from "./Payment/PaymentModal";
 import Bill from "components/pos/Sale/Bill";
 import { invoiceGetDetail } from "services/Invoices/invoice.service";
 import { cancelPendingPayment } from "services/Payment/payment.service"
-import useHotkeys from "hooks/pos/useHotKeys";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 export default function Order({
   orderId,
@@ -24,16 +24,25 @@ export default function Order({
   onChangeQty,
   focusSignal,
   openPaymentSignal,
+  status,
 }) {
   const [showPayment, setShowPayment] = useState(false);
   const [qrData, setQrData] = useState(null);
   const [showBill, setShowBill] = useState(false);
   const [billData, setBillData] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     setQrData(null);
   }, [orderId]);
+
+  useEffect(() => {
+    const currentInvoice = orderItems.find(it => it.orderId === orderId);
+    if (status === "PAID" && !showBill) {
+      fetchAndShowBill(orderId);
+    }
+  }, [status, orderId]);
 
   useEffect(() => {
     if (openPaymentSignal > 0 && orderItems.length > 0) {
@@ -45,9 +54,20 @@ export default function Order({
     const handleKeyDown = (event) => {
       if (event.key === 'F12') {
         event.preventDefault();
-        if (orderItems.length > 0 && !showPayment && !showBill) {
-          setShowPayment(true);
+
+        const hasValidItems = orderItems.length > 0 && orderItems.some(item => {
+          const q = parseFloat(item.quantity);
+          return !isNaN(q) && q > 0;
+        });
+
+        if (hasValidItems) {
+          if (!showPayment && !showBill) {
+            setShowPayment(true);
+          }
+        } else {
+          showNotification("Vui lòng nhập đúng số lượng sản phẩm trước khi thanh toán!", 'error');
         }
+        return
       }
 
       if (event.key === 'Enter') {
@@ -60,11 +80,9 @@ export default function Order({
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [orderItems, totalQuantity, showPayment, showBill, billData, onParentBankPaid]);
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [orderItems.length, showPayment, showBill, billData, onParentBankPaid]);
 
   const fetchAndShowBill = useCallback(async (id) => {
     try {

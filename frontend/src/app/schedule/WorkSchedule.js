@@ -24,7 +24,7 @@ const formatDate = (d) => {
     return `${yyyy}-${mm}-${dd}`;
 };
 
-const PAGE_SIZE = 2; // số nhân viên mỗi trang
+const PAGE_SIZE = 5; // số nhân viên mỗi trang
 
 /* ── Component ── */
 const WorkSchedule = () => {
@@ -37,7 +37,7 @@ const WorkSchedule = () => {
     const [currentMonday, setCurrentMonday] = useState(getMonday(new Date()));
     const [staffList, setStaffList] = useState([]);
     const [shifts, setShifts] = useState([]);
-    const [counters, setCounters] = useState([]);
+    // const [counters, setCounters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [filterMode, setFilterMode] = useState('staff');
@@ -60,14 +60,14 @@ const WorkSchedule = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [schedRes, shiftRes, counterRes] = await Promise.all([
+            const [schedRes, shiftRes] = await Promise.all([
                 api.get(`/roster?startDate=${startDate}&endDate=${endDate}`),
                 api.get('/shifts'),
-                api.get('/roster/counters'),
+                // api.get('/roster/counters'),
             ]);
             if (schedRes.data?.success) setStaffList(schedRes.data.data);
             if (shiftRes.data?.success) setShifts(shiftRes.data.data.filter(s => s.isActive === 1 || s.isActive === true));
-            if (counterRes.data?.success) setCounters(counterRes.data.data);
+            // if (counterRes.data?.success) setCounters(counterRes.data.data);
         } catch (err) {
             console.error(err);
             showNotification('Không thể tải dữ liệu lịch làm!', 'error');
@@ -142,8 +142,8 @@ const WorkSchedule = () => {
             return acc + Object.values(s.schedules || {}).reduce((a, arr) => a + arr.length, 0);
         }, 0),
         totalHours: filteredStaff.reduce((acc, s) => acc + (s.totalHours || 0), 0),
-        activeCounters: counters.length,
-    }), [filteredStaff, counters]);
+        // activeCounters: counters.length,
+    }), [filteredStaff]);
 
     return (
         <>
@@ -206,7 +206,7 @@ const WorkSchedule = () => {
                 <AssignShiftModal
                     cell={assignCell}
                     shifts={shifts}
-                    counters={counters}
+                    // counters={counters}
                     isCashier={assignCell.roleName === 'Cashier'}
                     onClose={closeAssign}
                     onSuccess={handleAssignSuccess}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import api from '../../services/axiosInstance';
+import { getStaffs } from '../../services/Staff/staff.service';
 import Pagination from '../../components/Pagination/Pagination';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
@@ -20,7 +20,7 @@ const StaffList = () => {
     const [sortOrder, setSortOrder] = useState('asc');
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const itemsPerPage = 8;
 
     const [modalType, setModalType] = useState(null);
     const [selectedStaff, setSelectedStaff] = useState(null);
@@ -28,9 +28,9 @@ const StaffList = () => {
 
     const fetchData = useCallback(async () => {
         try {
-            const response = await api.get('/staff');
-            if (response.data?.success) {
-                setStaffs(response.data.data);
+            const response = await getStaffs();
+            if (response?.success) {
+                setStaffs(response.data);
             } else { setStaffs([]); }
         } catch {
             showNotification('Không thể tải danh sách nhân viên!', 'error');
@@ -89,7 +89,7 @@ const StaffList = () => {
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
             <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
 
-                {/* HEADER (Đã đồng bộ giao diện Hóa Đơn) */}
+                {/* HEADER */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h3 className="fw-bold m-0 text-dark">Quản lý nhân viên</h3>
@@ -101,7 +101,7 @@ const StaffList = () => {
                     </button>
                 </div>
 
-                {/* STATS (Được thiết kế lại thành Card sáng màu để không phá vỡ layout) */}
+                {/* STATS */}
                 <div className="row g-3 mb-4">
                     {[
                         { label: 'Tổng nhân viên', value: stats.total, icon: 'bi-people-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
