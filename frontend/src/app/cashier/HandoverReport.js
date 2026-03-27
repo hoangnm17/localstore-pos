@@ -211,7 +211,7 @@ const HandoverReport = () => {
                                                 { label: 'Thời Gian', width: '110px' },
                                                 { label: 'Nhân Viên', width: '160px' },
                                                 { label: 'Ca Làm', width: '130px' },
-                                                { label: 'Quầy', width: '100px' },
+                                                // { label: 'Quầy', width: '100px' },
                                                 { label: 'Tiền Đầu Ca', width: '110px', align: 'right' },
                                                 { label: 'HT Thu (TM)', width: '120px', align: 'right' },
                                                 { label: 'Thực Đếm', width: '110px', align: 'right' },
@@ -270,14 +270,14 @@ const HandoverReport = () => {
                                                         </div>
                                                     </td>
                                                     {/* Quầy */}
-                                                    <td className="px-3" style={{ width: '100px' }}>
+                                                    {/* <td className="px-3" style={{ width: '100px' }}>
                                                         {row.counterName ? (
                                                             <span className="badge bg-secondary-subtle text-secondary border"
                                                                 style={{ fontSize: '0.75rem' }}>
                                                                 <i className="bi bi-shop me-1" />{row.counterName}
                                                             </span>
                                                         ) : <span className="text-muted">—</span>}
-                                                    </td>
+                                                    </td> */}
                                                     {/* Tiền đầu ca */}
                                                     <td className="px-3 text-end" style={{ width: '110px', color: '#475569', fontWeight: 600 }}>
                                                         {formatVND(row.openingCash)}
