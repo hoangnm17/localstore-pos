@@ -110,12 +110,12 @@ function Pagination({ page, totalPages, onPageChange }) {
 
 function SubTabBar({ tabs, active, onChange }) {
     return (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid rgba(0,0,0,0.1)', paddingBottom: 8 }}>
             {tabs.map(t => (
                 <button key={t.key} onClick={() => onChange(t.key)} style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                    background: active === t.key ? '#6366f1' : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
+                    background: active === t.key ? '#6366f1' : '#f1f5f9',
+                    color: active === t.key ? '#fff' : '#1e293b',
                     transition: 'all .2s'
                 }}>{t.label}</button>
             ))}
