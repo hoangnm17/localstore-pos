@@ -236,7 +236,7 @@ const DashboardPage = () => {
                                         <span className="fw-bold">{cat.totalProducts} SP</span>
                                     </div>
                                 ))}
-                                <button className="card-action-btn" onClick={() => navigate('/inventory')}>
+                                <button className="card-action-btn" onClick={() => navigate('/inventory/categories')}>
                                     Xem chi tiết kho <ChevronRight size={16} />
                                 </button>
                             </div>
