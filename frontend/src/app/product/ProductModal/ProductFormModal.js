@@ -281,6 +281,15 @@ function ProductFormModal({
             setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo.');
             return;
         }
+        const stock = Number(selectedChildProduct.stockQuantity || 0);
+        if (childBaseQuantity > stock) {
+            setError(
+                `Số lượng vượt quá tồn kho! "${selectedChildProduct.name}" chỉ còn ` +
+                `${stock.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit} trong kho ` +
+                `(bạn đang nhập ${childBaseQuantity.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit}).`
+            );
+            return;
+        }
 
         setComboRows((prev) => [...prev, {
             key: `${selectedChildProduct.id}-${Date.now()}`,

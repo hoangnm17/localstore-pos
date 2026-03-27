@@ -36,6 +36,11 @@ function ProductDetailModal({
     onRemoveComboItem,
     onRefresh
 }) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const features = user?.features || [];
+    const canCreateUnit = features.includes('CREATE_PRODUCT_UNIT');
+    const canEditUnit = features.includes('UPDATE_PRODUCT_UNIT');
+    const canDeleteUnit = features.includes('DELETE_PRODUCT_UNIT');
     return (
         <ModalShell
             open={open}
@@ -140,10 +145,12 @@ function ProductDetailModal({
                                 <small className="text-muted">Đơn vị cơ bản và các đơn vị phụ của sản phẩm</small>
                             </div>
 
-                            <button type="button" className="btn btn-success btn-sm" onClick={onOpenCreateUnit}>
-                                <i className="bi bi-plus-circle me-2" />
-                                Thêm đơn vị phụ
-                            </button>
+                            {canCreateUnit && (
+                                <button type="button" className="btn btn-success btn-sm" onClick={onOpenCreateUnit}>
+                                    <i className="bi bi-plus-circle me-2" />
+                                    Thêm đơn vị phụ
+                                </button>
+                            )}
                         </div>
 
                         <div className="card-body p-0">
@@ -179,14 +186,16 @@ function ProductDetailModal({
                                                     <td>
                                                         {unit.isBaseUnit ? (
                                                             <div className="d-flex flex-wrap gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn btn-sm btn-outline-warning"
-                                                                    onClick={() => onOpenEditUnit(unit)}
-                                                                >
-                                                                    <i className="bi bi-pencil-square me-1" />
-                                                                    Sửa giá
-                                                                </button>
+                                                                {canEditUnit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-warning"
+                                                                        onClick={() => onOpenEditUnit(unit)}
+                                                                    >
+                                                                        <i className="bi bi-pencil-square me-1" />
+                                                                        Sửa giá
+                                                                    </button>
+                                                                )}
 
                                                                 <button
                                                                     type="button"
@@ -200,14 +209,16 @@ function ProductDetailModal({
                                                             </div>
                                                         ) : (
                                                             <div className="d-flex flex-wrap gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn btn-sm btn-outline-warning"
-                                                                    onClick={() => onOpenEditUnit(unit)}
-                                                                >
-                                                                    <i className="bi bi-pencil-square me-1" />
-                                                                    Sửa
-                                                                </button>
+                                                                {canEditUnit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-warning"
+                                                                        onClick={() => onOpenEditUnit(unit)}
+                                                                    >
+                                                                        <i className="bi bi-pencil-square me-1" />
+                                                                        Sửa
+                                                                    </button>
+                                                                )}
 
                                                                 <button
                                                                     type="button"
@@ -219,15 +230,17 @@ function ProductDetailModal({
                                                                     In mã vạch
                                                                 </button>
 
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn btn-sm btn-outline-danger"
-                                                                    disabled={submitting}
-                                                                    onClick={() => onDeleteUnit(unit)}
-                                                                >
-                                                                    <i className="bi bi-trash me-1" />
-                                                                    Xóa
-                                                                </button>
+                                                                {canDeleteUnit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-danger"
+                                                                        disabled={submitting}
+                                                                        onClick={() => onDeleteUnit(unit)}
+                                                                    >
+                                                                        <i className="bi bi-trash me-1" />
+                                                                        Xóa
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </td>

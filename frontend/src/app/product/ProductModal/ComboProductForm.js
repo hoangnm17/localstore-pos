@@ -145,6 +145,9 @@ export default function ComboProductForm({
                         <div className="border rounded p-3 bg-light mb-3">
                             <div className="fw-semibold mb-3">
                                 Thêm vào combo: {selectedChildProduct.name} ({selectedChildProduct.code})
+                                <span className="ms-2 badge bg-secondary">
+                                    Tồn kho: {Number(selectedChildProduct.stockQuantity || 0).toLocaleString('vi-VN')} {selectedChildProduct.baseUnit}
+                                </span>
                             </div>
 
                             <div className="row g-3 align-items-end">
@@ -172,7 +175,11 @@ export default function ComboProductForm({
                                             <i className="bi bi-dash-lg" />
                                         </button>
                                         <input
-                                            className="form-control text-center"
+                                            className={`form-control text-center ${
+                                                selectedChildUnit && childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0)
+                                                    ? 'is-invalid'
+                                                    : ''
+                                            }`}
                                             type="number"
                                             min={childQuantityStep === 1 ? 1 : 0.001}
                                             step={childQuantityStep}
@@ -183,6 +190,12 @@ export default function ComboProductForm({
                                             <i className="bi bi-plus-lg" />
                                         </button>
                                     </div>
+                                    {selectedChildUnit && childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0) && (
+                                        <div className="text-danger small mt-1">
+                                            <i className="bi bi-exclamation-triangle-fill me-1" />
+                                            Vượt quá tồn kho! Còn {Number(selectedChildProduct.stockQuantity || 0).toLocaleString('vi-VN')} {selectedChildProduct.baseUnit}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="col-md-2">
@@ -199,6 +212,10 @@ export default function ComboProductForm({
                                         type="button"
                                         className="btn btn-success w-100"
                                         onClick={onAddComboRow}
+                                        disabled={
+                                            !selectedChildUnit ||
+                                            (childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0))
+                                        }
                                     >
                                         <i className="bi bi-plus-circle me-2" />
                                         Thêm vào combo
@@ -227,6 +244,7 @@ export default function ComboProductForm({
                             </div>
                         </div>
                     )}
+
 
                     <div className="table-responsive">
                         <table className="table table-bordered align-middle">
