@@ -7,6 +7,7 @@ import ProductUnitModal from './ProductModal/ProductUnitModal';
 import ProductStatusModal from './ProductModal/ProductStatusModal';
 import ProductPriceHistoryModal from './ProductModal/ProductPriceHistoryModal';
 import ProductComboItemModal from './ProductModal/ProductComboItemModal';
+import BarcodePrintModal from './ProductModal/BarcodePrintModal';
 
 import useProductCategories from '../../hooks/product/useProductCategories';
 import useProductList from '../../hooks/product/useProductList';
@@ -28,6 +29,11 @@ function formatQuantity(value, allowDecimalQuantity) {
         });
     }
     return Math.round(num).toLocaleString('vi-VN');
+}
+
+function getPrintableUnit(product) {
+    if (!product?.units?.length) return null;
+    return product.units.find(u => u.isBaseUnit) || product.units[0];
 }
 
 function ProductList() {
@@ -77,7 +83,11 @@ function ProductList() {
 
         comboModalState,
         openComboModal,
-        closeComboModal
+        closeComboModal,
+
+        printModalState,
+        openPrintModal,
+        closePrintModal
     } = useProductModals();
 
     const {
@@ -474,6 +484,12 @@ function ProductList() {
                 onOpenCreateUnit={() => openUnitCreateModal(detailState.product)}
                 onOpenEditUnit={(unit) => openUnitEditModal(detailState.product, unit)}
                 onDeleteUnit={handleDeleteUnit}
+                onOpenPrintUnit={(unit) => openPrintModal(detailState.product, unit)}
+                onOpenPrintCombo={() => {
+                    const printableUnit = getPrintableUnit(detailState.product);
+                    if (!printableUnit) return;
+                    openPrintModal(detailState.product, printableUnit);
+                }}
                 onOpenAddComboItem={(product) => openComboModal(product)}
                 onRemoveComboItem={handleRemoveComboItem}
                 onRefresh={() => refreshDetailModal(detailState.product?.id)}
@@ -512,6 +528,13 @@ function ProductList() {
                 submitting={submitLoading}
                 onClose={closeComboModal}
                 onSubmit={handleAddComboItem}
+            />
+
+            <BarcodePrintModal
+                open={printModalState.open}
+                product={printModalState.product}
+                unit={printModalState.unit}
+                onClose={closePrintModal}
             />
 
             {/* ── Confirm Dialog ── */}

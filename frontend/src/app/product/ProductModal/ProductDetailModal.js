@@ -30,6 +30,8 @@ function ProductDetailModal({
     onOpenCreateUnit,
     onOpenEditUnit,
     onDeleteUnit,
+    onOpenPrintUnit,
+    onOpenPrintCombo,
     onOpenAddComboItem,
     onRemoveComboItem,
     onRefresh
@@ -113,6 +115,19 @@ function ProductDetailModal({
                                             </div>
                                         </div>
                                     )}
+                                    {product.isCombo && (
+                                        <div className="mt-3">
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary btn-sm"
+                                                disabled={!product.units?.some((u) => u.barcode)}
+                                                onClick={onOpenPrintCombo}
+                                            >
+                                                <i className="bi bi-printer me-2" />
+                                                In tem combo
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -163,14 +178,26 @@ function ProductDetailModal({
                                                     <td>{unit.isBaseUnit ? 'Có' : 'Không'}</td>
                                                     <td>
                                                         {unit.isBaseUnit ? (
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-sm btn-outline-warning"
-                                                                onClick={() => onOpenEditUnit(unit)}
-                                                            >
-                                                                <i className="bi bi-pencil-square me-1" />
-                                                                Sửa giá
-                                                            </button>
+                                                            <div className="d-flex flex-wrap gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-sm btn-outline-warning"
+                                                                    onClick={() => onOpenEditUnit(unit)}
+                                                                >
+                                                                    <i className="bi bi-pencil-square me-1" />
+                                                                    Sửa giá
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-sm btn-outline-primary"
+                                                                    disabled={!unit.barcode}
+                                                                    onClick={() => onOpenPrintUnit(unit)}
+                                                                >
+                                                                    <i className="bi bi-printer me-1" />
+                                                                    In mã vạch
+                                                                </button>
+                                                            </div>
                                                         ) : (
                                                             <div className="d-flex flex-wrap gap-2">
                                                                 <button
@@ -180,6 +207,16 @@ function ProductDetailModal({
                                                                 >
                                                                     <i className="bi bi-pencil-square me-1" />
                                                                     Sửa
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-sm btn-outline-primary"
+                                                                    disabled={!unit.barcode}
+                                                                    onClick={() => onOpenPrintUnit(unit)}
+                                                                >
+                                                                    <i className="bi bi-printer me-1" />
+                                                                    In mã vạch
                                                                 </button>
 
                                                                 <button
