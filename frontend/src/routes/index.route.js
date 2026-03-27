@@ -51,15 +51,10 @@ const AppRoutes = () => {
           {salesRoute}
         </Route>
       </Route>
-      <Route element={<ProtectedRoute requiredRoles={['Warehouse', 'Cashier']} />}>
-        <Route element={<AppLayout />}>
-          {cashierRoute}
-        </Route>
-      </Route>
-
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier', 'Warehouse']} />}>
         <Route element={<AppLayout />}>
           {profileRoute}
+          {cashierRoute}
         </Route>
       </Route>
       <Route path="/Error" element={<Forbidden />} />
