@@ -11,14 +11,13 @@ import { POS_HOTKEYS } from "config/HotKey";
 
 
 const PAGE_CONFIG = {
-  ITEMS_PER_PAGE: 10,
+  ITEMS_PER_PAGE: 8,
 };
 
-export default function Product({ addItem, isModalOpen }) {
+export default function Product({ addItem, isModalOpen, searchText, onSearchChange }) {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,10 +55,10 @@ export default function Product({ addItem, isModalOpen }) {
       showNotification(`Sản phẩm [${product.name || 'Đơn vị'} - ${unit?.unitName}] đã hết hàng!`, "error");
       return;
     }
-    
     addItem({
       productId: Number(product.id),
       productUnitId: Number(unit.unitId),
+      productStock: Number(product.stock),
       productName: product.name,
       unitName: unit.unitName,
       unitPrice: unit.finalPrice,
@@ -80,7 +79,6 @@ export default function Product({ addItem, isModalOpen }) {
       if (res?.success && res.data.length > 0) {
         const product = res.data[0];
         const matchedUnit = product.units?.find(u => u.barcode === barcode);
-        console.log(res);
 
         if (matchedUnit) {
           handleAddItem(product, matchedUnit);
@@ -114,7 +112,7 @@ export default function Product({ addItem, isModalOpen }) {
 
   useEffect(() => {
     fetchProductList();
-  }, [currentPage, search, selectedCategory]);
+  }, [currentPage, searchText, selectedCategory]);
 
   const fetchProductList = async () => {
     setLoading(true);
@@ -122,7 +120,7 @@ export default function Product({ addItem, isModalOpen }) {
       const res = await getAllProducts({
         page: currentPage,
         limit: PAGE_CONFIG.ITEMS_PER_PAGE,
-        search: search || "",
+        search: searchText || "",
         categoryId: selectedCategory?.id || null,
       });
 
@@ -139,7 +137,7 @@ export default function Product({ addItem, isModalOpen }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory]);
+  }, [searchText, selectedCategory]);
 
   return (
     <div className="d-flex flex-column bg-light h-100 overflow-hidden">
@@ -148,18 +146,19 @@ export default function Product({ addItem, isModalOpen }) {
 
           <div className="card-header bg-white border-0 pt-3 px-3 flex-shrink-0">
             <FilterBar
-              keyword={search}
-              onKeywordChange={setSearch}
+              keyword={searchText}
+              onKeywordChange={onSearchChange}
               categories={categories}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
               addItem={handleBarcode}
               preventFocus={isModalOpen}
+              
             />
           </div>
 
 
-          <div className="card-body px-3 flex-grow-1 overflow-auto custom-scrollbar" style={{ minHeight: 0 }}>
+          <div className="card-body px-5 flex-grow-1 overflow-auto custom-scrollbar" style={{ minHeight: 0 }}>
             {loading ? (
               <div className="d-flex flex-column align-items-center justify-content-center h-100">
                 <div className="spinner-border text-primary" role="status"></div>

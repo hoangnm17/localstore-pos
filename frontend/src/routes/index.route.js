@@ -1,8 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./protected.route";
-import AppLayout from "../layouts/AppLayout";  // ✅ Layout chung mới
+import AppLayout from "../layouts/AppLayout";
 
-// Lazy imports — giữ nguyên tên cũ của page components
 import salesRoute from "./sales.route";
 import InventoryRoutes from "./inventory.route";
 import authRoute from "./auth.route";
@@ -19,6 +18,7 @@ import cashierRoute from "./cashier.route";
 import Forbidden from "../app/auth/Forbidden";
 import restockRoute from "./restock.route"
 import returnRoute from "./return.route"
+import profileRoute from "./profile.route";
 
 const AppRoutes = () => {
   return (
@@ -47,14 +47,16 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
         <Route element={<AppLayout />}>
           {InvoiceRoutes}
-          {cashierRoute}
           {returnRoute}
+          {salesRoute}
         </Route>
       </Route>
-      <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier']} />}>
-        {salesRoute}
+      <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier', 'Warehouse']} />}>
+        <Route element={<AppLayout />}>
+          {profileRoute}
+          {cashierRoute}
+        </Route>
       </Route>
-
       <Route path="/Error" element={<Forbidden />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>

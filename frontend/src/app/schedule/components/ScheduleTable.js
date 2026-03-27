@@ -27,16 +27,7 @@ const formatHours = (h) => {
 };
 
 const ScheduleTable = ({
-    loading,
-    filterMode,
-    staffPage,      
-    shifts,
-    filteredStaff,   
-    weekDates,
-    todayStr,
-    canAssign,
-    onOpenAssign,
-    onRemove,
+    loading, filterMode, staffPage, shifts, filteredStaff, weekDates, todayStr, canAssign, onOpenAssign, onRemove,
 }) => {
     if (loading) {
         return (
@@ -53,18 +44,11 @@ const ScheduleTable = ({
                 <thead style={{ background: '#1e293b', position: 'sticky', top: 0, zIndex: 10 }}>
                     <tr>
                         <th className="py-3 ps-4 fw-bold"
-                            style={{
-                                fontSize: '0.75rem', textTransform: 'uppercase',
-                                letterSpacing: '0.7px', width: '190px',
-                                color: '#040c13',  
-                            }}>
+                            style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '190px', color: '#040c13' }}>
                             {filterMode === 'staff' ? 'NHÂN VIÊN' : 'CA LÀM VIỆC'}
                         </th>
                         <th className="py-3 text-center fw-bold"
-                            style={{
-                                fontSize: '0.75rem', textTransform: 'uppercase', width: '80px',
-                                color: '#0e0e0e',  
-                            }}>
+                            style={{ fontSize: '0.75rem', textTransform: 'uppercase', width: '80px', color: '#0e0e0e' }}>
                             {filterMode === 'staff' ? 'GIỜ' : 'SL'}
                         </th>
                         {weekDates.map((d, i) => {
@@ -72,20 +56,10 @@ const ScheduleTable = ({
                             const isToday = dStr === todayStr;
                             return (
                                 <th key={i} className="py-2 text-center" style={{ width: '120px', minWidth: '110px' }}>
-                                    <div style={{
-                                        fontSize: '0.7rem', fontWeight: 700,
-                                        color: isToday ? '#fbbf24' : '#020304',
-                                        letterSpacing: '1px', textTransform: 'uppercase',
-                                    }}>
+                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#fbbf24' : '#020304', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                         {dayLabels[i]}
                                     </div>
-                                    <span style={{
-                                        display: 'inline-block',
-                                        background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)',
-                                        color: isToday ? '#1e293b' : '#0e0909',
-                                        borderRadius: '6px', padding: '2px 8px',
-                                        fontWeight: 700, fontSize: '0.8rem',
-                                    }}>
+                                    <span style={{ display: 'inline-block', background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)', color: isToday ? '#1e293b' : '#0e0909', borderRadius: '6px', padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem' }}>
                                         {d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                                     </span>
                                 </th>
@@ -95,23 +69,9 @@ const ScheduleTable = ({
                 </thead>
                 <tbody>
                     {filterMode === 'staff' ? (
-                        <StaffRows
-                            staffPage={staffPage}
-                            weekDates={weekDates}
-                            todayStr={todayStr}
-                            canAssign={canAssign}
-                            onOpenAssign={onOpenAssign}
-                            onRemove={onRemove}
-                        />
+                        <StaffRows staffPage={staffPage} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onOpenAssign={onOpenAssign} onRemove={onRemove} />
                     ) : (
-                        <ShiftRows
-                            shifts={shifts}
-                            filteredStaff={filteredStaff}
-                            weekDates={weekDates}
-                            todayStr={todayStr}
-                            canAssign={canAssign}
-                            onRemove={onRemove}
-                        />
+                        <ShiftRows shifts={shifts} filteredStaff={filteredStaff} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onRemove={onRemove} />
                     )}
                 </tbody>
             </table>
@@ -123,146 +83,82 @@ const ScheduleTable = ({
 const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, onRemove }) => {
     if (staffPage.length === 0) {
         return (
-            <tr>
-                <td colSpan={9} className="text-center py-5 text-secondary">
-                    <i className="bi bi-inbox fs-2 d-block mb-2" />
-                    Không tìm thấy nhân viên phù hợp.
-                </td>
-            </tr>
+            <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="bi bi-inbox fs-2 d-block mb-2" />Không tìm thấy nhân viên phù hợp.</td></tr>
         );
     }
 
     return staffPage.map(staff => {
         const isCashier = staff.roleName === 'Cashier';
         const isWarehouse = staff.roleName === 'Warehouse';
-        const isOver48 = staff.totalHours > 40;
+        const isOver48 = staff.totalHours > 48;
 
         return (
-            <tr key={staff.staffId} className="ws-row border-top"
-                style={{ background: isWarehouse ? '#fafaf9' : '#fff' }}>
-
+            <tr key={staff.staffId} className="ws-row border-top" style={{ background: isWarehouse ? '#fafaf9' : '#fff' }}>
                 {/* Cột nhân viên */}
                 <td className="ps-4 py-3">
                     <div className="d-flex align-items-center gap-2">
                         <div style={{
                             width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                            background: isCashier
-                                ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
-                                : 'linear-gradient(135deg, #94a3b8, #64748b)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontWeight: 800, fontSize: '0.9rem',
+                            background: isCashier ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)' : 'linear-gradient(135deg, #94a3b8, #64748b)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.9rem',
                         }}>
                             {staff.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <div className="fw-bold" style={{ fontSize: '0.88rem', color: '#0f172a' }}>
-                                {staff.fullName}
-                            </div>
-                            <span className={`badge rounded-pill ${isCashier ? 'bg-primary' : 'bg-secondary'}`}
-                                style={{ fontSize: '0.65rem' }}>
-                                {isCashier ? 'THU NGÂN' : 'KHO'}
+                            <div className="fw-bold" style={{ fontSize: '0.88rem', color: '#0f172a' }}>{staff.fullName}</div>
+
+                            <span className={`badge rounded-pill mt-1 text-uppercase ${isCashier ? 'bg-primary' : isWarehouse ? 'bg-secondary' : 'bg-danger'}`} style={{ fontSize: '0.65rem' }}>
+                                {isCashier ? 'THU NGÂN' : isWarehouse ? 'KHO' : 'QUẢN LÝ'}
                             </span>
                         </div>
                     </div>
                 </td>
 
-                {/* Cột giờ */}
+                {/* Cột Tổng Giờ */}
                 <td className="text-center py-3">
-                    {isCashier ? (
-                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isOver48 ? '#dc2626' : '#2563eb' }}
-                            title={isOver48 ? 'Gần đạt giới hạn 48h/tuần!' : ''}>
-                            {isOver48 && <i className="bi bi-exclamation-triangle-fill me-1 text-warning" />}
-                            {formatHours(staff.totalHours)}
-                        </span>
-                    ) : (
-                        <span className="text-secondary" style={{ fontSize: '0.8rem' }}>HC</span>
-                    )}
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isOver48 ? '#dc2626' : '#2563eb' }} title={isOver48 ? 'Vượt quá 48h/tuần!' : ''}>
+                        {isOver48 && <i className="bi bi-exclamation-triangle-fill me-1 text-warning" />}
+                        {formatHours(staff.totalHours)}
+                    </span>
                 </td>
 
-                {/* Cột từng ngày */}
+                {/* Cột Chi Tiết Hành Động Khắp 7 Ngày */}
                 {weekDates.map((d, i) => {
                     const dateStr = formatDate(d);
                     const isToday = dateStr === todayStr;
                     const isPast = dateStr < todayStr;
-                    const dayShifts = isCashier ? (staff.schedules?.[dateStr] || []) : [];
+                    const dayShifts = staff.schedules?.[dateStr] || [];
 
                     return (
-                        <td key={i} className="py-2 align-top"
-                            style={{
-                                borderLeft: '1px dashed #e2e8f0',
-                                background: isToday ? '#fffbeb' : 'transparent',
-                                minWidth: '110px',
-                            }}>
-                            {isWarehouse ? (
-                                <div className="text-center" style={{
-                                    fontSize: '0.72rem', color: '#94a3b8',
-                                    fontStyle: 'italic', padding: '4px',
-                                }}>
-                                    Hành chính
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
-                                    {dayShifts.map(sc => {
-                                        const sStyle = getShiftStyle(sc.shiftId);
-                                        const counterDisplay = sc.counterName || sc.counterCode;
-                                        return (
-                                            <div key={sc.scheduleId} style={{
-                                                borderRadius: '8px', padding: '5px 8px',
-                                                backgroundColor: sStyle.bg,
-                                                border: `1px solid ${sStyle.border}`,
-                                                color: sStyle.text, position: 'relative',
-                                                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                                            }}>
-                                                <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', paddingRight: '22px' }}>
-                                                    {sc.shiftName}
-                                                </span>
-                                                <span style={{ fontSize: '0.68rem', opacity: 0.8, display: 'block' }}>
-                                                    {sc.startTime} – {sc.endTime}
-                                                </span>
-                                                {counterDisplay && (
-                                                    <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '2px', opacity: 0.85 }}>
-                                                        <i className="bi bi-shop me-1" />
-                                                        {counterDisplay}
-                                                    </span>
-                                                )}
-                                                {canAssign && (
-                                                    <button className="ws-remove-btn"
-                                                        title="Xóa ca này"
-                                                        onClick={() => onRemove(sc.scheduleId)}
-                                                        style={{
-                                                            position: 'absolute', top: '50%', right: '5px',
-                                                            transform: 'translateY(-50%)',
-                                                            background: 'rgba(239,68,68,0.15)',
-                                                            border: 'none', borderRadius: '50%',
-                                                            width: '20px', height: '20px',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            cursor: 'pointer', color: '#ef4444',
-                                                            fontWeight: 900, fontSize: '0.7rem', padding: 0,
-                                                        }}>
-                                                        ✕
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                    {canAssign && !isPast && (
-                                        <button className="ws-add-btn"
-                                            onClick={() => onOpenAssign(staff, dateStr)}
-                                            style={{
-                                                width: '100%', border: '1.5px dashed #cbd5e1',
-                                                borderRadius: '8px', padding: '4px 0',
-                                                background: 'transparent', color: '#94a3b8',
-                                                fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                                                marginTop: '2px',
-                                            }}>
-                                            + Thêm ca
-                                        </button>
-                                    )}
-                                    {isPast && dayShifts.length === 0 && (
-                                        <div className="text-center" style={{ fontSize: '0.7rem', color: '#cbd5e1', padding: '4px' }}>—</div>
-                                    )}
-                                </div>
-                            )}
+                        <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent', minWidth: '110px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
+                                {dayShifts.map(sc => {
+                                    const sStyle = getShiftStyle(sc.shiftId);
+                                    const counterDisplay = sc.counterName || sc.counterCode;
+                                    return (
+                                        <div key={sc.scheduleId} style={{
+                                            borderRadius: '8px', padding: '5px 8px', backgroundColor: sStyle.bg, border: `1px solid ${sStyle.border}`,
+                                            color: sStyle.text, position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                                        }}>
+                                            <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', paddingRight: '22px' }}>{sc.shiftName}</span>
+                                            <span style={{ fontSize: '0.68rem', opacity: 0.8, display: 'block' }}>{sc.startTime} – {sc.endTime}</span>
+                                            {counterDisplay && <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '2px', opacity: 0.85 }}><i className="bi bi-shop me-1" />{counterDisplay}</span>}
+                                            {canAssign && (
+                                                <button className="ws-remove-btn" title="Xóa ca này" onClick={() => onRemove(sc.scheduleId)}
+                                                    style={{ position: 'absolute', top: '50%', right: '5px', transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {/* ÁP DỤNG BUTTON CHO CẢ 3 ROLE */}
+                                {canAssign && !isPast && (
+                                    <button className="ws-add-btn" onClick={() => onOpenAssign(staff, dateStr)}
+                                        style={{ width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px' }}>
+                                        + Thêm ca
+                                    </button>
+                                )}
+                                {isPast && dayShifts.length === 0 && <div className="text-center" style={{ fontSize: '0.7rem', color: '#cbd5e1', padding: '4px' }}>—</div>}
+                            </div>
                         </td>
                     );
                 })}
@@ -273,26 +169,14 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
 
 /* ── Shift Rows ── */
 const ShiftRows = ({ shifts, filteredStaff, weekDates, todayStr, canAssign, onRemove }) => {
-    if (shifts.length === 0) {
-        return (
-            <tr>
-                <td colSpan={9} className="text-center py-5 text-secondary">
-                    <i className="bi bi-inbox fs-2 d-block mb-2" />
-                    Chưa có ca làm việc nào.
-                </td>
-            </tr>
-        );
-    }
+    if (shifts.length === 0) return <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="bi bi-inbox fs-2 d-block mb-2" />Chưa có ca làm việc nào.</td></tr>;
 
     return shifts.map(shift => {
         const sStyle = getShiftStyle(shift.id);
         return (
             <tr key={shift.id} className="ws-row border-top">
                 <td className="ps-4 py-3">
-                    <span className="badge px-3 py-2 rounded-pill fw-bold"
-                        style={{ background: sStyle.bg, color: sStyle.text, fontSize: '0.85rem' }}>
-                        {shift.name}
-                    </span>
+                    <span className="badge px-3 py-2 rounded-pill fw-bold" style={{ background: sStyle.bg, color: sStyle.text, fontSize: '0.85rem' }}>{shift.name}</span>
                     <div className="small text-secondary mt-1">{shift.startTime} → {shift.endTime}</div>
                 </td>
                 <td className="text-center">
@@ -300,55 +184,27 @@ const ShiftRows = ({ shifts, filteredStaff, weekDates, todayStr, canAssign, onRe
                         let count = 0;
                         weekDates.forEach(d => {
                             const ds = formatDate(d);
-                            filteredStaff.forEach(s => {
-                                if (s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id)) count++;
-                            });
+                            filteredStaff.forEach(s => { if (s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id)) count++; });
                         });
-                        return count > 0
-                            ? <span className="fw-bold text-success">{count}</span>
-                            : <span className="text-secondary">—</span>;
+                        return count > 0 ? <span className="fw-bold text-success">{count}</span> : <span className="text-secondary">—</span>;
                     })()}
                 </td>
                 {weekDates.map((d, i) => {
                     const ds = formatDate(d);
                     const isToday = ds === todayStr;
-                    const inShift = filteredStaff.filter(s =>
-                        s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id)
-                    );
+                    const inShift = filteredStaff.filter(s => s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id));
                     return (
-                        <td key={i} className="py-2 align-top"
-                            style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent' }}>
+                        <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
                                 {inShift.map(s => {
                                     const entry = s.schedules[ds].find(sc => sc.shiftId === shift.id);
                                     return (
-                                        <div key={s.staffId} style={{
-                                            background: '#f8fafc', border: '1px solid #e2e8f0',
-                                            borderRadius: '8px', padding: '5px 8px',
-                                            position: 'relative', paddingRight: canAssign ? '28px' : '8px',
-                                        }}>
-                                            <div className="fw-semibold" style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                                {s.fullName}
-                                            </div>
-                                            {(entry?.counterName || entry?.counterCode) && (
-                                                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                                                    <i className="bi bi-shop me-1" />
-                                                    {entry.counterName || entry.counterCode}
-                                                </div>
-                                            )}
+                                        <div key={s.staffId} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '5px 8px', position: 'relative', paddingRight: canAssign ? '28px' : '8px' }}>
+                                            <div className="fw-semibold" style={{ fontSize: '0.78rem', color: '#334155' }}>{s.fullName}</div>
+                                            {(entry?.counterName || entry?.counterCode) && <div style={{ fontSize: '0.68rem', color: '#64748b' }}><i className="bi bi-shop me-1" />{entry.counterName || entry.counterCode}</div>}
                                             {canAssign && (
-                                                <button className="ws-remove-btn"
-                                                    onClick={() => onRemove(entry.scheduleId)}
-                                                    style={{
-                                                        position: 'absolute', top: '50%', right: '5px',
-                                                        transform: 'translateY(-50%)',
-                                                        background: 'rgba(239,68,68,0.15)', border: 'none',
-                                                        borderRadius: '50%', width: '20px', height: '20px',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0,
-                                                    }}>
-                                                    ✕
-                                                </button>
+                                                <button className="ws-remove-btn" onClick={() => onRemove(entry.scheduleId)}
+                                                    style={{ position: 'absolute', top: '50%', right: '5px', transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
                                             )}
                                         </div>
                                     );

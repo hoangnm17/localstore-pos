@@ -2,8 +2,10 @@ const authService = require('../services/auth.service');
 module.exports.login = async (req, res) => {
     try {
         const { username, password } = req.body;
+        console.log(`[AUTH] Login attempt for username: ${username}`);
 
         const result = await authService.login(username, password);
+        console.log(`[AUTH] Login successful for username: ${username}`);
 
         return res.status(200).json({
             success: true,
@@ -11,6 +13,7 @@ module.exports.login = async (req, res) => {
             data: result
         });
     } catch (error) {
+        console.error(`[AUTH] Login failed for username: ${req.body.username}. Error: ${error.message}`);
         return res.status(401).json({
             success: false,
             message: error.message

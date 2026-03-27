@@ -17,6 +17,8 @@ const OrderItem = ({
   const qtyRef = useRef(null);
 
   const handleChange = (e) => {
+    console.log(e.target.value);
+    
     const { value } = e.target;
     const finalValue = formatQuantityInput(
       value,

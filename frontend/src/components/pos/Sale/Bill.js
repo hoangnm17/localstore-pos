@@ -49,7 +49,7 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
       <div className="bill-wrapper">
         <div className="bill-paper">
           <div className="text-center">
-            <div className="fw-bold" style={{fontSize: '18px'}}>CỬA HÀNG CAO BẰNG MỘ MIXUE</div>
+            <div className="fw-bold" style={{fontSize: '18px'}}>CỬA HÀNG TIỆN LỢI</div>
             <div style={{fontSize: '10px'}}>120 Yên Lãng, Đống Đa, Hà Nội</div>
             <div style={{fontSize: '10px'}}>Hotline: 0666666666</div>
           </div>
@@ -77,6 +77,7 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
             <thead>
               <tr>
                 <th>Sản phẩm</th>
+                <th className="text-center">ĐVT</th>
                 <th className="text-center">SL</th>
                 <th className="text-end">T.Tiền</th>
               </tr>
@@ -87,6 +88,9 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
                   <td className="py-2">
                     <div className="fw-bold">{item.productName}</div>
                     <div style={{fontSize: '10px'}}>{formatCurrency(item.unitPrice)}</div>
+                  </td>
+                  <td className="text-center" style={{ fontSize: '11px' }}>
+                    {item.unitName || item.unit || "Cái"} 
                   </td>
                   <td className="text-center">{item.quantity}</td>
                   <td className="text-end fw-bold">{formatCurrency(item.lineTotal)}</td>
