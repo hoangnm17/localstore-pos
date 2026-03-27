@@ -40,7 +40,7 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
 
             -- Số ngày công (Manager/Warehouse: đếm ngày có check-in)
             COUNT(DISTINCT CASE
-                WHEN ws.status IN ('working', 'completed')
+                WHEN ws.status = 'completed'
                 THEN CAST(ws.workDate AS DATE)
             END) AS workingDays,
 
@@ -63,7 +63,7 @@ module.exports.getSalaryReport = async (month, year, staffId = null, roleName = 
         LEFT JOIN WorkSchedules ws
             ON s.id = ws.staffId
             AND ws.workDate BETWEEN @startDate AND @endDate
-            AND ws.status IN ('working', 'completed')
+            AND ws.status = 'completed'
         LEFT JOIN Shifts sh ON ws.shiftId = sh.id
         WHERE s.employmentStatus = 'working'
             ${staffFilter}

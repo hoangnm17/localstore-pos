@@ -70,6 +70,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
         e.preventDefault();
         if (!selectedScheduleId) return setErrorMsg('Vui lòng chọn ca cần kết!');
         if (actualCash === '') return setErrorMsg('Vui lòng nhập số tiền thực đếm trong két!');
+        if (chenhLech < 0 && !note.trim()) return setErrorMsg('Vui lòng ghi lý do thất thoát!');
 
         setLoading(true);
         setErrorMsg('');
@@ -183,7 +184,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <span className="fw-bold text-secondary small">2. Hệ thống thu (Tiền mặt)</span>
+                                        <span className="fw-bold text-secondary small">2. Hệ thống thu</span>
                                         <div className="input-group input-group-sm" style={{ width: '180px' }}>
                                             <input type="text" className="form-control text-end fw-bold bg-white text-primary"
                                                 value={formatVND(systemCash)} disabled />
@@ -194,7 +195,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     <hr className="my-3 border-success" style={{ opacity: 0.2 }} />
 
                                     <div className="d-flex justify-content-between align-items-center mb-4 p-2 bg-success-subtle rounded-3 border border-success border-opacity-25">
-                                        <span className="fw-bold text-success ms-1">TỔNG CẦN CÓ (1+2)</span>
+                                        <span className="fw-bold text-success ms-1">TỔNG</span>
                                         <span className="fw-bold text-success fs-5 me-1">{formatVND(tongTien)} VNĐ</span>
                                     </div>
 
@@ -217,7 +218,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     </div>
 
                                     <div>
-                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do (Bắt buộc nếu có chênh lệch)..."
+                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do"
                                             value={note} onChange={e => setNote(e.target.value)} />
                                     </div>
 

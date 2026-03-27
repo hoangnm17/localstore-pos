@@ -33,7 +33,7 @@ module.exports.checkIn = async (staffId, openingCash) => {
     if (role === 'Cashier' || role === 'Warehouse') {
         if (nowStr > limitStr) {
             record = `LateIn[${nowStr}]`;
-            penalty = 50000;
+            penalty = 10000;
         }
     }
 

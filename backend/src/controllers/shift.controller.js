@@ -40,6 +40,36 @@ module.exports.getShiftById = async (req, res) => {
   }
 };
 
+module.exports.updateShift = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { checkInStart, checkInEnd, checkOutDeadline } = req.body;
+
+    await shiftService.updateShift(id, { checkInStart, checkInEnd, checkOutDeadline });
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật giới hạn điểm danh thành công!"
+    });
+  } catch (err) {
+    console.error(err);
+    if (
+      err.message.includes("Không tìm") ||
+      err.message.includes("giới hạn") ||
+      err.message.includes("deadline") ||
+      err.message.includes("Giờ") ||
+      err.message.includes("kết ca") ||
+      err.message.includes("nhập cả")
+    ) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi hệ thống: " + err.message
+    });
+  }
+};
+
 module.exports.createShift = async (req, res) => {
   try {
     const { name, startTime, endTime, checkInStart, checkInEnd, checkOutDeadline } = req.body;

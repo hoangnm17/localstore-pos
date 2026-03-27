@@ -47,6 +47,11 @@ module.exports.submitHandover = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu thông tin kết ca!" });
         }
 
+        const expectedTotal = parseFloat(openingCash) + parseFloat(systemCash || 0);
+        if (parseFloat(actualCash) < expectedTotal && (!note || note.trim() === '')) {
+            return res.status(400).json({ success: false, message: "Vui lòng ghi lý do thất thoát!" });
+        }
+
         const scheduleTimes = await cashierModel.getScheduleTimes(scheduleId);
         if (!scheduleTimes) {
             return res.status(404).json({ success: false, message: "Không tìm thấy dữ liệu ca làm việc này!" });

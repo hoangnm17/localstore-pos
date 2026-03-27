@@ -33,7 +33,7 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [errorMsg]);
-const getDiff = (m1, m2) => {
+  const getDiff = (m1, m2) => {
     let d = m1 - m2;
     if (d < -720) d += 1440;
     if (d > 720) d -= 1440;
@@ -51,7 +51,7 @@ const getDiff = (m1, m2) => {
 
     if (form.startTime && form.endTime) {
       let duration = toMins(form.endTime) - toMins(form.startTime);
-      if (duration < 0) duration += 1440; 
+      if (duration < 0) duration += 1440;
 
       if (duration === 0) e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
       else if (duration < 30) e.endTime = 'Ca làm tối thiểu 30 phút!';
@@ -82,7 +82,7 @@ const getDiff = (m1, m2) => {
       const checkOutM = toMins(form.checkOutDeadline);
       const startM = toMins(form.startTime);
       const endM = toMins(form.endTime);
-      
+
       if (getDiff(checkOutM, startM) <= 0)
         e.checkOutDeadline = 'Thời gian kết ca phải sau giờ bắt đầu ca!';
       if (getDiff(checkOutM, endM) > 30)
@@ -119,7 +119,7 @@ const getDiff = (m1, m2) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const isChanged = 
+    const isChanged =
       form.name !== (shift.name || '') ||
       form.startTime !== (shift.startTime || '') ||
       form.endTime !== (shift.endTime || '') ||
@@ -127,9 +127,9 @@ const getDiff = (m1, m2) => {
       form.checkInEnd !== (shift.checkInEnd || '') ||
       form.checkOutDeadline !== (shift.checkOutDeadline || '');
 
-      if (!isChanged) {
+    if (!isChanged) {
       setErrorMsg('Bạn chưa chỉnh sửa thông tin nào!');
-      return; 
+      return;
     }
 
     if (!validate()) return;
@@ -138,9 +138,9 @@ const getDiff = (m1, m2) => {
     try {
       const payload = {
         ...form,
-        checkInStart:form.checkInStart || null,
-        checkInEnd:form.checkInEnd || null,
-        checkOutDeadline:form.checkOutDeadline || null,
+        checkInStart: form.checkInStart || null,
+        checkInEnd: form.checkInEnd || null,
+        checkOutDeadline: form.checkOutDeadline || null,
       };
       const res = await api.put(`/shifts/${shift.id}`, payload);
 
@@ -205,8 +205,8 @@ const getDiff = (m1, m2) => {
             <div className="mb-3">
               <label className="small fw-bold">Tên ca <span className="text-danger">*</span></label>
               <input type="text" name="name"
-                className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
-                value={form.name} onChange={handleChange} />
+                className="form-control form-control-sm bg-light text-muted"
+                value={form.name} disabled />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
 
@@ -219,15 +219,15 @@ const getDiff = (m1, m2) => {
                 <div className="col-6">
                   <label className="small fw-bold">Giờ bắt đầu <span className="text-danger">*</span></label>
                   <input type="time" name="startTime"
-                    className={`form-control form-control-sm ${errors.startTime ? 'is-invalid' : ''}`}
-                    value={form.startTime} onChange={handleChange} />
+                    className="form-control form-control-sm bg-light text-muted"
+                    value={form.startTime} disabled />
                   {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
                 </div>
                 <div className="col-6">
                   <label className="small fw-bold">Giờ kết thúc <span className="text-danger">*</span></label>
                   <input type="time" name="endTime"
-                    className={`form-control form-control-sm ${errors.endTime ? 'is-invalid' : ''}`}
-                    value={form.endTime} onChange={handleChange} />
+                    className="form-control form-control-sm bg-light text-muted"
+                    value={form.endTime} disabled />
                   {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
                 </div>
               </div>

@@ -131,7 +131,7 @@ module.exports.createHandover = async (data) => {
                 IF CAST(@now AS TIME) < @endTime
                 BEGIN
                     SET @newRecord = CONCAT('EarlyOut[', CONVERT(VARCHAR(5), @now, 108), ']');
-                    SET @penalty = 50000;
+                    SET @penalty = 10000;
                 END
                 -- PHẠT: Bàn Giao Trễ (chốt sau deadline)
                 ELSE IF CAST(@now AS TIME) > @deadline
@@ -164,9 +164,9 @@ module.exports.createHandover = async (data) => {
 
         let finalPenalty = 0;
         if (now < endDT) {
-            finalPenalty = 50000;
+            finalPenalty = 10000;
         } else if (now > deadlineDT) {
-            finalPenalty = 50000;
+            finalPenalty = 10000;
         }
 
         return { penalty: finalPenalty };
@@ -181,7 +181,7 @@ module.exports.getHandoverReport = async ({ fromDate, toDate, staffId, page, pag
     const pool = await connectDB();
     const offset = (page - 1) * pageSize;
 
-    let whereClause = 'WHERE 1=1';
+    let whereClause = "WHERE ws.status = 'completed'";
     const request = pool.request();
 
     if (fromDate) {

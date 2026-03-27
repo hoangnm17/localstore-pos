@@ -6,7 +6,7 @@ import useDebounce from '../../hooks/common/useDebounce';
 
 import ShiftCreateModal from './modals/ShiftCreateModal';
 import ShiftDetailModal from './modals/ShiftDetailModal';
-// import ShiftUpdateModal from './modals/ShiftUpdateModal';
+import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
 
 const PAGE_SIZE = 10;
@@ -42,7 +42,7 @@ const ShiftList = () => {
 
   const openCreate = () => setModalType('create');
   const openDetail = (s) => { setSelectedShift(s); setModalType('detail'); };
-  // const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
+  const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
   const openToggle = (s) => { setSelectedShift(s); setModalType('toggle'); };
   const closeModal = () => { setModalType(null); setSelectedShift(null); };
   const handleSuccess = useCallback(() => { closeModal(); fetchShifts(); }, [fetchShifts]);
@@ -240,6 +240,15 @@ const ShiftList = () => {
                               <i className="bi bi-eye-fill" style={{ fontSize: '1rem', lineHeight: '34px' }} />
                             </button>
 
+                            <button
+                              className="btn btn-sm btn-outline-warning ms-1"
+                              style={{ borderRadius: '8px', width: '34px', height: '34px', padding: 0 }}
+                              title="Chỉnh sửa giới hạn ca"
+                              onClick={() => openUpdate(shift)}
+                            >
+                              <i className="bi bi-pencil-fill" style={{ fontSize: '1rem', lineHeight: '34px' }} />
+                            </button>
+
                             <div className="form-check form-switch m-0 ms-2"
                               title={isActive ? 'Ngừng sử dụng' : 'Kích hoạt'}>
                               <input
@@ -271,7 +280,7 @@ const ShiftList = () => {
 
       {modalType === 'create' && <ShiftCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
       {modalType === 'detail' && selectedShift && <ShiftDetailModal shift={selectedShift} onClose={closeModal} />}
-      {/* {modalType === 'update' && selectedShift && <ShiftUpdateModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />} */}
+      {modalType === 'update' && selectedShift && <ShiftUpdateModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
       {modalType === 'toggle' && selectedShift && <ShiftToggleModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
     </div>
   );
