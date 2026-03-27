@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./protected.route";
-import AppLayout from "../layouts/AppLayout"; 
+import AppLayout from "../layouts/AppLayout";
 
 import salesRoute from "./sales.route";
 import InventoryRoutes from "./inventory.route";
@@ -52,12 +52,14 @@ const AppRoutes = () => {
         </Route>
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Warehouse', 'Cashier']} />}>
-        {cashierRoute}
+        <Route element={<AppLayout />}>
+          {cashierRoute}
+        </Route>
       </Route>
 
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier', 'Warehouse']} />}>
         <Route element={<AppLayout />}>
-        {profileRoute}
+          {profileRoute}
         </Route>
       </Route>
       <Route path="/Error" element={<Forbidden />} />
