@@ -205,16 +205,9 @@ function ProductDetailModal({
 
                     {product.isCombo ? (
                         <div className="card">
-                            <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div>
-                                    <div className="fw-bold">Thành phần combo</div>
-                                    <small className="text-muted">Quản lý các sản phẩm con cấu thành combo</small>
-                                </div>
-
-                                <button type="button" className="btn btn-success btn-sm" onClick={() => onOpenAddComboItem(product)}>
-                                    <i className="bi bi-plus-circle me-2" />
-                                    Thêm thành phần
-                                </button>
+                            <div className="card-header">
+                                <div className="fw-bold">Thành phần combo</div>
+                                <small className="text-muted">Danh sách các sản phẩm con cấu thành combo</small>
                             </div>
 
                             <div className="card-body p-0">
@@ -226,13 +219,12 @@ function ProductDetailModal({
                                                 <th>Tên SP con</th>
                                                 <th>Base unit</th>
                                                 <th>Số lượng</th>
-                                                <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {!comboItems?.length ? (
                                                 <tr>
-                                                    <td colSpan="5" className="text-center py-4">
+                                                    <td colSpan="4" className="text-center py-4">
                                                         Combo chưa có thành phần nào.
                                                     </td>
                                                 </tr>
@@ -243,16 +235,6 @@ function ProductDetailModal({
                                                         <td className="fw-semibold">{item.childProductName}</td>
                                                         <td>{item.baseUnit}</td>
                                                         <td>{Number(item.quantity || 0).toLocaleString('vi-VN')}</td>
-                                                        <td>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-sm btn-outline-danger"
-                                                                onClick={() => onRemoveComboItem(item.id)}
-                                                            >
-                                                                <i className="bi bi-trash me-1" />
-                                                                Xóa
-                                                            </button>
-                                                        </td>
                                                     </tr>
                                                 ))
                                             )}

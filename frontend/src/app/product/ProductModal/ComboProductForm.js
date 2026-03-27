@@ -35,7 +35,9 @@ export default function ComboProductForm({
     onIncreaseQty,
     onDecreaseQty,
     onAddComboRow,
-    onRemoveComboRow
+    onRemoveComboRow,
+    onUpdateComboRowQty,
+    onUpdateComboRowUnit
 }) {
     return (
         <>
@@ -254,8 +256,33 @@ export default function ComboProductForm({
                                         <tr key={row.key}>
                                             <td>{row.productCode}</td>
                                             <td className="fw-semibold">{row.productName}</td>
-                                            <td>{row.unitName}</td>
-                                            <td>{Number(row.quantityDisplay).toLocaleString('vi-VN')}</td>
+                                            <td style={{ minWidth: 160 }}>
+                                                {row.units && row.units.length > 1 ? (
+                                                    <select
+                                                        className="form-select form-select-sm"
+                                                        value={row.selectedUnitId}
+                                                        onChange={(e) => onUpdateComboRowUnit(row.key, e.target.value)}
+                                                    >
+                                                        {row.units.map((u) => (
+                                                            <option key={u.id} value={u.id}>
+                                                                {u.unitName} | x{Number(u.conversionFactor).toLocaleString('vi-VN')} | {Number(u.salePrice).toLocaleString('vi-VN')} đ
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    row.unitName
+                                                )}
+                                            </td>
+                                            <td style={{ minWidth: 110 }}>
+                                                <input
+                                                    type="number"
+                                                    className="form-control form-control-sm text-center"
+                                                    min={row.unitType === 'WEIGHT' ? 0.001 : 1}
+                                                    step={row.unitType === 'WEIGHT' ? 0.001 : 1}
+                                                    value={row.quantityDisplay}
+                                                    onChange={(e) => onUpdateComboRowQty(row.key, e.target.value)}
+                                                />
+                                            </td>
                                             <td>{Number(row.quantityBase).toLocaleString('vi-VN')} {row.baseUnit}</td>
                                             <td>{formatMoney(row.unitSalePrice)}</td>
                                             <td className="fw-semibold">{formatMoney(row.lineTotal)}</td>
