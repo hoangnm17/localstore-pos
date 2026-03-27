@@ -153,6 +153,7 @@ function ProductFormModal({
                                 productName: item.childProductName || productDetail?.name || '',
                                 productCode: item.childProductCode || productDetail?.code || '',
                                 baseUnit: productDetail?.baseUnit || item.baseUnit || '',
+                                units,
                                 selectedUnitId: String(baseUnit.id),
                                 unitName: baseUnit.unitName,
                                 unitType: baseUnit.unitType,
@@ -280,6 +281,15 @@ function ProductFormModal({
             setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo.');
             return;
         }
+        const stock = Number(selectedChildProduct.stockQuantity || 0);
+        if (childBaseQuantity > stock) {
+            setError(
+                `Số lượng vượt quá tồn kho! "${selectedChildProduct.name}" chỉ còn ` +
+                `${stock.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit} trong kho ` +
+                `(bạn đang nhập ${childBaseQuantity.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit}).`
+            );
+            return;
+        }
 
         setComboRows((prev) => [...prev, {
             key: `${selectedChildProduct.id}-${Date.now()}`,
@@ -288,6 +298,7 @@ function ProductFormModal({
             productName: selectedChildProduct.name,
             productCode: selectedChildProduct.code,
             baseUnit: selectedChildProduct.baseUnit,
+            units: childUnits,
             selectedUnitId: String(selectedChildUnit.id),
             unitName: selectedChildUnit.unitName,
             unitType: selectedChildUnit.unitType,
@@ -305,6 +316,39 @@ function ProductFormModal({
     };
 
     const handleRemoveComboRow = (rowKey) => setComboRows((prev) => prev.filter((r) => r.key !== rowKey));
+
+    const handleUpdateComboRowQty = (rowKey, newQtyDisplay) => {
+        const qty = Number(newQtyDisplay);
+        if (Number.isNaN(qty) || qty <= 0) return;
+        setComboRows((prev) => prev.map((r) => {
+            if (r.key !== rowKey) return r;
+            const quantityBase = roundNumber(qty * r.conversionFactor, 3);
+            const lineTotal = roundNumber(qty * r.unitSalePrice, 2);
+            return { ...r, quantityDisplay: qty, quantityBase, lineTotal };
+        }));
+    };
+
+    const handleUpdateComboRowUnit = (rowKey, newUnitId) => {
+        setComboRows((prev) => prev.map((r) => {
+            if (r.key !== rowKey) return r;
+            const unit = (r.units || []).find((u) => String(u.id) === String(newUnitId));
+            if (!unit) return r;
+            const conversionFactor = Number(unit.conversionFactor || 1);
+            const unitSalePrice = Number(unit.salePrice || 0);
+            const quantityBase = roundNumber(r.quantityDisplay * conversionFactor, 3);
+            const lineTotal = roundNumber(r.quantityDisplay * unitSalePrice, 2);
+            return {
+                ...r,
+                selectedUnitId: String(unit.id),
+                unitName: unit.unitName,
+                unitType: unit.unitType,
+                conversionFactor,
+                unitSalePrice,
+                quantityBase,
+                lineTotal
+            };
+        }));
+    };
 
     const validate = () => {
         const errors = {};
@@ -459,6 +503,8 @@ function ProductFormModal({
                         onDecreaseQty={handleDecreaseChildQuantity}
                         onAddComboRow={handleAddComboRow}
                         onRemoveComboRow={handleRemoveComboRow}
+                        onUpdateComboRowQty={handleUpdateComboRowQty}
+                        onUpdateComboRowUnit={handleUpdateComboRowUnit}
                     />
                 )}
             </form>
