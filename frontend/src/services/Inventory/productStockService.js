@@ -40,6 +40,12 @@ const productStockService = {
     return api.get(`/inventory/product-units/search`, {
       params: { keyword }
     });
+  },
+
+  updatePrice(productUnitId, salePrice) {
+    return api.put(`/inventory/product-units/${productUnitId}/price`, {
+      salePrice
+    });
   }
 };
 
