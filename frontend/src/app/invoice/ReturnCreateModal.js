@@ -177,7 +177,7 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
           <button 
             className="btn btn-primary rounded-pill px-5 fw-bold"
             onClick={handleSubmit}
-            disabled={submitting || totalRefund === 0}
+            disabled={submitting}
           >
             {submitting ? (
               <><span className="spinner-border spinner-border-sm me-2"></span> Đang xử lý...</>
