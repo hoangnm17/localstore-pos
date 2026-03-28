@@ -62,8 +62,8 @@ export default function BillModal({ invoice, onClose, autoPrint = false }) {
           </div>
 
           <div className="small d-flex justify-content-between">
-            <span>Ngày: <b>{new Date(invoice.createdAt).toLocaleDateString("vi-VN")}</b></span>
-            <span>Giờ: <b>{new Date(invoice.createdAt).toLocaleTimeString("vi-VN", {hour:'2-digit', minute:'2-digit'})}</b></span>
+            <span>Ngày: <b>{new Date(invoice.createdAt.replace('Z', '')).toLocaleDateString("vi-VN")}</b></span>
+            <span>Giờ: <b>{new Date(invoice.createdAt.replace('Z', '')).toLocaleTimeString("vi-VN", {hour:'2-digit', minute:'2-digit'})}</b></span>
           </div>
 
           <div className="customer-section">
