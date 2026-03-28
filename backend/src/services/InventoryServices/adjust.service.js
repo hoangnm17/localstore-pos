@@ -16,7 +16,6 @@ const createAdjustment = async (user, body) => {
         throw new Error("Dữ liệu không hợp lệ");
     }
 
-    // Validation mới cho format kiểm kê theo unit lớn nhất
     for (let item of items) {
         if (!item.productId || typeof item.actualLargest !== "number" || typeof item.actualRemainder !== "number") {
             throw new Error("Dữ liệu item không hợp lệ (cần productId, actualLargest, actualRemainder)");
@@ -33,7 +32,6 @@ const createAdjustment = async (user, body) => {
 };
 
 const updateStatus = async (user, adjustmentId, newStatus) => {
-    // giữ nguyên
     if (!user.permissions.includes("PROCESS_ADJUST")) {
         throw new Error("Bạn không có quyền xử lý phiếu");
     }

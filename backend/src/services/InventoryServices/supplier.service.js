@@ -114,7 +114,6 @@ const updateProductOfSupplier = async (
 
     const { price, productUnitId, status } = body;
 
-    // update status
     if (status) {
         await supplierModel.updateProductSupplierStatus(
             supplierId,
@@ -123,7 +122,6 @@ const updateProductOfSupplier = async (
         );
     }
 
-    // chỉ insert khi có price
     if (price && productUnitId) {
         await supplierModel.updateProductOfSupplierPrice(
             supplierId,
