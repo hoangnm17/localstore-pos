@@ -66,7 +66,6 @@ exports.createReturn = async (user, payload = {}) => {
         );
         if (!invoice) throw new Error("Invoice not found");
         if (invoice.status !== "PAID") throw new Error("Invoice must be PAID");
-        console.log("INVOICE", invoice)
         // 2. Lấy item gốc
         const invoiceItems = await invoiceModel.getInvoiceItems(transaction, invoiceId);
         const itemMap = new Map(invoiceItems.map(i => [Number(i.id), i]));
@@ -131,7 +130,7 @@ exports.createReturn = async (user, payload = {}) => {
                 );
             }
 
-            // 🔥 FIX CHÍNH
+            //  FIX CHÍNH
             const discountedUnitPrice = round(
                 invItem.unitPrice * (1 - discountRatio)
             );

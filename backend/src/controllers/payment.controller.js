@@ -62,19 +62,14 @@ const createQR = async (req, res) => {
 const webhook = async (req, res) => {
   try {
     await paymentService.confirmPayment(req.body);
-
-
-    return res.json({
-      success: true,
-      message: "Webhook processed",
-    });
   } catch (err) {
-    console.error("SePay webhook error:", err);
-    return res.status(400).json({
-      success: false,
-      message: err.message || "Webhook failed",
-    });
+    console.error("SePay webhook error:", err.message);
   }
+
+  return res.json({
+    success: true,
+    message: "Webhook received",
+  });
 };
 
 const cancelPendingPayment = async (req, res) => {
