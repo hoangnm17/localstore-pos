@@ -60,6 +60,23 @@ module.exports.createShift = async (data) => {
   return result.recordset[0].id;
 };
 
+module.exports.updateShift = async (id, data) => {
+  const pool = await connectDB();
+  await pool.request()
+    .input('id', sql.Int, id)
+    .input('checkInStart', sql.VarChar, data.checkInStart ? formatTimeToSQL(data.checkInStart) : null)
+    .input('checkInEnd', sql.VarChar, data.checkInEnd ? formatTimeToSQL(data.checkInEnd) : null)
+    .input('checkOutDeadline', sql.VarChar, data.checkOutDeadline ? formatTimeToSQL(data.checkOutDeadline) : null)
+    .query(`
+      UPDATE Shifts 
+      SET checkInStart = @checkInStart,
+          checkInEnd = @checkInEnd,
+          checkOutDeadline = @checkOutDeadline
+      WHERE id = @id
+    `);
+  return true;
+};
+
 
 module.exports.toggleShift = async (id) => {
   const pool = await connectDB();

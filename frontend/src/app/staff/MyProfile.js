@@ -1,11 +1,12 @@
 import { useNotification } from 'components/global/Notification/NotificationContext';
 import React, { useEffect, useState } from 'react';
 import { changeMyPassword, getMyProfile } from 'services/Staff/staff.service';
+import useTitle from "hooks/common/useTitle";
 
 const MyProfile = () => {
     const [profile, setProfile] = useState(null);
     const [passData, setPassData] = useState({ oldPassword: '', newPassword: '' });
-    
+    useTitle("Hồ Sơ Của Tôi")
     // State để ẩn/hiện mật khẩu
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);

@@ -43,40 +43,118 @@ const ScheduleTable = ({
             <table className="table table-hover align-middle mb-0" style={{ minWidth: '1100px', fontSize: '0.875rem' }}>
                 <thead style={{ background: '#1e293b', position: 'sticky', top: 0, zIndex: 10 }}>
                     <tr>
-                        <th className="py-3 ps-4 fw-bold"
-                            style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '190px', color: '#040c13' }}>
-                            {filterMode === 'staff' ? 'NHÂN VIÊN' : 'CA LÀM VIỆC'}
-                        </th>
-                        <th className="py-3 text-center fw-bold"
-                            style={{ fontSize: '0.75rem', textTransform: 'uppercase', width: '80px', color: '#0e0e0e' }}>
-                            {filterMode === 'staff' ? 'GIỜ' : 'SL'}
-                        </th>
-                        {weekDates.map((d, i) => {
-                            const dStr = formatDate(d);
-                            const isToday = dStr === todayStr;
-                            return (
-                                <th key={i} className="py-2 text-center" style={{ width: '120px', minWidth: '110px' }}>
-                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#fbbf24' : '#020304', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                                        {dayLabels[i]}
-                                    </div>
-                                    <span style={{ display: 'inline-block', background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)', color: isToday ? '#1e293b' : '#0e0909', borderRadius: '6px', padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem' }}>
-                                        {d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                                    </span>
+                        {filterMode === 'date' ? (
+                            <>
+                                <th className="py-3 ps-4 fw-bold"
+                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '180px', color: '#040c13' }}>
+                                    NGÀY
                                 </th>
-                            );
-                        })}
+                                <th className="py-3 fw-bold text-center"
+                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#0e0e0e' }}>
+                                    DANH SÁCH CA & NHÂN VIÊN
+                                </th>
+                            </>
+                        ) : (
+                            <>
+                                <th className="py-3 ps-4 fw-bold"
+                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '190px', color: '#040c13' }}>
+                                    {filterMode === 'staff' ? 'NHÂN VIÊN' : 'CA LÀM VIỆC'}
+                                </th>
+                                <th className="py-3 text-center fw-bold"
+                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', width: '80px', color: '#0e0e0e' }}>
+                                    {filterMode === 'staff' ? 'GIỜ' : 'SL'}
+                                </th>
+                                {weekDates.map((d, i) => {
+                                    const dStr = formatDate(d);
+                                    const isToday = dStr === todayStr;
+                                    return (
+                                        <th key={i} className="py-2 text-center" style={{ width: '120px', minWidth: '110px' }}>
+                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#fbbf24' : '#020304', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                                {dayLabels[i]}
+                                            </div>
+                                            <span style={{ display: 'inline-block', background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)', color: isToday ? '#1e293b' : '#0e0909', borderRadius: '6px', padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem' }}>
+                                                {d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                            </span>
+                                        </th>
+                                    );
+                                })}
+                            </>
+                        )}
                     </tr>
                 </thead>
                 <tbody>
                     {filterMode === 'staff' ? (
                         <StaffRows staffPage={staffPage} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onOpenAssign={onOpenAssign} onRemove={onRemove} />
-                    ) : (
+                    ) : filterMode === 'shift' ? (
                         <ShiftRows shifts={shifts} filteredStaff={filteredStaff} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onRemove={onRemove} />
+                    ) : (
+                        <DateRows weekDates={weekDates} todayStr={todayStr} filteredStaff={filteredStaff} shifts={shifts} onRemove={onRemove} canAssign={canAssign} />
                     )}
                 </tbody>
             </table>
         </div>
     );
+};
+
+/* ── Date Rows ── */
+const DateRows = ({ weekDates, todayStr, filteredStaff, shifts, onRemove, canAssign }) => {
+    return weekDates.map(date => {
+        const dStr = formatDate(date);
+        const isToday = dStr === todayStr;
+
+        // Tìm tất cả ca có nhân viên làm vào ngày này
+        const shiftsOnThisDate = [];
+        shifts.forEach(shift => {
+            const staffList = filteredStaff.filter(s =>
+                s.schedules?.[dStr]?.some(sc => sc.shiftId === shift.id)
+            );
+            if (staffList.length > 0) {
+                shiftsOnThisDate.push({ shift, staffList });
+            }
+        });
+
+        return (
+            <tr key={dStr} className="ws-row border-top" style={{ background: isToday ? '#fffbeb' : '#fff' }}>
+                <td className="ps-4 py-3 align-top" style={{ width: '180px' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: isToday ? '#f59e0b' : '#1e293b' }}>
+                        {date.toLocaleDateString('vi-VN', { weekday: 'long' })}
+                    </div>
+                    <div className="text-secondary small">{date.toLocaleDateString('vi-VN')}</div>
+                </td>
+                <td className="py-2 px-3">
+                    <div className="d-flex flex-wrap gap-3">
+                        {shiftsOnThisDate.map(({ shift, staffList }) => {
+                            const sStyle = getShiftStyle(shift.id);
+                            return (
+                                <div key={shift.id} className="p-2 border rounded-3 bg-white shadow-sm" style={{ minWidth: '220px', borderLeft: `4px solid ${sStyle.border} !important` }}>
+                                    <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
+                                        <div className="fw-bold small" style={{ color: sStyle.text }}>{shift.name}</div>
+                                        <div className="text-muted" style={{ fontSize: '0.65rem' }}>{shift.startTime} - {shift.endTime}</div>
+                                    </div>
+                                    <div className="d-flex flex-column gap-1">
+                                        {staffList.map(s => {
+                                            const sc = s.schedules[dStr].find(x => x.shiftId === shift.id);
+                                            return (
+                                                <div key={s.staffId} className="d-flex justify-content-between align-items-center bg-light p-1 px-2 rounded-2" style={{ fontSize: '0.75rem' }}>
+                                                    <span className="fw-medium">{s.fullName}</span>
+                                                    {canAssign && (
+                                                        <button className="btn btn-link text-danger p-0 ms-2 text-decoration-none" title="Xóa" onClick={() => onRemove(sc.scheduleId)}>
+                                                            <i className="bi bi-x-circle-fill"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {shiftsOnThisDate.length === 0 && <span className="text-secondary opacity-50 small my-2 italic">Không có ca làm việc nào được phân trong ngày này</span>}
+                    </div>
+                </td>
+            </tr>
+        );
+    });
 };
 
 /* ── Staff Rows ── */
@@ -145,7 +223,10 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
                                             {counterDisplay && <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '2px', opacity: 0.85 }}><i className="bi bi-shop me-1" />{counterDisplay}</span>}
                                             {canAssign && (
                                                 <button className="ws-remove-btn" title="Xóa ca này" onClick={() => onRemove(sc.scheduleId)}
-                                                    style={{ position: 'absolute', top: '50%', right: '5px', transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
+                                                    style={{ position: 'absolute', top: '50%', right: '5px', 
+                                                        transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%',
+                                                         width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                         cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
                                             )}
                                         </div>
                                     );
@@ -153,7 +234,9 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
                                 {/* ÁP DỤNG BUTTON CHO CẢ 3 ROLE */}
                                 {canAssign && !isPast && (
                                     <button className="ws-add-btn" onClick={() => onOpenAssign(staff, dateStr)}
-                                        style={{ width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px' }}>
+                                        style={{ width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0',
+                                         background: 'transparent', color: '#94a3b8', fontWeight: 600,
+                                          fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px' }}>
                                         + Thêm ca
                                     </button>
                                 )}

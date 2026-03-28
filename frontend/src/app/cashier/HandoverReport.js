@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/axiosInstance';
 import Pagination from '../../components/Pagination/Pagination';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import HandoverDetailModal from './modals/HandoverDetailModal';
+import DailyAuditModal from './modals/DailyAuditModal';
+import { getHandoverReport, getDailyAudit } from '../../services/Cashier/cashier.service';
+import useTitle from "hooks/common/useTitle";
 
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 
@@ -15,13 +17,15 @@ const fmtLocalDate = (d) => {
 
 const fmtTime = (str) => {
     if (!str) return '—';
-    const d = new Date(str);
+    const cleaned = str.replace('Z', '');
+    const d = new Date(cleaned);
     return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
 const fmtDate = (str) => {
     if (!str) return '—';
-    const d = new Date(str);
+    const cleaned = str.replace('Z', '');
+    const d = new Date(cleaned);
     return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
@@ -40,6 +44,7 @@ const diffColor = (d) => {
 };
 
 const HandoverReport = () => {
+    useTitle("Báo Cáo Bàn Giao Tiền Mặt")
     const { showNotification } = useNotification();
     const today = fmtLocalDate(new Date());
     const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
@@ -58,36 +63,56 @@ const HandoverReport = () => {
     const [loading, setLoading] = useState(false);
     // const [counters, setCounters] = useState([]);
     const [selectedRow, setSelectedRow] = useState(null);
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [auditData, setAuditData] = useState(null);
 
-    useEffect(() => {
-        api.get('/roster/counters').then(res => {
-            // if (res.data?.success) setCounters(res.data.data);
-        }).catch(() => { });
-    }, []);
 
     const fetchReport = useCallback(async () => {
         setLoading(true);
         try {
             const params = { fromDate, toDate, page, pageSize: PAGE_SIZE };
-            // if (counterId) params.counterId = counterId;
             if (roleFilter) params.role = roleFilter;
             if (searchName) params.staffName = searchName;
             if (searchShift) params.shiftName = searchShift;
 
-            const res = await api.get('/cashier/handover/report', { params });
-            if (res.data?.success) {
-                setData(res.data.data || []);
-                setSummary(res.data.summary || null);
-                setPagination(res.data.pagination || null);
+            const res = await getHandoverReport(params);
+            if (res?.success) {
+                setData(res.data || []);
+                setSummary(res.summary || null);
+                setPagination(res.pagination || null);
             } else {
-                showNotification(res.data?.message || 'Lỗi tải báo cáo!', 'error');
+                showNotification(res?.message || 'Lỗi tải báo cáo!', 'error');
             }
         } catch (err) {
-            showNotification(err.response?.data?.message || 'Lỗi kết nối!', 'error');
+            showNotification(err.message || 'Lỗi kết nối!', 'error');
         } finally {
             setLoading(false);
         }
     }, [fromDate, toDate, roleFilter, searchName, searchShift, page, showNotification]);
+
+    const handleDailyAudit = async () => {
+        try {
+            const res = await getDailyAudit(fromDate);
+            if (res?.success) {
+                setAuditData(res.data);
+                setShowAuditModal(true);
+            } else {
+                showNotification(res?.message || 'Lỗi đối soát!', 'error');
+            }
+        } catch (err) {
+            console.error('Audit Error:', err);
+            showNotification(err.message || 'Lỗi lấy dữ liệu đối soát!', 'error');
+        }
+    };
+
+    const handleReset = () => {
+        setFromDate(firstOfMonth);
+        setToDate(today);
+        setRoleFilter('');
+        setSearchName('');
+        setSearchShift('');
+        setPage(1);
+    };
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -96,12 +121,19 @@ const HandoverReport = () => {
         return () => clearTimeout(timer);
     }, [searchName, searchShift]);
 
-    useEffect(() => { setPage(1); }, [fromDate, toDate, roleFilter]);
+    useEffect(() => {
+        if (fromDate > toDate) {
+            setToDate(fromDate);
+            showNotification('Ngày bắt đầu không được lớn hơn Ngày kết thúc!', 'warning');
+        }
+        setPage(1);
+    }, [fromDate, toDate, roleFilter, showNotification]);
+
     useEffect(() => { fetchReport(); }, [fetchReport]);
 
     return (
         <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
-            <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
+            <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh', overflowY: 'auto' }}>
 
                 {/* ── HEADER BANNER ── */}
                 <div className="mb-4">
@@ -112,6 +144,12 @@ const HandoverReport = () => {
                             </h3>
                             <p className="m-0 mt-2 text-secondary">Tổng hợp kết ca và kiểm kê tiền mặt toàn bộ nhân viên.</p>
                         </div>
+                        {fromDate === toDate && (
+                            <button className="btn btn-primary fw-bold px-4 py-2 rounded-3 d-flex align-items-center gap-2"
+                                onClick={handleDailyAudit}>
+                                <i className="bi bi-file-earmark-check-fill" /> Tổng kết ngày
+                            </button>
+                        )}
                     </div>
 
                     {/* Summary tiles */}
@@ -144,12 +182,12 @@ const HandoverReport = () => {
                     <div className="row g-3 align-items-end">
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Từ ngày</label>
-                            <input type="date" className="form-control border-0 bg-light" style={{ borderRadius: '10px' }}
+                            <input type="date" lang="vi" className="form-control border-0 bg-light px-2" style={{ borderRadius: '10px', fontSize: '0.9rem' }}
                                 value={fromDate} onChange={e => setFromDate(e.target.value)} />
                         </div>
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Đến ngày</label>
-                            <input type="date" className="form-control border-0 bg-light" style={{ borderRadius: '10px' }}
+                            <input type="date" lang="vi" className="form-control border-0 bg-light px-2" style={{ borderRadius: '10px', fontSize: '0.9rem' }}
                                 value={toDate} onChange={e => setToDate(e.target.value)} />
                         </div>
                         {/* Vai trò */}
@@ -162,23 +200,12 @@ const HandoverReport = () => {
                                 ))}
                             </select>
                         </div>
-                        {/* Quầy */}
-                        {/* <div className="col-md-2">
-                            <label className="small fw-bold text-secondary mb-1">Quầy</label>
-                            <select className="form-select border-0 bg-light" style={{ borderRadius: '10px' }}
-                                value={counterId} onChange={e => setCounterId(e.target.value)}>
-                                <option value="">Tất cả quầy</option>
-                                {counters.map(c => (
-                                    <option key={c.id} value={c.id}>{c.counterName}</option>
-                                ))}
-                            </select>
-                        </div> */}
                         {/* Tìm tên nhân viên */}
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Tìm nhân viên</label>
                             <div className="position-relative">
                                 <input type="text" className="form-control ps-3 border-0 bg-light" style={{ borderRadius: '10px', fontSize: '0.875rem' }}
-                                    placeholder="Nhập tên..."
+                                    placeholder="Tìm tên..."
                                     value={searchName} onChange={e => setSearchName(e.target.value)} />
                             </div>
                         </div>
@@ -187,9 +214,17 @@ const HandoverReport = () => {
                             <label className="small fw-bold text-secondary mb-1">Tìm ca làm</label>
                             <div className="position-relative">
                                 <input type="text" className="form-control ps-3 border-0 bg-light" style={{ borderRadius: '10px', fontSize: '0.875rem' }}
-                                    placeholder="Nhập tên ca..."
+                                    placeholder="Tìm ca..."
                                     value={searchShift} onChange={e => setSearchShift(e.target.value)} />
                             </div>
+                        </div>
+                        {/* Nút Làm mới */}
+                        <div className="col-md-2 d-flex gap-2">
+                            <button className="btn btn-outline-secondary w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                                style={{ borderRadius: '10px', height: '38px' }}
+                                onClick={handleReset}>
+                                <i className="bi bi-arrow-counterclockwise" /> Làm mới
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -211,9 +246,8 @@ const HandoverReport = () => {
                                                 { label: 'Thời Gian', width: '110px' },
                                                 { label: 'Nhân Viên', width: '160px' },
                                                 { label: 'Ca Làm', width: '130px' },
-                                                // { label: 'Quầy', width: '100px' },
                                                 { label: 'Tiền Đầu Ca', width: '110px', align: 'right' },
-                                                { label: 'HT Thu (TM)', width: '120px', align: 'right' },
+                                                { label: 'HT Thu', width: '120px', align: 'right' },
                                                 { label: 'Thực Đếm', width: '110px', align: 'right' },
                                                 { label: 'Chênh Lệch', width: '110px', align: 'right' },
                                                 { label: 'Ghi Chú', width: '120px' },
@@ -269,15 +303,6 @@ const HandoverReport = () => {
                                                             {row.shiftStart} – {row.shiftEnd}
                                                         </div>
                                                     </td>
-                                                    {/* Quầy */}
-                                                    {/* <td className="px-3" style={{ width: '100px' }}>
-                                                        {row.counterName ? (
-                                                            <span className="badge bg-secondary-subtle text-secondary border"
-                                                                style={{ fontSize: '0.75rem' }}>
-                                                                <i className="bi bi-shop me-1" />{row.counterName}
-                                                            </span>
-                                                        ) : <span className="text-muted">—</span>}
-                                                    </td> */}
                                                     {/* Tiền đầu ca */}
                                                     <td className="px-3 text-end" style={{ width: '110px', color: '#475569', fontWeight: 600 }}>
                                                         {formatVND(row.openingCash)}
@@ -342,6 +367,15 @@ const HandoverReport = () => {
                 <HandoverDetailModal
                     row={selectedRow}
                     onClose={() => setSelectedRow(null)}
+                />
+            )}
+
+            {showAuditModal && (
+                <DailyAuditModal
+                    workDate={fromDate}
+                    auditData={auditData}
+                    daySummary={summary}
+                    onClose={() => setShowAuditModal(false)}
                 />
             )}
         </div>

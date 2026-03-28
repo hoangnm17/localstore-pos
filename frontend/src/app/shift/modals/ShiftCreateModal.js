@@ -4,10 +4,8 @@ import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
 import api from '../../../services/axiosInstance';
 
-// Helper: "HH:MM" → số phút
 const toMins = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
-// Helper: số phút → "HH:MM"
 const fromMins = (mins) => {
   const safe = ((mins % 1440) + 1440) % 1440;
   const h = Math.floor(safe / 60);
@@ -32,7 +30,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
       alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [errorMsg]);
-const getDiff = (m1, m2) => {
+  const getDiff = (m1, m2) => {
     let d = m1 - m2;
     if (d < -720) d += 1440;
     if (d > 720) d -= 1440;
@@ -49,12 +47,18 @@ const getDiff = (m1, m2) => {
     if (!form.endTime) e.endTime = 'Chọn giờ kết thúc!';
 
     if (form.startTime && form.endTime) {
-      let duration = toMins(form.endTime) - toMins(form.startTime);
-      if (duration < 0) duration += 1440; 
+      const startM = toMins(form.startTime);
+      const endM = toMins(form.endTime);
+      let duration = endM - startM;
+      if (duration < 0) duration += 1440;
 
-      if (duration === 0) e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
-      else if (duration < 30) e.endTime = 'Ca làm tối thiểu 30 phút!';
-      else if (duration > 600) e.endTime = 'Ca làm tối đa 10 giờ!';
+      if (duration === 0) {
+        e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
+      } else if (duration < 30) {
+        e.endTime = 'Ca làm việc tối thiểu 30 phút!';
+      } else if (duration > 600) {
+        e.endTime = 'Ca làm việc tối đa 10 giờ!';
+      }
     }
 
     const hasCheckIn = form.checkInStart || form.checkInEnd;
@@ -62,30 +66,37 @@ const getDiff = (m1, m2) => {
       if (!form.checkInStart) e.checkInStart = 'Nhập giờ bắt đầu nhận chấm công!';
       if (!form.checkInEnd) e.checkInEnd = 'Nhập deadline chấm công!';
 
-      if (form.checkInStart && form.checkInEnd && form.startTime && form.endTime) {
+      if (form.checkInStart && form.checkInEnd && form.startTime) {
         const startM = toMins(form.startTime);
-        const endM = toMins(form.endTime);
         const checkInSM = toMins(form.checkInStart);
         const checkInEM = toMins(form.checkInEnd);
 
-        if (getDiff(checkInEM, checkInSM) <= 0)
+        let checkInRange = checkInEM - checkInSM;
+        if (checkInRange < 0) checkInRange += 1440;
+
+        if (checkInRange <= 0)
           e.checkInEnd = 'Deadline phải sau giờ bắt đầu nhận chấm công!';
-        if (getDiff(checkInSM, startM) < -30)
+
+        const earlyMins = getDiff(startM, checkInSM);
+        if (earlyMins > 30)
           e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
-        if (getDiff(checkInEM, endM) > 30)
-          e.checkInEnd = 'Không được muộn hơn giờ kết thúc ca quá 30 phút!';
+
+        const lateMins = getDiff(checkInEM, startM); 
+        if (lateMins > 30)
+          e.checkInEnd = 'Deadline không được trễ hơn giờ bắt đầu ca quá 30 phút!';
       }
     }
 
-    if (form.checkOutDeadline && form.startTime && form.endTime) {
-      const checkOutM = toMins(form.checkOutDeadline);
-      const startM = toMins(form.startTime);
+    if (form.checkOutDeadline && form.endTime) {
       const endM = toMins(form.endTime);
-      
-      if (getDiff(checkOutM, startM) <= 0)
-        e.checkOutDeadline = 'Thời gian kết ca phải sau giờ bắt đầu ca!';
-      if (getDiff(checkOutM, endM) > 30)
-        e.checkOutDeadline = 'Thời gian kết ca không được trễ hơn giờ kết thúc quá 30 phút!';
+      const checkOutM = toMins(form.checkOutDeadline);
+
+      const lateMins = getDiff(checkOutM, endM); 
+
+      if (lateMins < 0)
+        e.checkOutDeadline = 'Giờ phải logout phải sau hoặc bằng giờ kết thúc ca!';
+      else if (lateMins > 30)
+        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 30 phút!';
     }
 
     setErrors(e);
@@ -101,7 +112,7 @@ const getDiff = (m1, m2) => {
       if (name === 'startTime' && value) {
         const startMins = toMins(value);
         updated.checkInStart = fromMins(startMins - 5);
-        updated.checkInEnd   = fromMins(startMins - 5 + 10);
+        updated.checkInEnd = fromMins(startMins - 5 + 10);
       }
 
       if (name === 'checkInStart' && value) {
@@ -123,15 +134,12 @@ const getDiff = (m1, m2) => {
     try {
       const payload = {
         ...form,
-        checkInStart:     form.checkInStart     || null,
-        checkInEnd:       form.checkInEnd       || null,
+        checkInStart: form.checkInStart || null,
+        checkInEnd: form.checkInEnd || null,
         checkOutDeadline: form.checkOutDeadline || null,
       };
       const res = await api.post('/shifts', payload);
 
-      // Interceptor của axiosInstance luôn trả về resolved promise
-      // với cấu trúc { success, message, ... } hoặc { data: {...} } nếu thành công
-      // → phải đọc cả res.data?.success lẫn res.success
       const isSuccess = res.data?.success ?? res.success;
       if (isSuccess) {
         showNotification('Tạo ca làm việc thành công!', 'success');

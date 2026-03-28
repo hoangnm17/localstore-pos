@@ -11,7 +11,7 @@ module.exports.getPendingSchedule = async (staffId) => {
                 sh.name as shiftName,
                 CONVERT(VARCHAR(5), sh.startTime, 108) as startTime,
                 CONVERT(VARCHAR(5), sh.endTime,   108) as endTime,
-                CONVERT(VARCHAR(5), sh.checkInEnd,108) as checkInEnd,
+                CONVERT(VARCHAR(5), sh.checkInEnd, 108) as checkInEnd,
                 r.name as roleName
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
@@ -22,12 +22,12 @@ module.exports.getPendingSchedule = async (staffId) => {
               AND ws.workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
               AND ws.status = 'assigned'
               AND (
-                  r.name IN ('Manager', 'Warehouse')
+                  r.name = 'Manager'
                   OR (
                       CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
                           >= ISNULL(sh.checkInStart, sh.startTime)
                       AND CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
-                          <= sh.endTime
+                          < sh.endTime
                   )
               )
             ORDER BY sh.startTime ASC
@@ -100,6 +100,28 @@ WHERE id = @id
     return true;
 };
 
+module.exports.hasIncompletePreviousShift = async (staffId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .query(`
+            SELECT TOP 1 ws.id, ws.workDate, sh.name as shiftName
+            FROM WorkSchedules ws
+            JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.staffId = @staffId
+              AND ws.status = 'working'
+              AND (
+                ws.workDate < CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
+                OR (
+                    ws.workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
+                    AND CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME) > CAST(sh.endTime AS TIME)
+                )
+              )
+              AND ws.workDate >= DATEADD(day, -7, CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE))
+        `);
+    return result.recordset.length > 0 ? result.recordset[0] : null;
+};
+
 module.exports.getWorkingScheduleById = async (scheduleId, staffId) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -135,6 +157,30 @@ module.exports.getStaffRoleName = async (staffId) => {
             WHERE s.id = @staffId
         `);
     return result.recordset[0]?.roleName || '';
+};
+
+module.exports.autoMarkAbsent = async (staffId) => {
+    const pool = await connectDB();
+    await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .query(`
+            UPDATE WorkSchedules
+            SET status = 'absent'
+            WHERE staffId = @staffId
+              AND status = 'assigned'
+              AND (
+                workDate < CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
+                OR (
+                  workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
+                  AND (
+                      SELECT CAST(sh2.endTime AS TIME)
+                      FROM Shifts sh2
+                      WHERE sh2.id = WorkSchedules.shiftId
+                  ) < CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
+                )
+              )
+        `);
+    return true;
 };
 
 module.exports.autoAssignWarehouse = async (staffId) => {

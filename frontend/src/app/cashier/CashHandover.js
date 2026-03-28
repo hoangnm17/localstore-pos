@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BaseModal from '../../components/common/BaseModal';
 import AlertMessage from '../../components/common/AlertMessage';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
-import api from '../../services/axiosInstance';
+import { getPendingShifts, getSystemCash, submitHandover } from '../../services/Cashier/cashier.service';
 
 const formatVND = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "0";
 const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
@@ -27,10 +27,9 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
     useEffect(() => {
         const fetchPending = async () => {
             try {
-                const res = await api.get(`/cashier/handover/pending?workDate=${todayStr}`);
-                const isSuccess = res.data?.success ?? res.success;
-                if (isSuccess) {
-                    const shifts = res.data?.data || res.data;
+                const res = await getPendingShifts(todayStr);
+                if (res?.success) {
+                    const shifts = res.data || [];
                     setPendingShifts(shifts);
                     if (shifts.length > 0) setSelectedScheduleId(shifts[0].scheduleId);
                 }
@@ -48,12 +47,11 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
         const fetchSystemCash = async () => {
             setLoading(true);
             try {
-                const res = await api.get(`/cashier/handover/system-cash?scheduleId=${selectedScheduleId}`);
-                const isSuccess = res.data?.success ?? res.success;
-                if (isSuccess) {
-                    setSystemCash(res.data?.data?.systemCash || 0);
+                const res = await getSystemCash(selectedScheduleId);
+                if (res?.success) {
+                    setSystemCash(res.data?.systemCash || 0);
                 }
-            } catch (err) { setErrorMsg('Lỗi tính toán doanh thu hệ thống!'); }
+            } catch { setErrorMsg('Lỗi tính toán doanh thu hệ thống!'); }
             finally { setLoading(false); }
         };
         fetchSystemCash();
@@ -70,29 +68,27 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
         e.preventDefault();
         if (!selectedScheduleId) return setErrorMsg('Vui lòng chọn ca cần kết!');
         if (actualCash === '') return setErrorMsg('Vui lòng nhập số tiền thực đếm trong két!');
+        if (chenhLech < 0 && !note.trim()) return setErrorMsg('Vui lòng ghi lý do thất thoát!');
 
         setLoading(true);
         setErrorMsg('');
         try {
-            const res = await api.post('/cashier/handover', {
+            const res = await submitHandover({
                 scheduleId: selectedScheduleId,
                 openingCash, systemCash, actualCash: actualCashNum, note
             });
-            const isSuccess = res.data?.success ?? res.success;
-            if (isSuccess) {
+            if (res?.success) {
                 showNotification('Kết ca và bàn giao thành công!', 'success');
-
-                const penalty = res.data?.data?.penalty || res.data?.penalty || 0;
+                const penalty = res.data?.penalty || 0;
                 if (penalty > 0) {
-                    showNotification(`Cảnh báo: Bạn bị phạt ${penalty}đ do không tuân thủ giờ kết ca!`, 'warning');
+                    showNotification(`Cảnh báo: Bạn bị phạt ${penalty.toLocaleString('vi-VN')}đ do không tuân thủ giờ kết ca!`, 'warning');
                 }
-
                 onSuccess();
             } else {
-                setErrorMsg(res.data?.message || res.message || 'Lỗi kết ca!');
+                setErrorMsg(res?.message || 'Lỗi kết ca!');
             }
         } catch (err) {
-            setErrorMsg(err.response?.data?.message || 'Lỗi kết nối server!');
+            setErrorMsg(err.message || 'Lỗi kết nối server!');
         } finally { setLoading(false); }
     };
 
@@ -183,7 +179,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <span className="fw-bold text-secondary small">2. Hệ thống thu (Tiền mặt)</span>
+                                        <span className="fw-bold text-secondary small">2. Hệ thống thu</span>
                                         <div className="input-group input-group-sm" style={{ width: '180px' }}>
                                             <input type="text" className="form-control text-end fw-bold bg-white text-primary"
                                                 value={formatVND(systemCash)} disabled />
@@ -194,7 +190,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     <hr className="my-3 border-success" style={{ opacity: 0.2 }} />
 
                                     <div className="d-flex justify-content-between align-items-center mb-4 p-2 bg-success-subtle rounded-3 border border-success border-opacity-25">
-                                        <span className="fw-bold text-success ms-1">TỔNG CẦN CÓ (1+2)</span>
+                                        <span className="fw-bold text-success ms-1">TỔNG</span>
                                         <span className="fw-bold text-success fs-5 me-1">{formatVND(tongTien)} VNĐ</span>
                                     </div>
 
@@ -217,7 +213,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     </div>
 
                                     <div>
-                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do (Bắt buộc nếu có chênh lệch)..."
+                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do"
                                             value={note} onChange={e => setNote(e.target.value)} />
                                     </div>
 

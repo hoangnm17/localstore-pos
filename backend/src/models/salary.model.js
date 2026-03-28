@@ -1,141 +1,109 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
 
-const MONTHLY_ROLES = ['Manager', 'Warehouse'];
-module.exports.getSalaryReport = async (month, year, staffId = null, roleName = null) => {
+/**
+ * Model Lương - Chỉ tập trung vào truy vấn dữ liệu thô
+ */
+
+// Lấy danh sách nhân viên và lương cơ bản
+module.exports.getStaffSalaryInfo = async (filter = {}) => {
     const pool = await connectDB();
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const totalDaysInMonth = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(totalDaysInMonth).padStart(2, '0')}`;
-
-    let staffFilter = '';
-    if (staffId) staffFilter += ' AND s.id = @staffId';
-    if (roleName) staffFilter += ' AND r.name = @roleName';
-
-    const request = pool.request()
-        .input('startDate', sql.Date, startDate)
-        .input('endDate', sql.Date, endDate)
-        .input('month', sql.Int, month)
-        .input('year', sql.Int, year);
-
-    if (staffId) request.input('staffId', sql.BigInt, staffId);
-    if (roleName) request.input('roleName', sql.NVarChar(50), roleName);
-
-    const result = await request.query(`
-        SELECT
-            s.id AS staffId, s.fullName, s.salaryType, s.baseSalary,
-            r.name AS roleName,
-
-            -- Tổng giờ làm (chỉ Cashier, chỉ ca completed)
-            ISNULL(SUM(
-                CASE
-                    WHEN s.salaryType = 'hourly' AND ws.status = 'completed' THEN
-                        CASE WHEN sh.endTime < sh.startTime
-                             THEN (DATEDIFF(MINUTE, sh.startTime, sh.endTime) + 1440) / 60.0
-                             ELSE DATEDIFF(MINUTE, sh.startTime, sh.endTime) / 60.0
-                        END
-                    ELSE 0
-                END
-            ), 0) AS totalHours,
-
-            -- Số ngày công (Manager/Warehouse: đếm ngày có check-in)
-            COUNT(DISTINCT CASE
-                WHEN ws.status IN ('working', 'completed')
-                THEN CAST(ws.workDate AS DATE)
-            END) AS workingDays,
-
-            ${totalDaysInMonth} AS totalDaysInMonth,
-            ISNULL(SUM(ws.penaltyAmount), 0) AS totalDeductions,
-
-            STRING_AGG(
-                CASE
-                    WHEN ISNULL(ws.penaltyAmount, 0) > 0 AND ws.attendanceRecord IS NOT NULL THEN
-                        CONCAT('Ngày ', CONVERT(VARCHAR(5), ws.workDate, 103), ': ',
-                               ws.attendanceRecord, ' (-', CAST(ws.penaltyAmount AS INT), 'đ)')
-                    ELSE NULL
-                END,
-                ' | '
-            ) AS penaltyDetails
-
+    let query = `
+        SELECT s.id AS staffId, s.fullName, s.salaryType, s.baseSalary, r.name AS roleName
         FROM Staff s
         LEFT JOIN Users u ON s.userId = u.id
         LEFT JOIN Roles r ON u.roleId = r.id
-        LEFT JOIN WorkSchedules ws
-            ON s.id = ws.staffId
-            AND ws.workDate BETWEEN @startDate AND @endDate
-            AND ws.status IN ('working', 'completed')
-        LEFT JOIN Shifts sh ON ws.shiftId = sh.id
         WHERE s.employmentStatus = 'working'
-            ${staffFilter}
-        GROUP BY s.id, s.fullName, s.salaryType, s.baseSalary, r.name
-        ORDER BY r.name, s.fullName
-    `);
-
-    const MONTHLY_ROLES = ['Manager', 'Warehouse'];
-    return result.recordset.map(row => {
-        const totalHours = Number(row.totalHours) || 0;
-        const baseSalary = Number(row.baseSalary) || 0;
-        const isMonthlyRole = MONTHLY_ROLES.includes(row.roleName);
-        const effectiveSalaryType = isMonthlyRole ? 'monthly' : row.salaryType;
-
-        let workingDays = Number(row.workingDays);
-        let deductions = Number(row.totalDeductions) || 0;
-        let penaltyDetails = row.penaltyDetails;
-
-        if (row.roleName === 'Manager') {
-            workingDays = row.totalDaysInMonth;
-            deductions = 0;
-            penaltyDetails = 'Không áp dụng phạt';
-        }
-
-        const grossSalary = effectiveSalaryType === 'hourly'
-            ? baseSalary * totalHours
-            : (baseSalary / row.totalDaysInMonth) * workingDays;
-
-        return {
-            staffId: row.staffId,
-            fullName: row.fullName,
-            salaryType: effectiveSalaryType,
-            baseSalary,
-            roleName: row.roleName,
-            totalHours: parseFloat(totalHours.toFixed(2)),
-            workingDays: workingDays,
-            totalDaysInMonth: row.totalDaysInMonth,
-            deductions,
-            grossSalary,
-            netSalary: grossSalary - deductions,
-            note: row.roleName === 'Manager' ? 'Lương cố định nguyên tháng (Chủ cửa hàng)'
-                : isMonthlyRole ? 'Lương theo ngày công' : '',
-            penaltyDetails: penaltyDetails || 'Không có vi phạm',
-        };
-    });
+    `;
+    const request = pool.request();
+    if (filter.staffId) {
+        query += " AND s.id = @staffId";
+        request.input('staffId', sql.BigInt, filter.staffId);
+    }
+    if (filter.roleName) {
+        query += " AND r.name = @roleName";
+        request.input('roleName', sql.NVarChar(50), filter.roleName);
+    }
+    const result = await request.query(query);
+    return result.recordset;
 };
 
+// Lấy dữ liệu chấm công thô trong tháng
+module.exports.getRawWorkSchedules = async (startDate, endDate) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('start', sql.Date, startDate)
+        .input('end', sql.Date, endDate)
+        .query(`
+            SELECT ws.staffId, ws.workDate, ws.status, ws.penaltyAmount, ws.attendanceRecord,
+                   sh.name as shiftName, sh.startTime, sh.endTime
+            FROM WorkSchedules ws
+            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.workDate BETWEEN @start AND @end
+              AND ws.status IN ('completed', 'absent')
+        `);
+    return result.recordset;
+};
 
+// Lấy dữ liệu lương đã chốt
+module.exports.getConfirmedPayrolls = async (month, year, filter = {}) => {
+    const pool = await connectDB();
+    let query = `
+        SELECT p.*, s.fullName, r.name AS roleName
+        FROM Payrolls p
+        JOIN Staff s ON p.staffId = s.id
+        JOIN Users u ON s.userId = u.id
+        JOIN Roles r ON u.roleId = r.id
+        WHERE p.month = @month AND p.year = @year
+    `;
+    const request = pool.request().input('month', sql.Int, month).input('year', sql.Int, year);
+    if (filter.staffId) {
+        query += " AND s.id = @staffId";
+        request.input('staffId', sql.BigInt, filter.staffId);
+    }
+    if (filter.roleName) {
+        query += " AND r.name = @roleName";
+        request.input('roleName', sql.NVarChar(50), filter.roleName);
+    }
+    const result = await request.query(query);
+    return result.recordset;
+};
 
 module.exports.getRoleList = async () => {
     const pool = await connectDB();
-    const result = await pool.request().query(`
-        SELECT DISTINCT r.name AS roleName
-        FROM Staff s
-        LEFT JOIN Users u ON s.userId = u.id
-        LEFT JOIN Roles r ON u.roleId = r.id
-        WHERE s.employmentStatus = 'working'
-          AND r.name IS NOT NULL
-        ORDER BY r.name
-    `);
-    return result.recordset.map(r => r.roleName);
+    const result = await pool.request().query("SELECT DISTINCT r.name FROM Roles r JOIN Users u ON r.id = u.roleId JOIN Staff s ON u.id = s.userId WHERE s.employmentStatus = 'working'");
+    return result.recordset.map(r => r.name);
 };
 
-module.exports.getStaffList = async () => {
+module.exports.getPayrollStatus = async (month, year) => {
     const pool = await connectDB();
-    const result = await pool.request().query(`
-        SELECT s.id, s.fullName, r.name AS roleName
-        FROM Staff s
-        LEFT JOIN Users u ON s.userId = u.id
-        LEFT JOIN Roles r ON u.roleId = r.id
-        WHERE s.employmentStatus = 'working'
-        ORDER BY s.fullName
-    `);
-    return result.recordset;
+    const result = await pool.request()
+        .input('m', sql.Int, month).input('y', sql.Int, year)
+        .query("SELECT COUNT(*) as cnt FROM Payrolls WHERE month = @m AND year = @y AND status = 'paid'");
+    return { isPaid: result.recordset[0].cnt > 0 };
+};
+
+module.exports.savePayroll = async (payrollData) => {
+    const pool = await connectDB();
+    const { staffId, month, year, baseSalary, salaryType, workUnit, gross, deductions, net, note } = payrollData;
+    await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .input('month', sql.Int, month)
+        .input('year', sql.Int, year)
+        .input('base', sql.Decimal(15, 2), baseSalary)
+        .input('type', sql.NVarChar(20), salaryType)
+        .input('unit', sql.Float, workUnit)
+        .input('gross', sql.Decimal(15, 2), gross)
+        .input('deduct', sql.Decimal(15, 2), deductions)
+        .input('net', sql.Decimal(15, 2), net)
+        .input('note', sql.NVarChar(1000), note)
+        .query(`
+            IF EXISTS (SELECT 1 FROM Payrolls WHERE staffId = @staffId AND month = @month AND year = @year)
+                UPDATE Payrolls SET appliedBaseSalary = @base, appliedSalaryType = @type, totalWorkUnit = @unit,
+                                   provisionalSalary = @gross, deductions = @deduct, finalAmount = @net, note = @note, status = 'paid', createdAt = GETDATE()
+                WHERE staffId = @staffId AND month = @month AND year = @year
+            ELSE
+                INSERT INTO Payrolls (staffId, month, year, appliedBaseSalary, appliedSalaryType, totalWorkUnit, provisionalSalary, deductions, finalAmount, note, status)
+                VALUES (@staffId, @month, @year, @base, @type, @unit, @gross, @deduct, @net, @note, 'paid')
+        `);
 };
