@@ -288,10 +288,6 @@ export default function SalesHome() {
               <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-schedule")}>
                 <i className="bi bi-box-arrow-in-right me-3 text-success"></i> Lịch làm việc
               </button>
-              <div className="border-top my-1"></div>
-              <button className="dropdown-item py-2 px-3 border-0 text-danger" onClick={logout}>
-                <i className="bi bi-power me-3"></i> Đăng xuất
-              </button>
             </div>
           )}
         </div>

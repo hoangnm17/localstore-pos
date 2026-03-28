@@ -18,6 +18,25 @@ export default function CustomerSearch({
     setPhone("");
   }, [invoiceId]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // F1 -> focus input
+      if (e.key === "F1") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+
+      // Ctrl + N -> mở tạo khách
+      if (e.key === "F8") {
+        e.preventDefault();
+        setShowCreate(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handlePhoneChange = (e) => {
     const value = e.target.value;
     if (!value || /^[0-9]+$/.test(value)) {

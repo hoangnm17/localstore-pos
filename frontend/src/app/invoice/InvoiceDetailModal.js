@@ -23,13 +23,12 @@ const RETURN_STATUS_THEME = {
 
 export default function InvoiceDetailModal({ invoiceId, onClose, onRefresh }) {
   const navigate = useNavigate();
-  const { showNotification } = useNotification(); // Sử dụng Notification Hook
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const [inv, setInv] = useState(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
 
-  // Logic kiểm tra quyền được hoàn trả
   const canReturn = inv?.status === "PAID" && inv?.items?.some(item => item.remainingQuantity > 0);
 
   useEffect(() => {
@@ -106,9 +105,8 @@ export default function InvoiceDetailModal({ invoiceId, onClose, onRefresh }) {
                 </div>
                 <div className="col-md-4">
                   <div className="info-item-card">
-                    <label>Nhân viên & Quầy</label>
+                    <label>Nhân viên</label>
                     <p className="m-0">{inv.staffName || "Hệ thống"}</p>
-                    <small className="text-muted">{inv.counterName || "Quầy thu ngân"}</small>
                   </div>
                 </div>
               </div>
