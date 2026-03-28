@@ -8,17 +8,21 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
     address: "",
   });
 
+  const [originalData, setOriginalData] = useState(null); // thêm
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // fill dữ liệu khi mở modal
   useEffect(() => {
     if (supplier) {
-      setFormData({
+      const data = {
         name: supplier.name || "",
         contactInfo: supplier.contactInfo || "",
         address: supplier.address || "",
-      });
+      };
+
+      setFormData(data);
+      setOriginalData(data);
       setErrors({});
     }
   }, [supplier]);
@@ -31,10 +35,10 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
       [e.target.name]: e.target.value,
     });
 
-    // clear lỗi khi nhập lại
     setErrors({
       ...errors,
       [e.target.name]: "",
+      general: "",
     });
   };
 
@@ -49,19 +53,37 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
 
     if (Object.keys(loi).length > 0) return;
 
+    if (
+      originalData &&
+      formData.name.trim() === originalData.name &&
+      formData.contactInfo.trim() === originalData.contactInfo &&
+      formData.address.trim() === originalData.address
+    ) {
+      setErrors({
+        general: "Thông tin chưa được thay đổi",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
-      await supplierService.updateSupplier(supplier.id, {
+      const res = await supplierService.updateSupplier(supplier.id, {
         name: formData.name.trim(),
         contactInfo: formData.contactInfo.trim(),
         address: formData.address.trim(),
       });
 
-      onUpdated();
+      if (!res?.data?.success) {
+        onUpdated(false);
+        return;
+      }
+
+      onUpdated(true);
       onClose();
     } catch (err) {
       console.error("Update supplier error:", err);
+      onUpdated(false);
     } finally {
       setLoading(false);
     }
@@ -84,7 +106,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
             {/* Body */}
             <div className="modal-body">
 
-              {/* Name */}
               <div className="mb-3">
                 <label className="form-label fw-medium">
                   Tên nhà cung cấp *
@@ -131,6 +152,12 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
                 />
                 {errors.address && <div className="text-danger mt-1">{errors.address}</div>}
               </div>
+
+              {errors.general && (
+                <div className="text-danger text-center mt-2 fw-medium">
+                  {errors.general}
+                </div>
+              )}
 
             </div>
 

@@ -164,19 +164,27 @@ module.exports.autoMarkAbsent = async (staffId) => {
     await pool.request()
         .input('staffId', sql.BigInt, staffId)
         .query(`
+            DECLARE @now DATETIME = DATEADD(hour, 7, GETUTCDATE());
+            DECLARE @today DATE = CAST(@now AS DATE);
+            DECLARE @currentTime TIME = CAST(@now AS TIME);
+
             UPDATE WorkSchedules
             SET status = 'absent'
             WHERE staffId = @staffId
               AND status = 'assigned'
               AND (
-                workDate < CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
-                OR (
-                  workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
-                  AND (
-                      SELECT CAST(sh2.endTime AS TIME)
-                      FROM Shifts sh2
-                      WHERE sh2.id = WorkSchedules.shiftId
-                  ) < CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
+                -- 1. Các ngày đã qua hẳn
+                workDate < @today
+                OR 
+                -- 2. Hôm nay nhưng đã quá giờ kết thúc (Chỉ tính ca kết thúc trong ngày)
+                (
+                    workDate = @today
+                    AND EXISTS (
+                        SELECT 1 FROM Shifts sh 
+                        WHERE sh.id = WorkSchedules.shiftId 
+                        AND sh.endTime > sh.startTime -- Ca không xuyên ca qua đêm
+                        AND sh.endTime < @currentTime  -- Đã quá giờ kết thúc
+                    )
                 )
               )
         `);

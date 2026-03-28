@@ -6,6 +6,8 @@ const returnItemModel = require("../models/returnItem.model");
 const invoiceService = require("./invoice.service")
 const customerPointLogService = require("./customerPointLog.service");
 
+const ROLE_MANAGER = 1; 
+
 const runInTransaction = async (work) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
@@ -359,4 +361,23 @@ exports.rejectReturn = async (user, returnId, data) => {
             note: note
         };
     });
+};
+exports.getReturns = async (filters = {}, user) => {
+    const page = Math.max(1, Number(filters.page || 1));
+    const pageSize = Math.max(1, Number(filters.pageSize || 20));
+    const offset = (page - 1) * pageSize;
+    const pool = await connectDB();
+    const data = await returnModel.getReturns(pool, {
+        status: filters.status,
+        pageSize,
+        offset,
+        staffId: user.roleId === ROLE_MANAGER ? null : user.id
+    });
+
+    return {
+        page,
+        pageSize,
+        total: data.total,
+        data: data.rows
+    };
 };

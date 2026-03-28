@@ -4,6 +4,7 @@ import supplierService from "../../../services/Inventory/supplierService";
 import CreateSupplierModal from "../InventoryModal/CreateSupplierModal";
 import EditSupplierModal from "../InventoryModal/EditSupplierModal";
 import useTitle from "../../../hooks/common/useTitle";
+import { useNotification } from "components/global/Notification/NotificationContext";
 
 function SupplierList() {
   useTitle("Quản lý nhà cung cấp");
@@ -11,6 +12,7 @@ function SupplierList() {
   const canUpdateSupplier = user?.features?.includes("UPDATE_SUPPLIER");
 
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
 
   const [suppliers, setSuppliers] = useState([]);
 
@@ -191,14 +193,28 @@ function SupplierList() {
       <CreateSupplierModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onCreated={() => fetchSuppliers(search)}
+        onCreated={(success) => {
+          if (success) {
+            showNotification("Thêm nhà cung cấp thành công", "success");
+            fetchSuppliers(search);
+          } else {
+            showNotification("Thêm nhà cung cấp thất bại", "error");
+          }
+        }}
       />
 
       <EditSupplierModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         supplier={selectedSupplier}
-        onUpdated={() => fetchSuppliers(search)}
+        onUpdated={(success) => {
+          if (success) {
+            showNotification("Cập nhật nhà cung cấp thành công", "success");
+            fetchSuppliers(search);
+          } else {
+            showNotification("Cập nhật thất bại", "error");
+          }
+        }}
       />
     </div>
   );

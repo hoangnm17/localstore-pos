@@ -19,7 +19,6 @@ function CreateSupplierModal({ isOpen, onClose, onCreated }) {
       [e.target.name]: e.target.value,
     });
 
-    // clear lỗi khi user nhập lại
     setErrors({
       ...errors,
       [e.target.name]: "",
@@ -41,13 +40,22 @@ function CreateSupplierModal({ isOpen, onClose, onCreated }) {
 
     try {
       setLoading(true);
-      await supplierService.createSupplier(formData);
-      onCreated();
+
+      const res = await supplierService.createSupplier(formData);
+
+      if (!res?.data?.success) {
+        onCreated(false);
+        return;
+      }
+
+      onCreated(true);
       onClose();
+
       setFormData({ name: "", contactInfo: "", address: "" });
       setErrors({});
     } catch (error) {
       console.error("Create supplier error:", error);
+      onCreated(false);
     } finally {
       setLoading(false);
     }

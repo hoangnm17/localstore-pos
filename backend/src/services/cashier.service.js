@@ -27,12 +27,21 @@ module.exports.submitHandover = async (userId, data) => {
     const { scheduleId, actualCash, note } = data;
     if (!scheduleId || actualCash === undefined) throw new Error("Thiếu thông tin bàn giao!");
 
-    const systemCash = await cashierModel.getSystemCash(staff.id, scheduleId);
+    const systemCashInfo = await cashierModel.getSystemCash(staff.id, scheduleId);
+
+    // Chặn kết ca sớm
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
+
+    if (systemCashInfo.endTimeStr && nowStr < systemCashInfo.endTimeStr) {
+        throw new Error(`Bạn chưa hết giờ làm (Kết thúc lúc ${systemCashInfo.endTimeStr}). Chưa thể bàn giao!`);
+    }
 
     return await cashierModel.createHandoverSimple({
         scheduleId,
-        openingCash: data.openingCash || 0,
-        systemCash,
+        openingCash: systemCashInfo.openingCash,
+        systemCash: systemCashInfo.netSystemCash,
         actualCash,
         note,
         updatedRecord: data.updatedRecord || '',

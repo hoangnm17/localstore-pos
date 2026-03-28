@@ -10,7 +10,7 @@ module.exports.checkPending = async (staffId) => {
         await attendanceModel.autoAssignWarehouse(staffId);
     }
 
-    /* Tạm thời bỏ qua chặn bàn giao để User demo
+    // Kiểm tra chặn bàn giao ca cũ trước khi được nhận ca mới
     if (roleName === 'Cashier') {
         const incompleteShift = await attendanceModel.hasIncompletePreviousShift(staffId);
         if (incompleteShift) {
@@ -20,7 +20,7 @@ module.exports.checkPending = async (staffId) => {
                 message: `Bạn chưa bàn giao tiền mặt cho ca: [${incompleteShift.shiftName}] ngày ${dateStr}. Vui lòng kết ca này trước!`
             };
         }
-    } */
+    }
 
     const schedule = await attendanceModel.getPendingSchedule(staffId);
     if (!schedule) return null;
@@ -35,9 +35,9 @@ module.exports.checkIn = async (staffId, openingCash) => {
 
     const role = schedule.roleName;
 
-    // Lấy giờ hiện tại 
-    const nowStr = new Date(Date.now() + 7 * 3600 * 1000)
-        .toISOString().split('T')[1].substring(0, 5);
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
 
     const limitStr = schedule.checkInEnd || schedule.startTime;
     const endStr = schedule.endTime;
@@ -77,8 +77,9 @@ module.exports.simpleCheckOut = async (staffId, scheduleId) => {
         throw new Error("Chỉ nhân viên kho mới được dùng chức năng này!");
     }
 
-    const nowStr = new Date(Date.now() + 7 * 3600 * 1000)
-        .toISOString().split('T')[1].substring(0, 5);
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
 
     let record = 'OnTime';
     let penalty = 0;
