@@ -252,7 +252,6 @@ export default function InvoiceDetailModal({ invoiceId, onClose, onRefresh }) {
             onClose={() => setShowReturnModal(false)}
             onCreated={() => {
               setShowReturnModal(false);
-              showNotification("Khởi tạo đơn hoàn trả thành công!", "success");
               onRefresh?.();
             }}
           />

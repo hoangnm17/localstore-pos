@@ -6,6 +6,8 @@ const returnItemModel = require("../models/returnItem.model");
 const invoiceService = require("./invoice.service")
 const customerPointLogService = require("./customerPointLog.service");
 
+const ROLE_MANAGER = 1;
+
 const runInTransaction = async (work) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
@@ -27,13 +29,12 @@ exports.getReturns = async (filters = {}, user) => {
     const page = Math.max(1, Number(filters.page || 1));
     const pageSize = Math.max(1, Number(filters.pageSize || 20));
     const offset = (page - 1) * pageSize;
-
     const pool = await connectDB();
     const data = await returnModel.getReturns(pool, {
         status: filters.status,
         pageSize,
         offset,
-        staffId: user.role === "MANAGER" ? null : user.id
+        staffId: user.roleId === ROLE_MANAGER ? null : user.id
     });
 
     return {
@@ -64,7 +65,7 @@ exports.createReturn = async (user, payload = {}) => {
         );
         if (!invoice) throw new Error("Invoice not found");
         if (invoice.status !== "PAID") throw new Error("Invoice must be PAID");
-        console.log("INVOICE", invoice)
+        
         // 2. Lấy item gốc
         const invoiceItems = await invoiceModel.getInvoiceItems(transaction, invoiceId);
         const itemMap = new Map(invoiceItems.map(i => [Number(i.id), i]));

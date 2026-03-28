@@ -211,7 +211,6 @@ const payCash = async (id, { payment }) => {
 
     if (!Number.isFinite(payAmount) || payAmount < 0)
       throw new Error("Invalid payment amount");
-
     if (payAmount < (finalAmount * 1000) / 1000)
       throw new Error("Payment amount is not enough");
 
