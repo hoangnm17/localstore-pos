@@ -44,7 +44,7 @@ export default function ReturnList() {
           <h3 className="fw-bold text-dark m-0">Quản lý hàng hoàn</h3>
           <p className="text-muted small m-0">Theo dõi và xử lý các yêu cầu hoàn tiền từ khách hàng</p>
         </div>
-        
+
         <div className="filter-pill-box">
           {STATUS_OPTIONS.map((opt) => (
             <button
@@ -123,8 +123,10 @@ export default function ReturnList() {
               ) : (
                 <tr>
                   <td colSpan="6" className="text-center py-5">
-                    <img src="https://cdn-icons-png.flaticon.com/512/5058/5058436.png" width="80" alt="empty" className="opacity-25 mb-3" />
-                    <p className="text-muted">Không có dữ liệu đơn hoàn nào</p>
+                    <div className="text-muted">
+                      <i className="bi bi-inbox fs-1 opacity-25 mb-3 d-block"></i>
+                      <p className="mb-0">Không có dữ liệu đơn hoàn nào</p>
+                    </div>
                   </td>
                 </tr>
               )}

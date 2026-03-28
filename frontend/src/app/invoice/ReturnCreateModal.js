@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import BaseModal from "components/common/BaseModal";
 import { formatCurrency } from "utils/formatters";
-import api from "services/axiosInstance";
 import { createReturn } from "services/Return/return.service";
 import { useNotification } from "components/global/Notification/NotificationContext"; // Import context
 
@@ -9,7 +8,6 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   
-  // Sử dụng hook notification
   const { showNotification } = useNotification();
 
   const [qtyMap, setQtyMap] = useState(() => {
@@ -49,7 +47,6 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
       }))
       .filter((it) => it.quantity > 0);
 
-    // Thay thế setErrMsg bằng showNotification
     if (!items.length) {
       return showNotification("Vui lòng chọn ít nhất một sản phẩm để hoàn", "warning");
     }
