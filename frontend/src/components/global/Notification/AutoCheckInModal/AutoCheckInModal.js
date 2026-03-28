@@ -5,7 +5,7 @@ import { attendanceService } from 'services/Attendance/attendance.service';
 const formatVND = (num) => {
     if (num === '' || num === null || num === undefined) return "";
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-};const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
+}; const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
 
 const AutoCheckInModal = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,6 +19,11 @@ const AutoCheckInModal = () => {
             try {
                 const res = await attendanceService.checkPending();
                 if (res.success && res.data) {
+                    // Cashier bị chặn vì ca cũ chưa bàn giao
+                    if (res.data.blocked) {
+                        showNotification(res.data.message, 'warning');
+                        return;
+                    }
                     setScheduleInfo(res.data);
                     setIsModalOpen(true);
                 }
@@ -27,7 +32,7 @@ const AutoCheckInModal = () => {
         };
         const timer = setTimeout(fetchPending, 1500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [showNotification]);
 
     const handleCashInput = (e) => {
         const val = e.target.value;
@@ -46,7 +51,7 @@ const AutoCheckInModal = () => {
                 showNotification('Nhận ca làm việc thành công!', 'success');
 
                 if (res.data.penalty > 0) {
-                    showNotification(`Cảnh báo: Bạn bị áp phạt ${res.data.penalty}đ do vào ca trễ!`, 'warning');
+                    showNotification(`Bạn bị áp phạt ${res.data.penalty}đ do vào ca trễ!`, 'warning');
                 }
                 setIsModalOpen(false);
             }
@@ -88,7 +93,7 @@ const AutoCheckInModal = () => {
                                         type="text"
                                         value={formatVND(cashAmount)}
                                         onChange={handleCashInput}
-                                        placeholder="1.500.000"
+                                        placeholder="Nhập số tiền"
                                         className="form-control  text-primary"
                                         style={{ fontSize: '1.2rem', padding: '12px' }}
                                         required
