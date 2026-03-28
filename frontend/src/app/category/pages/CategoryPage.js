@@ -23,6 +23,12 @@ export default function CategoryPage() {
     const { categories, pagination, reload, deleteCategory } = useCategories({ showNotification, onConfirm, search, page: currentPage, limit: PAGE_SIZE });
     const formHook = useCategoryForm(editId, { showNotification });
 
+    const user = JSON.parse(localStorage.getItem('user'));
+    const features = user?.features || [];
+    const canCreateCategory = features.includes('CREATE_CATEGORY');
+    const canEditCategory = features.includes('UPDATE_CATEGORY');
+    const canDeleteCategory = features.includes('DELETE_CATEGORY');
+
     function openCreate() {
         setEditId(null);
         setOpen(true);
@@ -49,10 +55,12 @@ export default function CategoryPage() {
                         onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                     />
                 </div>
-                <button className="btn btn-primary" onClick={openCreate}>
-                    <i className="bi bi-plus-circle me-2" />
-                    Tạo danh mục mới
-                </button>
+                {canCreateCategory && (
+                    <button className="btn btn-primary" onClick={openCreate}>
+                        <i className="bi bi-plus-circle me-2" />
+                        Tạo danh mục mới
+                    </button>
+                )}
             </div>
 
             {/* Table */}
@@ -64,7 +72,9 @@ export default function CategoryPage() {
                             <th className="text-start">Tên danh mục</th>
                             <th style={{ width: 130 }}>SL sản phẩm</th>
                             <th style={{ width: 130 }}>Trạng thái</th>
-                            <th style={{ width: 110 }}>Thao tác</th>
+                            {(canEditCategory || canDeleteCategory) && (
+                                <th style={{ width: 110 }}>Thao tác</th>
+                            )}
                         </tr>
                     </thead>
                     <tbody>
@@ -83,6 +93,8 @@ export default function CategoryPage() {
                                     level={0}
                                     onEdit={openEdit}
                                     onDelete={deleteCategory}
+                                    canEdit={canEditCategory}
+                                    canDelete={canDeleteCategory}
                                 />
                             ))
                         )}
@@ -138,10 +150,10 @@ export default function CategoryPage() {
 }
 
 // ── Inline table row with expand/collapse ──────────────────────────────────
-function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
+function CategoryTableRow({ item, index, level, onEdit, onDelete, canEdit, canDelete }) {
     const [expanded, setExpanded] = useState(false);
     const hasChildren = item.children && item.children.length > 0;
-    const canDelete = item.totalProductCount === 0;
+    const canDeleteItem = item.totalProductCount === 0;
 
     const indent = level * 20;
 
@@ -183,23 +195,29 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                 </td>
 
                 {/* Actions */}
-                <td className="text-center">
-                    <button
-                        className="btn btn-link btn-sm p-0 me-2 text-warning"
-                        onClick={() => onEdit(item.id)}
-                        title="Sửa"
-                    >
-                        <i className="bi bi-pencil-square fs-5"></i>
-                    </button>
-                    <button
-                        className="btn btn-link btn-sm p-0 text-danger"
-                        onClick={() => canDelete && onDelete(item.id)}
-                        disabled={!canDelete}
-                        title={canDelete ? 'Xóa' : 'Không thể xóa vì có sản phẩm'}
-                    >
-                        <i className="bi bi-trash fs-5"></i>
-                    </button>
-                </td>
+                {(canEdit || canDelete) && (
+                    <td className="text-center">
+                        {canEdit && (
+                            <button
+                                className="btn btn-link btn-sm p-0 me-2 text-warning"
+                                onClick={() => onEdit(item.id)}
+                                title="Sửa"
+                            >
+                                <i className="bi bi-pencil-square fs-5"></i>
+                            </button>
+                        )}
+                        {canDelete && (
+                            <button
+                                className="btn btn-link btn-sm p-0 text-danger"
+                                onClick={() => canDeleteItem && onDelete(item.id)}
+                                disabled={!canDeleteItem}
+                                title={canDeleteItem ? 'Xóa' : 'Không thể xóa vì có sản phẩm'}
+                            >
+                                <i className="bi bi-trash fs-5"></i>
+                            </button>
+                        )}
+                    </td>
+                )}
             </tr>
 
             {/* Children rows */}
@@ -211,6 +229,8 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                     level={level + 1}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                 />
             ))}
         </>

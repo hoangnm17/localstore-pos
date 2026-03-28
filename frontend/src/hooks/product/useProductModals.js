@@ -98,6 +98,28 @@ function useProductModals() {
         });
     };
 
+    const [printModalState, setPrintModalState] = useState({
+        open: false,
+        product: null,
+        unit: null
+    });
+
+    const openPrintModal = (product, unit) => {
+        setPrintModalState({
+            open: true,
+            product,
+            unit
+        });
+    };
+
+    const closePrintModal = () => {
+        setPrintModalState({
+            open: false,
+            product: null,
+            unit: null
+        });
+    };
+
     return {
         productFormState,
         setProductFormState,
@@ -118,8 +140,11 @@ function useProductModals() {
         comboModalState,
         setComboModalState,
         openComboModal,
-        closeComboModal
-    };
-}
+        closeComboModal,
 
-export default useProductModals;
+        printModalState,
+        setPrintModalState,
+        openPrintModal,
+        closePrintModal
+    };
+}export default useProductModals;
