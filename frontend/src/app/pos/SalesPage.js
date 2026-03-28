@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "services/Auth/auth.service";
 import { POS_HOTKEYS } from "config/HotKey";
 import { useNotification } from "components/global/Notification/NotificationContext";
+import 'style/POS/SalePage.css'
 
 export default function SalesHome() {
   const {
@@ -281,8 +282,8 @@ export default function SalesHome() {
               <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/invoices")}>
                 <i className="bi bi-receipt me-3 text-primary"></i> Lịch sử đơn hàng
               </button>
-              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/handover-report")}>
-                <i className="bi bi-arrow-counterclockwise me-3 text-success"></i> Bàn giao ca
+              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-profile")}>
+                <i className="bi bi-arrow-counterclockwise me-3 text-success"></i> Hồ sơ của tôi
               </button>
               <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-schedule")}>
                 <i className="bi bi-box-arrow-in-right me-3 text-success"></i> Lịch làm việc
@@ -330,77 +331,6 @@ export default function SalesHome() {
           />
         </section>
       </main>
-
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        .chrome-tab {
-          height: 38px;
-          background: #e9ecef;
-          border-radius: 12px 12px 0 0;
-          margin-right: -8px;
-          cursor: pointer;
-          color: #5f6368;
-          transition: all 0.2s;
-          position: relative;
-          border: 1px solid #dee2e6;
-          border-bottom: none;
-        }
-        .chrome-tab:hover { background: #f1f3f4; z-index: 2; }
-        .chrome-tab.active {
-          background: linear-gradient(45deg, #007bff, #0056b3);
-          color: white;
-          z-index: 3;
-          border-color: transparent;
-        }
-        .close-icon { font-size: 14px; opacity: 0.6; }
-        .close-icon:hover { opacity: 1; color: #ff4d4f; }
-
-        /* Add Tab Button */
-        .btn-add-tab {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          border: none;
-          background: #f8f9fa;
-          color: #6c757d;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: 0.2s;
-        }
-        .btn-add-tab:hover { background: #dee2e6; color: #000; }
-
-        /* Glassmorphism Sidebar */
-        .glass-effect {
-          background: rgba(255, 255, 255, 0.9) !important;
-          backdrop-filter: blur(10px);
-        }
-
-        /* User Menu */
-        .dropdown-custom {
-          position: absolute;
-          top: 100%;
-          right: 0;
-          width: 220px;
-          background: white;
-          z-index: 2000;
-          animation: fadeIn 0.2s ease-out;
-        }
-        .dropdown-item { transition: 0.2s; font-size: 0.9rem; background: transparent; width: 100%; text-align: left;}
-        .dropdown-item:hover { background: #f8f9fa; transform: translateX(5px); }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Scrollbar tinh tế cho Order list (Inject vào component Order nếu cần) */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
-      `}</style>
     </div>
   );
 }

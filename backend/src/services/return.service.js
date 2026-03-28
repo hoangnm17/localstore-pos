@@ -4,6 +4,7 @@ const invoiceModel = require("../models/invoice.model");
 const returnModel = require("../models/return.model");
 const returnItemModel = require("../models/returnItem.model");
 const invoiceService = require("./invoice.service")
+const customerPointLogService = require("./customerPointLog.service");
 
 const runInTransaction = async (work) => {
     const pool = await connectDB();
@@ -22,7 +23,7 @@ const runInTransaction = async (work) => {
 };
 
 
-exports.getReturns = async (filters = {}) => {
+exports.getReturns = async (filters = {}, user) => {
     const page = Math.max(1, Number(filters.page || 1));
     const pageSize = Math.max(1, Number(filters.pageSize || 20));
     const offset = (page - 1) * pageSize;
@@ -31,7 +32,8 @@ exports.getReturns = async (filters = {}) => {
     const data = await returnModel.getReturns(pool, {
         status: filters.status,
         pageSize,
-        offset
+        offset,
+        staffId: user.role === "MANAGER" ? null : user.id
     });
 
     return {
@@ -276,41 +278,37 @@ exports.approveReturn = async (user, returnId) => {
             totalRefundAmount: totalRefund
         });
 
-        // 🔥 XỬ LÝ HOÀN ĐIỂM
-        if (invoice.customerId && invoice.usedPoints > 0) {
+        if (invoice.customerId) {
+            const refundRatio = invoice.finalAmount > 0 ? totalRefund / invoice.finalAmount : 0;
 
-            const refundRatio =
-                invoice.finalAmount > 0
-                    ? totalRefund / invoice.finalAmount
-                    : 0;
+            // --- 1. HOÀN LẠI ĐIỂM KHÁCH ĐÃ DÙNG (Cộng lại điểm) ---
+            // Chỉ chạy nếu đơn hàng này khách có dùng điểm để thanh toán (usedPoints > 0)
+            if (invoice.usedPoints > 0) {
+                const pointsToReturn = isFullReturn
+                    ? invoice.usedPoints
+                    : Math.round(invoice.usedPoints * refundRatio);
 
-            // 👉 FULL RETURN → hoàn toàn bộ điểm
-            if (isFullReturn) {
-
-                await this.adjustPoints(
-                    transaction,
-                    invoice.customerId,
-                    invoice.id,
-                    invoice.usedPoints,
-                    "REFUND_USED_POINTS"
-                );
-
-            } else {
-
-                // 👉 PARTIAL RETURN → hoàn theo tỷ lệ
-                const refundPoints = Math.round(
-                    invoice.usedPoints * refundRatio
-                );
-
-                if (refundPoints > 0) {
-                    await this.adjustPoints(
+                if (pointsToReturn > 0) {
+                    await customerPointLogService.adjustPoints(
                         transaction,
                         invoice.customerId,
                         invoice.id,
-                        refundPoints,
-                        "PARTIAL_REFUND_POINTS"
+                        pointsToReturn,
+                        isFullReturn ? "REFUND_USED_POINTS" : "PARTIAL_REFUND_POINTS"
                     );
                 }
+            }
+
+            const pointsToRevoke = Math.floor(totalRefund / 10000);
+
+            if (pointsToRevoke > 0) {
+                await customerPointLogService.adjustPoints(
+                    transaction,
+                    invoice.customerId,
+                    invoice.id,
+                    -pointsToRevoke, // Số âm: trừ đi số điểm đã tặng "oan"
+                    isFullReturn ? "REVOKE_EARNED_POINTS" : "PARTIAL_REVOKE_POINTS"
+                );
             }
         }
 
@@ -332,21 +330,33 @@ exports.approveReturn = async (user, returnId) => {
     });
 };
 
-exports.rejectReturn = async (user, returnId, reason) => {
+exports.rejectReturn = async (user, returnId, data) => {
+    const note = data?.note || null;
+
     return await runInTransaction(async (transaction) => {
         const ret = await returnModel.getReturnById(transaction, returnId);
-        if (!ret || ret.status !== "Pending") {
-            throw new Error("Only Pending return can be rejected");
+        
+        if (!ret) {
+            throw new Error("Không tìm thấy đơn hoàn trả.");
+        }
+
+        if (ret.status !== "Pending") {
+            throw new Error("Chỉ có thể từ chối đơn hàng đang ở trạng thái 'Chờ duyệt'.");
         }
 
         await returnModel.updateReturnStatus(transaction, returnId, {
             status: "Reject",
             approveBy: user.id,
             approvedAt: new Date(),
-            rejectReason: reason || null
+            note: note 
         });
+
         await returnItemModel.updateRestockApprovedByReturnId(transaction, returnId, "Cancel");
 
-        return { returnId: Number(returnId), status: "Rejected" };
+        return { 
+            returnId: Number(returnId), 
+            status: "Reject",
+            note: note
+        };
     });
 };

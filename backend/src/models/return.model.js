@@ -1,7 +1,7 @@
 const { connectDB, sql } = require("../config/database");
 
 
-exports.getReturns = async (pool, { status, pageSize, offset }) => {
+exports.getReturns = async (pool, { status, pageSize, offset, staffId }) => {
 
   const request = new sql.Request(pool);
 
@@ -12,47 +12,46 @@ exports.getReturns = async (pool, { status, pageSize, offset }) => {
     request.input("status", sql.VarChar, status);
   }
 
+  if (staffId) {
+    where += ` AND r.staffId = @staffId`;
+    request.input("staffId", sql.Int, staffId);
+  }
+
   request.input("pageSize", sql.Int, pageSize);
   request.input("offset", sql.Int, offset);
 
   const query = `
-  
+    -- total
     SELECT COUNT(*) AS total
     FROM Returns r
-    ${where}
+    ${where};
 
+    -- data
     SELECT
       r.id,
       r.invoiceId,
       r.totalRefundAmount,
       r.status,
       r.createdAt,
-
       i.invoiceCode,
       c.name AS customerName,
       s.fullName AS staffName
-
     FROM Returns r
-
     LEFT JOIN Invoices i ON r.invoiceId = i.id
     LEFT JOIN Customers c ON i.customerId = c.id
     LEFT JOIN Staff s ON r.staffId = s.id
-
     ${where}
-
     ORDER BY r.createdAt DESC
-
     OFFSET @offset ROWS
-    FETCH NEXT @pageSize ROWS ONLY
+    FETCH NEXT @pageSize ROWS ONLY;
   `;
 
   const result = await request.query(query);
 
   return {
-    total: result.recordsets[0][0].total,
-    rows: result.recordsets[1]
+    total: result.recordsets[0][0]?.total || 0,
+    rows: result.recordsets[1] || []
   };
-
 };
 
 exports.getReturnDetail = async (returnId) => {
@@ -69,6 +68,7 @@ exports.getReturnDetail = async (returnId) => {
       r.status,
       r.totalRefundAmount,
       r.createdAt,
+      r.note,
 
       i.invoiceCode,
       c.name AS customerName,
@@ -111,12 +111,10 @@ exports.getReturnDetail = async (returnId) => {
       id: i.id,
       quantity: i.quantity,
       refundAmount: i.refundAmount,
-      product: {
-        id: i.productId,
-        name: i.productName,
-        imageUrl: i.imageUrl,
-        unitName: i.unitName
-      }
+      id: i.productId,
+      name: i.productName,
+      imageUrl: i.imageUrl,
+      unitName: i.unitName
     }))
   };
 
@@ -214,11 +212,14 @@ exports.updateReturnStatus = async (transaction, id, data) => {
     .input("status", sql.VarChar(20), data.status)
     .input("approveBy", sql.BigInt, data.approveBy)
     .input("approvedAt", sql.DateTime2, data.approvedAt)
+    // Thêm input cho note (lý do từ chối hoặc ghi chú duyệt)
+    .input("note", sql.NVarChar(sql.MAX), data.note || null) 
     .query(`
-      UPDATE Returns
-      SET status = @status,
-          approveBy = @approveBy,
-          approvedAt = @approvedAt
+      UPDATE Returns 
+      SET status = @status, 
+          approveBy = @approveBy, 
+          approvedAt = @approvedAt,
+          note = @note
       WHERE id = @id
     `);
 };

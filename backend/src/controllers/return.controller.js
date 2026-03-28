@@ -2,54 +2,56 @@ const returnService = require("../services/return.service")
 
 
 const getReturns = async (req, res) => {
-  try {
+    try {
+        console.log(req.user);
 
-    const { status, page, pageSize } = req.query;
+        const { status, page, pageSize } = req.query;
 
-    const data = await returnService.getReturns({
-      status,
-      page,
-      pageSize
-    });
+        const data = await returnService.getReturns({
+            status,
+            page,
+            pageSize
+        },
+            req.user);
 
-    res.json({
-      success: true,
-      ...data
-    });
+        res.json({
+            success: true,
+            ...data
+        });
 
-  } catch (err) {
+    } catch (err) {
 
-    res.status(400).json({
-      success: false,
-      message: err.message
-    });
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
 
-  }
+    }
 };
 
 const getReturnDetail = async (req, res) => {
-  try {
+    try {
 
-    const data = await returnService.getReturnDetail(req.params.id);
+        const data = await returnService.getReturnDetail(req.params.id);
 
-    res.json({
-      success: true,
-      data
-    });
+        res.json({
+            success: true,
+            data
+        });
 
-  } catch (err) {
+    } catch (err) {
 
-    res.status(400).json({
-      success: false,
-      message: err.message
-    });
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
 
-  }
+    }
 };
 
 const createReturn = async (req, res) => {
-    
-    
+
+
     try {
         const data = await returnService.createReturn(req.user, req.body);
 
@@ -77,9 +79,13 @@ const approveReturn = async (req, res) => {
 const rejectReturn = async (req, res) => {
     try {
 
+        const { note } = req.body;
+        const { id } = req.params;
+
         const data = await returnService.rejectReturn(
             req.user,
-            req.params.id,
+            id,
+            { note }
         );
 
         res.json({

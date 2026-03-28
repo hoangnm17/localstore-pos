@@ -11,7 +11,6 @@ import InvoiceDetailModal from "./InvoiceDetailModal";
 
 const STATUS = {
   ALL: "ALL",
-  PENDING: "PENDING",
   UNPAID: "UNPAID",
   PAID: "PAID",
   CANCELLED: "CANCELLED",
@@ -20,7 +19,6 @@ const STATUS = {
 const STATUS_META = {
   PAID: { label: "Đã thanh toán", bg: "bg-success-subtle", color: "text-success", icon: "bi-check-circle-fill" },
   UNPAID: { label: "Chờ thanh toán", bg: "bg-warning-subtle", color: "text-warning-emphasis", icon: "bi-clock-history" },
-  PENDING: { label: "Đang xử lý", bg: "bg-info-subtle", color: "text-info-emphasis", icon: "bi-hourglass-split" },
   CANCELLED: { label: "Đã hủy bỏ", bg: "bg-danger-subtle", color: "text-danger", icon: "bi-x-circle-fill" },
   DEFAULT: { label: "N/A", bg: "bg-secondary-subtle", color: "text-secondary", icon: "bi-question-circle" }
 };

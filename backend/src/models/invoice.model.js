@@ -165,7 +165,7 @@ const getInvoice = async (transaction, id) => {
   const result = await new sql.Request(transaction)
     .input("id", sql.Int, id)
     .query(`
-      SELECT id, customerId, status, totalAmount, finalAmount
+      SELECT id, customerId, status, totalAmount, finalAmount, usedPoints
       FROM Invoices WITH (UPDLOCK, ROWLOCK)
       WHERE id = @id
     `);
