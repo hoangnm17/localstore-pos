@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Pagination from '../../components/Pagination/Pagination';
-import api from '../../services/axiosInstance';
+import { getShifts } from '../../services/Shift/shift.service.js';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
 
@@ -8,6 +8,7 @@ import ShiftCreateModal from './modals/ShiftCreateModal';
 import ShiftDetailModal from './modals/ShiftDetailModal';
 import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
+import useTitle from "hooks/common/useTitle";
 
 const PAGE_SIZE = 10;
 
@@ -23,15 +24,14 @@ const ShiftList = () => {
   const [modalType, setModalType] = useState(null);
   const [selectedShift, setSelectedShift] = useState(null);
   const { showNotification } = useNotification();
-
+  useTitle("Danh Sách Ca")
   const fetchShifts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/shifts');
-      const isSuccess = res.data?.success ?? res.success;
-      if (isSuccess) setShifts(res.data.data);
-    } catch {
-      showNotification('Không thể tải danh sách ca làm việc!', 'error');
+      const res = await getShifts();
+      if (res?.success) setShifts(res.data);
+    } catch (err) {
+      showNotification(err.message || 'Không thể tải danh sách ca làm việc!', 'error');
     } finally {
       setLoading(false);
     }
@@ -132,12 +132,12 @@ const ShiftList = () => {
         {/* SEARCH & FILTER */}
         <div className="card border-0 shadow-sm rounded-4 p-3 mb-4">
           <div className="row g-3 align-items-end">
-            <div className="col-md-5">
+            <div className="col-md-4">
               <label className="small fw-bold text-secondary mb-1">Tìm kiếm</label>
               <div className="position-relative">
                 <i className="bi bi-search position-absolute"
                   style={{ left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                <input type="text" className="form-control ps-5 border-0 bg-light"
+                <input type="text" className="form-control ps-5 border-0 bg-light fw-bold"
                   style={{ borderRadius: '12px' }}
                   placeholder="Tìm tên ca làm việc..."
                   value={searchInput}
@@ -146,18 +146,25 @@ const ShiftList = () => {
             </div>
             <div className="col-md-3">
               <label className="small fw-bold text-secondary mb-1">Trạng thái</label>
-              <select className="form-select border-0 bg-light" style={{ borderRadius: '12px' }}
+              <select className="form-select border-0 bg-light fw-bold" style={{ borderRadius: '12px' }}
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}>
-                <option value="all">Tất cả</option>
+                <option value="all">Tất cả trạng thái</option>
                 <option value="active">Đang sử dụng</option>
                 <option value="inactive">Ngừng sử dụng</option>
               </select>
             </div>
-            <div className="col-md-2 text-end">
-              <span className="badge bg-primary rounded-pill px-3 py-2 fs-6">
+            <div className="col-md-5 d-flex gap-2 justify-content-end align-items-end">
+              <button className="btn btn-outline-secondary fw-bold d-flex align-items-center gap-2"
+                style={{ borderRadius: '10px', height: '38px', fontSize: '0.85rem' }}
+                onClick={() => { setSearchInput(''); setFilterStatus('all'); setPage(1); fetchShifts(); }}>
+                <i className="bi bi-arrow-counterclockwise" /> Làm mới
+              </button>
+              <div className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold px-3"
+                style={{ borderRadius: '10px', height: '38px', minWidth: '45px', fontSize: '1rem' }}
+                title="Tổng số ca tìm thấy">
                 {filteredShifts.length}
-              </span>
+              </div>
             </div>
           </div>
         </div>
