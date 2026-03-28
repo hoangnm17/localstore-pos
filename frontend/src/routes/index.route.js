@@ -24,7 +24,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       {authRoute}
-
+    {salesRoute}
       <Route element={<ProtectedRoute requiredRoles={['Manager']} />}>
         <Route element={<AppLayout />}>
           {dashboardRoute}
@@ -48,7 +48,7 @@ const AppRoutes = () => {
         <Route element={<AppLayout />}>
           {InvoiceRoutes}
           {returnRoute}
-          {salesRoute}
+          
         </Route>
       </Route>
       <Route element={<ProtectedRoute requiredRoles={['Manager', 'Cashier', 'Warehouse']} />}>
