@@ -38,4 +38,17 @@ const findById = async (id) => {
     return result.recordset[0];
 };
 
-module.exports = { getAllUser, findByUsername, findById };
+const changeUserPassword = async (userId, newHashedPassword, requireChange = false) => {
+    const pool = await connectDB();
+    await pool.request()
+        .input('id', sql.Int, userId)
+        .input('pass', sql.VarChar, newHashedPassword)
+        .input('reqChange', sql.Bit, requireChange ? 1 : 0)
+        .query(`
+            UPDATE Users 
+            SET passwordHash = @pass, requirePasswordChange = @reqChange 
+            WHERE id = @id
+        `);
+    return true;
+};
+module.exports = { getAllUser, findByUsername, findById,changeUserPassword };

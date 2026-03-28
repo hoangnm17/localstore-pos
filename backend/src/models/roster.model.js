@@ -1,67 +1,19 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
 
-module.exports.getCounters = async () => {
+// Phân công ca
+module.exports.assignShift = async (staffId, shiftId, workDate) => {
     const pool = await connectDB();
-    const result = await pool.request().query(`
-        SELECT id, counterCode, counterName, status
-        FROM Counters
-        WHERE status = 'ACTIVE'
-        ORDER BY counterCode
-    `);
-    return result.recordset;
-};
-
-// Phân công ca 
-module.exports.assignShift = async (staffId, shiftId, workDate, counterId) => {
-    const pool = await connectDB();
-    const shiftInfo = await pool.request()
-        .input('shiftId', sql.Int, shiftId)
-        .query(`
-            SELECT 
-                name, startTime, endTime, 
-                CONVERT(VARCHAR(5), startTime, 108) AS startStr 
-            FROM Shifts WHERE id = @shiftId
-        `);
-    const shift = shiftInfo.recordset[0];
-
-    if (shift) {
-        const nowVN = new Date(Date.now() + 7 * 3600 * 1000);
-        const todayStr = nowVN.toISOString().split('T')[0];
-        const currentTime = nowVN.toISOString().split('T')[1].substring(0, 5);
-
-        const wDateStr = new Date(workDate).toISOString().split('T')[0];
-
-        if (wDateStr < todayStr) {
-            throw new Error("Không được phân công ca làm việc vào ngày trong quá khứ!");
-        }
-
-        if (wDateStr === todayStr && currentTime >= shift.startStr) {
-            throw new Error("Ca làm việc này đã quá giờ bắt đầu hôm nay, không thể giao ca!");
-        }
-    }
-
-    const counterIdValue = counterId != null ? counterId : null;
-
     await pool.request()
         .input('staffId', sql.BigInt, staffId)
-        .input('shiftId', sql.Int, shiftId || null)
+        .input('shiftId', sql.Int, shiftId)
         .input('workDate', sql.Date, workDate)
-        .input('counterId', sql.BigInt, counterIdValue)
-        .input('snapStart', sql.Time, shift ? shift.startTime : null)
-        .input('snapEnd', sql.Time, shift ? shift.endTime : null)
-        .input('snapName', sql.NVarChar(50), shift ? shift.name : null)
         .query(`
-            INSERT INTO WorkSchedules
-              (staffId, shiftId, workDate, counterId, status,
-               snapshotStartTime, snapshotEndTime, snapshotShiftName)
-            VALUES
-              (@staffId, @shiftId, @workDate, @counterId, 'assigned',
-               @snapStart, @snapEnd, @snapName)
+            INSERT INTO WorkSchedules (staffId, shiftId, workDate, status)
+            VALUES (@staffId, @shiftId, @workDate, 'assigned')
         `);
     return true;
 };
-
 
 // Kiểm tra nhân viên đã có ca này trong ngày chưa
 module.exports.checkExisting = async (staffId, shiftId, workDate) => {
@@ -72,82 +24,24 @@ module.exports.checkExisting = async (staffId, shiftId, workDate) => {
         .input('workDate', sql.Date, workDate)
         .query(`
             SELECT id FROM WorkSchedules
-            WHERE staffId = @staffId
-              AND shiftId = @shiftId
-              AND workDate = @workDate
+            WHERE staffId = @staffId AND shiftId = @shiftId AND workDate = @workDate
         `);
     return result.recordset[0];
 };
 
-// Kiểm tra quầy đã bị gán trong ca+ngày này chưa
-module.exports.checkCounterConflict = async (counterId, shiftId, workDate) => {
-    const pool = await connectDB();
-    const result = await pool.request()
-        .input('counterId', sql.BigInt, counterId)
-        .input('shiftId', sql.Int, shiftId)
-        .input('workDate', sql.Date, workDate)
-        .query(`
-            SELECT ws.id, s.fullName
-            FROM WorkSchedules ws
-            JOIN Staff s ON ws.staffId = s.id
-            WHERE ws.counterId = @counterId
-              AND ws.shiftId = @shiftId
-              AND ws.workDate = @workDate
-        `);
-    return result.recordset[0];
-};
-
-// Tính tổng giờ trong ngày 
-module.exports.getDailyHours = async (staffId, workDate) => {
+// Kiểm tra trùng giờ ca làm (Đơn giản hóa: lấy danh sách ca đã có rồi về Service logic check)
+module.exports.getStaffSchedulesInDay = async (staffId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('staffId', sql.BigInt, staffId)
         .input('workDate', sql.Date, workDate)
         .query(`
-            SELECT ISNULL(SUM(
-                CASE WHEN Eff.effEnd < Eff.effStart 
-                     THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
-                     ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
-                END
-            ), 0) AS totalHours
+            SELECT ws.id, sh.name as shiftName, sh.startTime, sh.endTime
             FROM WorkSchedules ws
             JOIN Shifts sh ON ws.shiftId = sh.id
-            CROSS APPLY (
-                SELECT 
-                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotStartTime IS NOT NULL THEN ws.snapshotStartTime ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
-                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotEndTime IS NOT NULL THEN ws.snapshotEndTime ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
-            ) AS Eff
-            WHERE ws.staffId  = @staffId
-              AND ws.workDate = @workDate
+            WHERE ws.staffId = @staffId AND ws.workDate = @workDate AND ws.status != 'absent'
         `);
-    return result.recordset[0]?.totalHours || 0;
-};
-
-// Tính tổng giờ trong tuần 
-module.exports.getWeeklyHours = async (staffId, weekStart, weekEnd) => {
-    const pool = await connectDB();
-    const result = await pool.request()
-        .input('staffId', sql.BigInt, staffId)
-        .input('weekStart', sql.Date, weekStart)
-        .input('weekEnd', sql.Date, weekEnd)
-        .query(`
-            SELECT ISNULL(SUM(
-                CASE WHEN Eff.effEnd < Eff.effStart 
-                     THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
-                     ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
-                END
-            ), 0) AS totalHours
-            FROM WorkSchedules ws
-            JOIN Shifts sh ON ws.shiftId = sh.id
-            CROSS APPLY (
-                SELECT 
-                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotStartTime IS NOT NULL THEN ws.snapshotStartTime ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
-                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) AND ws.snapshotEndTime IS NOT NULL THEN ws.snapshotEndTime ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
-            ) AS Eff
-            WHERE ws.staffId  = @staffId
-              AND ws.workDate BETWEEN @weekStart AND @weekEnd
-        `);
-    return result.recordset[0]?.totalHours || 0;
+    return result.recordset;
 };
 
 // Xóa phân công ca
@@ -159,7 +53,7 @@ module.exports.removeShift = async (scheduleId) => {
     return true;
 };
 
-// Lấy lịch tuần tổng hợp 
+// Lấy lịch tuần tổng hợp (Dữ liệu thô)
 module.exports.getWeeklySchedule = async (startDate, endDate) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -167,66 +61,75 @@ module.exports.getWeeklySchedule = async (startDate, endDate) => {
         .input('endDate', sql.Date, endDate)
         .query(`
             SELECT
-                s.id AS staffId,
-                s.fullName,
+                s.id AS staffId, s.fullName,
                 r.name AS roleName,
-                ws.id AS scheduleId,
-                ws.workDate,
-                ws.shiftId,
-                ws.status,
-                ws.counterId,
-                co.counterName,
-                co.counterCode,
-                
-                -- CROSS APPLY xử lý logic thời gian
-                Eff.effName AS shiftName,
-                CONVERT(VARCHAR(5), Eff.effStart, 108) AS startTime,
-                CONVERT(VARCHAR(5), Eff.effEnd, 108) AS endTime,
-                
-                CASE
-                    WHEN ws.shiftId IS NOT NULL THEN
-                        CASE WHEN Eff.effEnd < Eff.effStart 
-                             THEN (DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) + 1440) / 60.0
-                             ELSE DATEDIFF(MINUTE, Eff.effStart, Eff.effEnd) / 60.0
-                        END
-                    ELSE 8.0
-                END AS shiftHours
-                
+                ws.id AS scheduleId, ws.workDate,
+                sh.id AS shiftId, sh.name AS shiftName, sh.startTime, sh.endTime,
+                ws.status
             FROM Staff s
-            LEFT JOIN Users u  ON s.userId = u.id
-            LEFT JOIN Roles r  ON u.roleId = r.id
+            LEFT JOIN Users u ON s.userId = u.id
+            LEFT JOIN Roles r ON u.roleId = r.id
             LEFT JOIN WorkSchedules ws ON s.id = ws.staffId AND ws.workDate BETWEEN @startDate AND @endDate
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            LEFT JOIN Counters co ON ws.counterId = co.id
-            
-            -- LOGIC: Nếu <= Hôm nay thì giữ giờ cũ (snapshot). Nếu tương lai thì lấy giờ mới (bảng Shifts)
-            CROSS APPLY (
-                SELECT 
-                    effName = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotShiftName, sh.name) ELSE ISNULL(sh.name, ws.snapshotShiftName) END,
-                    effStart = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotStartTime, sh.startTime) ELSE ISNULL(sh.startTime, ws.snapshotStartTime) END,
-                    effEnd = CASE WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) THEN ISNULL(ws.snapshotEndTime, sh.endTime) ELSE ISNULL(sh.endTime, ws.snapshotEndTime) END
-            ) AS Eff
-            
-            WHERE s.employmentStatus = 'working'
+            WHERE s.employmentStatus = 'working' AND r.name IN ('Cashier')
             ORDER BY r.name, s.fullName, ws.workDate
         `);
     return result.recordset;
 };
-// Lấy thông tin lịch làm việc theo id
+
+// Lấy thông tin chi tiết một lịch làm
 module.exports.getScheduleById = async (scheduleId) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('id', sql.Int, scheduleId)
         .query(`
-            SELECT 
-                ws.id, 
-                ws.workDate, 
-                ws.shiftId,
-                CONVERT(VARCHAR(5), ws.snapshotStartTime, 108) AS snapshotStartTime,
-                CONVERT(VARCHAR(5), sh.startTime, 108) AS startTime
+            SELECT ws.*, sh.startTime, sh.endTime, sh.name as shiftName
             FROM WorkSchedules ws
-            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+            JOIN Shifts sh ON ws.shiftId = sh.id
             WHERE ws.id = @id
         `);
     return result.recordset[0];
+};
+
+// Lấy Role của nhân viên
+module.exports.getStaffRole = async (staffId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .query(`
+            SELECT r.name as roleName FROM Staff s 
+            JOIN Users u ON s.userId = u.id 
+            JOIN Roles r ON u.roleId = r.id 
+            WHERE s.id = @staffId
+        `);
+    return result.recordset[0]?.roleName || '';
+};
+
+// Xóa hàng loạt (Bulk Clear)
+module.exports.clearStaffSchedulesInRange = async ({ staffId, startDate, endDate, today, currentTime }) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .input('startDate', sql.Date, startDate)
+        .input('endDate', sql.Date, endDate)
+        .input('todayStr', sql.VarChar(10), today)
+        .input('currentTimeStr', sql.VarChar(8), currentTime)
+        .query(`
+            DELETE ws
+            FROM WorkSchedules ws
+            JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.staffId = @staffId
+              AND ws.workDate BETWEEN @startDate AND @endDate
+              AND ws.status = 'assigned'
+              AND (
+                  -- Toàn bộ các ngày nằm sau hôm nay
+                  ws.workDate > CAST(@todayStr AS DATE)
+                  -- HOẶC: Hôm nay nhưng giờ bắt đầu phải sau giờ hiện tại
+                  OR (
+                      ws.workDate = CAST(@todayStr AS DATE) 
+                      AND sh.startTime > CAST(@currentTimeStr AS TIME)
+                  )
+              )
+        `);
+    return result.rowsAffected[0];
 };

@@ -21,6 +21,7 @@ const returnItemRoutes = require("./returnItem.route")
 const uploadRoutes = require("./upload.route");
 
 const dashboardRoutes = require("./dashboard.route");
+const attendanceRoutes = require("./attendance.route")
 
 module.exports = (app) => {
     const version = "/api";
@@ -48,5 +49,6 @@ module.exports = (app) => {
     app.use(version + "/returns", returnRoutes)
     app.use(version + "/return-items", returnItemRoutes)
     app.use(version + "/upload", uploadRoutes);
+    app.use(version + "/attendance", attendanceRoutes);
 };
 

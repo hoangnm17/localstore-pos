@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Pagination from '../../components/Pagination/Pagination';
-import api from '../../services/axiosInstance';
+import { getShifts } from '../../services/Shift/shift.service.js';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
 
 import ShiftCreateModal from './modals/ShiftCreateModal';
+import ShiftDetailModal from './modals/ShiftDetailModal';
 import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
+import useTitle from "hooks/common/useTitle";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const ShiftList = () => {
   const [shifts, setShifts] = useState([]);
@@ -22,15 +24,14 @@ const ShiftList = () => {
   const [modalType, setModalType] = useState(null);
   const [selectedShift, setSelectedShift] = useState(null);
   const { showNotification } = useNotification();
-
+  useTitle("Danh Sách Ca")
   const fetchShifts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/shifts');
-      const isSuccess = res.data?.success ?? res.success;
-      if (isSuccess) setShifts(res.data.data);
-    } catch {
-      showNotification('Không thể tải danh sách ca làm việc!', 'error');
+      const res = await getShifts();
+      if (res?.success) setShifts(res.data);
+    } catch (err) {
+      showNotification(err.message || 'Không thể tải danh sách ca làm việc!', 'error');
     } finally {
       setLoading(false);
     }
@@ -40,6 +41,7 @@ const ShiftList = () => {
   useEffect(() => { setPage(1); }, [searchTerm, filterStatus]);
 
   const openCreate = () => setModalType('create');
+  const openDetail = (s) => { setSelectedShift(s); setModalType('detail'); };
   const openUpdate = (s) => { setSelectedShift(s); setModalType('update'); };
   const openToggle = (s) => { setSelectedShift(s); setModalType('toggle'); };
   const closeModal = () => { setModalType(null); setSelectedShift(null); };
@@ -74,15 +76,15 @@ const ShiftList = () => {
   ];
   const getColor = (idx) => shiftColors[idx % shiftColors.length];
 
-const getDuration = (start, end) => {
+  const getDuration = (start, end) => {
     if (!start || !end) return '—';
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     let mins = (eh * 60 + em) - (sh * 60 + sm);
     if (mins < 0) {
-        mins += 1440;
+      mins += 1440;
     }
-    if (mins === 0) return '—'; 
+    if (mins === 0) return '—';
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
@@ -91,7 +93,7 @@ const getDuration = (start, end) => {
   return (
     <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
       <div className="flex-grow-1 p-4" style={{ background: '#f0f2f5', maxHeight: '100vh' }}>
-        
+
         {/* HEADER */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
@@ -130,12 +132,12 @@ const getDuration = (start, end) => {
         {/* SEARCH & FILTER */}
         <div className="card border-0 shadow-sm rounded-4 p-3 mb-4">
           <div className="row g-3 align-items-end">
-            <div className="col-md-5">
+            <div className="col-md-4">
               <label className="small fw-bold text-secondary mb-1">Tìm kiếm</label>
               <div className="position-relative">
                 <i className="bi bi-search position-absolute"
                   style={{ left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                <input type="text" className="form-control ps-5 border-0 bg-light"
+                <input type="text" className="form-control ps-5 border-0 bg-light fw-bold"
                   style={{ borderRadius: '12px' }}
                   placeholder="Tìm tên ca làm việc..."
                   value={searchInput}
@@ -144,18 +146,25 @@ const getDuration = (start, end) => {
             </div>
             <div className="col-md-3">
               <label className="small fw-bold text-secondary mb-1">Trạng thái</label>
-              <select className="form-select border-0 bg-light" style={{ borderRadius: '12px' }}
+              <select className="form-select border-0 bg-light fw-bold" style={{ borderRadius: '12px' }}
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}>
-                <option value="all">Tất cả</option>
+                <option value="all">Tất cả trạng thái</option>
                 <option value="active">Đang sử dụng</option>
                 <option value="inactive">Ngừng sử dụng</option>
               </select>
             </div>
-            <div className="col-md-2 text-end">
-              <span className="badge bg-primary rounded-pill px-3 py-2 fs-6">
+            <div className="col-md-5 d-flex gap-2 justify-content-end align-items-end">
+              <button className="btn btn-outline-secondary fw-bold d-flex align-items-center gap-2"
+                style={{ borderRadius: '10px', height: '38px', fontSize: '0.85rem' }}
+                onClick={() => { setSearchInput(''); setFilterStatus('all'); setPage(1); fetchShifts(); }}>
+                <i className="bi bi-arrow-counterclockwise" /> Làm mới
+              </button>
+              <div className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold px-3"
+                style={{ borderRadius: '10px', height: '38px', minWidth: '45px', fontSize: '1rem' }}
+                title="Tổng số ca tìm thấy">
                 {filteredShifts.length}
-              </span>
+              </div>
             </div>
           </div>
         </div>
@@ -228,18 +237,26 @@ const getDuration = (start, end) => {
                           </span>
                         </td>
                         <td className="text-center">
-                          <div className="d-flex justify-content-center align-items-center gap-1">
+                          <div className="d-flex justify-content-center align-items-center gap-2">
                             <button
-                              className="btn btn-sm btn-outline-primary"
-                              style={{ borderRadius: '8px', width: '34px' }}
-                              title="Chỉnh sửa"
-                              disabled={!isActive}
-                              onClick={() => openUpdate(shift)}
+                              className="btn btn-sm btn-outline-info"
+                              style={{ borderRadius: '8px', width: '34px', height: '34px', padding: 0 }}
+                              title="Xem chi tiết"
+                              onClick={() => openDetail(shift)}
                             >
-                              <i className="bi bi-pencil-fill" />
+                              <i className="bi bi-eye-fill" style={{ fontSize: '1rem', lineHeight: '34px' }} />
                             </button>
 
-                            <div className="form-check form-switch m-0"
+                            <button
+                              className="btn btn-sm btn-outline-warning ms-1"
+                              style={{ borderRadius: '8px', width: '34px', height: '34px', padding: 0 }}
+                              title="Chỉnh sửa giới hạn ca"
+                              onClick={() => openUpdate(shift)}
+                            >
+                              <i className="bi bi-pencil-fill" style={{ fontSize: '1rem', lineHeight: '34px' }} />
+                            </button>
+
+                            <div className="form-check form-switch m-0 ms-2"
                               title={isActive ? 'Ngừng sử dụng' : 'Kích hoạt'}>
                               <input
                                 className="form-check-input"
@@ -269,6 +286,7 @@ const getDuration = (start, end) => {
       </div>
 
       {modalType === 'create' && <ShiftCreateModal onClose={closeModal} onSuccess={handleSuccess} />}
+      {modalType === 'detail' && selectedShift && <ShiftDetailModal shift={selectedShift} onClose={closeModal} />}
       {modalType === 'update' && selectedShift && <ShiftUpdateModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
       {modalType === 'toggle' && selectedShift && <ShiftToggleModal shift={selectedShift} onClose={closeModal} onSuccess={handleSuccess} />}
     </div>
