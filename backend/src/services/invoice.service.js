@@ -243,7 +243,7 @@ const getInvoiceDetail = async (id) => {
                 returnType: row.returnType,
                 refundMethod: row.refundMethod,
                 totalRefundAmount: Number(row.totalRefundAmount) || 0,
-                status: row.status?.toUpperCase(), // 🔥 normalize
+                status: row.status?.toUpperCase(),
                 createdAt: row.createdAt,
                 items: []
             });
@@ -271,7 +271,7 @@ const getInvoiceDetail = async (id) => {
     const returnedMap = new Map();
 
     returns.forEach(r => {
-        if (r.status !== "APPROVED") return; // 🔥 chỉ tính hợp lệ
+        if (r.status !== "APPROVED") return;
 
         r.items.forEach(i => {
             const prev = returnedMap.get(i.invoiceItemId) || 0;
@@ -292,7 +292,7 @@ const getInvoiceDetail = async (id) => {
     const discountRatio =
         totalAmountRaw > 0 ? totalDiscount / totalAmountRaw : 0;
 
-    // 6. Mapping items (🔥 FIX CHÍNH)
+    // 6. Mapping items
     const items = data.items.map(item => {
         const factor = Number(item.factor) || 1;
         const quantity = Number(item.quantity) || 0;
@@ -300,7 +300,6 @@ const getInvoiceDetail = async (id) => {
 
         const returnedQty = returnedMap.get(item.id) || 0;
 
-        // 🔥 giá sau giảm
         const discountedLineTotal = lineTotal * (1 - discountRatio);
 
         const discountedUnitPrice =
@@ -317,7 +316,7 @@ const getInvoiceDetail = async (id) => {
             quantity,
 
             unitPrice: Number(item.unitPrice) || 0,
-            discountedUnitPrice: Math.round(discountedUnitPrice), // 👈 QUAN TRỌNG
+            discountedUnitPrice: Math.round(discountedUnitPrice),
 
             lineTotal,
             discountedLineTotal: Math.round(discountedLineTotal),
@@ -326,11 +325,8 @@ const getInvoiceDetail = async (id) => {
             factor,
             unitType: item.unitType,
 
-            // tồn kho
             productStock: Number(item.quantityOnHand) || 0,
             quantityOnHand: (Number(item.quantityOnHand) || 0) / factor,
-
-            // hoàn trả
             returnedQuantity: returnedQty,
             remainingQuantity: quantity - returnedQty
         };
@@ -339,13 +335,11 @@ const getInvoiceDetail = async (id) => {
     // 7. Tổng tiền (chuẩn hóa lại)
     const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
 
-    // 🔥 chỉ tính refund hợp lệ
     const totalRefund = returns.reduce((sum, r) => {
         if (r.status !== "APPROVED") return sum;
         return sum + r.totalRefundAmount;
     }, 0);
 
-    // 🔥 chống bug refund > finalAmount
     const safeRefund = Math.min(totalRefund, finalAmount);
 
     // 8. Final response
@@ -358,6 +352,8 @@ const getInvoiceDetail = async (id) => {
 
         customerId: data.customerId ? Number(data.customerId) : null,
         customerName: data.customerName,
+        customerPoints: data.loyaltyPoints,
+        customerPhone: data.phone,
 
         staffName: data.staffName,
         counterName: data.counterName,
@@ -365,7 +361,7 @@ const getInvoiceDetail = async (id) => {
         totalAmount,
         finalAmount,
 
-        totalDiscount, // 👈 thêm luôn cho FE
+        totalDiscount,
         totalRefund: safeRefund,
 
         items,
@@ -430,8 +426,8 @@ const syncCounter = async (userId, configCounterId) => {
     }
 
     if (!schedule || schedule.status !== 'working') {
-        const err = new 
-        Error("Bạn chưa nhận ca ngày hôm nay! Vui lòng vào 'Lịch của tôi' để nhận ca trước khi bán hàng.");
+        const err = new
+            Error("Bạn chưa nhận ca ngày hôm nay! Vui lòng vào 'Lịch của tôi' để nhận ca trước khi bán hàng.");
         err.statusCode = 400;
         throw err;
     }

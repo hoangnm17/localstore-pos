@@ -324,6 +324,8 @@ const getInvoiceDetail = async (id) => {
         i.customerId,
 
         cu.name AS customerName,
+        cu.loyaltyPoints,
+        cu.phone,
         s.fullName AS staffName,
         c.counterName
 

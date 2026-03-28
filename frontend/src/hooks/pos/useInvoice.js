@@ -117,6 +117,14 @@ export const useInvoiceTabs = () => {
               ? {
                 ...inv,
                 items: detail?.items ?? [],
+                customer: detail?.customerId
+                  ? {
+                    id: detail.customerId,
+                    name: detail.customerName,
+                    loyaltyPoints: detail.customerPoints,
+                    phone: detail.customerPhone
+                  }
+                  : null,
                 itemsLoaded: true
               }
               : inv
