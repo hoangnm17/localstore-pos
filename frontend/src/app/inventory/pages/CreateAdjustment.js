@@ -51,47 +51,47 @@ const CreateAdjustment = () => {
   };
 
   const handleAddProduct = async (product) => {
-    if (adjustmentItems.some((i) => i.id === product.id)) return;
+  if (adjustmentItems.some((i) => i.id === product.id)) return;
 
-    try {
-      const res = await adjustmentService.checkProductConflict(product.id);
-      const isInPending = res.data.data.isInPending;
+  try {
+    const res = await adjustmentService.checkProductConflict(product.id);
+    const isInPending = res.data.data.isInPending;
 
-      if (isInPending) {
-        alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`);
-        return;
-      }
-
-      const singleUnit =
-        !product.largestConversionFactor || product.largestConversionFactor === 1;
-
-      const isDecimalSingle =
-        singleUnit && product.allowDecimalQuantity;
-
-      setAdjustmentItems((prev) => [
-        ...prev,
-        {
-          ...product,
-
-          actualLargest: isDecimalSingle
-            ? product.quantityOnHand.toString()
-            : product.systemLargest.toString(),
-
-          actualRemainder: singleUnit
-            ? "0"
-            : product.systemRemainder.toString(),
-
-          isConflict: isInPending,
-        },
-      ]);
-
-      setKeyword("");
-      setShowSearchResults(false);
-    } catch (err) {
-      console.error(err);
-      alert("Không kiểm tra được trạng thái sản phẩm");
+    if (isInPending) {
+      alert(`Sản phẩm "${product.name}" đang nằm trong phiếu kiểm kê khác đang chờ xử lý.\nBạn không thể thêm sản phẩm này vào phiếu điều chỉnh.`);
+      return;
     }
-  };
+
+    const singleUnit =
+      !product.largestConversionFactor || product.largestConversionFactor === 1;
+
+    const isDecimalSingle =
+      singleUnit && product.allowDecimalQuantity;
+
+    setAdjustmentItems((prev) => [
+      ...prev,
+      {
+        ...product,
+
+        actualLargest: isDecimalSingle
+          ? product.quantityOnHand.toString()
+          : product.systemLargest.toString(),
+
+        actualRemainder: singleUnit
+          ? "0"
+          : product.systemRemainder.toString(),
+
+        isConflict: isInPending,
+      },
+    ]);
+
+    setKeyword("");
+    setShowSearchResults(false);
+  } catch (err) {
+    console.error(err);
+    alert("Không kiểm tra được trạng thái sản phẩm");
+  }
+};
 
   const handleLargestChange = (id, e) => {
     const item = adjustmentItems.find((i) => i.id === id);
@@ -195,21 +195,21 @@ const CreateAdjustment = () => {
   };
 
   const formatSystemQuantity = (item) => {
-    const unit = item.largestUnitName || "Đơn Vị";
+  const unit = item.largestUnitName || "Đơn Vị";
 
-    const isDecimalSingle =
-      isSingleUnit(item) && item.allowDecimalQuantity;
+  const isDecimalSingle =
+    isSingleUnit(item) && item.allowDecimalQuantity;
 
-    if (isDecimalSingle) {
-      return `${item.quantityOnHand} ${unit}`;
-    }
+  if (isDecimalSingle) {
+    return `${item.quantityOnHand} ${unit}`;
+  }
 
-    if (isSingleUnit(item)) {
-      return `${item.systemLargest} ${unit}`;
-    }
+  if (isSingleUnit(item)) {
+    return `${item.systemLargest} ${unit}`;
+  }
 
-    return `${item.systemLargest} ${unit} + ${item.systemRemainder} lẻ`;
-  };
+  return `${item.systemLargest} ${unit} + ${item.systemRemainder} lẻ`;
+};
 
   const summary = useMemo(() => {
     let increase = 0;
@@ -259,6 +259,7 @@ const CreateAdjustment = () => {
       return alert("Vui lòng thêm ít nhất một sản phẩm.");
     }
 
+    // Kiểm tra chênh lệch trước khi tạo phiếu
     if (!validateBeforeSubmit()) {
       return;
     }
@@ -274,20 +275,12 @@ const CreateAdjustment = () => {
 
     try {
       setSaving(true);
-
-      const res = await adjustmentService.createAdjustment(payload);
-
-      const data = res?.data || res;
-
-      if (!data?.success) {
-        throw new Error(data?.message || "Thao tác thất bại");
-      }
+      await adjustmentService.createAdjustment(payload);
 
       alert("Tạo phiếu điều chỉnh thành công!");
       navigate("/inventory/requests/adjust?status=Pending");
-
     } catch (err) {
-      alert(err.message || "Tạo phiếu thất bại.");
+      alert(err.response?.data?.message || "Tạo phiếu thất bại.");
     } finally {
       setSaving(false);
     }

@@ -40,7 +40,7 @@ export default function FilterBar({
 
   const debouncedKeyword = useDebounce(displayKeyword, 500);
 
-  const { totalProdPages } = useMemo(() => {
+  const { currentItems, totalProdPages } = useMemo(() => {
     const filtered = allProducts.filter((item) => {
       const matchCat = !selectedCategory || item.categoryId === selectedCategory.id;
       const matchKey = item.name.toLowerCase().includes(debouncedKeyword.toLowerCase());

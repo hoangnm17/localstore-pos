@@ -35,9 +35,7 @@ export default function ComboProductForm({
     onIncreaseQty,
     onDecreaseQty,
     onAddComboRow,
-    onRemoveComboRow,
-    onUpdateComboRowQty,
-    onUpdateComboRowUnit
+    onRemoveComboRow
 }) {
     return (
         <>
@@ -145,9 +143,6 @@ export default function ComboProductForm({
                         <div className="border rounded p-3 bg-light mb-3">
                             <div className="fw-semibold mb-3">
                                 Thêm vào combo: {selectedChildProduct.name} ({selectedChildProduct.code})
-                                <span className="ms-2 badge bg-secondary">
-                                    Tồn kho: {Number(selectedChildProduct.stockQuantity || 0).toLocaleString('vi-VN')} {selectedChildProduct.baseUnit}
-                                </span>
                             </div>
 
                             <div className="row g-3 align-items-end">
@@ -175,11 +170,7 @@ export default function ComboProductForm({
                                             <i className="bi bi-dash-lg" />
                                         </button>
                                         <input
-                                            className={`form-control text-center ${
-                                                selectedChildUnit && childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0)
-                                                    ? 'is-invalid'
-                                                    : ''
-                                            }`}
+                                            className="form-control text-center"
                                             type="number"
                                             min={childQuantityStep === 1 ? 1 : 0.001}
                                             step={childQuantityStep}
@@ -190,12 +181,6 @@ export default function ComboProductForm({
                                             <i className="bi bi-plus-lg" />
                                         </button>
                                     </div>
-                                    {selectedChildUnit && childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0) && (
-                                        <div className="text-danger small mt-1">
-                                            <i className="bi bi-exclamation-triangle-fill me-1" />
-                                            Vượt quá tồn kho! Còn {Number(selectedChildProduct.stockQuantity || 0).toLocaleString('vi-VN')} {selectedChildProduct.baseUnit}
-                                        </div>
-                                    )}
                                 </div>
 
                                 <div className="col-md-2">
@@ -212,10 +197,6 @@ export default function ComboProductForm({
                                         type="button"
                                         className="btn btn-success w-100"
                                         onClick={onAddComboRow}
-                                        disabled={
-                                            !selectedChildUnit ||
-                                            (childBaseQuantity > Number(selectedChildProduct.stockQuantity || 0))
-                                        }
                                     >
                                         <i className="bi bi-plus-circle me-2" />
                                         Thêm vào combo
@@ -245,7 +226,6 @@ export default function ComboProductForm({
                         </div>
                     )}
 
-
                     <div className="table-responsive">
                         <table className="table table-bordered align-middle">
                             <thead className="pm-thead">
@@ -274,33 +254,8 @@ export default function ComboProductForm({
                                         <tr key={row.key}>
                                             <td>{row.productCode}</td>
                                             <td className="fw-semibold">{row.productName}</td>
-                                            <td style={{ minWidth: 160 }}>
-                                                {row.units && row.units.length > 1 ? (
-                                                    <select
-                                                        className="form-select form-select-sm"
-                                                        value={row.selectedUnitId}
-                                                        onChange={(e) => onUpdateComboRowUnit(row.key, e.target.value)}
-                                                    >
-                                                        {row.units.map((u) => (
-                                                            <option key={u.id} value={u.id}>
-                                                                {u.unitName} | x{Number(u.conversionFactor).toLocaleString('vi-VN')} | {Number(u.salePrice).toLocaleString('vi-VN')} đ
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                ) : (
-                                                    row.unitName
-                                                )}
-                                            </td>
-                                            <td style={{ minWidth: 110 }}>
-                                                <input
-                                                    type="number"
-                                                    className="form-control form-control-sm text-center"
-                                                    min={row.unitType === 'WEIGHT' ? 0.001 : 1}
-                                                    step={row.unitType === 'WEIGHT' ? 0.001 : 1}
-                                                    value={row.quantityDisplay}
-                                                    onChange={(e) => onUpdateComboRowQty(row.key, e.target.value)}
-                                                />
-                                            </td>
+                                            <td>{row.unitName}</td>
+                                            <td>{Number(row.quantityDisplay).toLocaleString('vi-VN')}</td>
                                             <td>{Number(row.quantityBase).toLocaleString('vi-VN')} {row.baseUnit}</td>
                                             <td>{formatMoney(row.unitSalePrice)}</td>
                                             <td className="fw-semibold">{formatMoney(row.lineTotal)}</td>

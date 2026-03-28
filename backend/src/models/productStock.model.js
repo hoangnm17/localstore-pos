@@ -336,25 +336,6 @@ const addStock = async (transaction, productId, quantity) => {
   return result.rowsAffected[0];
 };
 
-const updateProductUnitPrice = async (productUnitId, salePrice) => {
-    const pool = await connectDB();
-
-    const result = await pool.request()
-        .input("productUnitId", sql.Int, productUnitId)
-        .input("salePrice", sql.Decimal(15, 2), salePrice)
-        .query(`
-            UPDATE ProductUnits
-            SET salePrice = @salePrice
-            WHERE id = @productUnitId;
-
-            SELECT *
-            FROM ProductUnits
-            WHERE id = @productUnitId;
-        `);
-
-    return result.recordset[0];
-};
-
 module.exports = {
     getStockByProductId,
     updateStock,
@@ -369,5 +350,4 @@ module.exports = {
     getLowStockProductUnits,
     searchProductUnits,
     addStock,
-    updateProductUnitPrice
 }

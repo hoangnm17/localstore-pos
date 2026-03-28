@@ -117,7 +117,7 @@ exports.getPointLogs = async (req, res) => {
 exports.adjustPoints = async (req, res) => {
     try {
         const { pointChange, reason } = req.body;
-        const log = await pointLogService.adjustPoints(req.params.id, { pointChange, reason });
+        const log = await pointLogService.manualAdjustPoints(req.params.id, { pointChange, reason });
         res.json({ success: true, message: 'Cập nhật điểm thành công', data: log });
     } catch (err) {
         const status = err.message.includes('Không tìm thấy') ? 404 : 400;

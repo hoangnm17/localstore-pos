@@ -127,7 +127,8 @@ function SubTabBar({ tabs, active, onChange }) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  UC3 + UC4: Customer Detail Modal
 // ═══════════════════════════════════════════════════════════════════════════
-function CustomerDetailModal({ customer, onClose }) {
+function CustomerDetailModal({ customer: initialCustomer, onClose, onRefresh }) {
+    const [customer, setCustomer] = useState(initialCustomer);
     const [subTab, setSubTab] = useState('history');
     const [history, setHistory] = useState([]);
     const [histPage, setHistPage] = useState(1);
@@ -159,6 +160,13 @@ function CustomerDetailModal({ customer, onClose }) {
         } catch { } finally { setLogsLoading(false); }
     }, [customer.id, logsPage]);
 
+    const fetchCustomer = useCallback(async () => {
+        try {
+            const res = await getCustomerById(customer.id);
+            if (res?.success) setCustomer(res.data);
+        } catch { }
+    }, [customer.id]);
+
     useEffect(() => { if (subTab === 'history') fetchHistory(); }, [subTab, fetchHistory]);
     useEffect(() => { if (subTab === 'points') fetchLogs(); }, [subTab, fetchLogs]);
 
@@ -170,6 +178,8 @@ function CustomerDetailModal({ customer, onClose }) {
             setAdjMsg(<><i className="bi bi-check-lg me-1"></i> Cập nhật điểm thành công!</>);
             setAdjForm({ pointChange: '', reason: '' });
             fetchLogs();
+            fetchCustomer();
+            if (onRefresh) onRefresh();
         } catch (e) {
             setAdjMsg(<><i className="bi bi-x-circle-fill me-1"></i> {e.response?.data?.message || e.message}</>);
         } finally { setAdjSaving(false); }
@@ -354,7 +364,7 @@ function CustomersTab() {
                     </div>
                 </Modal>
             )}
-            {detailTarget && <CustomerDetailModal customer={detailTarget} onClose={() => setDetailTarget(null)} />}
+            {detailTarget && <CustomerDetailModal customer={detailTarget} onClose={() => setDetailTarget(null)} onRefresh={fetchData} />}
             {deleteTarget && <ConfirmDialog message={`Vô hiệu hóa khách hàng "${deleteTarget.name}"?`} onConfirm={async () => { await deleteCustomer(deleteTarget.id); setDeleteTarget(null); fetchData(); }} onCancel={() => setDeleteTarget(null)} />}
             {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>

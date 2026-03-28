@@ -177,27 +177,6 @@ const searchProductUnits = async (keyword) => {
     return await productModel.searchProductUnits(keyword);
 };
 
-const updateProductUnitPrice = async (productUnitId, salePrice) => {
-
-    if (!productUnitId) {
-        throw new Error("productUnitId is required");
-    }
-
-    if (salePrice == null || salePrice < 0) {
-        throw new Error("Sale price must be >= 0");
-    }
-
-    const updated = await productModel.updateProductUnitPrice(
-        productUnitId,
-        salePrice
-    );
-
-    if (!updated) {
-        throw new Error("Product unit not found");
-    }
-
-    return updated;
-};
 
 module.exports = {
     deductStock,
@@ -211,5 +190,4 @@ module.exports = {
     getLowStockProducts,
     searchProductUnits,
     addStock,
-    updateProductUnitPrice
 }
