@@ -1,0 +1,520 @@
+        .modern-return-container {
+            background: #f8fafc;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Filter Pills */
+        .filter-pill-box {
+            display: flex;
+            background: #e2e8f0;
+            padding: 5px;
+            border-radius: 50px;
+            gap: 5px;
+        }
+
+        .filter-pill {
+            border: none;
+            background: transparent;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .filter-pill.active {
+            background: white;
+            color: var(--active-color);
+            font-weight: 700;
+        }
+
+        /* Table Style */
+        .custom-table thead {
+            background: #f1f5f9;
+        }
+
+        .custom-table thead th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            border: none;
+        }
+
+        .custom-table tbody tr {
+            transition: all 0.2s;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #f1f5f9;
+            transform: scale(1.002);
+        }
+
+        .id-badge {
+            background: #eff6ff;
+            color: #2563eb;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            background: #6366f1;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-action-view {
+            border: 1px solid #e2e8f0;
+            background: white;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.2s;
+        }
+
+        .btn-action-view:hover {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        /* Skeleton */
+        .skeleton-row {
+            height: 60px;
+        }
+
+        .skeleton-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 10px;
+            width: 90%;
+            margin: auto;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Custom Modal */
+        .modal-custom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .modal-custom-content {
+            background: white;
+            width: 100%;
+            max-width: 850px;
+            border-radius: 20px;
+            animation: zoomIn 0.3s;
+            overflow: hidden;
+        }
+
+        .modal-custom-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-close-custom {
+            border: none;
+            background: #f1f5f9;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: #64748b;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-close-custom:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .modal-custom-body {
+            padding: 24px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+
+
+        /*Restock List*/
+        .restock-modern-container {
+            padding: 30px;
+            background: #fbfbfd;
+            min-height: 100vh;
+        }
+
+        .restock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+        }
+
+        .title-section h3 {
+            font-weight: 800;
+            font-size: 24px;
+            color: #1d1d1f;
+            margin-bottom: 5px;
+        }
+
+        .breadcrumb {
+            font-size: 13px;
+            color: #86868b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-tabs-wrapper {
+            display: flex;
+            background: #e8e8ed;
+            padding: 4px;
+            border-radius: 12px;
+        }
+
+        .status-tab {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #515154;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .status-tab.active {
+            background: #fff;
+            color: #0071e3;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .restock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .restock-card {
+            background: #fff;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            transition: 0.3s;
+        }
+
+        .restock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .return-badge {
+            background: #f5f5f7;
+            color: #1d1d1f;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .time-tag {
+            color: #86868b;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 4px;
+            line-height: 1.4;
+            height: 50px;
+            overflow: hidden;
+        }
+
+        .product-meta {
+            color: #86868b;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .stat-pill {
+            flex: 1;
+            background: #f5f5f7;
+            padding: 12px;
+            border-radius: 14px;
+        }
+
+        .stat-pill label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            color: #86868b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-pill .val {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1d1d1f;
+        }
+
+        .stat-pill.highlight {
+            background: #e1f2ff;
+        }
+
+        .stat-pill.highlight .val {
+            color: #0071e3;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-approve-modern {
+            flex: 2;
+            background: #0071e3;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-reject-modern {
+            flex: 1;
+            background: #fff;
+            color: #ff3b30;
+            border: 1px solid #ff3b3022;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .final-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .final-status.approved {
+            background: #e8f5e9;
+            color: #34c759;
+        }
+
+        .final-status.rejected {
+            background: #fff1f0;
+            color: #ff3b30;
+        }
+
+        .modern-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 50px;
+        }
+
+        .p-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #d2d2d7;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .empty-state-modern {
+            text-align: center;
+            padding: 100px 0;
+        }
+
+        .skeleton-card-modern {
+            height: 260px;
+            background: #eee;
+            border-radius: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        /*InvoiceDetail*/
+        .modern-invoice-modal {
+            font-family: 'Inter', sans-serif;
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .modal-header-custom {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6366f1;
+        }
+
+        .soft-badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid;
+        }
+
+        .modal-body-custom {
+            padding: 24px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+
+        .info-item-card {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .info-item-card label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .qty-circle {
+            background: #f1f5f9;
+            color: #475569;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .return-icon-sm {
+            width: 28px;
+            height: 28px;
+            background: #fef2f2;
+            color: #dc2626;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
