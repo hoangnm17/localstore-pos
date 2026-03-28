@@ -8,8 +8,10 @@ import StaffUpdateModal from './modals/StaffUpdateModal';
 import StaffDetailModal from './modals/StaffDetailModal';
 import StaffToggleModal from './modals/StaffToggleModal';
 import StaffResignModal from './modals/StaffResignModal';
+import useTitle from "hooks/common/useTitle";
 
 const StaffList = () => {
+    useTitle("Danh Sách Nhân Sự")
     const [staffs, setStaffs] = useState([]);
     const [fetchLoading, setFetchLoading] = useState(true);
 
@@ -27,6 +29,7 @@ const StaffList = () => {
     const { showNotification } = useNotification();
 
     const fetchData = useCallback(async () => {
+        setFetchLoading(true);
         try {
             const response = await getStaffs();
             if (response?.success) {
@@ -36,7 +39,17 @@ const StaffList = () => {
             showNotification('Không thể tải danh sách nhân viên!', 'error');
             setStaffs([]);
         } finally { setFetchLoading(false); }
-    }, [showNotification]);
+    }, []);
+
+    const handleReset = useCallback(() => {
+        setSearchInput('');
+        setRoleFilter('All');
+        setStatusFilter('All');
+        setSortOrder('asc');
+        setCurrentPage(1);
+        fetchData();
+        // showNotification('Đã làm mới danh sách!', 'info');
+    }, [fetchData]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, statusFilter]);
@@ -136,12 +149,14 @@ const StaffList = () => {
                                 <input type="text" className="form-control ps-5 border-0 bg-light"
                                     style={{ borderRadius: '12px' }}
                                     placeholder="Tìm tên, SĐT, email..."
+                                    value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)} />
                             </div>
                         </div>
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Vai trò</label>
                             <select className="form-select border-0 bg-light" style={{ borderRadius: '12px' }}
+                                value={roleFilter}
                                 onChange={(e) => setRoleFilter(e.target.value)}>
                                 <option value="All">Tất cả</option>
                                 <option value="Manager">Quản lý</option>
@@ -152,6 +167,7 @@ const StaffList = () => {
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Nhân sự</label>
                             <select className="form-select border-0 bg-light" style={{ borderRadius: '12px' }}
+                                value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}>
                                 <option value="All">Tất cả</option>
                                 <option value="working">Đang làm</option>
@@ -161,15 +177,23 @@ const StaffList = () => {
                         <div className="col-md-2">
                             <label className="small fw-bold text-secondary mb-1">Sắp xếp</label>
                             <select className="form-select border-0 bg-light" style={{ borderRadius: '12px' }}
+                                value={sortOrder}
                                 onChange={(e) => setSortOrder(e.target.value)}>
                                 <option value="asc">Tên A → Z</option>
                                 <option value="desc">Tên Z → A</option>
                             </select>
                         </div>
-                        <div className="col-md-2 text-end">
-                            <span className="badge bg-primary rounded-pill px-3 py-2 fs-6">
-                                {filteredData.length}
-                            </span>
+                        <div className="col-md-2">
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-outline-secondary w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                                    style={{ borderRadius: '12px', height: '38px' }}
+                                    onClick={handleReset}>
+                                    <i className="bi bi-arrow-counterclockwise" /> Làm mới
+                                </button>
+                                <div className="badge bg-primary rounded-pill px-3 py-2 fs-6 d-flex align-items-center justify-content-center" style={{ minWidth: '45px' }}>
+                                    {filteredData.length}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
