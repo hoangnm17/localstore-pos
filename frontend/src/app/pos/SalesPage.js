@@ -282,8 +282,8 @@ export default function SalesHome() {
               <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/invoices")}>
                 <i className="bi bi-receipt me-3 text-primary"></i> Lịch sử đơn hàng
               </button>
-              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/handover-report")}>
-                <i className="bi bi-arrow-counterclockwise me-3 text-success"></i> Bàn giao ca
+              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-profile")}>
+                <i className="bi bi-arrow-counterclockwise me-3 text-success"></i> Hồ sơ của tôi
               </button>
               <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-schedule")}>
                 <i className="bi bi-box-arrow-in-right me-3 text-success"></i> Lịch làm việc
