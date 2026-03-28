@@ -1,147 +1,162 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 
-const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
-const formatHours = (decimalHours) => {
-    if (!decimalHours) return '0h 00m';
-    const h = Math.floor(decimalHours);
-    const m = Math.round((decimalHours - h) * 60);
-    return `${h}h ${String(m).padStart(2, '0')}m`;
+const ROLE_NAME_MAP = {
+    'Manager': 'Quản lý',
+    'Cashier': 'Thu ngân',
+    'Warehouse': 'Thủ kho'
 };
 
-const translatePenalty = (rawText) => {
-    if (!rawText) return '';
-    let text = rawText;
+const SalaryDetailModal = ({ row, month, year, onClose, autoPrint = false }) => {
+    useEffect(() => {
+        if (autoPrint && row) {
+            const timer = setTimeout(() => {
+                window.print();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [autoPrint, row]);
 
-    text = text.replace(/OnTime,\s*/g, '');
-    text = text.replace(/OnTime\s*[|,]/g, '');
-
-    text = text.replace(/LateIn\[(.*?)\]/g, 'Vào ca muộn lúc $1');
-    text = text.replace(/EarlyOut\[(.*?)\]/g, 'Về sớm lúc $1');
-    text = text.replace(/LateHandover\[(.*?)\]/g, 'Bàn giao tiền quá hạn lúc $1');
-
-    text = text.replace(/\(-(\d+)[dđ]?\)/g, (match, money) => {
-        return `(- ${new Intl.NumberFormat('vi-VN').format(money)} đ)`;
-    });
-
-    return text.trim();
-};
-
-const SalaryDetailModal = ({ row, month, year, onClose }) => {
     if (!row) return null;
 
-    const isHourly = row.salaryType === 'hourly';
+    const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 
-    const baseSalaryDisplay = isHourly
-        ? `${formatVND(row.baseSalary)} / giờ`
-        : formatVND(row.baseSalary);
+    const penalties = row.penaltyDetails ? row.penaltyDetails.split(';').map(s => s.trim()).filter(s => s) : [];
 
     return (
-        <BaseModal onClose={onClose} maxWidth="550px">
-            <div style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.15)' }}>
+        <BaseModal onClose={onClose} maxWidth="500px">
+            <style>
+                {`
+                @media print {
+                    @page { size: A5; margin: 10mm; }
+                    body * { visibility: hidden; }
+                    #salary-slip-print, #salary-slip-print * { visibility: visible; }
+                    #salary-slip-print { 
+                        position: absolute; 
+                        left: 50%; top: 0;
+                        transform: translateX(-50%);
+                        width: 15cm !important; 
+                        padding: 10px !important;
+                        box-shadow: none !important;
+                        background: #fff !important;
+                        border: 1px solid #eee !important;
+                    }
+                    .no-print { display: none !important; }
+                    .bg-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+                }
+                `}
+            </style>
 
-                <div style={{ background: 'linear-gradient(135deg, #39bdd1 0%)', padding: '24px 32px', color: '#fff' }}>
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 className="fw-bold m-0"><i className="bi bi-file-earmark-spreadsheet-fill me-2" />Chi Tiết Bảng Lương</h5>
-                            <small className="opacity-75">Tháng {month} năm {year}</small>
-                        </div>
-                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>
-                            <i className="bi bi-x-lg" />
+            <div id="salary-slip-print" className="bg-white rounded-4 shadow-lg overflow-hidden border">
+                {/* Header (Web Only) */}
+                <div className="no-print p-2 px-3 d-flex justify-content-between align-items-center" style={{ background: '#0891b2', color: '#fff' }}>
+                    <div className="d-flex align-items-center gap-2">
+                        <i className="bi bi-file-earmark-person-fill fs-5"></i>
+                        <span className="fw-bold small">PHIẾU LƯƠNG NHÂN VIÊN</span>
+                    </div>
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-sm btn-light fw-bold py-0 px-2" style={{ fontSize: '0.75rem' }} onClick={() => window.print()}>
+                            <i className="bi bi-printer-fill me-1"></i>In
                         </button>
+                        <button className="btn btn-sm btn-link text-white text-decoration-none fs-4 px-2 py-0" onClick={onClose}>&times;</button>
                     </div>
                 </div>
 
-                <div style={{ padding: '28px 32px' }}>
+                {/* Main Content */}
+                <div className="p-4">
+                    <div className="text-center mb-3 pb-2 border-bottom">
+                        <h5 className="fw-bold text-uppercase mb-1" style={{ letterSpacing: '1px', fontSize: '1rem' }}>LocalStore POS</h5>
+                        <p className="mb-0 text-secondary" style={{ fontSize: '0.75rem' }}>Kỳ lương: Tháng {month} / {year}</p>
+                    </div>
 
-                    <div className="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-4 border">
-                        <div style={{
-                            width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontWeight: 'bold', fontSize: '1.4rem'
-                        }}>
-                            {row.fullName.charAt(0).toUpperCase()}
+                    <div className="row mb-3 bg-light p-2 rounded-3 mx-0 border" style={{ fontSize: '0.85rem' }}>
+                        <div className="col-7 mb-1 font-weight-bold">
+                            <span className="text-muted small">NV:</span> {row.fullName}
                         </div>
-                        <div>
-                            <div className="fw-bold fs-5 text-dark">{row.fullName}</div>
-                            <div className="d-flex gap-2 mt-1">
-                                <span className="badge bg-secondary rounded-pill">{row.roleName}</span>
-                                <span className={`badge rounded-pill ${isHourly ? 'bg-primary-subtle text-primary border border-primary' : 'bg-success-subtle text-success border border-success'}`}>
-                                    {isHourly ? 'Lương theo giờ' : 'Lương cố định'}
-                                </span>
-                            </div>
+                        <div className="col-5 mb-1 text-end">
+                            <span className="badge bg-primary" style={{ fontSize: '0.7rem' }}>{ROLE_NAME_MAP[row.roleName] || row.roleName}</span>
+                        </div>
+                        <div className="col-7">
+                            <span className="text-muted small">Hình thức:</span> {row.salaryType === 'hourly' ? 'Theo giờ' : 'Cố định'}
+                        </div>
+                        <div className="col-5 text-end text-muted small">
+                            {new Date().toLocaleDateString('vi-VN')}
                         </div>
                     </div>
 
-                    <h6 className="fw-bold text-secondary mb-3 text-uppercase" style={{ fontSize: '0.8rem', letterSpacing: '0.5px' }}>
-                        <i className="bi bi-calculator me-2" />Diễn giải lương
-                    </h6>
+                    <table className="table table-bordered mb-3" style={{ fontSize: '0.85rem' }}>
+                        <thead className="bg-light text-center small fw-bold">
+                            <tr>
+                                <th className="py-1">DANH MỤC</th>
+                                <th className="py-1">THÀNH TIỀN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="ps-2 py-2">
+                                    <div className="fw-bold">Lương cơ sở</div>
+                                    <small className="text-muted">{formatVND(row.baseSalary)} {row.salaryType === 'hourly' ? '/giờ' : ''}</small>
+                                </td>
+                                <td className="text-end align-middle fw-semibold">{formatVND(row.baseSalary)}</td>
+                            </tr>
+                            {row.salaryType !== 'hourly' && (
+                                <tr>
+                                    <td className="ps-2 py-2">
+                                        <div className="fw-bold">Lương 1 ngày công</div>
+                                        <small className="text-muted">26 ngày công/tháng</small>
+                                    </td>
+                                    <td className="text-end align-middle fw-semibold">{formatVND(row.baseSalary / 26)}</td>
+                                </tr>
+                            )}
+                            <tr>
+                                <td className="ps-2 py-2">
+                                    <div className="fw-bold">Công thực tế</div>
+                                    <small className="text-muted">
+                                        {row.salaryType === 'hourly' ? `${row.totalHours} giờ` : `${row.workingDays} ngày`}
+                                    </small>
+                                </td>
+                                <td className="text-end align-middle fw-semibold">{formatVND(row.grossSalary)}</td>
+                            </tr>
+                            {row.deductions > 0 && (
+                                <tr>
+                                    <td className="ps-2 py-2 text-danger">
+                                        <div className="fw-bold text-uppercase" style={{ fontSize: '0.7rem' }}>Khấu trừ vi phạm</div>
+                                    </td>
+                                    <td className="text-end align-middle text-danger fw-bold">-{formatVND(row.deductions)}</td>
+                                </tr>
+                            )}
+                            <tr className="bg-light">
+                                <td className="text-end py-2 fw-bold">TỔNG THỰC LĨNH:</td>
+                                <td className="text-end py-2 fw-bold text-success fs-6">{formatVND(row.netSalary)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                    <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                        <span className="text-secondary fw-medium small">Mức lương cơ sở</span>
-                        <span className="fw-bold text-dark">{baseSalaryDisplay}</span>
-                    </div>
-
-                    {isHourly ? (
-                        <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                            <span className="text-secondary fw-medium small">Tổng thời gian làm việc</span>
-                            <span className="fw-bold text-primary">{formatHours(row.totalHours)}</span>
+                    {penalties.length > 0 && (
+                        <div className="mb-3 border p-2 rounded-2" style={{ background: '#fffcf5', fontSize: '0.75rem' }}>
+                            <div className="fw-bold border-bottom pb-1 mb-1 text-warning-emphasis">
+                                Chi tiết vi phạm:
+                            </div>
+                            <ul className="m-0 ps-3" style={{ lineHeight: '1.4' }}>
+                                {penalties.map((p, i) => <li key={i}>{p}</li>)}
+                            </ul>
                         </div>
-                    ) : (
-                        <>
-                            <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <span className="text-secondary fw-medium small">Số ngày đi làm</span>
-                                <span className="fw-bold text-dark">{row.workingDays} ngày</span>
-                            </div>
-                            <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <span className="text-secondary fw-medium small">Tổng ngày trong tháng</span>
-                                <span className="fw-bold text-dark">{row.totalDaysInMonth} ngày</span>
-                            </div>
-                        </>
                     )}
 
-                    <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2 mt-3">
-                        <span className="text-secondary fw-medium small">Lương </span>
-                        <span className="fw-bold text-success">{formatVND(row.grossSalary)}</span>
-                    </div>
-
-                    <div className="mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
-                        <span className="text-secondary fw-medium small"> Phạt</span>
-                        <span className={`fw-bold ${row.deductions > 0 ? 'text-danger' : 'text-muted'}`}>
-                            {row.deductions > 0 ? `- ${formatVND(row.deductions)}` : '0 đ'}
-                        </span>
-                    </div>
-                    <ul className="mb-0 ps-3" style={{ listStyleType: 'disc', lineHeight: '1.6' }}>
-                        {row.penaltyDetails.split(' | ').map((errDetail, idx) => {
-                            if (!errDetail.trim()) return null;
-
-                            const humanText = translatePenalty(errDetail);
-
-                            return (
-                                <li key={idx} className="opacity-75 fw-medium">
-                                    {humanText}
-                                </li>
-                            )
-                        })}
-                    </ul>
-                    <div className="mt-4 p-3 rounded-4" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                        <div className="d-flex justify-content-between align-items-center">
-                            <span className="fw-bold text-success fs-6 text-uppercase">THỰC LĨNH</span>
-                            <span className="fw-bold text-success" style={{ fontSize: '1.4rem' }}>{formatVND(row.netSalary)}</span>
+                    <div className="row mt-4 text-center" style={{ fontSize: '0.75rem' }}>
+                        <div className="col-6">
+                            <p className="fw-bold mb-4 small">Người Nhận</p>
+                            <div className="mt-3 text-muted text-decoration-underline">(Ký tên)</div>
+                        </div>
+                        <div className="col-6">
+                            <p className="fw-bold mb-4 small">Xác Nhận Quản lý</p>
+                            <div className="mt-3 text-muted text-decoration-underline">(Ký tên)</div>
                         </div>
                     </div>
 
-                    {row.note && (
-                        <div className="alert alert-warning py-2 mt-3 small mb-0">
-                            <i className="bi bi-info-circle-fill me-2" />
-                            <strong>Ghi chú:</strong> {row.note}
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ padding: '16px 32px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '10px' }} onClick={onClose}>Đóng</button>
+                    <div className="text-center mt-4 no-print">
+                        <button className="btn btn-secondary btn-sm px-4 rounded-pill" onClick={onClose}>Đóng</button>
+                    </div>
                 </div>
             </div>
         </BaseModal>
