@@ -2,6 +2,9 @@ const sql = require("mssql");
 const { connectDB } = require("../config/database");
 const crypto = require("crypto")
 const invoiceModel = require("../models/invoice.model");
+const promotionModel = require("../models/promotion.model");
+const paymentModel = require("../models/payment.model")
+const returnModel = require("../models/return.model")
 
 const runInTransaction = async (callback) => {
     const pool = await connectDB();
@@ -70,16 +73,34 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
         await invoiceModel.updateInvoiceCode(transaction, invoiceId, invoiceCode);
 
         let totalAmount = 0;
+        let totalDiscount = 0;
+
 
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            const unitPrice = product.salePrice;
-            const lineTotal = unitPrice * item.quantity;
-            const baseQuantity = item.quantity * product.conversionFactor;
+            const discountData = await promotionModel.getDiscountByProduct({
+                productId: item.productId,
+                productUnitId: item.productUnitId
+            });
 
-            totalAmount += lineTotal;
+            let unitPrice = product.salePrice;
+            let itemDiscount = 0;
+
+            if (discountData && discountData.promotionId) {
+                if (discountData.discountPercent > 0) {
+                    itemDiscount = Math.round((unitPrice * discountData.discountPercent / 100) * 1000) / 1000;
+                } else if (discountData.discountAmount > 0) {
+                    itemDiscount = discountData.discountAmount;
+                }
+                unitPrice = Math.max(0, Math.round((unitPrice - itemDiscount) * 1000) / 1000);
+            }
+            const lineTotal = Math.round((unitPrice * item.quantity) * 1000) / 1000;
+            const baseQuantity = Math.round((item.quantity * product.conversionFactor) * 1000) / 1000;
+
+            totalAmount = Math.round((totalAmount + lineTotal) * 1000) / 1000;
+            totalDiscount = Math.round((totalDiscount + (itemDiscount * item.quantity)) * 1000) / 1000;
 
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId,
@@ -96,8 +117,12 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
 
         await invoiceModel.updateAmounts(transaction, invoiceId, {
             totalAmount,
-            finalAmount: totalAmount,
+            finalAmount: Math.round((totalAmount - totalDiscount) * 1000) / 1000,
         });
+
+        if (totalDiscount > 0) {
+            await invoiceModel.updateInvoiceDiscount(transaction, invoiceId, null, totalDiscount);
+        }
 
         return { id: invoiceId, invoiceCode };
     });
@@ -112,16 +137,16 @@ const updateInvoiceItems = async (id, { items }) => {
         await invoiceModel.deleteInvoiceItems(transaction, id);
 
         let totalAmount = 0;
-
+        let totalDiscount = 0;
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
 
-            const unitPrice = product.salePrice;
-            const lineTotal = unitPrice * item.quantity;
-            const baseQuantity = item.quantity * product.conversionFactor;
+            const unitPrice = item.unitPrice;
+            const lineTotal = Math.round((unitPrice * item.quantity) * 1000) / 1000;
+            const baseQuantity = Math.round((item.quantity * product.conversionFactor) * 1000) / 1000;
 
-            totalAmount += lineTotal;
+            totalAmount = Math.round((totalAmount + lineTotal) * 1000) / 1000;
             await invoiceModel.insertInvoiceItem(transaction, {
                 invoiceId: id,
                 productId: item.productId,
@@ -135,16 +160,37 @@ const updateInvoiceItems = async (id, { items }) => {
             });
 
         }
-
+        console.log(totalAmount)
         await invoiceModel.updateAmounts(transaction, id, {
             totalAmount,
-            finalAmount: totalAmount
+            finalAmount: Math.round((totalAmount - totalDiscount) * 1000) / 1000
         });
+
+        if (totalDiscount > 0) {
+            await invoiceModel.updateInvoiceDiscount(transaction, id, null, totalDiscount);
+        }
 
         return { updated: true };
 
     });
 
+};
+
+const getEditableInvoice = async (transaction, id) => {
+
+    const invoice = await invoiceModel.getInvoiceById(
+        transaction,
+        id,
+        { forUpdate: true }
+    );
+
+    if (!invoice)
+        throw new Error("Invoice not found");
+
+    if (["PAID", "CANCELLED"].includes(invoice.status))
+        throw new Error("Cannot update this invoice");
+
+    return invoice;
 };
 
 const cancelInvoice = async (id) => {
@@ -159,6 +205,16 @@ const cancelInvoice = async (id) => {
             "CANCELLED"
         );
 
+        const existingPayment = await invoiceModel.getPaymentByInvoiceId(transaction, id);
+
+        if (existingPayment) {
+            await paymentModel.updatePayment(transaction, {
+                invoiceId: id,
+                amount: existingPayment.amount,
+                paymentMethod: existingPayment.paymentMethod,
+                status: "CANCELLED",
+            });
+        }
         return { cancelled: true };
 
     });
@@ -170,9 +226,147 @@ const getDraftInvoices = async () => {
 };
 
 const getInvoiceDetail = async (id) => {
-    const invoice = await invoiceModel.getInvoiceDetail(id);
-    if (!invoice) throw new Error("Invoice not found");
-    return invoice;
+    // 1. Lấy invoice
+    const data = await invoiceModel.getInvoiceDetail(id);
+    if (!data) throw new Error("Invoice not found");
+
+    // 2. Lấy return
+    const returnRaw = await returnModel.getReturnsByInvoiceId(id);
+
+    // 3. Group returns
+    const returnMap = new Map();
+
+    for (const row of returnRaw) {
+        if (!returnMap.has(row.id)) {
+            returnMap.set(row.id, {
+                id: Number(row.id),
+                returnType: row.returnType,
+                refundMethod: row.refundMethod,
+                totalRefundAmount: Number(row.totalRefundAmount) || 0,
+                status: row.status?.toUpperCase(),
+                createdAt: row.createdAt,
+                items: []
+            });
+        }
+
+        if (row.returnItemId) {
+            returnMap.get(row.id).items.push({
+                id: Number(row.returnItemId),
+                invoiceItemId: Number(row.invoiceItemId),
+                productId: Number(row.productId),
+                productName: row.productName,
+                quantity: Number(row.quantity) || 0,
+                refundAmount: Number(row.refundAmount) || 0,
+                unitName: row.unitName,
+                productUnitId: Number(row.productUnitId),
+                baseQuantity: Number(row.baseQuantity) || 0,
+                restockApproved: row.restockApproved
+            });
+        }
+    }
+
+    const returns = Array.from(returnMap.values());
+
+    // 4. Map số lượng đã hoàn
+    const returnedMap = new Map();
+
+    returns.forEach(r => {
+        if (r.status !== "APPROVED") return;
+
+        r.items.forEach(i => {
+            const prev = returnedMap.get(i.invoiceItemId) || 0;
+            returnedMap.set(i.invoiceItemId, prev + i.quantity);
+        });
+    });
+
+    // 5. Tính discount ratio
+    const totalAmountRaw = data.items.reduce(
+        (sum, i) => sum + Number(i.lineTotal || 0),
+        0
+    );
+
+    const finalAmount = Number(data.finalAmount) || 0;
+
+    const totalDiscount = totalAmountRaw - finalAmount;
+
+    const discountRatio =
+        totalAmountRaw > 0 ? totalDiscount / totalAmountRaw : 0;
+
+    // 6. Mapping items
+    const items = data.items.map(item => {
+        const factor = Number(item.factor) || 1;
+        const quantity = Number(item.quantity) || 0;
+        const lineTotal = Number(item.lineTotal) || 0;
+
+        const returnedQty = returnedMap.get(item.id) || 0;
+
+        const discountedLineTotal = lineTotal * (1 - discountRatio);
+
+        const discountedUnitPrice =
+            quantity > 0 ? discountedLineTotal / quantity : 0;
+
+        return {
+            id: Number(item.id),
+            productId: Number(item.productId),
+            productUnitId: Number(item.productUnitId),
+
+            productName: item.productName,
+            code: item.code,
+
+            quantity,
+
+            unitPrice: Number(item.unitPrice) || 0,
+            discountedUnitPrice: Math.round(discountedUnitPrice),
+
+            lineTotal,
+            discountedLineTotal: Math.round(discountedLineTotal),
+
+            unitName: item.unitName,
+            factor,
+            unitType: item.unitType,
+
+            productStock: Number(item.quantityOnHand) || 0,
+            quantityOnHand: (Number(item.quantityOnHand) || 0) / factor,
+            returnedQuantity: returnedQty,
+            remainingQuantity: quantity - returnedQty
+        };
+    });
+
+    // 7. Tổng tiền (chuẩn hóa lại)
+    const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+
+    const totalRefund = returns.reduce((sum, r) => {
+        if (r.status !== "APPROVED") return sum;
+        return sum + r.totalRefundAmount;
+    }, 0);
+
+    const safeRefund = Math.min(totalRefund, finalAmount);
+
+    // 8. Final response
+    return {
+        id: Number(data.id),
+        invoiceCode: data.invoiceCode,
+        createdAt: data.createdAt,
+
+        status: data.status,
+
+        customerId: data.customerId ? Number(data.customerId) : null,
+        customerName: data.customerName,
+        customerPoints: data.loyaltyPoints,
+        customerPhone: data.phone,
+
+        staffName: data.staffName,
+        counterName: data.counterName,
+
+        totalAmount,
+        finalAmount,
+
+        totalDiscount,
+        totalRefund: safeRefund,
+
+        items,
+        returns
+    };
 };
 
 const updateInvoiceCustomer = async (
@@ -224,31 +418,18 @@ const updateInvoiceCustomer = async (
 const syncCounter = async (userId, configCounterId) => {
     const data = await invoiceModel.getStaffAndSchedule(userId);
     if (!data)
-         throw new Error("Tài khoản chưa được liên kết với nhân viên!");
-    const { staffId,roleName, schedule } = data;
+        throw new Error("Tài khoản chưa được liên kết với nhân viên!");
+    const { staffId, roleName, schedule } = data;
 
-    if (schedule) {
-        if (schedule.counterId !== null && 
-            String(schedule.counterId) !== String(configCounterId)) {
-            const machineName = await invoiceModel.getCounterName(configCounterId);
-            const assignedName = schedule.counterName || `Quầy khác`;
-            
-            const err = new Error(`
-                Bạn được phân công làm việc tại "${assignedName}"
-                . Không thể bán hàng tại máy của "${machineName}"!`);
-            err.statusCode = 400; 
-            throw err; 
-        }
-        
-        await invoiceModel.checkInSchedule(schedule.id);
-    } else {
-        if (roleName === 'Cashier') {
-            const err = new Error("Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!");
-            err.statusCode = 400;
-            throw err;
-        }
-        const machineName = await invoiceModel.getCounterName(configCounterId);
-        await invoiceModel.createManagerSchedule(staffId, configCounterId, machineName);
+    if (roleName === 'Manager') {
+        return { staffId, counterId: configCounterId };
+    }
+
+    if (!schedule || schedule.status !== 'working') {
+        const err = new
+            Error("Bạn chưa nhận ca ngày hôm nay! Vui lòng vào 'Lịch của tôi' để nhận ca trước khi bán hàng.");
+        err.statusCode = 400;
+        throw err;
     }
 
     return { staffId, counterId: configCounterId };

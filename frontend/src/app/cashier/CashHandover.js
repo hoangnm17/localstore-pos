@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BaseModal from '../../components/common/BaseModal';
 import AlertMessage from '../../components/common/AlertMessage';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
-import api from '../../services/axiosInstance';
+import { getPendingShifts, getSystemCash, submitHandover } from '../../services/Cashier/cashier.service';
 
 const formatVND = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "0";
 const parseVND = (str) => Number(str.toString().replace(/[^0-9]/g, ''));
@@ -11,13 +11,15 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
     const { showNotification } = useNotification();
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-    
+
     const [pendingShifts, setPendingShifts] = useState([]);
     const [selectedScheduleId, setSelectedScheduleId] = useState('');
-    
-    const [openingCash, setOpeningCash] = useState(0); 
-    const [systemCash, setSystemCash] = useState(0);
-    const [actualCash, setActualCash] = useState(''); 
+
+    const [openingCash, setOpeningCash] = useState(0);
+    const [systemCash, setSystemCash] = useState(0); // Net = sales - return
+    const [salesCash, setSalesCash] = useState(0);
+    const [returnCash, setReturnCash] = useState(0);
+    const [actualCash, setActualCash] = useState('');
     const [note, setNote] = useState('');
 
     const tongTien = openingCash + systemCash;
@@ -27,10 +29,9 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
     useEffect(() => {
         const fetchPending = async () => {
             try {
-                const res = await api.get(`/cashier/handover/pending?workDate=${todayStr}`);
-                const isSuccess = res.data?.success ?? res.success;
-                if (isSuccess) {
-                    const shifts = res.data?.data || res.data;
+                const res = await getPendingShifts(todayStr);
+                if (res?.success) {
+                    const shifts = res.data || [];
                     setPendingShifts(shifts);
                     if (shifts.length > 0) setSelectedScheduleId(shifts[0].scheduleId);
                 }
@@ -41,20 +42,26 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
 
     useEffect(() => {
         if (!selectedScheduleId) { setSystemCash(0); return; }
-        
+        const selectedShift = pendingShifts.find(s => String(s.scheduleId) === String(selectedScheduleId));
+        if (selectedShift) {
+            setOpeningCash(selectedShift.openingCash || 0);
+        }
         const fetchSystemCash = async () => {
             setLoading(true);
             try {
-                const res = await api.get(`/cashier/handover/system-cash?scheduleId=${selectedScheduleId}`);
-                const isSuccess = res.data?.success ?? res.success;
-                if (isSuccess) {
-                    setSystemCash(res.data?.data?.systemCash || 0);
+                const res = await getSystemCash(selectedScheduleId);
+                if (res?.success) {
+                    const data = res.data?.systemCash || {};
+                    setSalesCash(data.salesCash || 0);
+                    setReturnCash(data.returnCash || 0);
+                    setSystemCash(data.netSystemCash || 0);
+                    if (data.openingCash !== undefined) setOpeningCash(data.openingCash);
                 }
-            } catch (err) { setErrorMsg('Lỗi tính toán doanh thu hệ thống!'); }
+            } catch { setErrorMsg('Lỗi tính toán doanh thu hệ thống!'); }
             finally { setLoading(false); }
         };
         fetchSystemCash();
-    }, [selectedScheduleId]);
+    }, [selectedScheduleId, pendingShifts]);
 
     const handleInput = (e, setter) => {
         const val = e.target.value;
@@ -67,27 +74,31 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
         e.preventDefault();
         if (!selectedScheduleId) return setErrorMsg('Vui lòng chọn ca cần kết!');
         if (actualCash === '') return setErrorMsg('Vui lòng nhập số tiền thực đếm trong két!');
-        
+        if (chenhLech < 0 && !note.trim()) return setErrorMsg('Vui lòng ghi lý do thất thoát!');
+
         setLoading(true);
         setErrorMsg('');
         try {
-            const res = await api.post('/cashier/handover', {
+            const res = await submitHandover({
                 scheduleId: selectedScheduleId,
                 openingCash, systemCash, actualCash: actualCashNum, note
             });
-            const isSuccess = res.data?.success ?? res.success;
-            if (isSuccess) {
+            if (res?.success) {
                 showNotification('Kết ca và bàn giao thành công!', 'success');
+                const penalty = res.data?.penalty || 0;
+                if (penalty > 0) {
+                    showNotification(`Cảnh báo: Bạn bị phạt ${penalty.toLocaleString('vi-VN')}đ do không tuân thủ giờ kết ca!`, 'warning');
+                }
                 onSuccess();
             } else {
-                setErrorMsg(res.data?.message || res.message || 'Lỗi kết ca!');
+                setErrorMsg(res?.message || 'Lỗi kết ca!');
             }
         } catch (err) {
-            setErrorMsg(err.response?.data?.message || 'Lỗi kết nối server!');
+            setErrorMsg(err.message || 'Lỗi kết nối server!');
         } finally { setLoading(false); }
     };
 
-    const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff', height: '100%' };
+    const leftStyle = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff', height: '100%' };
     const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0', height: '100%' };
 
     return (
@@ -118,7 +129,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     <h6 className="fw-bold text-primary mb-3">
                                         <i className="bi bi-info-circle-fill me-2" />Thông Tin Ca Làm
                                     </h6>
-                                    
+
                                     <div className="mb-3">
                                         <label className="small fw-bold text-secondary mb-1">Ngày làm việc</label>
                                         <div className="form-control bg-white fw-bold">
@@ -135,7 +146,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
 
                                     <div className="mb-3">
                                         <label className="small fw-bold text-secondary mb-1">Ca cần bàn giao <span className="text-danger">*</span></label>
-                                        <select className="form-select border-primary fw-bold" 
+                                        <select className="form-select border-primary fw-bold"
                                             value={selectedScheduleId} onChange={e => setSelectedScheduleId(e.target.value)}>
                                             {pendingShifts.length === 0 && <option value="">-- Hết ca cần bàn giao --</option>}
                                             {pendingShifts.map(s => (
@@ -145,11 +156,13 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                             ))}
                                         </select>
                                     </div>
-                                    
+
                                     {selectedScheduleId && (
                                         <div className="alert alert-info py-2 small mb-0 mt-3 border-0">
-                                            <i className="bi bi-shop me-2" />
-                                            Quầy: <strong>{pendingShifts.find(s => s.scheduleId === selectedScheduleId)?.counterName}</strong>
+                                            <i className="bi bi-clock me-2" />
+                                            Ca: <strong>
+                                                {pendingShifts.find(s => String(s.scheduleId) === String(selectedScheduleId))?.shiftName}
+                                            </strong>
                                         </div>
                                     )}
                                 </div>
@@ -165,17 +178,26 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     <div className="d-flex justify-content-between align-items-center mb-2">
                                         <span className="fw-bold text-secondary small">1. Tiền lẻ đầu ca</span>
                                         <div className="input-group input-group-sm" style={{ width: '180px' }}>
-                                            <input type="text" className="form-control text-end fw-bold" 
-                                                value={formatVND(openingCash)} onChange={e => handleInput(e, setOpeningCash)} />
+                                            <input type="text" className="form-control text-end fw-bold"
+                                                value={formatVND(openingCash)} disabled />
                                             <span className="input-group-text bg-white text-muted">VNĐ</span>
                                         </div>
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <span className="fw-bold text-secondary small">2. Hệ thống thu (Tiền mặt)</span>
+                                        <span className="fw-bold text-secondary small">2. Doanh thu bán hàng</span>
                                         <div className="input-group input-group-sm" style={{ width: '180px' }}>
-                                            <input type="text" className="form-control text-end fw-bold bg-white text-primary" 
-                                                value={formatVND(systemCash)} disabled />
+                                            <input type="text" className="form-control text-end fw-bold bg-white text-primary"
+                                                value={formatVND(salesCash)} disabled />
+                                            <span className="input-group-text bg-white text-muted">VNĐ</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <span className="fw-bold text-secondary small">3. Tiền hoàn trả khách</span>
+                                        <div className="input-group input-group-sm" style={{ width: '180px' }}>
+                                            <input type="text" className="form-control text-end fw-bold bg-white text-danger"
+                                                value={`-${formatVND(returnCash)}`} disabled />
                                             <span className="input-group-text bg-white text-muted">VNĐ</span>
                                         </div>
                                     </div>
@@ -183,7 +205,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     <hr className="my-3 border-success" style={{ opacity: 0.2 }} />
 
                                     <div className="d-flex justify-content-between align-items-center mb-4 p-2 bg-success-subtle rounded-3 border border-success border-opacity-25">
-                                        <span className="fw-bold text-success ms-1">TỔNG CẦN CÓ (1+2)</span>
+                                        <span className="fw-bold text-success ms-1">TỔNG</span>
                                         <span className="fw-bold text-success fs-5 me-1">{formatVND(tongTien)} VNĐ</span>
                                     </div>
 
@@ -191,7 +213,7 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                         <div className="col-7">
                                             <label className="small fw-bold mb-1">Tiền thực đếm trong két <span className="text-danger">*</span></label>
                                             <div className="input-group">
-                                                <input type="text" className="form-control text-end fw-bold text-primary fs-6" 
+                                                <input type="text" className="form-control text-end fw-bold text-primary fs-6"
                                                     placeholder="0" value={formatVND(actualCash)} onChange={e => handleInput(e, setActualCash)} />
                                                 <span className="input-group-text bg-white">VNĐ</span>
                                             </div>
@@ -199,14 +221,14 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                         <div className="col-5">
                                             <label className="small fw-bold mb-1">Chênh lệch</label>
                                             <div className="input-group">
-                                                <input type="text" className={`form-control text-end fw-bold fs-6 bg-white ${chenhLech < 0 ? 'text-danger' : chenhLech > 0 ? 'text-warning' : 'text-success'}`} 
+                                                <input type="text" className={`form-control text-end fw-bold fs-6 bg-white ${chenhLech < 0 ? 'text-danger' : chenhLech > 0 ? 'text-warning' : 'text-success'}`}
                                                     value={(chenhLech > 0 ? '+' : '') + formatVND(chenhLech)} disabled />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do (Bắt buộc nếu có chênh lệch)..." 
+                                        <input type="text" className="form-control form-control-sm" placeholder="Ghi chú lý do"
                                             value={note} onChange={e => setNote(e.target.value)} />
                                     </div>
 
@@ -223,8 +245,8 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                         <button type="submit" className="btn text-white px-4 fw-bold"
                             style={{ background: 'linear-gradient(135deg, #0ea5e9, #3b82f6)', border: 'none', borderRadius: '12px' }}
                             disabled={loading || pendingShifts.length === 0}>
-                            {loading 
-                                ? <><span className="spinner-border spinner-border-sm me-2"/> Đang lưu...</> 
+                            {loading
+                                ? <><span className="spinner-border spinner-border-sm me-2" /> Đang lưu...</>
                                 : <><i className="bi bi-check-circle-fill me-2" /> Hoàn Tất Bàn Giao</>
                             }
                         </button>

@@ -39,7 +39,7 @@ const getAllInvoice = async (req, res) => {
     const limit = Number(pageSize) > 0 ? Number(pageSize) : 10;
     const cleanInvoiceCode = invoiceCode?.trim();
 
-    const allowedStatus = ["UNPAID", "PAID", "CANCELLED"];
+    const allowedStatus = ["UNPAID", "PAID", "CANCELLED", "PENDING"];
     const cleanStatus = status?.trim();
 
     if (cleanStatus && !allowedStatus.includes(cleanStatus)) {
@@ -68,34 +68,22 @@ const getAllInvoice = async (req, res) => {
 
 const createInvoice = async (req, res) => {
   try {
-    const staffId = req.user?.id;
-    const counterId = req.user?.counterId;
+    const userId = req.user?.id;
+    if (!userId) 
+      return res.status(401).json({ 
+    success: false, 
+    message: "Unauthorized" 
+  });
 
-    if (!staffId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    if (!counterId) {
-      return res.status(500).json({
-        success: false,
-        message: "Missing Counter",
-      })
-    }
+    const { staffId } = await invoiceService.syncCounter(userId, COUNTER_ID);
 
     const result = await invoiceService.createInvoice({
       ...req.body,
       staffId,
-      counterId,
+      counterId: COUNTER_ID,
     });
 
-    return res.status(201).json({
-      success: true,
-      data: result,
-    });
-
+    return res.status(201).json({ success: true, data: result });
   } catch (err) {
     return handleError(res, err);
   }

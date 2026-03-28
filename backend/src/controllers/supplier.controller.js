@@ -139,13 +139,13 @@ const addProductToSupplier = async (req, res) => {
         console.error(err);
         if (err.message === "PRODUCT_UNIT_PRICE_REQUIRED")
             return res.status(400).json({
-                success:false,
-                message:"Product, unit and price are required"
+                success: false,
+                message: "Product, unit and price are required"
             });
 
         return res.status(500).json({
-            success:false,
-            message:"Internal server error"
+            success: false,
+            message: "Internal server error"
         });
     }
 };
@@ -161,6 +161,12 @@ const createSupplier = async (req, res) => {
         });
 
     } catch (err) {
+
+        if (err.message === "SUPPLIER_ALREADY_EXISTS")
+            return res.status(400).json({
+                success: false,
+                message: "Nhà cung cấp đã tồn tại"
+            });
 
         if (err.message === "SUPPLIER_NAME_REQUIRED")
             return res.status(400).json({
@@ -198,13 +204,13 @@ const updateProductOfSupplier = async (req, res) => {
 
         if (err.message === "PRICE_AND_UNIT_REQUIRED")
             return res.status(400).json({
-                success:false,
-                message:"Price and unit are required"
+                success: false,
+                message: "Price and unit are required"
             });
 
         return res.status(500).json({
-            success:false,
-            message:"Internal server error"
+            success: false,
+            message: "Internal server error"
         });
     }
 };
@@ -225,6 +231,12 @@ const updateSupplier = async (req, res) => {
         });
 
     } catch (err) {
+
+        if (err.message === "SUPPLIER_ALREADY_EXISTS")
+            return res.status(400).json({
+                success: false,
+                message: "Nhà cung cấp đã tồn tại"
+            });
 
         if (err.message === "SUPPLIER_ID_REQUIRED")
             return res.status(400).json({ success: false, message: "Supplier ID is required" });

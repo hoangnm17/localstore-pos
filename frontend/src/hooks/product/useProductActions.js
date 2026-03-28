@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
     addComboItem,
+    assembleCombo,
     createProduct,
     createProductUnit,
     deleteProductUnit,
@@ -9,6 +10,7 @@ import {
     removeComboItem,
     startSellingProduct,
     stopSellingProduct,
+    updateComboStock,
     updateProduct,
     updateProductUnit
 } from '../../services/Product/product.service';
@@ -101,7 +103,7 @@ function useProductActions({
             setProductFormState({
                 open: true,
                 mode: 'edit',
-                productType: product.isCombo ? 'combo' : 'regular',
+                productType: product.isCombo ? 'combo' : 'thường',
                 product: {
                     ...product,
                     comboItems
@@ -140,12 +142,19 @@ function useProductActions({
 
             if (productFormState.mode === 'create') {
                 const response = await createProduct(basicPayload);
-                createdProductId = response.data?.id;
+
+                if (response.data?.success === false) {
+                    throw new Error(response.data?.message || 'Tạo sản phẩm thất bại.');
+                }
+
+                createdProductId = response.data?.data?.id ?? response.data?.id;
 
                 if (payload.isCombo && desiredComboItems.length > 0) {
                     await syncComboItems(createdProductId, [], desiredComboItems);
                 }
-
+                if (payload.isCombo && Number(payload.initialStock) > 0) {
+                    await assembleCombo(createdProductId, Number(payload.initialStock));
+                }
                 closeProductFormModal();
                 await loadProducts();
 
@@ -160,12 +169,20 @@ function useProductActions({
             const editingProductId = productFormState.product.id;
             const currentComboItems = productFormState.product?.comboItems || [];
 
-            await updateProduct(editingProductId, basicPayload);
+            const updateResponse = await updateProduct(editingProductId, basicPayload);
+            if (updateResponse.data?.success === false) {
+                throw new Error(updateResponse.data?.message || 'Cập nhật sản phẩm thất bại.');
+            }
 
             if (payload.isCombo) {
                 await syncComboItems(editingProductId, currentComboItems, desiredComboItems);
             }
-
+            if (payload.isCombo && payload.correctedStock !== null && payload.correctedStock >= 0) {
+                await updateComboStock(editingProductId, payload.correctedStock);
+            }
+            if (payload.isCombo && Number(payload.initialStock) > 0) {
+                await assembleCombo(editingProductId, Number(payload.initialStock));
+            }
             closeProductFormModal();
             await loadProducts();
 
@@ -186,7 +203,7 @@ function useProductActions({
                 return;
             }
 
-            showNotification(error.response?.data?.message || 'Lưu sản phẩm thất bại.', 'error');
+            showNotification(error.response?.data?.message || error.message || 'Lưu sản phẩm thất bại.', 'error');
         } finally {
             setSubmitLoading(false);
         }
@@ -220,12 +237,10 @@ function useProductActions({
     const handleSaveUnit = async (payload) => {
         try {
             setSubmitLoading(true);
-            let response;
-
             if (unitModalState.mode === 'create') {
-                response = await createProductUnit(payload);
+                await createProductUnit(payload);
             } else {
-                response = await updateProductUnit(unitModalState.unit.id, payload);
+                await updateProductUnit(unitModalState.unit.id, payload);
             }
             showNotification(
                 unitModalState.mode === 'create'

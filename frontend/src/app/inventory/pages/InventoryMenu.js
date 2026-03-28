@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import useTitle from "../../../hooks/common/useTitle";
 
 function InventoryMenu() {
+  useTitle("Menu quản lý kho hàng");
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
   const navigateToStatus = (status) => {
@@ -150,9 +152,9 @@ function InventoryMenu() {
                 <div className="bg-warning bg-gradient text-white rounded-circle p-5 mb-4 shadow">
                   <i className="bi bi-exclamation-triangle fs-2"></i>
                 </div>
-                <h4 className="card-title fw-bold mb-3 text-dark">Lỗi nhập hàng</h4>
+                <h4 className="card-title fw-bold mb-3 text-dark">Vấn đề của kho</h4>
                 <p className="card-text text-muted mb-4 fs-5">
-                  Ghi nhận và xử lý các sai lệch khi nhập kho
+                  Ghi nhận các vấn đề của kho
                 </p>
               </div>
               <div className="card-footer bg-transparent border-0 pb-5 pt-0">
@@ -166,49 +168,69 @@ function InventoryMenu() {
         </div>
       </div>
       {showModal && (
-        <div className="modal fade show d-block" tabIndex="-1">
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 shadow">
-              <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold">
-                  Chọn trạng thái đơn điều chỉnh
+            <div className="modal-content border-0 shadow-lg rounded-4">
+
+              {/* Header với nền nhẹ */}
+              <div className="modal-header border-0 bg-light rounded-top-4 px-4 pt-4">
+                <h5 className="modal-title fw-bold text-dark">
+                  <i className="bi bi-layers-half me-2 text-primary"></i>
+                  Quản lý Đơn Điều Chỉnh
                 </h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close shadow-none"
                   onClick={() => setShowModal(false)}
                 ></button>
               </div>
 
-              <div className="modal-body text-center pb-4">
-                <div className="d-grid gap-3">
+              <div className="modal-body px-4 pb-4">
+                <p className="text-muted small mb-4">Vui lòng chọn trạng thái bạn muốn xem hoặc tạo đơn mới.</p>
 
-                  <button
-                    className="btn btn-warning btn-lg rounded-pill"
-                    onClick={() => navigateToStatus("Pending")}
-                  >
-                    Chờ xử lý
-                  </button>
+                <div className="d-grid gap-2">
 
-                  <button
-                    className="btn btn-success btn-lg rounded-pill"
-                    onClick={() => navigateToStatus("Approved")}
-                  >
-                    Đã duyệt
-                  </button>
+                  {/* Group: Bộ lọc trạng thái */}
+                  <div className="row g-2 mb-2">
+                    <div className="col-12">
+                      <button
+                        className="btn btn-outline-warning w-100 py-3 rounded-3 d-flex align-items-center justify-content-between px-4 border-2 fw-semibold"
+                        onClick={() => navigateToStatus("Pending")}
+                      >
+                        <span><i className="bi bi-clock-history me-2"></i> Chờ xử lý</span>
+                        <i className="bi bi-chevron-right opacity-50"></i>
+                      </button>
+                    </div>
 
-                  <button
-                    className="btn btn-danger btn-lg rounded-pill"
-                    onClick={() => navigateToStatus("Rejected")}
-                  >
-                    Từ chối
-                  </button>
+                    <div className="col-6">
+                      <button
+                        className="btn btn-outline-success w-100 py-3 rounded-3 fw-semibold border-2"
+                        onClick={() => navigateToStatus("Approved")}
+                      >
+                        <i className="bi bi-check2-circle me-1"></i> Đã duyệt
+                      </button>
+                    </div>
 
+                    <div className="col-6">
+                      <button
+                        className="btn btn-outline-danger w-100 py-3 rounded-3 fw-semibold border-2"
+                        onClick={() => navigateToStatus("Rejected")}
+                      >
+                        <i className="bi bi-x-circle me-1"></i> Từ chối
+                      </button>
+                    </div>
+                  </div>
+
+                  <hr className="my-3 opacity-10" />
+
+                  {/* Action: Tạo đơn mới - Nổi bật nhất */}
                   <button
-                    className="btn btn-primary btn-lg rounded-pill"
+                    className="btn btn-primary btn-lg py-3 rounded-3 shadow-sm fw-bold d-flex align-items-center justify-content-center border-0"
+                    style={{ background: 'linear-gradient(45deg, #0d6efd, #0b5ed7)' }}
                     onClick={() => navigate("/inventory/requests/adjust/create")}
                   >
-                    Tạo đơn
+                    <i className="bi bi-plus-lg me-2"></i>
+                    TẠO ĐƠN MỚI
                   </button>
 
                 </div>

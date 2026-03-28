@@ -14,7 +14,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                             onClick={() => handleChange('saleMode', 'piece')}
                         >
                             <i className="bi bi-tag me-2" />
-                            Bán theo piece
+                            Bán theo số lượng
                         </button>
                     </div>
 
@@ -45,7 +45,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
             {/* Giá bán + ngưỡng tồn */}
             <div className="row g-3 mb-4">
                 <div className="col-md-6">
-                    <label className="form-label fw-semibold">Giá bán base unit<span className="text-danger">*</span></label>
+                    <label className="form-label fw-semibold">Giá bán base đơn vị cơ bản<span className="text-danger">*</span></label>
                     <input
                         className={`form-control ${errors.salePrice ? 'is-invalid' : ''}`}
                         type="number"

@@ -23,27 +23,35 @@ exports.getCustomers = async (filters) => {
 
     let query = `
         SELECT
-            id,
-            phone,
-            name,
-            loyaltyPoints,
-            totalSpending,
-            status,
-            createdAt,
-            updatedAt
-        FROM Customers
+            c.id,
+            c.phone,
+            c.name,
+            c.loyaltyPoints,
+            c.status,
+            c.createdAt,
+            c.updatedAt,
+            -- Tính tổng tiền từ các hóa đơn đã thanh toán (PAID) thực tế
+            ISNULL(SUM(CASE WHEN i.status = 'PAID' THEN i.finalAmount ELSE 0 END), 0) AS totalSpending
+        FROM Customers c
+        LEFT JOIN Invoices i ON c.id = i.customerId
         WHERE 1=1
     `;
 
+
     if (status) {
-        query += ` AND status = @status`;
+        query += ` AND c.status = @status`; // Thêm c.
     }
 
     if (search) {
-        query += ` AND (name LIKE @search OR phone LIKE @search)`;
+        query += ` AND (c.name LIKE @search OR c.phone LIKE @search)`; // Thêm c.
     }
 
-    query += ` ORDER BY createdAt DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+
+
+    query += ` GROUP BY c.id, c.phone, c.name, c.loyaltyPoints, c.status, c.createdAt, c.updatedAt `;
+
+    query += ` ORDER BY c.createdAt DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+
 
     const request = pool.request()
         .input('limit', sql.Int, limit)

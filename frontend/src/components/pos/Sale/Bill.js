@@ -1,204 +1,137 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import BaseModal from "components/common/BaseModal";
 import { formatCurrency } from "utils/formatters";
 
-export default function BillModal({ invoice, onClose }) {
-  const printRef = useRef();
-
+export default function BillModal({ invoice, onClose, autoPrint = false }) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.print();
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+    if (autoPrint && invoice) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint, invoice]);
 
   if (!invoice) return null;
 
+  // Tính toán số tiền giảm giá
+  const discountAmount = (invoice.totalAmount || 0) - (invoice.finalAmount || 0);
+
   return (
-    <BaseModal onClose={onClose} maxWidth="500px">
+    <BaseModal onClose={onClose} maxWidth="420px">
       <style>{`
-        .bill-wrapper {
-          background-color: #f8f9fa;
-          padding: 20px;
-          border-radius: 16px;
-        }
-        .bill-paper {
-          background: #ffffff;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-          padding: 40px 30px;
-          position: relative;
-          color: #2d3436;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        /* Hiệu ứng răng cưa giả ở đáy hóa đơn */
-        .bill-paper::after {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 10px;
-          background: linear-gradient(-45deg, #f8f9fa 5px, transparent 0), 
-                      linear-gradient(45deg, #f8f9fa 5px, transparent 0);
-          background-size: 10px 10px;
-        }
-        .bill-header-title {
-          font-size: 1.6rem;
-          font-weight: 800;
-          letter-spacing: -0.5px;
-          color: #000;
-        }
-        .dashed-line {
-          border-top: 2px dashed #dfe6e9;
-          margin: 20px 0;
-        }
-        .item-row td {
-          padding: 12px 0;
-          vertical-align: top;
-        }
-        .product-name {
-          font-size: 1.1rem;
-          font-weight: 600;
-          display: block;
-          margin-bottom: 2px;
-        }
-        .total-section {
-          background-color: #f1f2f6;
-          border-radius: 12px;
-          padding: 20px;
-        }
-        .qr-placeholder {
-          width: 120px;
-          height: 120px;
-          background: #fff;
-          border: 1px solid #eee;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto;
-          border-radius: 8px;
-        }
         @media print {
+          @page { margin: 0; size: 80mm auto; }
+          body { margin: 0; padding: 0; background: #fff; }
+          .d-print-none { display: none !important; }
           body * { visibility: hidden; }
           .bill-paper, .bill-paper * { visibility: visible; }
           .bill-paper {
-            position: absolute;
-            left: 0; top: 0; width: 100%;
-            box-shadow: none;
-            padding: 0;
+            position: absolute; left: 0; top: 0;
+            width: 80mm; padding: 4mm 6mm;
+            box-shadow: none !important;
           }
-          .d-print-none { display: none !important; }
         }
+        .bill-wrapper { background-color: #f0f2f5; padding: 20px 10px; display: flex; justify-content: center; }
+        .bill-paper {
+          background: #fff; width: 80mm; padding: 20px; color: #000;
+          font-family: "Inter", sans-serif; font-size: 12px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .divider { border-top: 1px dashed #000; margin: 12px 0; }
+        .customer-section { background: #f9f9f9; padding: 8px; border-radius: 4px; margin: 10px 0; border: 0.5px solid #eee; }
+        .item-table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+        .item-table th { text-align: left; font-size: 10px; border-bottom: 1px solid #000; padding-bottom: 5px; }
+        .grand-total { font-size: 16px; font-weight: bold; margin-top: 8px; padding-top: 8px; border-top: 1.5px solid #000; }
+        .discount-row { color: #000; font-style: italic; }
       `}</style>
 
       <div className="bill-wrapper">
-        <div ref={printRef} className="bill-paper">
-          
-          {/* Header */}
-          <div className="text-center mb-4">
-            <div className="bill-header-title mb-1 text-uppercase">Cửa hàng đẳng cấp</div>
-            <div className="text-muted small">Địa chỉ: 123 Đường ABC, Quận 1, TP. HCM</div>
-            <div className="text-muted small">Hotline: 0901.234.567</div>
+        <div className="bill-paper">
+          <div className="text-center">
+            <div className="fw-bold" style={{fontSize: '18px'}}>CỬA HÀNG TIỆN LỢI</div>
+            <div style={{fontSize: '10px'}}>120 Yên Lãng, Đống Đa, Hà Nội</div>
+            <div style={{fontSize: '10px'}}>Hotline: 0666666666</div>
           </div>
 
-          <div className="text-center mb-4">
-            <h4 className="fw-bold m-0">HÓA ĐƠN BÁN LẺ</h4>
-            <div className="badge bg-light text-dark border mt-2 px-3 py-2">
-              SỐ: {invoice.invoiceCode || "HD-000123"}
-            </div>
+          <div className="divider"></div>
+
+          <div className="text-center mb-3">
+            <div className="fw-bold" style={{fontSize: '14px'}}>HÓA ĐƠN BÁN LẺ</div>
+            <div style={{fontSize: '11px'}}>Mã: {invoice.invoiceCode}</div>
           </div>
 
-          {/* Thông tin khách/nhân viên */}
-          <div className="row g-3 mb-2 small">
-            <div className="col-7">
-              <div className="text-muted">Ngày lập:</div>
-              <div className="fw-bold">{new Date(invoice.createdAt).toLocaleString("vi-VN")}</div>
-            </div>
-            <div className="col-5 text-end">
-              <div className="text-muted">Thu ngân:</div>
-              <div className="fw-bold">{invoice.staffName}</div>
-            </div>
+          <div className="small d-flex justify-content-between">
+            <span>Ngày: <b>{new Date(invoice.createdAt.replace('Z', '')).toLocaleDateString("vi-VN")}</b></span>
+            <span>Giờ: <b>{new Date(invoice.createdAt.replace('Z', '')).toLocaleTimeString("vi-VN", {hour:'2-digit', minute:'2-digit'})}</b></span>
           </div>
 
-          <div className="dashed-line"></div>
+          <div className="customer-section">
+            <div style={{fontSize: '10px', color: '#666'}}>Khách hàng:</div>
+            <div className="fw-bold">{invoice.customerName || "Khách lẻ"}</div>
+            {invoice.customerPhone && <div className="small">{invoice.customerPhone}</div>}
+            <div style={{fontSize: '9px', marginTop: '4px'}}>Thu ngân: {invoice.staffName}</div>
+          </div>
 
-          {/* Danh sách sản phẩm */}
-          <table className="w-100 mb-4">
+          <table className="item-table">
             <thead>
-              <tr className="text-muted small text-uppercase">
-                <th className="pb-2">Mặt hàng</th>
-                <th className="pb-2 text-center">SL</th>
-                <th className="pb-2 text-end">Thành tiền</th>
+              <tr>
+                <th>Sản phẩm</th>
+                <th className="text-center">ĐVT</th>
+                <th className="text-center">SL</th>
+                <th className="text-end">T.Tiền</th>
               </tr>
             </thead>
             <tbody>
-              {invoice.items?.map((item) => (
-                <tr key={item.id} className="item-row border-bottom-0">
-                  <td>
-                    <span className="product-name">{item.productName}</span>
-                    <span className="text-muted small">
-                      {formatCurrency(item.unitPrice)} / {item.unitName}
-                    </span>
+              {invoice.items?.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="py-2">
+                    <div className="fw-bold">{item.productName}</div>
+                    <div style={{fontSize: '10px'}}>{formatCurrency(item.unitPrice)}</div>
                   </td>
-                  <td className="text-center fw-bold">x{item.quantity}</td>
-                  <td className="text-end fw-bold">
-                    {formatCurrency(item.lineTotal)}
+                  <td className="text-center" style={{ fontSize: '11px' }}>
+                    {item.unitName || item.unit || "Cái"} 
                   </td>
+                  <td className="text-center">{item.quantity}</td>
+                  <td className="text-end fw-bold">{formatCurrency(item.lineTotal)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="dashed-line"></div>
+          <div className="divider"></div>
 
-          {/* Phần thanh toán */}
-          <div className="total-section mb-4">
-            <div className="d-flex justify-content-between mb-2">
-              <span className="text-muted">Tổng tiền hàng:</span>
-              <span className="fw-medium">{formatCurrency(invoice.totalAmount || invoice.finalAmount)}</span>
-            </div>
-            <div className="d-flex justify-content-between mb-2 text-danger">
-              <span className="">Chiết khấu:</span>
-              <span>- 0đ</span>
-            </div>
-            <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary border-opacity-10">
-              <span className="fw-bold h5 mb-0 text-uppercase">Tổng cộng:</span>
-              <span className="h3 mb-0 fw-bolder text-primary">
-                {formatCurrency(invoice.finalAmount)}
-              </span>
-            </div>
+          {/* CHI TIẾT THANH TOÁN */}
+          <div className="d-flex justify-content-between mb-1">
+            <span>Tiền hàng:</span>
+            <span>{formatCurrency(invoice.totalAmount)}</span>
           </div>
 
-          {/* Footer & QR */}
-          <div className="text-center mt-5">
-            <div className="qr-placeholder mb-3">
-              <div className="text-center">
-                <div style={{fontSize: '10px', color: '#999'}}>QUÉT MÃ</div>
-                <div style={{fontSize: '12px', fontWeight: 'bold'}}>THANH TOÁN</div>
-              </div>
+          {/* CHỈ HIỆN NẾU CÓ GIẢM GIÁ */}
+          {discountAmount > 0 && (
+            <div className="d-flex justify-content-between mb-1 discount-row">
+              <span>Chiết khấu:</span>
+              <span>-{formatCurrency(discountAmount)}</span>
             </div>
-            <p className="fw-bold mb-1" style={{fontSize: '1.1rem'}}>CẢM ƠN QUÝ KHÁCH!</p>
-            <p className="text-muted small">Hẹn gặp lại quý khách lần sau</p>
+          )}
+
+          <div className="d-flex justify-content-between grand-total">
+            <span>TỔNG CỘNG:</span>
+            <span>{formatCurrency(invoice.finalAmount)}</span>
+          </div>
+
+          <div className="text-center mt-4">
+            <div className="fw-bold">CẢM ƠN QUÝ KHÁCH!</div>
+            <div style={{fontSize: '10px'}}>Hẹn gặp lại quý khách</div>
           </div>
         </div>
+      </div>
 
-        {/* Nút bấm điều khiển */}
-        <div className="mt-4 d-flex gap-3 d-print-none">
-          <button 
-            className="btn btn-secondary btn-lg w-100 fw-bold border-0 shadow-sm" 
-            style={{backgroundColor: '#e9ecef', color: '#495057'}}
-            onClick={onClose}
-          >
-            ĐÓNG
-          </button>
-          <button 
-            className="btn btn-primary btn-lg w-100 fw-bold shadow-sm" 
-            style={{backgroundColor: '#0d6efd'}}
-            onClick={() => window.print()}
-          >
-            IN LẠI
-          </button>
-        </div>
+      <div className="p-3 d-print-none text-center bg-white border-top">
+         <button className="btn btn-primary fw-bold px-4 shadow-sm" onClick={() => window.print()}>
+            <i className="bi bi-printer me-2"></i>IN LẠI
+         </button>
+         <button className="btn btn-light ms-2" onClick={onClose}>Đóng</button>
       </div>
     </BaseModal>
   );

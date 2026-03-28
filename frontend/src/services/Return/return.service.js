@@ -2,19 +2,24 @@ import api from "services/axiosInstance";
 
 
 export const getReturnDetail = async (returnId) => {
-  const res = await api.get(`/returns/${returnId}`);
-  return res.data;
+    const res = await api.get(`/returns/${returnId}`);
+    return res.data;
+};
+export const getReturn = async (params) => {
+    const res = await api.get("/returns", { params }); 
+    return res.data;
 };
 
+export const createReturn = async (payload) => {
+    await api.post("/returns", payload)
+}
 
 export const approveReturn = async (id) => {
-    console.log("id", id);
-    
     return await api.patch(`returns/${id}/approve`);
 }
 
-export const rejectReturn = async (id) => {
-    return await api.patch(`returns/${id}/reject`);
+export const rejectReturn = async (id, data) => {
+    return await api.patch(`returns/${id}/reject`, data);
 }
 
 export const getItems = async (status = "PENDING", page = 1, pageSize = 10) => {

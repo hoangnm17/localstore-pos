@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
+import { resignStaff } from '../../../services/Staff/staff.service';
 
 const StaffResignModal = ({ staff, onClose, onSuccess }) => {
     const [isUpdating, setIsUpdating] = useState(false);
@@ -11,8 +11,8 @@ const StaffResignModal = ({ staff, onClose, onSuccess }) => {
         if (isUpdating) return;
         setIsUpdating(true);
         try {
-            const res = await api.put('/staff/resign', { id: staff.id });
-            if (res.data?.success) {
+            const res = await resignStaff(staff.id);
+            if (res?.success) {
                 showNotification(`Đã ghi nhận ${staff.fullName} nghỉ việc!`, 'warning');
                 onSuccess();
             } else {

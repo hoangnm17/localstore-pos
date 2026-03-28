@@ -32,7 +32,10 @@ function buildInitialState(initialData, productType) {
             status: initialData.status || 'Selling',
             productType: initialData.isCombo ? 'combo' : 'regular',
             saleMode: initialData.allowDecimalQuantity ? 'weight' : 'piece',
-            pricingMode: 'manual'
+            pricingMode: 'manual',
+            initialStock: 0,
+            correctedStock: initialData.stockQuantity ?? 0,
+            stockQuantity: initialData.stockQuantity ?? 0
         };
     }
 
@@ -48,7 +51,10 @@ function buildInitialState(initialData, productType) {
         status: 'Selling',
         productType,
         saleMode: 'piece',
-        pricingMode: productType === 'combo' ? 'auto' : 'manual'
+        pricingMode: productType === 'combo' ? 'auto' : 'manual',
+        initialStock: 0,
+        correctedStock: '',
+        stockQuantity: 0
     };
 }
 
@@ -147,6 +153,7 @@ function ProductFormModal({
                                 productName: item.childProductName || productDetail?.name || '',
                                 productCode: item.childProductCode || productDetail?.code || '',
                                 baseUnit: productDetail?.baseUnit || item.baseUnit || '',
+                                units,
                                 selectedUnitId: String(baseUnit.id),
                                 unitName: baseUnit.unitName,
                                 unitType: baseUnit.unitType,
@@ -180,16 +187,31 @@ function ProductFormModal({
     const handleChange = (field, value) => {
         setForm((prev) => {
             const next = { ...prev, [field]: value };
+
             if (field === 'productType' && value === 'combo') {
                 next.saleMode = 'piece';
-                next.baseUnit = prev.baseUnit || 'Combo';
+                next.baseUnit = 'Combo';
                 next.minThreshold = 0;
                 next.pricingMode = 'auto';
             }
+
             if (field === 'productType' && value === 'regular') {
                 next.pricingMode = 'manual';
+
+                // Nếu trước đó đang là combo thì xóa chữ "Combo"
+                if (prev.productType === 'combo' && prev.baseUnit === 'Combo') {
+                    next.baseUnit = '';
+                }
+
                 setComboRows([]);
+                setSelectedChildProduct(null);
+                setChildUnits([]);
+                setSelectedChildUnitId('');
+                setChildQuantity(1);
+                setSearchKeyword('');
+                setSearchResults([]);
             }
+
             return next;
         });
     };
@@ -271,7 +293,16 @@ function ProductFormModal({
         const qty = Number(childQuantity || 0);
         if (Number.isNaN(qty) || qty <= 0) { setError('Số lượng sản phẩm con phải lớn hơn 0.'); return; }
         if (comboRows.some((r) => String(r.childProductId) === String(selectedChildProduct.id))) {
-            setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo. Muốn đổi số lượng, hãy xóa dòng cũ rồi thêm lại.');
+            setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo.');
+            return;
+        }
+        const stock = Number(selectedChildProduct.stockQuantity || 0);
+        if (childBaseQuantity > stock) {
+            setError(
+                `Số lượng vượt quá tồn kho! "${selectedChildProduct.name}" chỉ còn ` +
+                `${stock.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit} trong kho ` +
+                `(bạn đang nhập ${childBaseQuantity.toLocaleString('vi-VN')} ${selectedChildProduct.baseUnit}).`
+            );
             return;
         }
 
@@ -282,6 +313,7 @@ function ProductFormModal({
             productName: selectedChildProduct.name,
             productCode: selectedChildProduct.code,
             baseUnit: selectedChildProduct.baseUnit,
+            units: childUnits,
             selectedUnitId: String(selectedChildUnit.id),
             unitName: selectedChildUnit.unitName,
             unitType: selectedChildUnit.unitType,
@@ -299,6 +331,39 @@ function ProductFormModal({
     };
 
     const handleRemoveComboRow = (rowKey) => setComboRows((prev) => prev.filter((r) => r.key !== rowKey));
+
+    const handleUpdateComboRowQty = (rowKey, newQtyDisplay) => {
+        const qty = Number(newQtyDisplay);
+        if (Number.isNaN(qty) || qty <= 0) return;
+        setComboRows((prev) => prev.map((r) => {
+            if (r.key !== rowKey) return r;
+            const quantityBase = roundNumber(qty * r.conversionFactor, 3);
+            const lineTotal = roundNumber(qty * r.unitSalePrice, 2);
+            return { ...r, quantityDisplay: qty, quantityBase, lineTotal };
+        }));
+    };
+
+    const handleUpdateComboRowUnit = (rowKey, newUnitId) => {
+        setComboRows((prev) => prev.map((r) => {
+            if (r.key !== rowKey) return r;
+            const unit = (r.units || []).find((u) => String(u.id) === String(newUnitId));
+            if (!unit) return r;
+            const conversionFactor = Number(unit.conversionFactor || 1);
+            const unitSalePrice = Number(unit.salePrice || 0);
+            const quantityBase = roundNumber(r.quantityDisplay * conversionFactor, 3);
+            const lineTotal = roundNumber(r.quantityDisplay * unitSalePrice, 2);
+            return {
+                ...r,
+                selectedUnitId: String(unit.id),
+                unitName: unit.unitName,
+                unitType: unit.unitType,
+                conversionFactor,
+                unitSalePrice,
+                quantityBase,
+                lineTotal
+            };
+        }));
+    };
 
     const validate = () => {
         const errors = {};
@@ -344,7 +409,13 @@ function ProductFormModal({
             allowDecimalQuantity: isCombo ? false : form.saleMode === 'weight',
             comboItems: isCombo
                 ? comboRows.map((r) => ({ childProductId: r.childProductId, quantity: r.quantityBase }))
-                : []
+                : [],
+            initialStock: isCombo ? Number(form.initialStock || 0) : 0,
+            correctedStock: isCombo &&
+                String(form.correctedStock).trim() !== '' &&
+                Number(form.correctedStock) !== Number(form.stockQuantity)
+                ? Number(form.correctedStock)
+                : null
         });
     };
 
@@ -354,8 +425,8 @@ function ProductFormModal({
             title={modalTitle}
             subtitle={
                 isCombo
-                    ? 'Tạo/sửa combo theo đúng nghiệp vụ: chọn sản phẩm con trước, hệ thống tự tính tổng giá lẻ rồi mới ra giá combo.'
-                    : 'Base unit được tạo cùng lúc với sản phẩm. Unit phụ sẽ thêm ở chi tiết sản phẩm.'
+                    ? 'Chọn sản phẩm con trước, hệ thống tự tính tổng giá lẻ rồi mới ra giá combo.'
+                    : 'Đơn vị cơ bản được tạo cùng lúc với sản phẩm. Đơn vị phụ sẽ thêm ở chi tiết sản phẩm.'
             }
             width="1150px"
             onClose={onClose}
@@ -447,11 +518,11 @@ function ProductFormModal({
                         onDecreaseQty={handleDecreaseChildQuantity}
                         onAddComboRow={handleAddComboRow}
                         onRemoveComboRow={handleRemoveComboRow}
+                        onUpdateComboRowQty={handleUpdateComboRowQty}
+                        onUpdateComboRowUnit={handleUpdateComboRowUnit}
                     />
                 )}
             </form>
         </ModalShell>
     );
-}
-
-export default ProductFormModal;
+} export default ProductFormModal;

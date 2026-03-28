@@ -2,45 +2,88 @@ import { useEffect, useState } from "react";
 import supplierService from "../../../services/Inventory/supplierService";
 
 function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
-  const [name, setName] = useState("");
-  const [contactInfo, setContactInfo] = useState("");
-  const [address, setAddress] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    contactInfo: "",
+    address: "",
+  });
 
-  // Khi mở modal → fill dữ liệu
+  const [originalData, setOriginalData] = useState(null); // thêm
+
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     if (supplier) {
-      setName(supplier.name || "");
-      setContactInfo(supplier.contactInfo || "");
-      setAddress(supplier.address || "");
-      setError("");
+      const data = {
+        name: supplier.name || "",
+        contactInfo: supplier.contactInfo || "",
+        address: supplier.address || "",
+      };
+
+      setFormData(data);
+      setOriginalData(data);
+      setErrors({});
     }
   }, [supplier]);
 
   if (!isOpen || !supplier) return null;
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+
+    setErrors({
+      ...errors,
+      [e.target.name]: "",
+      general: "",
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError("Tên nhà cung cấp không được để trống");
+    let loi = {};
+
+    if (!formData.name.trim()) loi.name = "Vui long nhap ten nha cung cap";
+    if (!formData.contactInfo.trim()) loi.contactInfo = "Vui long nhap thong tin lien he";
+    if (!formData.address.trim()) loi.address = "Vui long nhap dia chi";
+
+    setErrors(loi);
+
+    if (Object.keys(loi).length > 0) return;
+
+    if (
+      originalData &&
+      formData.name.trim() === originalData.name &&
+      formData.contactInfo.trim() === originalData.contactInfo &&
+      formData.address.trim() === originalData.address
+    ) {
+      setErrors({
+        general: "Thông tin chưa được thay đổi",
+      });
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
 
-      await supplierService.updateSupplier(supplier.id, {
-        name: name.trim(),
-        contactInfo,
-        address,
+      const res = await supplierService.updateSupplier(supplier.id, {
+        name: formData.name.trim(),
+        contactInfo: formData.contactInfo.trim(),
+        address: formData.address.trim(),
       });
 
-      onUpdated(); // reload list
-      onClose();   // đóng modal
+      if (!res?.data?.success) {
+        onUpdated(false);
+        return;
+      }
+
+      onUpdated(true);
+      onClose();
     } catch (err) {
       console.error("Update supplier error:", err);
-      setError("Có lỗi xảy ra khi cập nhật");
+      onUpdated(false);
     } finally {
       setLoading(false);
     }
@@ -48,7 +91,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
 
   return (
     <>
-      {/* Modal */}
       <div className="modal fade show d-block" tabIndex="-1">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content rounded-4 shadow">
@@ -58,20 +100,11 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
               <h5 className="modal-title fw-bold">
                 Chỉnh sửa nhà cung cấp
               </h5>
-              <button
-                className="btn-close"
-                onClick={onClose}
-              ></button>
+              <button className="btn-close" onClick={onClose}></button>
             </div>
 
             {/* Body */}
             <div className="modal-body">
-
-              {error && (
-                <div className="alert alert-danger py-2">
-                  {error}
-                </div>
-              )}
 
               <div className="mb-3">
                 <label className="form-label fw-medium">
@@ -79,38 +112,52 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
                 </label>
                 <input
                   type="text"
-                  className="form-control"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  name="name"
+                  className={`form-control ${errors.name ? "is-invalid" : ""}`}
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Nhập tên nhà cung cấp..."
                 />
+                {errors.name && <div className="text-danger mt-1">{errors.name}</div>}
               </div>
 
+              {/* Contact */}
               <div className="mb-3">
                 <label className="form-label fw-medium">
-                  Số điện thoại / Liên hệ
+                  Số điện thoại / Liên hệ *
                 </label>
                 <input
                   type="text"
-                  className="form-control"
-                  value={contactInfo}
-                  onChange={(e) => setContactInfo(e.target.value)}
+                  name="contactInfo"
+                  className={`form-control ${errors.contactInfo ? "is-invalid" : ""}`}
+                  value={formData.contactInfo}
+                  onChange={handleChange}
                   placeholder="Nhập thông tin liên hệ..."
                 />
+                {errors.contactInfo && <div className="text-danger mt-1">{errors.contactInfo}</div>}
               </div>
 
+              {/* Address */}
               <div className="mb-2">
                 <label className="form-label fw-medium">
-                  Địa chỉ
+                  Địa chỉ *
                 </label>
                 <input
                   type="text"
-                  className="form-control"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  name="address"
+                  className={`form-control ${errors.address ? "is-invalid" : ""}`}
+                  value={formData.address}
+                  onChange={handleChange}
                   placeholder="Nhập địa chỉ..."
                 />
+                {errors.address && <div className="text-danger mt-1">{errors.address}</div>}
               </div>
+
+              {errors.general && (
+                <div className="text-danger text-center mt-2 fw-medium">
+                  {errors.general}
+                </div>
+              )}
 
             </div>
 
@@ -137,7 +184,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdated }) {
         </div>
       </div>
 
-      {/* Backdrop nền tối */}
       <div className="modal-backdrop fade show"></div>
     </>
   );

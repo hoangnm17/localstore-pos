@@ -260,7 +260,7 @@ function ProductComboItemModal({
             }
         >
             <div className="alert alert-info">
-                Bạn có thể chọn <strong>đơn vị cơ bản</strong> hoặc <strong>unit phụ</strong>.
+                Bạn có thể chọn <strong>đơn vị cơ bản</strong> hoặc <strong>đơn vị phụ</strong>.
                 <br />
             </div>
 
@@ -314,7 +314,7 @@ function ProductComboItemModal({
                             <th>Loại</th>
                             <th>Kiểu bán</th>
                             <th>Đơn vị cơ bản</th>
-                            <th>Giá base</th>
+                            <th>Giá bán đơn vị cơ bản</th>
                             <th>Tồn kho</th>
                         </tr>
                     </thead>
@@ -361,7 +361,7 @@ function ProductComboItemModal({
                                         {item.allowDecimalQuantity ? (
                                             <span className="badge bg-info text-dark">Cân</span>
                                         ) : (
-                                            <span className="badge bg-warning text-dark">Piece</span>
+                                            <span className="badge bg-warning text-dark">Số lượng</span>
                                         )}
                                     </td>
                                     <td>{item.baseUnit}</td>
@@ -451,7 +451,7 @@ function ProductComboItemModal({
 
                             <div className="col-md-4">
                                 <div className="alert alert-warning mb-0">
-                                    <strong>Số lượng quy đổi về base unit:</strong><br />
+                                    <strong>Số lượng quy đổi về đơn vị cơ bản:</strong><br />
                                     {selectedUnit
                                         ? `${convertedBaseQuantity.toLocaleString('vi-VN')} ${selectedProduct.baseUnit}`
                                         : '—'}

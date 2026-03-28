@@ -8,21 +8,26 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
 
     useEffect(() => {
-        categoryService.fetchCategoryTree('', 1, 100).then(res => {            // Flatten tree để hiển thị trong dropdown
+        categoryService.fetchCategoryTree('', 1, 100).then(res => {
             const flat = [];
+
             function flatten(items, level = 0) {
                 items.forEach(item => {
                     flat.push({ ...item, level, productCount: item.productCount ?? 0 });
                     if (item.children?.length) flatten(item.children, level + 1);
                 });
             }
+
             flatten(res.data?.data || res.data || []);
             setCategories(flat);
         });
     }, []);
 
     useEffect(() => {
-        // Cleanup preview URL khi component unmount
+        setPreview(form.imageUrl ? getImageUrl(form.imageUrl) : null);
+    }, [form.imageUrl]);
+
+    useEffect(() => {
         return () => {
             if (preview && preview.startsWith('blob:')) {
                 URL.revokeObjectURL(preview);
@@ -30,9 +35,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         };
     }, [preview]);
 
-
-    async function onSubmit(e) {
-        e.preventDefault();
+    async function handleSubmit() {
         const success = await submit();
         if (success) {
             onDone();
@@ -42,6 +45,7 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     async function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
+
         const tempUrl = URL.createObjectURL(file);
         setPreview(tempUrl);
 
@@ -61,7 +65,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
         }
     }
 
-
     function handleUrlChange(e) {
         const url = e.target.value;
         change('imageUrl', url);
@@ -74,10 +77,11 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
     }
 
     return (
-        <form onSubmit={onSubmit}>
-            {/* Tên danh mục */}
+        <div>
             <div className="mb-3">
-                <label className="form-label">Tên danh mục <span className="text-danger">*</span></label>
+                <label className="form-label">
+                    Tên danh mục <span className="text-danger">*</span>
+                </label>
                 <input
                     className="form-control"
                     value={form.name}
@@ -86,7 +90,6 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                 />
             </div>
 
-            {/* Danh mục cha */}
             <div className="mb-3">
                 <label className="form-label">
                     Danh mục cha <span className="text-muted small">(không bắt buộc)</span>
@@ -112,12 +115,10 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                                     {prefix}{c.name}{hasProduct ? ' (đã có sản phẩm)' : ''}
                                 </option>
                             );
-                        })
-                    }
+                        })}
                 </select>
             </div>
 
-            {/* Ảnh */}
             <div className="mb-3">
                 <label className="form-label">
                     Ảnh danh mục <span className="text-muted small">(không bắt buộc)</span>
@@ -128,15 +129,23 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
                         <img
                             src={preview}
                             alt="preview"
-                            style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #dee2e6' }}
-                            onError={() => setPreview(null)}  // ✅ thêm onError
+                            style={{
+                                width: 80,
+                                height: 80,
+                                objectFit: 'cover',
+                                borderRadius: 6,
+                                border: '1px solid #dee2e6'
+                            }}
+                            onError={() => setPreview(null)}
                         />
                         <button
                             type="button"
                             className="btn btn-sm btn-danger position-absolute top-0 end-0"
                             style={{ padding: '1px 5px', fontSize: 10 }}
                             onClick={handleRemoveImage}
-                        >✕</button>
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -159,8 +168,10 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
             </div>
 
             <div className="d-flex justify-content-end gap-2 mt-3">
-                <button type="submit" className="btn btn-primary">Lưu</button>
+                <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                    Lưu
+                </button>
             </div>
-        </form>
+        </div>
     );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import CustomerCreateModal from "app/pos/Order/Customer/CustomerCreateModal";
 import { useCustomerSearch } from "hooks/pos/useCustomerSearch";
-import useHotkeys from "hooks/pos/useHotKeys";
+import 'style/POS/Customer.css'
 import { POS_HOTKEYS } from "config/HotKey";
 
 export default function CustomerSearch({
@@ -18,16 +18,24 @@ export default function CustomerSearch({
     setPhone("");
   }, [invoiceId]);
 
-  useHotkeys({
-    [POS_HOTKEYS.SEARCH_CUSTOMER]: () => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    },
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // F1 -> focus input
+      if (e.key === "F1") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
 
-    [POS_HOTKEYS.CREATE_CUSTOMER]: () => {
-      setShowCreate(true);
-    }
-  });
+      // Ctrl + N -> mở tạo khách
+      if (e.key === "F8") {
+        e.preventDefault();
+        setShowCreate(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handlePhoneChange = (e) => {
     const value = e.target.value;
@@ -39,6 +47,12 @@ export default function CustomerSearch({
   const handleSelectCustomer = (cust) => {
     onSelectCustomer(cust);
     setPhone("");
+  };
+
+  const handleCreatedSuccess = (newCustomer) => {
+    onSelectCustomer(newCustomer);
+    setPhone("");
+    setShowCreate(false);
   };
 
   return (
@@ -71,6 +85,20 @@ export default function CustomerSearch({
                 value={phone}
                 onChange={handlePhoneChange}
                 maxLength={11}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (result.length > 0) {
+                      handleSelectCustomer(result[0]);
+                    } else if (phone.length >= 6) {
+                      setShowCreate(true);
+                    }
+                  }
+
+                  if (e.key === "Escape") {
+                    onSelectCustomer(null);
+                    setPhone("");
+                  }
+                }}
               />
               {loading && (
                 <div className="spinner-border spinner-border-sm loader" />
@@ -159,191 +187,9 @@ export default function CustomerSearch({
         <CustomerCreateModal
           phone={phone}
           onClose={() => setShowCreate(false)}
-          onCreated={(newCustomer) => {
-            onSelectCustomer(newCustomer);
-            setPhone("");
-            setShowCreate(false);
-          }}
+          onCreated={handleCreatedSuccess}
         />
       )}
-
-      <style>{customStyles}</style>
     </div>
   );
 }
-
-// --- CSS STYLES ---
-const customStyles = `
-  /* Container & Label */
-  .customer-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 0.05rem;
-  }
-  
-  .customer-badge-active {
-    background: #ecfdf5;
-    color: #10b981;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 20px;
-    border: 1px solid #d1fae5;
-  }
-
-  /* Search Box */
-  .search-box-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: 12px;
-    color: #94a3b8;
-    pointer-events: none;
-  }
-
-  .search-input {
-    padding-left: 36px !important;
-    height: 42px;
-    border-radius: 10px !important;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    font-size: 14px;
-    transition: all 0.2s ease;
-  }
-
-  .search-input:focus {
-    background: #fff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .loader {
-    position: absolute;
-    right: 12px;
-  }
-
-  /* Create Button */
-  .btn-create-customer {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-
-  /* Dropdown Results */
-  .search-results-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 12px;
-    margin-top: 8px;
-    z-index: 1060;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-  }
-
-  .result-item {
-    padding: 10px 15px;
-    border-bottom: 1px solid #f1f5f9;
-  }
-
-  .avatar-circle {
-    width: 32px;
-    height: 32px;
-    background: #eff6ff;
-    color: #3b82f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .customer-name {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: #1e293b;
-  }
-
-  .customer-phone {
-    font-size: 11px;
-    color: #64748b;
-  }
-
-  .points-badge {
-    font-size: 11px;
-    background: #fffbeb;
-    color: #b45309;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-  }
-
-  .no-result {
-    font-size: 13px;
-    color: #94a3b8;
-  }
-
-  /* Selected Customer Card */
-  .selected-customer-card {
-    background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
-    border: 1px solid #bfdbfe;
-    border-radius: 12px;
-    padding: 12px;
-  }
-
-  .selected-icon {
-    width: 44px;
-    height: 44px;
-    background: #3b82f6;
-    color: white;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-  }
-
-  .selected-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #1e3a8a;
-  }
-
-  .selected-sub {
-    font-size: 12px;
-    color: #475569;
-  }
-
-  .btn-remove-customer {
-    background: #fff;
-    border: 1px solid #fecaca;
-    color: #ef4444;
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
-
-  .btn-remove-customer:hover {
-    background: #ef4444;
-    color: #fff;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;

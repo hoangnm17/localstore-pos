@@ -5,13 +5,16 @@ import CategoryModal from '../ui/CategoryModal';
 import Pagination from '../../../components/Pagination/Pagination';
 import '../../product/pm-theme.css';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
+
 export default function CategoryPage() {
     const { showNotification } = useNotification();
 
-    // ── Confirm dialog state ────────────────────────────
     const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
     const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
-    const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
+    const handleConfirmOk = () => {
+        confirmState.onOk?.();
+        setConfirmState({ open: false, message: '', onOk: null });
+    };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
 
     const [editId, setEditId] = useState(null);
@@ -20,11 +23,19 @@ export default function CategoryPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 10;
 
-    const { categories, pagination, reload, deleteCategory } = useCategories({ showNotification, onConfirm, search, page: currentPage, limit: PAGE_SIZE });
+    const { categories, pagination, reload, deleteCategory } = useCategories({
+        showNotification,
+        onConfirm,
+        search,
+        page: currentPage,
+        limit: PAGE_SIZE
+    });
+
     const formHook = useCategoryForm(editId, { showNotification });
 
     function openCreate() {
         setEditId(null);
+        formHook.resetForm();
         setOpen(true);
     }
 
@@ -33,9 +44,23 @@ export default function CategoryPage() {
         setOpen(true);
     }
 
+    function handleCloseModal() {
+        setOpen(false);
+        setEditId(null);
+        formHook.resetForm();
+    }
+
+    function handleDone() {
+        const isEditing = !!editId;
+        setOpen(false);
+        setEditId(null);
+        formHook.resetForm();
+        reload();
+        showNotification(isEditing ? 'Cập nhật danh mục thành công.' : 'Tạo danh mục thành công.', 'success');
+    }
+
     return (
         <div className="pm-page">
-            {/* Toolbar */}
             <div className="d-flex align-items-center justify-content-between mb-3 gap-2">
                 <div className="input-group" style={{ maxWidth: 340 }}>
                     <span className="input-group-text bg-white border-end-0">
@@ -46,16 +71,19 @@ export default function CategoryPage() {
                         className="form-control border-start-0"
                         placeholder="Tìm kiếm danh mục..."
                         value={search}
-                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                        onChange={e => {
+                            setSearch(e.target.value);
+                            setCurrentPage(1);
+                        }}
                     />
                 </div>
+
                 <button className="btn btn-primary" onClick={openCreate}>
                     <i className="bi bi-plus-circle me-2" />
                     Tạo danh mục mới
                 </button>
             </div>
 
-            {/* Table */}
             <div className="table-responsive">
                 <table className="table table-hover table-bordered align-middle">
                     <thead className="pm-thead text-center">
@@ -90,37 +118,43 @@ export default function CategoryPage() {
                 </table>
             </div>
 
-            {/* Pagination */}
             <Pagination
                 currentPage={currentPage}
                 totalPages={pagination.totalPages}
                 onPageChange={setCurrentPage}
             />
 
-            {/* Modal */}
             <CategoryModal
                 {...formHook}
                 open={open}
                 isEdit={!!editId}
                 editId={editId}
-                onClose={() => setOpen(false)}
-                onDone={() => {
-                    setOpen(false);
-                    reload();
-                    showNotification(editId ? 'Cập nhật danh mục thành công.' : 'Tạo danh mục thành công.', 'success');
-                }}
+                onClose={handleCloseModal}
+                onDone={handleDone}
             />
 
-            {/* ── Confirm Dialog ── */}
             {confirmState.open && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,21,41,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
-                }}>
-                    <div style={{
-                        background: '#fff', borderRadius: 12, padding: '28px 32px',
-                        minWidth: 340, maxWidth: 480, boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
-                    }}>
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,21,41,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2000
+                    }}
+                >
+                    <div
+                        style={{
+                            background: '#fff',
+                            borderRadius: 12,
+                            padding: '28px 32px',
+                            minWidth: 340,
+                            maxWidth: 480,
+                            boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
+                        }}
+                    >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                             <i className="bi bi-exclamation-triangle-fill" style={{ color: '#faad14', fontSize: '1.5rem' }} />
                             <strong style={{ fontSize: '1rem' }}>Xác nhận</strong>
@@ -137,7 +171,6 @@ export default function CategoryPage() {
     );
 }
 
-// ── Inline table row with expand/collapse ──────────────────────────────────
 function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
     const [expanded, setExpanded] = useState(false);
     const hasChildren = item.children && item.children.length > 0;
@@ -148,10 +181,8 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
     return (
         <>
             <tr>
-                {/* # — only show number for root */}
                 <td className="text-center">{level === 0 ? index : ''}</td>
 
-                {/* Name */}
                 <td>
                     <div style={{ paddingLeft: indent, display: 'flex', alignItems: 'center', gap: 6 }}>
                         {hasChildren ? (
@@ -171,18 +202,14 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                     </div>
                 </td>
 
-                {/* Count */}
                 <td className="text-center">{item.totalProductCount ?? 0}</td>
 
-                {/* Status */}
                 <td className="text-center">
                     {item.status === 0 || item.status === false
                         ? <span className="badge bg-secondary">Ngừng bán</span>
-                        : <span className="badge bg-success">Đang bán</span>
-                    }
+                        : <span className="badge bg-success">Đang bán</span>}
                 </td>
 
-                {/* Actions */}
                 <td className="text-center">
                     <button
                         className="btn btn-link btn-sm p-0 me-2 text-warning"
@@ -191,6 +218,7 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                     >
                         <i className="bi bi-pencil-square fs-5"></i>
                     </button>
+
                     <button
                         className="btn btn-link btn-sm p-0 text-danger"
                         onClick={() => canDelete && onDelete(item.id)}
@@ -202,7 +230,6 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                 </td>
             </tr>
 
-            {/* Children rows */}
             {hasChildren && expanded && item.children.map(child => (
                 <CategoryTableRow
                     key={child.id}

@@ -10,7 +10,6 @@ const handleError = (res, err) => {
     });
   }
 
-  // Chuẩn hóa not found
   if (err.message?.toLowerCase().includes("not found")) {
     return res.status(404).json({
       success: false,
@@ -18,7 +17,6 @@ const handleError = (res, err) => {
     });
   }
 
-  // Business error mặc định
   return res.status(400).json({
     success: false,
     message: err.message || "Internal server error",
@@ -62,21 +60,33 @@ const createQR = async (req, res) => {
 };
 
 const webhook = async (req, res) => {
-  console.log("DA NHAN HOOK TU API SEPAY")
-  console.log(req.body);
   try {
     await paymentService.confirmPayment(req.body);
-
-
-    return res.json({
-      success: true,
-      message: "Webhook processed",
-    });
   } catch (err) {
-    console.error("SePay webhook error:", err);
-    return res.status(400).json({
+    console.error("SePay webhook error:", err.message);
+  }
+
+  return res.json({
+    success: true,
+    message: "Webhook received",
+  });
+};
+
+const cancelPendingPayment = async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+
+    await paymentService.cancelPendingPayment(invoiceId);
+
+    res.json({
+      success: true,
+      message: "Cancelled pending payment"
+    });
+
+  } catch (err) {
+    res.status(400).json({
       success: false,
-      message: err.message || "Webhook failed",
+      message: err.message
     });
   }
 };
@@ -85,4 +95,5 @@ module.exports = {
   createQR,
   webhook,
   payCash,
+  cancelPendingPayment,
 };

@@ -1,5 +1,23 @@
 const customerPointLogModel = require('../models/customerPointLog.model');
 const customerModel = require('../models/customer.model');
+const { connectDB, sql } = require('../config/database');
+
+const runInTransaction = async (callback) => {
+    const pool = await connectDB();
+    const transaction = new sql.Transaction(pool);
+
+    try {
+        await transaction.begin();
+        const result = await callback(transaction);
+        await transaction.commit();
+        return result;
+    } catch (err) {
+        try {
+            await transaction.rollback();
+        } catch (_) { }
+        throw err;
+    }
+};
 
 /**
  * Lấy lịch sử điểm của khách hàng + phân trang
@@ -23,6 +41,24 @@ exports.getPointLogs = async (customerId, { page = 1, limit = 20 } = {}) => {
     };
 };
 
+/**
+ * Điều chỉnh điểm khách hàng thủ công (từ controller/UI)
+ * Không yêu cầu transaction bên ngoài
+ */
+exports.manualAdjustPoints = async (customerId, { pointChange, reason }) => {
+    if (!pointChange || pointChange === 0) return 0;
+    
+    return await runInTransaction(async (transaction) => {
+        return await exports.adjustPoints(
+            transaction,
+            customerId,
+            null, // Không có invoiceId
+            pointChange,
+            reason || "ADJUST_MANUAL"
+        );
+    });
+};
+
 exports.adjustPoints = async (
     transaction,
     customerId,
@@ -40,13 +76,13 @@ exports.adjustPoints = async (
     );
 
     if (!customer)
-        throw new Error("Customer not found");
+        throw new Error("Không tìm thấy khách hàng");
 
-    const newPoints = customer.loyaltyPoints + pointChange;
+    const newPoints = (customer.loyaltyPoints || 0) + pointChange;
 
     if (newPoints < 0)
         throw new Error(
-            `Customer only has ${customer.loyaltyPoints} points`
+            `Khách hàng chỉ có ${customer.loyaltyPoints} điểm, không thể trừ thêm ${Math.abs(pointChange)} điểm.`
         );
 
 
@@ -66,4 +102,3 @@ exports.adjustPoints = async (
 
     return pointChange;
 };
-

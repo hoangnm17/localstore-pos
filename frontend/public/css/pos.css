@@ -1,0 +1,32 @@
+/*SalePage*/
+
+
+
+
+/*Payment Detail */
+.fw-black {
+    font-weight: 900;
+}
+
+.btn-pay-gradient {
+    background: linear-gradient(135deg, #0d6efd 0%, #004dc7 100%);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+}
+
+.btn-pay-gradient:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0b5ed7 0%, #003da1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.4);
+}
+
+.btn-pay-gradient:active {
+    transform: translateY(0);
+}
+
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}

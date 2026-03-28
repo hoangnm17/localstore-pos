@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { formatCurrency } from "utils/formatters";
 
 const PaymentDetail = ({
@@ -6,60 +6,76 @@ const PaymentDetail = ({
   totalQuantity = 0,
   onOpenPayment = () => {},
 }) => {
-
   const isEmpty = totalQuantity === 0;
+
   return (
     <div
-      className="p-4 bg-white border-top shadow-lg"
-      style={{ borderRadius: "20px 20px 0 0" }}
+      className="p-3 bg-white border-top shadow-lg position-relative"
+      style={{ 
+        borderRadius: "24px 24px 0 0",
+        zIndex: 10
+      }}
     >
-      {/* Tạm tính */}
-      <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-        <span className="text-secondary small fw-medium">
-          Tạm tính ({totalQuantity} món)
+      {/* Handle bar trang trí */}
+      <div className="d-flex justify-content-center mb-3">
+        <div className="bg-light border" style={{ width: '40px', height: '5px', borderRadius: '10px' }}></div>
+      </div>
+
+      {/* Chi tiết tạm tính */}
+      <div className="d-flex justify-content-between align-items-center mb-2 px-2">
+        <span className="text-muted fw-medium small">
+          Tạm tính ({totalQuantity} mặt hàng)
         </span>
         <span className="text-dark fw-bold">
           {formatCurrency(total)}
         </span>
       </div>
 
-      {/* Tổng thanh toán */}
-      <div className="d-flex justify-content-between align-items-center mb-4 px-1">
-        <h5 className="fw-bold mb-0 text-dark">Tổng thanh toán</h5>
-        <h4
-          className="fw-black mb-0 text-primary"
-          style={{ fontSize: "1.75rem" }}
-        >
-          {formatCurrency(total)}
-        </h4>
+      <hr className="my-3 opacity-25" />
+
+      {/* Tổng cộng */}
+      <div className="d-flex justify-content-between align-items-center mb-4 px-2">
+        <div className="lh-sm">
+          <h6 className="fw-bold mb-0 text-dark text-uppercase" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>
+            Tổng cộng
+          </h6>
+        </div>
+        <div className="text-end">
+          <h3
+            className="fw-bold mb-0 text-primary"
+            style={{ fontSize: "1.8rem", letterSpacing: '-1px' }}
+          >
+            {formatCurrency(total)}
+          </h3>
+        </div>
       </div>
 
-      {/* Button */}
+      {/* Nút bấm */}
       <button
         disabled={isEmpty}
         onClick={onOpenPayment}
-        className={`btn w-100 py-3 rounded-4 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 ${isEmpty ? "btn-light text-muted" : "btn-primary"
-          }`}
+        className={`btn w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 border-0 ${
+          isEmpty 
+            ? "btn-secondary opacity-25" 
+            : "btn-primary"
+        }`}
         style={{
-          fontSize: "1.1rem",
-          letterSpacing: "0.5px",
-          height: "60px",
+          fontSize: "1rem",
+          height: "56px",
         }}
       >
-        <i
-          className={`bi ${isEmpty ? "bi-cart-x" : "bi-credit-card-2-front"
-            } fs-5`}
-        ></i>
-        {isEmpty ? "Giỏ hàng trống" : "THANH TOÁN NGAY"}
+        {isEmpty ? (
+          <>
+            <i className="bi bi-cart-x fs-5"></i>
+            CHƯA CÓ SẢN PHẨM
+          </>
+        ) : (
+          <>
+            <i className="bi bi-shield-check fs-5"></i>
+            THANH TOÁN (F12)
+          </>
+        )}
       </button>
-
-      <style>{`
-        .fw-black { font-weight: 900; }
-        .btn-primary:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(13, 110, 253, 0.2) !important;
-        }
-      `}</style>
     </div>
   );
 };

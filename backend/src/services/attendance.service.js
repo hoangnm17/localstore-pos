@@ -1,0 +1,115 @@
+const attendanceModel = require("../models/attendance.model");
+
+module.exports.checkPending = async (staffId) => {
+    const roleName = await attendanceModel.getStaffRoleName(staffId);
+
+    if (roleName === 'Manager') return null;
+    await attendanceModel.autoMarkAbsent(staffId);
+
+    if (roleName === 'Warehouse') {
+        await attendanceModel.autoAssignWarehouse(staffId);
+    }
+
+    // Kiểm tra chặn bàn giao ca cũ trước khi được nhận ca mới
+    // if (roleName === 'Cashier') {
+    //     const incompleteShift = await attendanceModel.hasIncompletePreviousShift(staffId);
+    //     if (incompleteShift) {
+    //         const dateStr = new Date(incompleteShift.workDate).toLocaleDateString('vi-VN');
+    //         return {
+    //             blocked: true,
+    //             message: `Bạn chưa bàn giao tiền mặt cho ca: [${incompleteShift.shiftName}] ngày ${dateStr}. Vui lòng kết ca này trước!`
+    //         };
+    //     }
+    // }
+
+    const schedule = await attendanceModel.getPendingSchedule(staffId);
+    if (!schedule) return null;
+
+    const needsCash = ['Cashier'].includes(schedule.roleName);
+    return { ...schedule, needsCash };
+};
+
+module.exports.checkIn = async (staffId, openingCash) => {
+    const schedule = await attendanceModel.getPendingSchedule(staffId);
+    if (!schedule) throw new Error('Không tìm thấy ca chờ nhận hôm nay!');
+
+    const role = schedule.roleName;
+
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
+
+    const limitStr = schedule.checkInEnd || schedule.startTime;
+    const endStr = schedule.endTime;
+
+    let record = 'OnTime';
+    let penalty = 0;
+
+    if (role === 'Cashier' || role === 'Warehouse') {
+        const todayStr = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().split('T')[0];
+        const isCrossMidnight = endStr < schedule.startTime;
+
+        let isPastEnd = false;
+        if (schedule.workDateStr === todayStr) {
+            if (!isCrossMidnight && nowStr >= endStr) isPastEnd = true;
+        } else {
+            if (nowStr >= endStr) isPastEnd = true;
+        }
+
+        if (isPastEnd) {
+            throw new Error('Quá giờ kết thúc ca, không thể nhận ca này!');
+        }
+
+        let isLate = false;
+        if (schedule.workDateStr === todayStr) {
+            if (nowStr > limitStr) isLate = true;
+        } else {
+            isLate = true;
+        }
+
+        if (isLate) {
+            record = `LateIn[${nowStr}]`;
+            penalty = 10000;
+        }
+    }
+
+    const needsCash = ['Cashier'].includes(role);
+    if (needsCash && openingCash === undefined) {
+        throw new Error('Vui lòng đếm két và nhập số tiền đầu ca!');
+    }
+
+    await attendanceModel.processCheckIn(
+        schedule.scheduleId,
+        openingCash,
+        needsCash,
+        record,
+        penalty
+    );
+    return { record, penalty, message: 'Nhận ca thành công!' };
+};
+
+module.exports.simpleCheckOut = async (staffId, scheduleId) => {
+    const schedule = await attendanceModel.getWorkingScheduleById(scheduleId, staffId);
+    if (!schedule) throw new Error("Không tìm thấy ca đang làm của bạn!");
+    if (schedule.roleName !== 'Warehouse') {
+        throw new Error("Chỉ nhân viên kho mới được dùng chức năng này!");
+    }
+
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
+
+    let record = 'OnTime';
+    let penalty = 0;
+
+    if (nowStr < schedule.endTime) {
+        throw new Error("Chưa hết giờ làm, không thể kết ca!");
+    }
+
+    await attendanceModel.processSimpleCheckOut(scheduleId, record, penalty);
+    return { record, penalty, message: "Tan ca thành công!" };
+};
+
+module.exports.checkWorking = async (staffId) => {
+    return await attendanceModel.checkWorking(staffId);
+};

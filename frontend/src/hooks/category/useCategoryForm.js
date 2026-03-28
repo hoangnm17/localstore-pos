@@ -1,26 +1,36 @@
 import { useEffect, useState } from 'react';
 import categoryService from '../../services/Category/category.service';
 
+const EMPTY_FORM = {
+    name: '',
+    parentId: null,
+    imageUrl: ''
+};
+
 export default function useCategoryForm(editId, { showNotification } = {}) {
-    const [form, setForm] = useState({
-        name: '',
-        parentId: null,
-        imageUrl: ''
-    });
+    const [form, setForm] = useState(EMPTY_FORM);
 
     useEffect(() => {
         if (!editId) {
-            setForm({ name: '', parentId: null, imageUrl: '' });
+            setForm(EMPTY_FORM);
             return;
         }
 
         categoryService.getCategoryById(editId).then(res => {
-            setForm(res.data.data);
+            setForm({
+                name: res.data.data?.name || '',
+                parentId: res.data.data?.parentId ?? null,
+                imageUrl: res.data.data?.imageUrl || ''
+            });
         });
     }, [editId]);
 
     function change(field, value) {
         setForm(prev => ({ ...prev, [field]: value }));
+    }
+
+    function resetForm() {
+        setForm(EMPTY_FORM);
     }
 
     async function submit() {
@@ -29,17 +39,28 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
             return false;
         }
 
-        if (editId) {
-            await categoryService.updateCategory(editId, form);
-        } else {
-            await categoryService.createCategory(form);
+        try {
+            if (editId) {
+                await categoryService.updateCategory(editId, form);
+            } else {
+                await categoryService.createCategory(form);
+            }
+            return true;
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            if (showNotification) {
+                showNotification(errorMsg, 'error');
+            } else {
+                alert(errorMsg);
+            }
+            return false;
         }
-        return true;
     }
 
     return {
         form,
         change,
-        submit
+        submit,
+        resetForm
     };
 }

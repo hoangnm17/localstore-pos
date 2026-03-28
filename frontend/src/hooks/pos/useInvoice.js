@@ -32,16 +32,13 @@ export const useInvoiceTabs = () => {
     items: [],
     status: "LOCAL",
     isSaving: false,
-    itemsLoaded: true
+    itemsLoaded: true,
+    searchText: "",
   });
 
   const setAsActive = (id) => {
     setActiveInvoiceId(id);
   };
-
-  /* =====================================================
-     LOAD DRAFTS ON MOUNT
-  ===================================================== */
 
   useEffect(() => {
     const loadDrafts = async () => {
@@ -49,7 +46,7 @@ export const useInvoiceTabs = () => {
         const res = await invoiceGetDrafts();
         if (res && res.success === false) {
           showNotification(res.message
-             || "Lỗi truy cập ca làm việc!", "error");
+            || "Lỗi truy cập ca làm việc!", "error");
           const local = createLocalInvoice();
           setInvoices([local]);
           setAsActive(local.id);
@@ -69,7 +66,8 @@ export const useInvoiceTabs = () => {
           ...inv,
           items: [],
           itemsLoaded: false,
-          isSaving: false
+          isSaving: false,
+          searchText: "",
         }));
 
         setInvoices(formatted);
@@ -78,8 +76,8 @@ export const useInvoiceTabs = () => {
       } catch (err) {
         console.error("Load drafts failed:", err);
         const errorMsg =
-         err.response?.data?.message 
-         || "Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!";
+          err.response?.data?.message
+          || "Bạn không có lịch làm việc hôm nay. Vui lòng liên hệ Quản lý!";
         showNotification(errorMsg, "error");
         setAccessError(errorMsg);
         // const local = createLocalInvoice();
@@ -91,15 +89,18 @@ export const useInvoiceTabs = () => {
     loadDrafts();
   }, []);
 
-  /* =====================================================
-     ACTIVE INVOICE
-  ===================================================== */
+  const updateSearchText = (invoiceId, text) => {
+    console.log(text)
+    setInvoices(prev =>
+      prev.map(inv =>
+        inv.id === invoiceId
+          ? { ...inv, searchText: text }
+          : inv
+      )
+    );
+  };
 
   const activeInvoice = invoices.find(i => i.id === activeInvoiceId) || null;
-
-  /* =====================================================
-     LAZY LOAD DETAIL
-  ===================================================== */
 
   useEffect(() => {
     if (!activeInvoice) return;
@@ -116,6 +117,14 @@ export const useInvoiceTabs = () => {
               ? {
                 ...inv,
                 items: detail?.items ?? [],
+                customer: detail?.customerId
+                  ? {
+                    id: detail.customerId,
+                    name: detail.customerName,
+                    loyaltyPoints: detail.customerPoints,
+                    phone: detail.customerPhone
+                  }
+                  : null,
                 itemsLoaded: true
               }
               : inv
@@ -166,14 +175,16 @@ export const useInvoiceTabs = () => {
 
         if (res && res.success === false) {
           showNotification(res.message || "Bạn đang ngồi sai Quầy!", "error");
-          setInvoices(prev => 
-            prev.map(inv => 
-              inv.id === invoiceId ? 
-              { ...inv, 
-                isSaving: false, 
-                items: [] }
-                 : inv
-                ));
+          setInvoices(prev =>
+            prev.map(inv =>
+              inv.id === invoiceId ?
+                {
+                  ...inv,
+                  isSaving: false,
+                  items: []
+                }
+                : inv
+            ));
           return;
         }
         const newDbId = res?.data?.id;
@@ -231,7 +242,7 @@ export const useInvoiceTabs = () => {
             )
           );
         }
-      }, 1000);
+      }, 500);
     }
   };
 
@@ -289,14 +300,32 @@ export const useInvoiceTabs = () => {
     }
   };
 
-  const handlePaymentSuccess = useCallback((invoiceId) => {
-    showNotification("Thanh toán thành công!", "success");
+  const handlePaymentSuccess = useCallback((payload) => {
+    const invoiceId = String(payload.invoiceId || payload.orderId || payload.id);
 
+    setInvoices((prev) => {
+      const exists = prev.some(inv => String(inv.id) === invoiceId);
+
+      if (!exists) {
+        console.warn(`Không tìm thấy Tab cho hóa đơn #${invoiceId}`);
+        return prev;
+      }
+
+      return prev.map((inv) => {
+        if (String(inv.id) === invoiceId) {
+          return { ...inv, status: "PAID", isSaving: false };
+        }
+        return inv;
+      });
+    });
+  }, [showNotification]);
+
+  const handleFinishOrder = useCallback((invoiceId) => {
+    showNotification(`Đơn hàng #${invoiceId} đã thanh toán thành công!`, "success");
     let nextActiveId = null;
     setInvoices((prev) => {
       const remaining = prev.filter((inv) => String(inv.id) !== String(invoiceId));
 
-      // Tìm hóa đơn UNPAID khác để nhảy sang
       const nextUnpaid = [...remaining].reverse().find((inv) => inv.status === "UNPAID");
 
       if (nextUnpaid) {
@@ -304,17 +333,18 @@ export const useInvoiceTabs = () => {
         return remaining;
       }
 
-      // Nếu không còn đơn nào thì tạo đơn mới
       const local = createLocalInvoice();
       nextActiveId = local.id;
       return [...remaining, local];
     });
 
     if (nextActiveId) setActiveInvoiceId(nextActiveId);
-  }, [showNotification]);
+  }, []);
 
   const pay = async (paymentInfo) => {
-    if (!activeInvoice || activeInvoice.status !== "UNPAID") return;
+    if (!activeInvoice || activeInvoice.status !== "UNPAID") {
+      return { ignored: true };
+    }
     const invoiceId = activeInvoice.id;
 
     try {
@@ -330,6 +360,7 @@ export const useInvoiceTabs = () => {
         return { pending: true, qr };
       }
     } catch (err) {
+      console.log("ĐĂƯAUDBƯAUB")
       showNotification("Thanh toán thất bại!", "error");
       throw err;
     }
@@ -422,5 +453,7 @@ export const useInvoiceTabs = () => {
     goToNextInvoice,
     goToPrevInvoice,
     accessError,
+    updateSearchText,
+    handleFinishOrder,
   };
 };

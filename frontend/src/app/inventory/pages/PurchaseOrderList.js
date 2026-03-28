@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import purchaseOrderService from "../../../services/Inventory/purchaseOrderService";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import useTitle from "../../../hooks/common/useTitle";
 
 const PurchaseOrderList = () => {
+  useTitle("Danh sách đơn đặt hàng");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -78,11 +80,14 @@ const PurchaseOrderList = () => {
 
   // Fetch khi filters hoặc page thay đổi
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetchData(page);
   }, [filters, page, fetchData]);
 
   // Đồng bộ filters + page → URL
   useEffect(() => {
+    window.scrollTo(0, 0);
+
     const params = new URLSearchParams();
 
     if (filters.from) params.set("from", filters.from);

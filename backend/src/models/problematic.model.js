@@ -24,19 +24,16 @@ const getReports = async ({ userId, isManager, filters }) => {
 
     const request = pool.request();
 
-    //Warehouse chỉ xem của mình
     if (!isManager) {
         query += " AND reportedBy = @userId";
         request.input("userId", sql.BigInt, userId);
     }
 
-    //Filter status
     if (filters.status && filters.status !== "ALL") {
         query += " AND status = @status";
         request.input("status", sql.NVarChar, filters.status);
     }
 
-    //Filter ngày tạo (FROM)
     if (filters.createdFrom) {
         query += " AND createdAt >= @createdFrom";
         request.input(
@@ -46,7 +43,6 @@ const getReports = async ({ userId, isManager, filters }) => {
         );
     }
 
-    //Filter ngày tạo (TO) — set 23:59:59
     if (filters.createdTo) {
         const endDate = new Date(filters.createdTo);
         endDate.setHours(23, 59, 59, 999);

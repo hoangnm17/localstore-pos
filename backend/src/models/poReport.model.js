@@ -7,8 +7,6 @@ const getMonthlyReport = async ({ month, year, supplierId }) => {
     let supplierFilter = "";
     if (supplierId) supplierFilter = "AND po.supplierId = @supplierId";
 
-    /* ================= SUMMARY ================= */
-
     const summaryResult = await pool.request()
         .input("month", sql.Int, month)
         .input("year", sql.Int, year)
@@ -40,8 +38,6 @@ const getMonthlyReport = async ({ month, year, supplierId }) => {
                 ${supplierFilter}
         `);
 
-    /* ================= SUPPLIER STATS ================= */
-
     const supplierResult = await pool.request()
         .input("month", sql.Int, month)
         .input("year", sql.Int, year)
@@ -72,8 +68,6 @@ const getMonthlyReport = async ({ month, year, supplierId }) => {
             ORDER BY totalAmount DESC
         `);
 
-    /* ================= DAILY STATS ================= */
-
     const dailyResult = await pool.request()
         .input("month", sql.Int, month)
         .input("year", sql.Int, year)
@@ -101,8 +95,6 @@ const getMonthlyReport = async ({ month, year, supplierId }) => {
             GROUP BY DAY(po.createdAt)
             ORDER BY day
         `);
-
-    /* ================= TOP PRODUCTS ================= */
 
     const topProductsResult = await pool.request()
         .input("month", sql.Int, month)

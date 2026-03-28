@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import api from '../../services/axiosInstance';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import Pagination from '../../components/Pagination/Pagination';
@@ -8,6 +7,9 @@ import ConfirmRemoveModal from './modals/ConfirmRemoveModal';
 import ScheduleHeader from './components/ScheduleHeader';
 import ScheduleFilter from './components/ScheduleFilter';
 import ScheduleTable from './components/ScheduleTable';
+import { getWeeklySchedule, removeShift } from '../../services/Roster/roster.service';
+import { getShifts } from '../../services/Shift/shift.service.js';
+import useTitle from "hooks/common/useTitle";
 
 const getMonday = (d) => {
     const date = new Date(d);
@@ -24,9 +26,8 @@ const formatDate = (d) => {
     return `${yyyy}-${mm}-${dd}`;
 };
 
-const PAGE_SIZE = 2; // số nhân viên mỗi trang
+const PAGE_SIZE = 5;
 
-/* ── Component ── */
 const WorkSchedule = () => {
     const { hasFeature } = useAuth();
     const { showNotification } = useNotification();
@@ -37,18 +38,16 @@ const WorkSchedule = () => {
     const [currentMonday, setCurrentMonday] = useState(getMonday(new Date()));
     const [staffList, setStaffList] = useState([]);
     const [shifts, setShifts] = useState([]);
-    const [counters, setCounters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [filterMode, setFilterMode] = useState('staff');
-    const [roleFilter, setRoleFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-
 
     const [assignCell, setAssignCell] = useState(null);
     const [removeId, setRemoveId] = useState(null);
     const [removeLoading, setRemoveLoading] = useState(false);
 
+    useTitle("Phân công lịch")
     const weekDates = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(currentMonday);
         d.setDate(d.getDate() + i);
@@ -60,25 +59,22 @@ const WorkSchedule = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [schedRes, shiftRes, counterRes] = await Promise.all([
-                api.get(`/roster?startDate=${startDate}&endDate=${endDate}`),
-                api.get('/shifts'),
-                api.get('/roster/counters'),
+            const [schedRes, shiftRes] = await Promise.all([
+                getWeeklySchedule(startDate, endDate),
+                getShifts()
             ]);
-            if (schedRes.data?.success) setStaffList(schedRes.data.data);
-            if (shiftRes.data?.success) setShifts(shiftRes.data.data.filter(s => s.isActive === 1 || s.isActive === true));
-            if (counterRes.data?.success) setCounters(counterRes.data.data);
+            if (schedRes?.success) setStaffList(schedRes.data);
+            if (shiftRes?.success) setShifts(shiftRes.data.filter(s => s.isActive === 1 || s.isActive === true));
         } catch (err) {
             console.error(err);
-            showNotification('Không thể tải dữ liệu lịch làm!', 'error');
+            showNotification(err.message || 'Không thể tải dữ liệu lịch làm!', 'error');
         } finally {
             setLoading(false);
         }
     }, [startDate, endDate, showNotification]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchText, roleFilter, filterMode, currentMonday]);
+    useEffect(() => { setCurrentPage(1); }, [searchText, filterMode, currentMonday]);
 
     const prevWeek = () => {
         const d = new Date(currentMonday);
@@ -104,15 +100,18 @@ const WorkSchedule = () => {
 
     const openRemove = (scheduleId) => setRemoveId(scheduleId);
     const closeRemove = () => setRemoveId(null);
+
     const handleConfirmRemove = async () => {
         setRemoveLoading(true);
         try {
-            await api.delete(`/roster/${removeId}`);
-            showNotification('Đã xóa phân công!', 'success');
-            closeRemove();
-            fetchData();
+            const res = await removeShift(removeId);
+            if (res.success) {
+                showNotification('Đã xóa phân công!', 'success');
+                closeRemove();
+                fetchData();
+            }
         } catch (err) {
-            showNotification(err.response?.data?.message || 'Lỗi xóa phân công!', 'error');
+            showNotification(err.message || 'Lỗi xóa phân công!', 'error');
         } finally {
             setRemoveLoading(false);
         }
@@ -123,10 +122,9 @@ const WorkSchedule = () => {
         staffList.filter(s => {
             if (s.roleName !== 'Cashier' && s.roleName !== 'Warehouse') return false;
             const matchName = s.fullName.toLowerCase().includes(searchText.toLowerCase());
-            const matchRole = roleFilter === 'all' || s.roleName === roleFilter;
-            return matchName && matchRole;
+            return matchName;
         }),
-        [staffList, searchText, roleFilter]);
+        [staffList, searchText]);
 
     /* Paganation */
     const totalPages = Math.max(1, Math.ceil(filteredStaff.length / PAGE_SIZE));
@@ -142,8 +140,8 @@ const WorkSchedule = () => {
             return acc + Object.values(s.schedules || {}).reduce((a, arr) => a + arr.length, 0);
         }, 0),
         totalHours: filteredStaff.reduce((acc, s) => acc + (s.totalHours || 0), 0),
-        activeCounters: counters.length,
-    }), [filteredStaff, counters]);
+        // activeCounters: counters.length,
+    }), [filteredStaff]);
 
     return (
         <>
@@ -171,8 +169,8 @@ const WorkSchedule = () => {
                     <ScheduleFilter
                         searchText={searchText} setSearchText={setSearchText}
                         filterMode={filterMode} setFilterMode={setFilterMode}
-                        roleFilter={roleFilter} setRoleFilter={setRoleFilter}
                         totalCount={filteredStaff.length}
+                        onRefresh={fetchData}
                     />
 
                     {/* Table */}
@@ -206,7 +204,7 @@ const WorkSchedule = () => {
                 <AssignShiftModal
                     cell={assignCell}
                     shifts={shifts}
-                    counters={counters}
+                    // counters={counters}
                     isCashier={assignCell.roleName === 'Cashier'}
                     onClose={closeAssign}
                     onSuccess={handleAssignSuccess}

@@ -1,17 +1,47 @@
 const { connectDB, sql } = require("../config/database");
 const productModel = require("./productStock.model");
 
-const createAdjustmentWithItems = async (
-    staffId,
-    reason,
-    items
-) => {
+const convertToUnit = (quantity, conversionFactor) => {
+    const largestUnit = Math.floor(quantity / conversionFactor);
+    const remainder = quantity - largestUnit * conversionFactor;
+    return { largestUnit, remainder };
+};
 
+const getLargestUnitInfo = async (conn, productId) => {
+    const request = new sql.Request(conn);
+    const result = await request
+        .input("productId", sql.BigInt, productId)
+        .query(`
+            SELECT TOP 1 unitName, conversionFactor
+            FROM ProductUnits
+            WHERE productId = @productId
+            ORDER BY conversionFactor DESC
+        `);
+    return result.recordset[0];
+};
+
+const createAdjustmentWithItems = async (staffId, reason, items) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
 
     try {
         await transaction.begin();
+        const productIds = items.map(i => i.productId);
+
+        const pendingCheck = await new sql.Request(transaction)
+            .query(`
+                SELECT DISTINCT iai.productId
+                FROM InventoryAdjustmentItems iai
+                JOIN InventoryAdjustments ia 
+                    ON iai.adjustmentId = ia.id
+                WHERE ia.status = 'Pending'
+                AND iai.productId IN (${productIds.join(",")})
+            `);
+
+        if (pendingCheck.recordset.length > 0) {
+            const list = pendingCheck.recordset.map(i => i.productId).join(", ");
+            throw new Error(`Các sản phẩm đang nằm trong phiếu Pending: ${list}`);
+        }
 
         const adjustmentResult = await new sql.Request(transaction)
             .input("createdBy", sql.BigInt, staffId)
@@ -26,25 +56,47 @@ const createAdjustmentWithItems = async (
 
         for (let item of items) {
 
+            const stockResult = await new sql.Request(transaction)
+                .input("productId", sql.BigInt, item.productId)
+                .query(`
+                    SELECT quantityOnHand 
+                    FROM InventoryStocks 
+                    WHERE productId = @productId
+                `);
+
+            if (stockResult.recordset.length === 0) {
+                throw new Error(`Không tìm thấy tồn kho của productId ${item.productId}`);
+            }
+
+            const systemQuantity = stockResult.recordset[0].quantityOnHand;
+
+            const largestInfo = await getLargestUnitInfo(transaction, item.productId);
+            if (!largestInfo) {
+                throw new Error(`Không tìm thấy đơn vị sản phẩm cho productId ${item.productId}`);
+            }
+
+            const conversionFactor = largestInfo.conversionFactor;
+
+            const actualQuantity =
+                (item.actualLargest || 0) * conversionFactor +
+                (item.actualRemainder || 0);
+
             await new sql.Request(transaction)
                 .input("adjustmentId", sql.Int, adjustmentId)
                 .input("productId", sql.BigInt, item.productId)
-                .input("systemQuantity", sql.Decimal(15,3), item.systemQuantity)
-                .input("actualQuantity", sql.Decimal(15,3), item.actualQuantity)
+                .input("systemQuantity", sql.Decimal(15, 3), systemQuantity)
+                .input("actualQuantity", sql.Decimal(15, 3), actualQuantity)
                 .query(`
                     INSERT INTO InventoryAdjustmentItems
                     (adjustmentId, productId, systemQuantity, actualQuantity)
-                    VALUES
-                    (@adjustmentId, @productId, @systemQuantity, @actualQuantity)
+                    VALUES (@adjustmentId, @productId, @systemQuantity, @actualQuantity)
                 `);
         }
 
         await transaction.commit();
-
         return adjustmentId;
 
     } catch (error) {
-
         await transaction.rollback();
         throw error;
     }
@@ -98,17 +150,19 @@ const updateStatusTransaction = async (
             const itemsResult = await new sql.Request(transaction)
                 .input("adjustmentId", sql.Int, adjustmentId)
                 .query(`
-                    SELECT productId, actualQuantity
+                    SELECT productId, actualQuantity, systemQuantity
                     FROM InventoryAdjustmentItems
                     WHERE adjustmentId = @adjustmentId
                 `);
 
             for (let item of itemsResult.recordset) {
 
+                const difference = item.actualQuantity - item.systemQuantity;
+
                 const affected = await productModel.updateStock(
                     transaction,
                     item.productId,
-                    item.actualQuantity
+                    difference
                 );
 
                 if (affected === 0) {
@@ -171,14 +225,11 @@ const getAdjustments = async (filters) => {
 };
 
 const getAdjustmentDetail = async (adjustmentId) => {
-
     const pool = await connectDB();
 
-    // 1️⃣ Lấy thông tin phiếu
     const headerResult = await pool.request()
         .input("id", sql.Int, adjustmentId)
-        .query(`
-            SELECT 
+        .query(` SELECT 
                 ia.id,
                 ia.reason,
                 ia.status,
@@ -186,41 +237,94 @@ const getAdjustmentDetail = async (adjustmentId) => {
                 ia.processedAt,
                 s1.fullName AS createdByName,
                 s2.fullName AS processedByName
-            FROM InventoryAdjustments ia
-            LEFT JOIN Staff s1 ON ia.createdBy = s1.id
-            LEFT JOIN Staff s2 ON ia.processedBy = s2.id
-            WHERE ia.id = @id
-        `);
+                FROM InventoryAdjustments ia
+                LEFT JOIN Staff s1 ON ia.createdBy = s1.id
+                LEFT JOIN Staff s2 ON ia.processedBy = s2.id
+                WHERE ia.id = @id`
+            );
 
-    if (headerResult.recordset.length === 0) {
-        return null;
-    }
+    if (headerResult.recordset.length === 0) return null;
 
-    // 2️⃣ Lấy danh sách sản phẩm trong phiếu
     const itemsResult = await pool.request()
         .input("adjustmentId", sql.Int, adjustmentId)
-        .query(`
-            SELECT 
+        .query(`SELECT 
                 iai.productId,
                 p.name,
                 p.code,
+                p.baseUnit,
                 iai.systemQuantity,
                 iai.actualQuantity,
                 (iai.actualQuantity - iai.systemQuantity) AS difference
-            FROM InventoryAdjustmentItems iai
-            JOIN Products p ON iai.productId = p.id
-            WHERE iai.adjustmentId = @adjustmentId
-        `);
+                FROM InventoryAdjustmentItems iai
+                JOIN Products p ON iai.productId = p.id
+                WHERE iai.adjustmentId = @adjustmentId`
+            );
+
+    const items = await Promise.all(itemsResult.recordset.map(async (item) => {
+        const largestInfo = await getLargestUnitInfo(pool, item.productId);
+
+        if (!largestInfo) {
+            return {
+                ...item,
+                unitName: null,
+                systemLargest: parseFloat(item.systemQuantity) || 0,
+                systemRemainder: 0,
+                actualLargest: parseFloat(item.actualQuantity) || 0,
+                actualRemainder: 0,
+                differenceLargest: parseFloat(item.difference) || 0,
+                differenceRemainder: 0
+            };
+        }
+
+        const conv = parseFloat(largestInfo.conversionFactor);
+        const unitName = largestInfo.unitName;
+
+        const systemQ = parseFloat(item.systemQuantity) || 0;
+        const actualQ = parseFloat(item.actualQuantity) || 0;
+        const diffQ = parseFloat(item.difference) || 0;
+
+        const systemConverted = convertToUnit(systemQ, conv);
+        const actualConverted = convertToUnit(actualQ, conv);
+        const diffConverted = convertToUnit(diffQ, conv);
+
+        return {
+            ...item,
+            unitName,
+            systemLargest: systemConverted.largestUnit,
+            systemRemainder: systemConverted.remainder,
+            actualLargest: actualConverted.largestUnit,
+            actualRemainder: actualConverted.remainder,
+            differenceLargest: diffConverted.largestUnit,
+            differenceRemainder: diffConverted.remainder
+        };
+    }));
 
     return {
         ...headerResult.recordset[0],
-        items: itemsResult.recordset
+        items
     };
+};
+
+const checkProductInPending = async (productId) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input("productId", sql.BigInt, productId)
+        .query(`
+            SELECT TOP 1 ia.id
+            FROM InventoryAdjustmentItems iai
+            JOIN InventoryAdjustments ia 
+                ON iai.adjustmentId = ia.id
+            WHERE ia.status = 'Pending'
+            AND iai.productId = @productId
+        `);
+    return result.recordset.length > 0;
 };
 
 module.exports = {
     createAdjustmentWithItems,
     updateStatusTransaction,
     getAdjustments,
-    getAdjustmentDetail
+    getAdjustmentDetail,
+    checkProductInPending
 };

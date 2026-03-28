@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { formatCurrency } from "utils/formatters";
+import { safeParse } from "utils/safeParse";
+import { formatQuantityInput } from "utils/quantityValidator";
 
 const OrderItem = ({
   item,
@@ -8,97 +10,49 @@ const OrderItem = ({
   remove,
   activeItemId,
   onChangeQty,
-  focusSignal,
 }) => {
   const displayName = item.name ? item.name : item.productName;
-  const lineTotal = (item.unitPrice || 0) * item.quantity;
-
+  const qty = safeParse(item.quantity);
+  const lineTotal = item.unitPrice * qty;
   const qtyRef = useRef(null);
 
-  useEffect(() => {
-    if (activeItemId === item.id && qtyRef.current) {
-      requestAnimationFrame(() => {
-        qtyRef.current.focus();
-        qtyRef.current.select();
-      });
-    }
-  }, [activeItemId, focusSignal]);
-
   const handleChange = (e) => {
+    console.log(e.target.value);
+    
     const { value } = e.target;
-    let formattedValue = value;
-    console.log(item)
-    if (item.unitType === "PIECE") {
-      formattedValue = value.replace(/\D/g, "");
-    } else {
-      formattedValue = value.replace(/[^0-9.]/g, "");
-      const parts = formattedValue.split(".");
-      if (parts.length > 2) {
-        formattedValue = parts[0] + "." + parts.slice(1).join("");
-      }
-    }
-
-    // Trường hợp đang gõ dở: để trống hoặc chỉ có dấu chấm
-    if (formattedValue === "" || formattedValue === ".") {
-      onChangeQty(item.id, formattedValue);
-      return;
-    }
-
-    let number = parseFloat(formattedValue);
-
-    // Kiểm tra giới hạn tồn kho (quantityOnHand)
-    if (number > item.quantityOnHand) {
-      number = item.quantityOnHand;
-      formattedValue = number.toString();
-    }
-
-    // Không cho phép số âm
-    if (number < 0) {
-      number = 0;
-      formattedValue = "0";
-    }
-
-    // Nếu đang gõ số thập phân (ví dụ "1.") thì truyền chuỗi để giữ giao diện
-    const finalValue = (item.unitType === "WEIGHT" && formattedValue.includes("."))
-      ? formattedValue
-      : number;
+    const finalValue = formatQuantityInput(
+      value,
+      item.unitType,
+      item.quantityOnHand
+    );
 
     onChangeQty(item.id, finalValue);
   };
 
   const handleBlur = () => {
-    // Khi thoát khỏi input, nếu giá trị không hợp lệ thì reset về 1
-    const currentQty = parseFloat(item.quantity);
-    if (isNaN(currentQty) || currentQty <= 0) {
-      onChangeQty(item.id, 1);
-    }
-  };
+    let currentQty = safeParse(item.quantity);
 
+    if (currentQty <= 0) {
+      currentQty = 1;
+    }
+    onChangeQty(item.id, currentQty);
+  };
   return (
     <tr className="border-top align-middle">
-      {/* PRODUCT NAME */}
       <td className="text-start">
         <div className="fw-semibold">{displayName}</div>
-        {(item.variant || item.code) && (
-          <small className="text-muted">
-            {item.code} {item.variant ? `| ${item.variant}` : ""}
-          </small>
-        )}
       </td>
 
-      {/* UNIT NAME */}
       <td>
         <span className={`badge ${item.unitType === 'WEIGHT' ? 'bg-info' : 'bg-secondary'}`}>
           {item.unitName}
         </span>
       </td>
 
-      {/* UNIT PRICE */}
       <td className="text-end text-muted">
         {formatCurrency(item.unitPrice)}
       </td>
 
-      {/* QUANTITY CONTROL */}
       <td className="text-center">
         <div className="d-inline-flex align-items-center border rounded overflow-hidden">
           <button
@@ -128,7 +82,7 @@ const OrderItem = ({
           <button
             className="btn btn-light btn-sm border-0 rounded-0"
             onClick={() => increase(item.id)}
-            disabled={item.quantity >= item.quantityOnHand}
+            disabled={safeParse(item.quantity) >= item.quantityOnHand}
             type="button"
           >
             <i className="bi bi-plus"></i>

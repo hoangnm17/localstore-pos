@@ -11,3 +11,7 @@ export const createBankPayment = (invoiceId, payload = {}) => {
     ...payload,
   });
 };
+
+export const cancelPendingPayment = async (invoiceId) => {
+  return await api.post(`/payment/${invoiceId}/cancel`);
+};

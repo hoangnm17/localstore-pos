@@ -60,11 +60,11 @@ exports.getProducts = async (filters) => {
             puBase.id AS baseUnitId,
             puBase.barcode AS barcode,
             puBase.salePrice AS salePrice,
-            ISNULL(latestCost.costPrice, 0) AS costPrice,
             CASE
-                WHEN p.isCombo = 1 THEN ISNULL(comboStock.stockQuantity, 0)
-                ELSE ISNULL(s.quantityOnHand, 0)
-            END AS stockQuantity
+                WHEN p.isCombo = 1 THEN ISNULL(comboCost.costPrice, 0)
+                ELSE ISNULL(latestCost.costPrice, 0)
+            END AS costPrice,
+            ISNULL(s.quantityOnHand, 0) AS stockQuantity
         FROM Products p
         LEFT JOIN Categories c
             ON c.id = p.categoryId
@@ -74,23 +74,32 @@ exports.getProducts = async (filters) => {
         LEFT JOIN InventoryStocks s
             ON s.productId = p.id
         OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
-) latestCost
+            SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+            FROM PurchaseOrderItems poi
+            INNER JOIN PurchaseOrders po
+                ON po.id = poi.poId
+            INNER JOIN ProductUnits puCost
+                ON puCost.id = poi.productUnitId
+            WHERE puCost.productId = p.id
+                AND po.status = 'Received'
+            ORDER BY po.createdAt DESC, poi.id DESC
+        ) latestCost
         OUTER APPLY (
-            SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
+            SELECT ISNULL(SUM(pc.quantity * ISNULL(childLatest.costPrice, 0)), 0) AS costPrice
             FROM ProductCombos pc
-            LEFT JOIN InventoryStocks cs
-                ON cs.productId = pc.childProductId
+            LEFT JOIN (
+                SELECT
+                    puC.productId,
+                    CAST(ROUND(poiC.costPrice / NULLIF(CAST(puC.conversionFactor AS DECIMAL(15,3)), 0), 0) AS DECIMAL(15,0)) AS costPrice,
+                    ROW_NUMBER() OVER (PARTITION BY puC.productId ORDER BY poC.createdAt DESC, poiC.id DESC) AS rn
+                FROM PurchaseOrderItems poiC
+                INNER JOIN PurchaseOrders poC ON poC.id = poiC.poId
+                INNER JOIN ProductUnits puC ON puC.id = poiC.productUnitId
+                WHERE poC.status = 'Received'
+            ) childLatest ON childLatest.productId = pc.childProductId AND childLatest.rn = 1
             WHERE pc.parentProductId = p.id
-        ) comboStock
+        ) comboCost
+
         WHERE
     (@status IS NULL OR p.status = @status)
     AND (
@@ -136,9 +145,7 @@ exports.countProducts = async (filters) => {
             SELECT id
             FROM Categories
             WHERE id = @categoryId
-
             UNION ALL
-
             SELECT c.id
             FROM Categories c
             JOIN CategoryTree ct ON c.parentId = ct.id
@@ -195,12 +202,12 @@ exports.getProductDetail = async (id) => {
                 puBase.id AS baseUnitId,
                 puBase.barcode AS barcode,
                 puBase.salePrice AS salePrice,
-                ISNULL(latestCost.costPrice, 0) AS costPrice,
-                ISNULL(s.minThreshold, 0) AS minThreshold,
                 CASE
-                    WHEN p.isCombo = 1 THEN ISNULL(comboStock.stockQuantity, 0)
-                    ELSE ISNULL(s.quantityOnHand, 0)
-                END AS stockQuantity
+                    WHEN p.isCombo = 1 THEN ISNULL(comboCost.costPrice, 0)
+                    ELSE ISNULL(latestCost.costPrice, 0)
+                END AS costPrice,
+                ISNULL(s.minThreshold, 0) AS minThreshold,
+                ISNULL(s.quantityOnHand, 0) AS stockQuantity
             FROM Products p
             LEFT JOIN Categories c
                 ON c.id = p.categoryId
@@ -210,23 +217,32 @@ exports.getProductDetail = async (id) => {
             LEFT JOIN InventoryStocks s
                 ON s.productId = p.id
             OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
-) latestCost
+                SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+                FROM PurchaseOrderItems poi
+                INNER JOIN PurchaseOrders po
+                    ON po.id = poi.poId
+                INNER JOIN ProductUnits puCost
+                    ON puCost.id = poi.productUnitId
+                WHERE puCost.productId = p.id
+                    AND po.status = 'Received'
+                ORDER BY po.createdAt DESC, poi.id DESC
+            ) latestCost
             OUTER APPLY (
-                SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
+                SELECT ISNULL(SUM(pc.quantity * ISNULL(childLatest.costPrice, 0)), 0) AS costPrice
                 FROM ProductCombos pc
-                LEFT JOIN InventoryStocks cs
-                    ON cs.productId = pc.childProductId
+                LEFT JOIN (
+                    SELECT
+                        puC.productId,
+                        CAST(ROUND(poiC.costPrice / NULLIF(CAST(puC.conversionFactor AS DECIMAL(15,3)), 0), 0) AS DECIMAL(15,0)) AS costPrice,
+                        ROW_NUMBER() OVER (PARTITION BY puC.productId ORDER BY poC.createdAt DESC, poiC.id DESC) AS rn
+                    FROM PurchaseOrderItems poiC
+                    INNER JOIN PurchaseOrders poC ON poC.id = poiC.poId
+                    INNER JOIN ProductUnits puC ON puC.id = poiC.productUnitId
+                    WHERE poC.status = 'Received'
+                ) childLatest ON childLatest.productId = pc.childProductId AND childLatest.rn = 1
                 WHERE pc.parentProductId = p.id
-            ) comboStock
+            ) comboCost
+
             WHERE p.id = @id
         `);
 
@@ -292,15 +308,15 @@ exports.getProductByBarcode = async (barcode) => {
             LEFT JOIN InventoryStocks s
                 ON s.productId = p.id
             OUTER APPLY (
-    SELECT TOP 1 poi.costPrice
-    FROM PurchaseOrderItems poi
-    INNER JOIN PurchaseOrders po
-        ON po.id = poi.poId
-    INNER JOIN ProductUnits puCost
-        ON puCost.id = poi.productUnitId
-    WHERE puCost.productId = p.id
-      AND po.status = 'Received'
-    ORDER BY po.createdAt DESC, poi.id DESC
+            SELECT TOP 1 CAST(ROUND(poi.costPrice / NULLIF(CAST(puCost.conversionFactor AS DECIMAL(15, 3)), 0),0) AS DECIMAL(15, 0)) AS costPrice
+            FROM PurchaseOrderItems poi
+            INNER JOIN PurchaseOrders po
+                ON po.id = poi.poId
+            INNER JOIN ProductUnits puCost
+                ON puCost.id = poi.productUnitId
+            WHERE puCost.productId = p.id
+                AND po.status = 'Received'
+            ORDER BY po.createdAt DESC, poi.id DESC
             ) latestCost
             OUTER APPLY (
                 SELECT MIN(FLOOR(ISNULL(cs.quantityOnHand, 0) / NULLIF(pc.quantity, 0))) AS stockQuantity
@@ -581,57 +597,61 @@ exports.getProductWithBarcode = async (barcode) => {
 };
 
 exports.getAllProducts = async (filters) => {
-    const { search, page, pageSize, categoryId, status } = filters;
+    const { search, page = 1, pageSize = 10, categoryId, status } = filters;
     const offset = (page - 1) * pageSize;
 
-    const query = `
-        ${categoryId ? `
+    const baseFilter = `
+        WHERE [status] = @status
+        AND (
+            @search IS NULL
+            OR [name] LIKE N'%' + @search + '%'
+            OR [code] LIKE '%' + @search + '%'
+            OR [id] IN (
+                SELECT [productId] FROM [ProductUnits] WHERE [barcode] = @search
+            )
+        )
+        ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+    `;
+
+    const categoryCTE = categoryId ? `
         WITH CategoryTree AS (
             SELECT id FROM Categories WHERE id = @categoryId
             UNION ALL
-            SELECT c.id
-            FROM Categories c
+            SELECT c.id 
+            FROM Categories c 
             JOIN CategoryTree ct ON c.parentId = ct.id
-        )` : ``}
+        )
+    ` : ``;
 
+    const query = `
+        -- Query 1: COUNT
+        ${categoryCTE}
+        SELECT COUNT(*) AS total 
+        FROM [Products]
+        ${baseFilter};
+
+        -- Query 2: SELECT DATA
+        ${categoryCTE}
         SELECT 
-            p.[id], 
-            p.[name], 
-            p.[code],
-            p.[imageUrl],
-            p.[categoryId],
-            ISNULL(s.[quantityOnHand], 0) AS [stock],
+            p.[id], p.[name], p.[code], p.[imageUrl], p.[categoryId],
+            ISNULL(s.[quantityOnHand], 0) AS [stock], 
             s.[minThreshold],
-
             pu.[id] AS [unitId], 
-            pu.[unitName],
+            pu.[unitName], 
             pu.[conversionFactor] AS [factor],
             pu.[barcode], 
-            pu.[salePrice] AS [price],
+            pu.[salePrice] AS [price], 
             pu.[unitType]
         FROM (
             SELECT [id], [name], [code], [categoryId], [imageUrl]
             FROM [Products]
-            WHERE [status] = @status
-            AND (
-                @search IS NULL
-                OR [name] LIKE N'%' + @search + '%'
-                OR [code] LIKE '%' + @search + '%'
-                OR [id] IN (
-                    SELECT [productId]
-                    FROM [ProductUnits]
-                    WHERE [barcode] = @search
-                )
-            )
-            ${categoryId ? `AND [categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+            ${baseFilter}
             ORDER BY [id]
             OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
         ) AS p
-        LEFT JOIN [InventoryStocks] s 
-            ON p.[id] = s.[productId]
-        LEFT JOIN [ProductUnits] pu 
-            ON p.[id] = pu.[productId]
-        ORDER BY p.[id], pu.[conversionFactor]
+        LEFT JOIN [InventoryStocks] s ON p.[id] = s.[productId]
+        LEFT JOIN [ProductUnits] pu ON p.[id] = pu.[productId]
+        ORDER BY p.[id], pu.[conversionFactor];
     `;
 
     const request = new sql.Request();
@@ -642,5 +662,86 @@ exports.getAllProducts = async (filters) => {
     request.input('pageSize', sql.Int, pageSize);
 
     const result = await request.query(query);
-    return result.recordset;
+
+    return {
+        total: result.recordsets[0][0].total,
+        data: result.recordsets[1]
+    };
+};
+
+exports.getBarcodeProducts = async (filters) => {
+  const { search, page = 1, pageSize = 10, categoryId, status } = filters;
+
+  if (!search) return null;
+
+  const offset = (page - 1) * pageSize;
+
+  const query = `
+    ${categoryId ? `
+    WITH CategoryTree AS (
+        SELECT id FROM Categories WHERE id = @categoryId
+        UNION ALL
+        SELECT c.id
+        FROM Categories c
+        JOIN CategoryTree ct ON c.parentId = ct.id
+    )` : ``}
+
+    SELECT 
+        p.[id], 
+        p.[name], 
+        p.[code],
+        p.[imageUrl],
+        p.[categoryId],
+        ISNULL(s.[quantityOnHand], 0) AS [stock],
+        s.[minThreshold],
+
+        pu.[id] AS [unitId], 
+        pu.[unitName],
+        pu.[conversionFactor] AS [factor],
+        pu.[barcode], 
+        pu.[salePrice] AS [price],
+        pu.[unitType]
+
+    FROM [ProductUnits] pu
+    JOIN [Products] p ON pu.productId = p.id
+    LEFT JOIN [InventoryStocks] s ON p.id = s.productId
+
+    WHERE pu.[barcode] = @search
+    AND p.[status] = @status
+    ${categoryId ? `AND p.[categoryId] IN (SELECT id FROM CategoryTree)` : ``}
+
+    ORDER BY p.[id], pu.[conversionFactor]
+    OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+  `;
+
+  const request = new sql.Request();
+  request.input("search", sql.VarChar, search);
+  request.input("status", sql.VarChar, status || "Selling");
+  request.input("categoryId", sql.Int, categoryId || null);
+  request.input("offset", sql.Int, offset);
+  request.input("pageSize", sql.Int, pageSize);
+
+  const result = await request.query(query);
+
+  // ❌ Không tìm thấy → return null
+  if (result.recordset.length === 0) return null;
+
+  return result.recordset;
+};
+
+exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {
+    if (!barcode || String(barcode).trim() === '') return false;
+
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('barcode', sql.VarChar(50), barcode)
+        .input('excludeProductId', sql.BigInt, excludeProductId)
+        .query(`
+            SELECT COUNT(*) as count
+            FROM ProductUnits
+            WHERE barcode = @barcode
+            ${excludeProductId ? 'AND productId != @excludeProductId' : ''}
+        `);
+
+    return result.recordset[0].count > 0;
 };

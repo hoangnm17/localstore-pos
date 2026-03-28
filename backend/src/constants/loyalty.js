@@ -1,0 +1,5 @@
+module.exports = {
+  POINT_EXCHANGE: 100,
+  EARN_POINT_EXCHANGE: 10000,
+  EXPIRE_MINUTES: 2,
+};

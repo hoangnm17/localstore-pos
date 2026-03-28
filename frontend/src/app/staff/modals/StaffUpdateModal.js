@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
+import ConfirmModal from '../../../components/common/ConfirmModal'; 
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
+import { updateStaff, getStaffRoles, getStaffDetail, resetStaffPassword } from '../../../services/Staff/staff.service';
 
 const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
+    
+    const [showConfirmReset, setShowConfirmReset] = useState(false);
+    
+    const [currentUserId, setCurrentUserId] = useState(null); 
     const [errorMsg, setErrorMsg] = useState('');
     const [errorType, setErrorType] = useState('danger');
     const [originalData, setOriginalData] = useState(null);
@@ -17,19 +21,24 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         username: '', fullName: '', email: '', phoneNumber: '',
         roleId: '', salaryType: 'hourly', baseSalary: 0,
-        isActive: '', employmentStatus: 'working', createdAt: '', newPassword: ''
+        isActive: '', employmentStatus: 'working', createdAt: ''
     });
 
+    const getVietnameseRole = (roleName) => {
+        if (!roleName) return '';
+        const roleMap = {
+            'manager': 'Quản lý',
+            'cashier': 'Thu ngân',
+            'warehouse': 'Thủ Kho',
+        };
+        return roleMap[roleName.toLowerCase()] || roleName;
+    };
     useEffect(() => {
         const fetchRoles = async () => {
             try {
-                const res = await api.get('/staff/roles');
-                if (res.data?.success) {
-                    setRoleList(res.data.data);
-                }
-            } catch (error) {
-                console.error("Lỗi khi tải danh sách vai trò", error);
-            }
+                const res = await getStaffRoles();
+                if (res?.success) setRoleList(res.data);
+            } catch (error) {}
         };
         fetchRoles();
     }, []);
@@ -37,39 +46,47 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     useEffect(() => {
         const fetchStaffData = async () => {
             try {
-                const res = await api.get(`/staff/detail`, { params: { id: staffId } });
-                if (res.data?.success) {
-                    const s = res.data.data;
+                const res = await getStaffDetail(staffId);
+                if (res?.success) {
+                    const s = res.data;
+                    setCurrentUserId(s.userId); 
                     const data = {
-                        username: s.username || '',
-                        fullName: s.fullName || '',
-                        email: s.email || '',
-                        phoneNumber: s.phoneNumber || '',
-                        roleId: s.roleId?.toString() || '',
-                        salaryType: s.salaryType || 'hourly',
-                        baseSalary: s.baseSalary || 0,
-                        isActive: s.isActive || 'active',
-                        employmentStatus: s.employmentStatus || 'working',
-                        createdAt: s.createdAt ? s.createdAt.split('T')[0] : '',
-                        newPassword: ''
+                        username: s.username || '', fullName: s.fullName || '',
+                        email: s.email || '', phoneNumber: s.phoneNumber || '',
+                        roleId: s.roleId?.toString() || '', salaryType: s.salaryType || 'hourly',
+                        baseSalary: s.baseSalary ? Number(s.baseSalary).toLocaleString("vi-VN") : "",
+                        isActive: s.isActive || 'active', employmentStatus: s.employmentStatus || 'working',
+                        createdAt: s.createdAt ? s.createdAt.split('T')[0] : ''
                     };
                     setFormData(data);
                     setOriginalData(data);
                 }
-            } catch { setErrorMsg('Lỗi kết nối Server! Không thể tải dữ liệu.'); }
-            finally { setLoading(false); }
+            } catch { 
+                setErrorMsg('Lỗi kết nối Server! Không thể tải dữ liệu.'); 
+            } finally { setLoading(false); }
         };
         if (staffId) fetchStaffData();
     }, [staffId]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === "baseSalary") {
+            let pureNumber = value.replace(/\D/g, "");
+            if (!pureNumber) {
+                setFormData({ ...formData, baseSalary: "" });
+            } else {
+                let formatted = Number(pureNumber).toLocaleString("vi-VN");
+                setFormData({ ...formData, baseSalary: formatted });
+            }
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
         setErrorMsg('');
     };
 
     const validate = () => {
-        const nameRegex     = /^[\p{L}]+([\s\p{L}]+)*$/u;
-        const phoneRegex    = /^0[35789][0-9]{8}$/;
+        const nameRegex = /^[\p{L}]+([\s\p{L}]+)*$/u;
+        const phoneRegex = /^0[35789][0-9]{8}$/;
         const usernameRegex = /^[a-zA-Z0-9_]{4,30}$/;
 
         if (originalData) {
@@ -79,7 +96,6 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
 
         const name = formData.fullName?.trim();
         if (!name) return { msg: 'Họ tên không được để trống!', type: 'danger' };
-        if (name.length < 3) return { msg: 'Họ tên phải có ít nhất 3 ký tự!', type: 'danger' };
         if (!nameRegex.test(name)) return { msg: 'Họ tên chỉ được chứa chữ cái và khoảng trắng!', type: 'danger' };
 
         const phone = formData.phoneNumber?.trim();
@@ -89,17 +105,14 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
         if (!formData.roleId) return { msg: 'Vui lòng chọn vai trò!', type: 'danger' };
         if (!formData.createdAt) return { msg: 'Vui lòng chọn ngày vào làm!', type: 'danger' };
 
-        const salary = Number(formData.baseSalary);
-        if (isNaN(salary) || salary < 0) return { msg: 'Lương cơ bản không được âm!', type: 'danger' };
-        if (salary > 100_000_000) return { msg: 'Lương cơ bản không hợp lệ (tối đa 100 triệu)!', type: 'danger' };
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        if (isNaN(pureSalary) || pureSalary < 0) return { msg: 'Lương cơ bản không được âm!', type: 'danger' };
+        if (pureSalary > 100000000) return { msg: 'Lương cơ bản không hợp lệ (tối đa 100 triệu)!', type: 'danger' };
 
         const un = formData.username?.trim();
         if (!un) return { msg: 'Tên đăng nhập không được để trống!', type: 'danger' };
         if (!usernameRegex.test(un)) return { msg: 'Tên đăng nhập 4-30 ký tự, chỉ gồm a-z, 0-9, dấu _!', type: 'danger' };
 
-        if (formData.newPassword && formData.newPassword.length < 6) {
-            return { msg: 'Mật khẩu mới phải từ 6 ký tự!', type: 'danger' };
-        }
         return null;
     };
 
@@ -107,23 +120,40 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
         e.preventDefault();
         const err = validate();
         if (err) { setErrorType(err.type); return setErrorMsg(err.msg); }
-
         setSaving(true);
         setErrorMsg('');
+        const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
+        const payloadToSend = { ...formData, id: staffId, baseSalary: pureSalary };
         try {
-            const res = await api.put(`/staff/update`, { id: staffId, ...formData });
-            if (res.data?.success) {
+            const res = await updateStaff(payloadToSend); 
+            if (res?.success) {
                 showNotification('Cập nhật thông tin nhân viên thành công!', 'success');
                 onSuccess();
                 return;
             }
             setErrorType('danger');
-            setErrorMsg(res.message ?? res.data?.message ?? 'Cập nhật thất bại!');
-        } catch { setErrorMsg('Không thể kết nối tới server!'); }
-        finally { setSaving(false); }
+            setErrorMsg(res.message ?? 'Cập nhật thất bại!');
+        } catch (error) {
+            setErrorMsg(error?.response?.data?.message || 'Không kết nối được server!');
+            setErrorType('danger');
+        } finally { setSaving(false) }
     };
 
-    const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
+    const handleExecuteResetPassword = async () => {
+        setShowConfirmReset(false); 
+        try {
+            setSaving(true);
+            const res = await resetStaffPassword(currentUserId);
+            showNotification(res.message, 'success');
+        } catch (err) {
+            setErrorMsg(err.response?.data?.message || "Lỗi reset mất kết nối!");
+            setErrorType('danger');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const leftStyle = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
     const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0' };
 
     if (loading) return (
@@ -138,7 +168,6 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
     return (
         <BaseModal onClose={onClose} maxWidth="920px" disableClose={saving}>
             <div style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.15)' }}>
-                {/* HEADER */}
                 <div style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', padding: '24px 32px', color: '#fff' }}>
                     <div className="d-flex justify-content-between align-items-center">
                         <div className="d-flex align-items-center gap-3">
@@ -150,8 +179,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                 <small className="opacity-75">{formData.fullName}</small>
                             </div>
                         </div>
-                        <button onClick={onClose} disabled={saving}
-                            style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>
+                        <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>
                             <i className="bi bi-x-lg" />
                         </button>
                     </div>
@@ -164,48 +192,36 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                         <div className="row g-4">
                             <div className="col-md-6">
                                 <div style={leftStyle}>
-                                    <h6 className="fw-bold text-primary mb-3">
-                                        <i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân
-                                    </h6>
+                                    <h6 className="fw-bold text-primary mb-3"><i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân</h6>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Họ và tên <span className="text-danger">*</span></label>
-                                        <input type="text" name="fullName" className="form-control"
-                                            value={formData.fullName} onChange={handleChange} />
+                                        <input type="text" name="fullName" className="form-control" value={formData.fullName} onChange={handleChange} />
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Email liên lạc</label>
-                                        <input type="email" name="email" className="form-control"
-                                            value={formData.email} onChange={handleChange} />
+                                        <input type="email" name="email" className="form-control" value={formData.email} onChange={handleChange} />
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Số điện thoại <span className="text-danger">*</span></label>
-                                        <input type="text" name="phoneNumber" className="form-control"
-                                            value={formData.phoneNumber} maxLength={11} onChange={handleChange} />
+                                        <input type="text" name="phoneNumber" className="form-control" value={formData.phoneNumber} maxLength={11} onChange={handleChange} />
                                     </div>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Ngày vào làm</label>
-                                        <input type="date" name="createdAt" className="form-control"
-                                            value={formData.createdAt} onChange={handleChange} />
+                                        <input type="date" name="createdAt" className="form-control" value={formData.createdAt} onChange={handleChange} />
                                     </div>
                                 </div>
                             </div>
+                            
                             <div className="col-md-6">
                                 <div style={rightStyle}>
-                                    <h6 className="fw-bold text-success mb-3">
-                                        <i className="bi bi-briefcase-fill me-2" />Tài Khoản & Lương
-                                    </h6>
+                                    <h6 className="fw-bold text-success mb-3"><i className="bi bi-briefcase-fill me-2" />Tài Khoản & Lương</h6>
                                     <div className="row">
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
                                             <select name="roleId" className="form-select" value={formData.roleId} onChange={handleChange}>
                                                 <option value="">-- Chọn --</option>
-                                                {roleList.map(role => (
-                                                    <option key={role.id} value={role.id}>
-                                                        {role.name}
-                                                    </option>
-                                                ))}
+                                                {roleList.map(role => <option key={role.id} value={role.id}>{getVietnameseRole(role.name)}</option>)}
                                             </select>
-
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Trạng thái</label>
@@ -215,7 +231,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="row">
+                                    <div className="row mb-2">
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Loại lương</label>
                                             <select name="salaryType" className="form-select" value={formData.salaryType} onChange={handleChange}>
@@ -225,50 +241,54 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                         </div>
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Lương cơ bản</label>
-                                            <input type="number" name="baseSalary" className="form-control"
-                                                value={formData.baseSalary} min="0" max="100000000" onChange={handleChange} />
+                                            <input type="text" name="baseSalary" className="form-control" value={formData.baseSalary} onChange={handleChange} />
                                         </div>
                                     </div>
-                                    <div className="mb-3">
+
+                                    {/* PHẦN ĐĂNG NHẬP VÀ NÚT RESET DƯỚI NHAU */}
+                                    <div className="mb-4">
                                         <label className="small fw-bold">
                                             Tên đăng nhập <span className="text-danger">*</span>
                                         </label>
-                                        <input type="text" name="username" className="form-control"
-                                            value={formData.username} onChange={handleChange} />
-                                    </div>
-                                    <div style={{ background: '#fff', borderRadius: '10px', padding: '14px', border: '1px dashed #fca5a5' }}>
-                                        <label className="small fw-bold text-danger">
-                                            <i className="bi bi-shield-lock-fill me-1" />Mật khẩu mới (bỏ trống nếu không đổi)
-                                        </label>
-                                        <div className="input-group mt-1">
-                                            <input type={showPassword ? 'text' : 'password'}
-                                                name="newPassword" className="form-control"
-                                                value={formData.newPassword} placeholder="Nhập mật khẩu mới..."
-                                                onChange={handleChange} />
-                                            <button className="btn btn-outline-secondary" type="button"
-                                                onClick={() => setShowPassword(!showPassword)}>
-                                                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`} />
-                                            </button>
-                                        </div>
+                                        <input type="text" name="username" className="form-control mb-3" value={formData.username} onChange={handleChange} />
+                                        
+                                        <button type="button" 
+                                            disabled={saving || !currentUserId}
+                                            onClick={() => setShowConfirmReset(true)}
+                                            className="btn w-100 fw-bold hover-shadow"
+                                            style={{ background: '#ffffff', color: '#b91c1c', border: '1.5px solid #fca5a5', borderRadius: '8px' }}>
+                                            <i className="bi bi-arrow-counterclockwise fw-bold me-2" />
+                                            Đặt lại mật khẩu
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {/* FOOTER */}
+
                     <div style={{ padding: '20px 32px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button type="button" className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }}
-                            onClick={onClose} disabled={saving}>Hủy</button>
-                        <button type="submit" className="btn text-white px-4 fw-bold"
-                            style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none', borderRadius: '12px' }}
-                            disabled={saving}>
-                            {saving
-                                ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</>
-                                : <><i className="bi bi-floppy-fill me-2" />Cập Nhật</>}
+                        <button type="button" className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }} onClick={onClose} disabled={saving}>Hủy</button>    
+                        <button type="submit" className="btn text-white px-4 fw-bold" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none', borderRadius: '12px' }} disabled={saving}>
+                            {saving ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</> : <><i className="bi bi-floppy-fill me-2" />Cập Nhật</>}
                         </button>
                     </div>
                 </form>
             </div>
+
+            {showConfirmReset && (
+                <ConfirmModal
+                    title="KHÔI PHỤC MẬT KHẨU"
+                    message={
+                        <>
+                        Bạn có chắc chắn muốn khôi phục mật khẩu của <b>{formData.fullName}</b> về <b>123456</b>? 
+                        Người dùng sẽ phải đổi mật khẩu ở lần đăng nhập tiếp theo.                        
+                        </>
+                    }
+                    confirmText="Đồng ý"
+                    onConfirm={handleExecuteResetPassword}
+                    onCancel={() => setShowConfirmReset(false)}
+                />
+            )}
         </BaseModal>
     );
 };

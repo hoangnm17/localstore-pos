@@ -3,18 +3,19 @@ const { connectDB, sql } = require("../config/database.js");
 const VALID_TYPES = ['Percent', 'Fixed'];
 const VALID_STATUSES = ['Active', 'Expired', 'Disabled'];
 
-const validateFields = (data) => {
-    const { type, status, value, minOrderValue, maxUsage, startDate, expiryDate } = data;
+const validateFields = (data, isUpdate = false) => {
+    const { code, type, status, value, minOrderValue, maxUsage, startDate, expiryDate } = data;
 
-    if (type !== undefined && !VALID_TYPES.includes(type)) {
-        throw new Error(`type không hợp lệ. Chỉ chấp nhận: ${VALID_TYPES.join(', ')}`);
-    }
-    if (status !== undefined && !VALID_STATUSES.includes(status)) {
-        throw new Error(`status không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
+    // 1. Kiểm tra mã voucher (chỉ khi tạo mới hoặc nếu có truyền vào khi update)
+    if (!isUpdate || (code !== undefined)) {
+        if (code === undefined || code === null || String(code).trim() === '') {
+            throw new Error('Mã voucher không được để trống');
+        }
     }
 
+    // 2. Kiểm tra các số (không được âm)
     if (value !== undefined && parseFloat(value) < 0) {
-        throw new Error('Giá trị voucher không được là số âm');
+        throw new Error('Giá trị giảm của voucher không được là số âm');
     }
 
     if (minOrderValue !== undefined && parseFloat(minOrderValue) < 0) {
@@ -25,20 +26,49 @@ const validateFields = (data) => {
         throw new Error('Số lượt sử dụng tối đa không được là số âm');
     }
 
-    if (startDate && isNaN(Date.parse(startDate))) {
-        throw new Error('Ngày bắt đầu không hợp lệ');
+    // 3. Kiểm tra ngày (không được ở quá khứ)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Chỉ so sánh ngày, không cần giờ phút giây
+
+    /*
+    if (startDate) {
+        if (isNaN(Date.parse(startDate))) {
+            throw new Error('Ngày bắt đầu không đúng định dạng');
+        }
+        if (!isUpdate) {
+            const start = new Date(startDate);
+            if (start < now) {
+                throw new Error('Ngày bắt đầu không được ở trong quá khứ');
+            }
+        }
     }
 
-    if (expiryDate && isNaN(Date.parse(expiryDate))) {
-        throw new Error('Ngày hết hạn không hợp lệ');
+    if (expiryDate) {
+        if (isNaN(Date.parse(expiryDate))) {
+            throw new Error('Ngày hết hạn không đúng định dạng');
+        }
+        const end = new Date(expiryDate);
+        if (end < now) {
+            throw new Error('Ngày hết hạn không được ở trong quá khứ');
+        }
     }
+    */
 
-    if (startDate && expiryDate) {
+    // 4. Logic so sánh ngày
+    if (startDate && expiryDate && !isNaN(Date.parse(startDate)) && !isNaN(Date.parse(expiryDate))) {
         const start = new Date(startDate);
         const end = new Date(expiryDate);
         if (start > end) {
             throw new Error('Ngày bắt đầu không được lớn hơn ngày hết hạn');
         }
+    }
+
+    // 5. Validate ENUMs
+    if (type !== undefined && !VALID_TYPES.includes(type)) {
+        throw new Error(`Kiểu voucher không hợp lệ. Chỉ chấp nhận: ${VALID_TYPES.join(', ')}`);
+    }
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+        throw new Error(`Trạng thái không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
     }
 };
 
@@ -102,24 +132,31 @@ exports.createVoucher = async (data) => {
     const pool = await connectDB();
     const { code, value, type, minOrderValue = 0, maxUsage = 100, startDate, expiryDate, status = 'Active' } = data;
 
-    validateFields(data);
+    validateFields(data, false);
 
-    const result = await pool.request()
-        .input('code', sql.VarChar, code)
-        .input('value', sql.Decimal(15, 2), value)
-        .input('type', sql.VarChar, type)
-        .input('minOrderValue', sql.Decimal(15, 2), minOrderValue)
-        .input('maxUsage', sql.Int, maxUsage)
-        .input('startDate', sql.DateTime2, startDate || null)
-        .input('expiryDate', sql.DateTime2, expiryDate || null)
-        .input('status', sql.VarChar, status)
-        .query(`
-            INSERT INTO Vouchers (code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status)
-            VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status);
+    try {
+        const result = await pool.request()
+            .input('code', sql.VarChar, code)
+            .input('value', sql.Decimal(15, 2), value)
+            .input('type', sql.VarChar, type)
+            .input('minOrderValue', sql.Decimal(15, 2), minOrderValue)
+            .input('maxUsage', sql.Int, maxUsage)
+            .input('startDate', sql.DateTime2, startDate || null)
+            .input('expiryDate', sql.DateTime2, expiryDate || null)
+            .input('status', sql.VarChar, status)
+            .query(`
+                INSERT INTO Vouchers (code, value, type, minOrderValue, maxUsage, startDate, expiryDate, status)
+                VALUES (@code, @value, @type, @minOrderValue, @maxUsage, @startDate, @expiryDate, @status);
 
-            SELECT * FROM Vouchers WHERE id = SCOPE_IDENTITY();
-        `);
-    return result.recordset[0];
+                SELECT * FROM Vouchers WHERE id = SCOPE_IDENTITY();
+            `);
+        return result.recordset[0];
+    } catch (err) {
+        if (err.message.includes('UNIQUE KEY')) {
+            throw new Error(`Mã voucher "${code}" đã tồn tại trong hệ thống. Vui lòng dùng mã khác.`);
+        }
+        throw err;
+    }
 };
 
 exports.updateVoucher = async (id, data) => {
@@ -135,7 +172,7 @@ exports.updateVoucher = async (id, data) => {
         startDate: startDate !== undefined ? startDate : existing.startDate,
         expiryDate: expiryDate !== undefined ? expiryDate : existing.expiryDate
     };
-    validateFields(validationData);
+    validateFields(validationData, true);
 
     const setClauses = [];
     const request = pool.request().input('id', sql.Int, id);

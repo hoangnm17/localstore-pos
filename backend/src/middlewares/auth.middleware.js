@@ -31,7 +31,6 @@ const verifyToken = async (req, res, next) => {
 
         const permissions = await roleModel.getPermissionsByRoleId(user.roleId);
 
-        // Lấy Staff.id tương ứng với Users.id để dùng cho changedBy trong lịch sử giá
         const staff = await staffModel.getStaffByUserId(user.id);
 
         req.user = {
@@ -41,10 +40,10 @@ const verifyToken = async (req, res, next) => {
             roleId: user.roleId,
             permissions: permissions.map(p => p.featureKey)
         };
-
         next();
 
     } catch (error) {
+        console.error('Auth Middleware Error:', error.message);
         return res.status(401).json({
             success: false,
             message: "Token không hợp lệ hoặc đã hết hạn!"

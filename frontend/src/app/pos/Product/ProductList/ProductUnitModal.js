@@ -43,9 +43,20 @@ const ProductUnitModal = ({ product, show, onHide, onSelectUnit }) => {
                                         </small>
                                     </div>
                                     <div className="text-end">
-                                        <span className="fw-bold text-primary d-block">
-                                            {formatCurrency(unit.price)}
-                                        </span>
+                                        {unit.discountedPrice < unit.price ? (
+                                            <>
+                                                <span className="fw-bold text-primary d-block">
+                                                    {formatCurrency(unit.discountedPrice)}
+                                                </span>
+                                                <small className="text-muted text-decoration-line-through">
+                                                    {formatCurrency(unit.price)}
+                                                </small>
+                                            </>
+                                        ) : (
+                                            <span className="fw-bold text-primary d-block">
+                                                {formatCurrency(unit.price)}
+                                            </span>
+                                        )}
                                         {unit.factor > 1 && (
                                             <small className="badge bg-secondary-subtle text-secondary">
                                                 x{unit.factor} đơn vị lẻ

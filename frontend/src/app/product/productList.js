@@ -7,6 +7,7 @@ import ProductUnitModal from './ProductModal/ProductUnitModal';
 import ProductStatusModal from './ProductModal/ProductStatusModal';
 import ProductPriceHistoryModal from './ProductModal/ProductPriceHistoryModal';
 import ProductComboItemModal from './ProductModal/ProductComboItemModal';
+import BarcodePrintModal from './ProductModal/BarcodePrintModal';
 
 import useProductCategories from '../../hooks/product/useProductCategories';
 import useProductList from '../../hooks/product/useProductList';
@@ -30,12 +31,23 @@ function formatQuantity(value, allowDecimalQuantity) {
     return Math.round(num).toLocaleString('vi-VN');
 }
 
+function getPrintableUnit(product) {
+    if (!product?.units?.length) return null;
+    return product.units.find(u => u.isBaseUnit) || product.units[0];
+}
+
 function ProductList() {
     const { showNotification } = useNotification();
     const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
     const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
     const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    const features = user?.features || [];
+    const canCreateProduct = features.includes('CREATE_PRODUCT');
+    const canEditProduct = features.includes('UPDATE_PRODUCT');
+    const canDeleteProduct = features.includes('DELETE_PRODUCT');
 
     const { categories } = useProductCategories();
 
@@ -55,7 +67,6 @@ function ProductList() {
         handlePageChange,
         handleCheckAll,
         handleCheckOne,
-        handleBulkStopSelling,
         handleBulkSoftDelete
     } = useProductList({ showNotification, onConfirm });
 
@@ -76,7 +87,11 @@ function ProductList() {
 
         comboModalState,
         openComboModal,
-        closeComboModal
+        closeComboModal,
+
+        printModalState,
+        openPrintModal,
+        closePrintModal
     } = useProductModals();
 
     const {
@@ -125,7 +140,7 @@ function ProductList() {
 
     return (
         <div className="pm-page">
-            <div className="d-flex flex-wrap justify-content-end align-items-start gap-3 mb-4">
+            {/* <div className="d-flex flex-wrap justify-content-end align-items-start gap-3 mb-4">
                 <div className="d-flex flex-wrap gap-2">
                     <button
                         type="button"
@@ -136,7 +151,7 @@ function ProductList() {
                         Tạo sản phẩm mới
                     </button>
                 </div>
-            </div>
+            </div> */}
 
             <div className="pm-card card">
                 <div className="card-body">
@@ -218,52 +233,70 @@ function ProductList() {
                             </select>
                         </div>
 
-                        <div className="col-6 col-md-2">
-                            <div className="d-grid">
-                                <button type="button" className="btn btn-primary" onClick={handleApplySearch}>
-                                    <i className="bi bi-funnel me-2" />
-                                    Lọc
+                        {canCreateProduct && (
+                            <div className="col-6 col-md-2">
+                                <div className="d-flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={() => openCreateProductModal('regular')}
+                                    >
+                                        <i className="bi bi-plus-circle me-2" />
+                                        Tạo sản phẩm mới
+                                    </button>
+                                </div>
+
+                            </div>
+                        )}
+
+                    </div>
+
+                    {(canEditProduct || canDeleteProduct) && (
+                        <div className="pm-action-bar">
+                            <div className="fw-semibold">
+                                <i className="bi bi-check2-square me-2" />
+                                Đã chọn: {selectedIds.length} sản phẩm
+                            </div>
+
+
+                            <div className="d-flex flex-wrap gap-2">
+                                {canDeleteProduct && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger"
+                                        disabled={!selectedIds.length || bulkLoading}
+                                        onClick={handleBulkSoftDelete}
+                                    >
+                                        <i className="bi bi-trash me-2" />
+                                        Ngừng bán
+                                    </button>
+                                )}
+
+
+                                <button type="button" className="btn btn-outline-secondary" onClick={loadProducts}>
+                                    <i className="bi bi-arrow-clockwise me-2" />
+                                    Tải lại
                                 </button>
                             </div>
+
                         </div>
-                    </div>
+                    )}
 
-                    <div className="pm-action-bar">
-                        <div className="fw-semibold">
-                            <i className="bi bi-check2-square me-2" />
-                            Đã chọn: {selectedIds.length} sản phẩm
-                        </div>
-
-                        <div className="d-flex flex-wrap gap-2">
-
-                            <button
-                                type="button"
-                                className="btn btn-danger"
-                                disabled={!selectedIds.length || bulkLoading}
-                                onClick={handleBulkSoftDelete}
-                            >
-                                <i className="bi bi-trash me-2" />
-                                Ngừng bán
-                            </button>
-
-                            <button type="button" className="btn btn-outline-secondary" onClick={loadProducts}>
-                                <i className="bi bi-arrow-clockwise me-2" />
-                                Tải lại
-                            </button>
-                        </div>
-                    </div>
 
                     <div className="table-responsive">
                         <table className="table table-hover align-middle table-bordered">
                             <thead className="pm-thead">
                                 <tr>
-                                    <th style={{ width: 50 }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={allSelected}
-                                            onChange={handleCheckAll}
-                                        />
-                                    </th>
+                                    {(canEditProduct || canDeleteProduct) && (
+                                        <th style={{ width: 50 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={allSelected}
+                                                onChange={handleCheckAll}
+                                            />
+                                        </th>
+                                    )}
+
                                     <th>Mã SP</th>
                                     <th>Tên sản phẩm</th>
                                     <th>Danh mục</th>
@@ -271,8 +304,8 @@ function ProductList() {
                                     <th>Kiểu bán</th>
                                     <th>Đơn vị cơ bản</th>
                                     <th>Barcode</th>
-                                    <th>Giá bán</th>
                                     <th>Giá nhập</th>
+                                    <th>Giá bán</th>
                                     <th>Tồn kho</th>
                                     <th>Trạng thái</th>
                                     <th style={{ minWidth: 220 }}>Thao tác</th>
@@ -295,13 +328,16 @@ function ProductList() {
                                 ) : (
                                     products.map((product) => (
                                         <tr key={product.id}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.includes(product.id)}
-                                                    onChange={() => handleCheckOne(product.id)}
-                                                />
-                                            </td>
+                                            {(canEditProduct || canDeleteProduct) && (
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(product.id)}
+                                                        onChange={() => handleCheckOne(product.id)}
+                                                    />
+                                                </td>
+                                            )}
+
                                             <td>{product.code}</td>
                                             <td className="fw-semibold">{product.name}</td>
                                             <td>{product.categoryName || 'Chưa có'}</td>
@@ -329,14 +365,14 @@ function ProductList() {
                                                 ) : (
                                                     <span className="badge bg-warning text-dark">
                                                         <i className="bi bi-tag me-1" />
-                                                        Piece
+                                                        Số lượng
                                                     </span>
                                                 )}
                                             </td>
                                             <td>{product.baseUnit}</td>
                                             <td>{product.barcode || '—'}</td>
-                                            <td>{formatMoney(product.salePrice)}</td>
                                             <td>{formatMoney(product.costPrice)}</td>
+                                            <td>{formatMoney(product.salePrice)}</td>
                                             <td>{formatQuantity(product.stockQuantity, product.allowDecimalQuantity)}</td>
                                             <td>
                                                 {product.status === 'Selling' ? (
@@ -369,16 +405,19 @@ function ProductList() {
                                                             </button>
                                                         </li>
 
-                                                        <li>
-                                                            <button
-                                                                type="button"
-                                                                className="dropdown-item"
-                                                                onClick={() => openEditProductModal(product.id)}
-                                                            >
-                                                                <i className="bi bi-pencil-square me-2" />
-                                                                Sửa
-                                                            </button>
-                                                        </li>
+                                                        {canEditProduct && (
+                                                            <li>
+                                                                <button
+                                                                    type="button"
+                                                                    className="dropdown-item"
+                                                                    onClick={() => openEditProductModal(product.id)}
+                                                                >
+                                                                    <i className="bi bi-pencil-square me-2" />
+                                                                    Sửa
+                                                                </button>
+                                                            </li>
+                                                        )}
+
 
                                                         <li>
                                                             <button
@@ -391,16 +430,21 @@ function ProductList() {
                                                             </button>
                                                         </li>
 
-                                                        <li>
-                                                            <button
-                                                                type="button"
-                                                                className="dropdown-item"
-                                                                onClick={() => openStatusModal(product)}
-                                                            >
-                                                                <i className="bi bi-power me-2" />
-                                                                Trạng thái
-                                                            </button>
-                                                        </li>
+                                                        {canEditProduct && (
+                                                            <li>
+                                                                <button
+                                                                    type="button"
+                                                                    className="dropdown-item"
+                                                                    onClick={() => openStatusModal(product)}
+                                                                >
+                                                                    <i className="bi bi-power me-2" />
+                                                                    Trạng thái
+                                                                </button>
+                                                            </li>
+                                                        )}
+
+
+
                                                     </ul>
                                                 </div>
                                             </td>
@@ -467,6 +511,12 @@ function ProductList() {
                 onOpenCreateUnit={() => openUnitCreateModal(detailState.product)}
                 onOpenEditUnit={(unit) => openUnitEditModal(detailState.product, unit)}
                 onDeleteUnit={handleDeleteUnit}
+                onOpenPrintUnit={(unit) => openPrintModal(detailState.product, unit)}
+                onOpenPrintCombo={() => {
+                    const printableUnit = getPrintableUnit(detailState.product);
+                    if (!printableUnit) return;
+                    openPrintModal(detailState.product, printableUnit);
+                }}
                 onOpenAddComboItem={(product) => openComboModal(product)}
                 onRemoveComboItem={handleRemoveComboItem}
                 onRefresh={() => refreshDetailModal(detailState.product?.id)}
@@ -507,6 +557,13 @@ function ProductList() {
                 onSubmit={handleAddComboItem}
             />
 
+            <BarcodePrintModal
+                open={printModalState.open}
+                product={printModalState.product}
+                unit={printModalState.unit}
+                onClose={closePrintModal}
+            />
+
             {/* ── Confirm Dialog ── */}
             {confirmState.open && (
                 <div style={{
@@ -531,6 +588,4 @@ function ProductList() {
             )}
         </div>
     );
-}
-
-export default ProductList;
+} export default ProductList;

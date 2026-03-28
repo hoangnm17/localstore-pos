@@ -57,21 +57,20 @@ const countProductsByCategory = async (categoryId, search) => {
     return result.recordset[0].total;
 };
 
-const updateStock = async (transaction, productId, quantity) => {
+const updateStock = async (transaction, productId, difference) => {
 
     const result = await new sql.Request(transaction)
         .input("productId", sql.BigInt, productId)
-        .input("quantity", sql.Decimal(15, 3), quantity)
+        .input("difference", sql.Decimal(15, 3), difference)
         .query(`
             UPDATE InventoryStocks
-            SET quantityOnHand = @quantity
+            SET quantityOnHand = quantityOnHand + @difference
             WHERE productId = @productId
         `);
 
     return result.rowsAffected[0];
 };
 
-// Thêm hàm mới để lấy thông tin cơ bản sản phẩm (dùng trong controller)
 const getProductBasicInfo = async (productId) => {
     const pool = await connectDB();
 
@@ -142,10 +141,40 @@ const searchProducts = async (keyword) => {
           p.name,
           p.baseUnit,
           p.allowDecimalQuantity,
-          ISNULL(s.quantityOnHand, 0) AS quantityOnHand
+
+          ISNULL(s.quantityOnHand, 0) AS quantityOnHand,
+
+          -- Thông tin unit lớn nhất (conversionFactor cao nhất)
+          pu_largest.id AS largestUnitId,
+          pu_largest.unitName AS largestUnitName,
+          pu_largest.conversionFactor AS largestConversionFactor,
+
+          -- Tính toán số lượng theo unit lớn nhất (dùng FLOOR và MOD)
+          CASE 
+              WHEN pu_largest.conversionFactor IS NOT NULL AND pu_largest.conversionFactor > 0 
+              THEN FLOOR(ISNULL(s.quantityOnHand, 0) / pu_largest.conversionFactor)
+              ELSE 0 
+          END AS systemLargest,
+
+          CASE 
+              WHEN pu_largest.conversionFactor IS NOT NULL AND pu_largest.conversionFactor > 0 
+              THEN ISNULL(s.quantityOnHand, 0) % pu_largest.conversionFactor
+              ELSE ISNULL(s.quantityOnHand, 0) 
+          END AS systemRemainder
+
       FROM Products p
       LEFT JOIN InventoryStocks s 
           ON p.id = s.productId
+
+      -- Lấy unit lớn nhất (conversionFactor cao nhất)
+      OUTER APPLY (
+          SELECT TOP 1 
+              id, unitName, conversionFactor
+          FROM ProductUnits
+          WHERE productId = p.id
+          ORDER BY conversionFactor DESC
+      ) pu_largest
+
       WHERE 
           p.status = 'Selling'
           AND (
@@ -200,7 +229,6 @@ const updateMinThreshold = async (productId, minThreshold) => {
 };
 
 const getLowStockProductUnits = async () => {
-
     const pool = await connectDB();
 
     const result = await pool.request().query(`
@@ -212,24 +240,39 @@ const getLowStockProductUnits = async () => {
             p.id AS productId,
             p.name AS productName,
 
-            ISNULL(i.quantityOnHand,0) AS stockQuantity,
+            ISNULL(i.quantityOnHand, 0) AS stockQuantity,
             i.minThreshold
 
         FROM ProductUnits pu
 
-        JOIN Products p
+        INNER JOIN Products p
             ON p.id = pu.productId
 
         LEFT JOIN InventoryStocks i
             ON i.productId = p.id
 
-        WHERE ISNULL(i.quantityOnHand,0) <= i.minThreshold
+        WHERE 
+            -- chỉ lấy unit lớn nhất của mỗi product
+            pu.conversionFactor = (
+                SELECT MAX(pu2.conversionFactor)
+                FROM ProductUnits pu2
+                WHERE pu2.productId = pu.productId
+            )
+
+            -- đảm bảo có giá từ supplier (KHÔNG gây duplicate)
+            AND EXISTS (
+                SELECT 1
+                FROM SupplierProductPrices spp
+                WHERE spp.unitId = pu.id
+            )
+
+            -- lọc tồn kho thấp
+            AND ISNULL(i.quantityOnHand, 0) <= ISNULL(i.minThreshold, 0)
 
         ORDER BY stockQuantity ASC
     `);
 
     return result.recordset;
-
 };
 
 const searchProductUnits = async (keyword) => {
@@ -244,12 +287,31 @@ const searchProductUnits = async (keyword) => {
                 pu.unitName,
 
                 p.id AS productId,
-                p.name AS productName
+                p.name AS productName,
+
+                spp.price,
+                spp.createdAt
 
             FROM ProductUnits pu
 
             JOIN Products p
                 ON p.id = pu.productId
+
+            JOIN SupplierProductPrices spp
+                ON spp.productId = p.id
+                AND spp.unitId = pu.id
+
+            JOIN (
+                SELECT 
+                    productId,
+                    unitId,
+                    MAX(createdAt) AS latestCreatedAt
+                FROM SupplierProductPrices
+                GROUP BY productId, unitId
+            ) latest
+                ON latest.productId = spp.productId
+                AND latest.unitId = spp.unitId
+                AND latest.latestCreatedAt = spp.createdAt
 
             WHERE p.name LIKE @keyword
 

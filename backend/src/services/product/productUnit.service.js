@@ -57,16 +57,17 @@ exports.create = async (data) => {
     validatePayload(data);
     data.barcode = data.barcode?.trim() || null;
 
-    if (Number(data.conversionFactor) === 1) {
-        throw new Error('Base unit phải được quản lý ở API sản phẩm, không tạo ở API đơn vị tính.');
-    }
+    // if (Number(data.conversionFactor) === 1) {
+    //     throw new Error('Base unit phải được quản lý ở API sản phẩm, không tạo ở API đơn vị tính.');
+    // }
 
     const product = await productModel.getProductById(data.productId);
     if (!product) {
         throw new Error('Không tìm thấy sản phẩm.');
     }
 
-    if (Number(data.salePrice) <= Number(product.salePrice)) {
+    const isBaseUnit = Number(data.conversionFactor) === 1;
+    if (!isBaseUnit && Number(data.salePrice) <= Number(product.salePrice)) {
         throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
     }
 
@@ -88,10 +89,6 @@ exports.update = async (id, data) => {
         throw new Error('Không tìm thấy đơn vị tính.');
     }
 
-    if (Number(current.conversionFactor) === 1) {
-        throw new Error('Base unit phải được cập nhật ở API sản phẩm.');
-    }
-
     const product = await productModel.getProductById(current.productId);
     if (!product) {
         throw new Error('Không tìm thấy sản phẩm.');
@@ -104,11 +101,12 @@ exports.update = async (id, data) => {
     merged.barcode = merged.barcode?.trim() || null;
     validatePayload(merged);
 
-    if (Number(merged.conversionFactor) === 1) {
-        throw new Error('Không được đổi đơn vị phụ thành base unit.');
-    }
+    // if (Number(merged.conversionFactor) === 1) {
+    //     throw new Error('Không được đổi đơn vị phụ thành base unit.');
+    // }
 
-    if (Number(merged.salePrice) <= Number(product.salePrice)) {
+    const isBaseUnit = Number(merged.conversionFactor) === 1;
+    if (!isBaseUnit && Number(merged.salePrice) <= Number(product.salePrice)) {
         throw new Error(`Giá bán đơn vị phụ phải lớn hơn giá base unit (${product.salePrice}).`);
     }
 
