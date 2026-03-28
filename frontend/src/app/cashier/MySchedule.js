@@ -44,7 +44,11 @@ const shiftColors = [
     { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
     { bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe' }
 ];
-const getShiftStyle = (id) => shiftColors[(id - 1) % shiftColors.length] || shiftColors[0];
+const getShiftStyle = (id, status) => {
+    if (status === 'absent') return { bg: '#fef2f2', text: '#ef4444', border: '#fecaca' };
+    if (status === 'completed') return { bg: '#f1f5f9', text: '#64748b', border: '#cbd5e1' };
+    return shiftColors[(id - 1) % shiftColors.length] || shiftColors[0];
+};
 
 const MySchedule = () => {
     useTitle("Lịch Của Tôi")
@@ -291,19 +295,20 @@ const MySchedule = () => {
                                                 <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px 4px' }}>
                                                         {dayShifts.map(sc => {
-                                                            const sStyle = getShiftStyle(sc.shiftId);
+                                                            const sStyle = getShiftStyle(sc.shiftId, sc.scheduleStatus);
+                                                            const isAbs = sc.scheduleStatus === 'absent';
                                                             const isCompleted = sc.scheduleStatus === 'completed' || sc.handoverId;
                                                             return (
                                                                 <div key={sc.scheduleId} style={{
                                                                     borderRadius: '8px', padding: '8px',
-                                                                    backgroundColor: isCompleted ? '#f1f5f9' : sStyle.bg,
-                                                                    border: `1px solid ${isCompleted ? '#cbd5e1' : sStyle.border}`,
-                                                                    color: isCompleted ? '#64748b' : sStyle.text,
+                                                                    backgroundColor: sStyle.bg,
+                                                                    border: `1px solid ${sStyle.border}`,
+                                                                    color: sStyle.text,
                                                                     position: 'relative',
                                                                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                                                                 }}>
                                                                     <div style={{ fontWeight: 700, fontSize: '0.78rem', paddingRight: '15px' }}>
-                                                                        {sc.shiftName || sc.snapshotShiftName}
+                                                                        {sc.shiftName || sc.snapshotShiftName} {isAbs && <small className="text-danger ms-1">[Vắng]</small>}
                                                                     </div>
                                                                     <div style={{ fontSize: '0.68rem', opacity: 0.85, margin: '2px 0' }}>
                                                                         <i className="bi bi-clock me-1" />{sc.startTime} – {sc.endTime}

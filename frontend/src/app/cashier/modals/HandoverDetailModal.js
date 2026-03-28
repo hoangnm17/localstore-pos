@@ -83,9 +83,9 @@ const HandoverDetailModal = ({ row, onClose }) => {
                         <i className="bi bi-clock-fill me-2" />Thông Tin Ca Làm
                     </h6>
                     <div className="mb-4">
-                        <InfoRow label="Ca làm việc"     value={row.shiftName || '—'} />
-                        <InfoRow label="Giờ ca"          value={`${row.shiftStart} – ${row.shiftEnd}`} />
-                        <InfoRow label="Ngày làm việc"   value={row.workDate ? new Date(row.workDate).toLocaleDateString('vi-VN') : '—'} />
+                        <InfoRow label="Ca làm việc" value={row.shiftName || '—'} />
+                        <InfoRow label="Giờ ca" value={`${row.shiftStart} – ${row.shiftEnd}`} />
+                        <InfoRow label="Ngày làm việc" value={row.workDate ? new Date(row.workDate).toLocaleDateString('vi-VN') : '—'} />
                         <InfoRow label="Thời điểm bàn giao" value={`${fmtTime(row.handoverTime.replace('Z', ''))}`} />
                     </div>
 
@@ -100,14 +100,19 @@ const HandoverDetailModal = ({ row, onClose }) => {
                             valueClass="fw-semibold text-secondary"
                         />
                         <InfoRow
-                            label="Hệ thống thu (Tiền mặt)"
-                            value={formatVND(row.systemCash)}
-                            valueClass="fw-bold text-primary"
+                            label="Doanh thu bán hàng"
+                            value={formatVND(Number(row.systemCash) + Number(row.returnCash))}
+                            valueClass="fw-semibold text-primary"
                         />
                         <InfoRow
-                            label="Tổng cần có (Đầu ca + HT thu)"
+                            label="Tiền hoàn trả khách"
+                            value={"-" + formatVND(row.returnCash)}
+                            valueClass="fw-semibold text-danger"
+                        />
+                        <InfoRow
+                            label="Tổng cần có (Két)"
                             value={formatVND(Number(row.openingCash) + Number(row.systemCash))}
-                            valueClass="fw-bold text-success"
+                            valueClass="fw-bold fs-5 text-dark"
                         />
                         <InfoRow
                             label="Thực đếm trong két"
