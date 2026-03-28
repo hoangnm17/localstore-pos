@@ -53,12 +53,12 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       const startM = toMins(form.startTime);
       const endM = toMins(form.endTime);
       let duration = endM - startM;
-      if (duration < 0) duration += 1440; 
+      if (duration < 0) duration += 1440;
 
       if (duration === 0) {
         e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
-      } else if (duration < 30) {
-        e.endTime = 'Ca làm việc tối thiểu 30 phút!';
+      } else if (duration < 5) {
+        e.endTime = 'Ca làm việc tối thiểu 5 phút!';
       } else if (duration > 600) {
         e.endTime = 'Ca làm việc tối đa 10 giờ! (Hiện tại: ' + (duration / 60).toFixed(1) + 'h)';
       }
@@ -80,13 +80,13 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
         if (checkInRange <= 0)
           e.checkInEnd = 'Deadline phải sau giờ bắt đầu nhận chấm công!';
 
-        const earlyMins = getDiff(startM, checkInSM); 
-        if (earlyMins > 30)
-          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
+        const earlyMins = getDiff(startM, checkInSM);
+        if (earlyMins > 5)
+          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 5 phút!';
 
         const lateMins = getDiff(checkInEM, startM);
-        if (lateMins > 30)
-          e.checkInEnd = 'Deadline không được trễ hơn giờ bắt đầu ca quá 30 phút!';
+        if (lateMins > 5)
+          e.checkInEnd = 'Deadline không được trễ hơn giờ bắt đầu ca quá 5 phút!';
       }
     }
 
@@ -98,8 +98,8 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
 
       if (lateMins < 0)
         e.checkOutDeadline = 'Giờ phải logout phải sau hoặc bằng giờ kết thúc ca!';
-      else if (lateMins > 30)
-        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 30 phút!';
+      else if (lateMins > 5)
+        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 5 phút!';
     }
 
     setErrors(e);
@@ -114,12 +114,12 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
 
       if (name === 'startTime' && value) {
         const startMins = toMins(value);
-        updated.checkInStart = fromMins(startMins - 5);
-        updated.checkInEnd = fromMins(startMins - 5 + 10);
+        updated.checkInStart = fromMins(startMins - 2);
+        updated.checkInEnd = fromMins(startMins - 2 + 4);
       }
 
       if (name === 'checkInStart' && value) {
-        updated.checkInEnd = fromMins(toMins(value) + 10);
+        updated.checkInEnd = fromMins(toMins(value) + 2);
       }
 
       return updated;

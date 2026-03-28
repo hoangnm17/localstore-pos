@@ -34,11 +34,11 @@ module.exports.updateShift = async (id, data) => {
     if (getDiff(checkInEndM, checkInStartM) <= 0) {
       throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
     }
-    if (getDiff(checkInStartM, startMins) < -30) {
-      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
+    if (getDiff(checkInStartM, startMins) < -5) {
+      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 5 phút!");
     }
-    if (getDiff(checkInEndM, endMins) > 30) {
-      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 30 phút!");
+    if (getDiff(checkInEndM, endMins) > 5) {
+      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 5 phút!");
     }
   }
 
@@ -47,8 +47,8 @@ module.exports.updateShift = async (id, data) => {
     if (getDiff(checkOutDeadlineM, startMins) <= 0) {
       throw new Error("Thời gian lưu chót bàn giao phải sau giờ bắt đầu ca!");
     }
-    if (getDiff(checkOutDeadlineM, endMins) > 30) {
-      throw new Error("Thời gian bàn giao không được trễ hơn giờ kết thúc ca quá 30 phút!");
+    if (getDiff(checkOutDeadlineM, endMins) > 5) {
+      throw new Error("Thời gian bàn giao không được trễ hơn giờ kết thúc ca quá 5 phút!");
     }
   }
 
@@ -69,7 +69,7 @@ module.exports.createShift = async (data) => {
   let duration = endMins - startMins;
   if (duration < 0) duration += 1440;
   if (duration === 0) throw new Error("Giờ kết thúc không được trùng giờ bắt đầu!");
-  if (duration < 30) throw new Error("Ca làm tối thiểu 30 phút!");
+  if (duration < 5) throw new Error("Ca làm tối thiểu 5 phút!");
   if (duration > 600) throw new Error("Ca làm tối đa 10 giờ!");
 
   if (data.checkInStart || data.checkInEnd) {
@@ -82,11 +82,11 @@ module.exports.createShift = async (data) => {
     if (getDiff(checkInEndM, checkInStartM) <= 0) {
       throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
     }
-    if (getDiff(checkInStartM, startMins) < -30) {
-      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
+    if (getDiff(checkInStartM, startMins) < -5) {
+      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 5 phút!");
     }
-    if (getDiff(checkInEndM, endMins) > 30) {
-      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 30 phút!");
+    if (getDiff(checkInEndM, endMins) > 5) {
+      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 5 phút!");
     }
   }
 
@@ -95,8 +95,8 @@ module.exports.createShift = async (data) => {
     if (getDiff(checkOutDeadlineM, startMins) <= 0) {
       throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
     }
-    if (getDiff(checkOutDeadlineM, endMins) > 30) {
-      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
+    if (getDiff(checkOutDeadlineM, endMins) > 5) {
+      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 5 phút!");
     }
   }
 

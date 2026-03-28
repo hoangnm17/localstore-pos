@@ -11,16 +11,16 @@ module.exports.checkPending = async (staffId) => {
     }
 
     // Kiểm tra chặn bàn giao ca cũ trước khi được nhận ca mới
-    if (roleName === 'Cashier') {
-        const incompleteShift = await attendanceModel.hasIncompletePreviousShift(staffId);
-        if (incompleteShift) {
-            const dateStr = new Date(incompleteShift.workDate).toLocaleDateString('vi-VN');
-            return {
-                blocked: true,
-                message: `Bạn chưa bàn giao tiền mặt cho ca: [${incompleteShift.shiftName}] ngày ${dateStr}. Vui lòng kết ca này trước!`
-            };
-        }
-    }
+    // if (roleName === 'Cashier') {
+    //     const incompleteShift = await attendanceModel.hasIncompletePreviousShift(staffId);
+    //     if (incompleteShift) {
+    //         const dateStr = new Date(incompleteShift.workDate).toLocaleDateString('vi-VN');
+    //         return {
+    //             blocked: true,
+    //             message: `Bạn chưa bàn giao tiền mặt cho ca: [${incompleteShift.shiftName}] ngày ${dateStr}. Vui lòng kết ca này trước!`
+    //         };
+    //     }
+    // }
 
     const schedule = await attendanceModel.getPendingSchedule(staffId);
     if (!schedule) return null;
@@ -46,10 +46,28 @@ module.exports.checkIn = async (staffId, openingCash) => {
     let penalty = 0;
 
     if (role === 'Cashier' || role === 'Warehouse') {
-        if (nowStr >= endStr) {
+        const todayStr = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().split('T')[0];
+        const isCrossMidnight = endStr < schedule.startTime;
+
+        let isPastEnd = false;
+        if (schedule.workDateStr === todayStr) {
+            if (!isCrossMidnight && nowStr >= endStr) isPastEnd = true;
+        } else {
+            if (nowStr >= endStr) isPastEnd = true;
+        }
+
+        if (isPastEnd) {
             throw new Error('Quá giờ kết thúc ca, không thể nhận ca này!');
         }
-        if (nowStr > limitStr) {
+
+        let isLate = false;
+        if (schedule.workDateStr === todayStr) {
+            if (nowStr > limitStr) isLate = true;
+        } else {
+            isLate = true;
+        }
+
+        if (isLate) {
             record = `LateIn[${nowStr}]`;
             penalty = 10000;
         }

@@ -58,11 +58,15 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
         .input('staffId', sql.BigInt, staffId)
         .query(`
             -- 1. Xác định khung giờ làm việc thực tế (từ lúc Check-in đến lúc kết ca)
-            DECLARE @startTime DATETIME, @endTime DATETIME, @endTimeStr VARCHAR(5);
+            DECLARE @startTime DATETIME, @endTime DATETIME, @endTimeStr VARCHAR(5), @startTimeStr VARCHAR(5), @logoutDeadlineStr VARCHAR(5), @curPenalty DECIMAL(15,2), @curRecord NVARCHAR(255);
             SELECT 
                 @startTime = ISNULL(ws.checkInTime, CAST(ws.workDate AS DATETIME)), 
                 @endTime   = ISNULL(ws.checkOutTime, DATEADD(hour, 7, GETUTCDATE())),
-                @endTimeStr = CONVERT(VARCHAR(5), sh.endTime, 108)
+                @endTimeStr = CONVERT(VARCHAR(5), sh.endTime, 108),
+                @startTimeStr = CONVERT(VARCHAR(5), sh.startTime, 108),
+                @logoutDeadlineStr = CONVERT(VARCHAR(5), sh.checkOutDeadline, 108),
+                @curPenalty = ISNULL(ws.penaltyAmount, 0),
+                @curRecord = ISNULL(ws.attendanceRecord, '')
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
             WHERE ws.id = @scheduleId;
@@ -92,7 +96,11 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
                 @sales   AS salesCash, 
                 @refund  AS returnCash, 
                 (@sales - @refund) AS netSystemCash, -- Sửa: Không cộng opening vào Net nữa
-                @endTimeStr AS endTimeStr;
+                @endTimeStr AS endTimeStr,
+                @startTimeStr AS startTimeStr,
+                @logoutDeadlineStr AS logoutDeadlineStr,
+                @curPenalty AS currentPenalty,
+                @curRecord AS currentRecord;
         `);
 
     const row = result.recordset[0];
@@ -101,7 +109,11 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
         salesCash: row?.salesCash || 0,
         returnCash: row?.returnCash || 0,
         netSystemCash: row?.netSystemCash || 0,
-        endTimeStr: row?.endTimeStr
+        endTimeStr: row?.endTimeStr,
+        startTimeStr: row?.startTimeStr,
+        logoutDeadlineStr: row?.logoutDeadlineStr,
+        currentPenalty: row?.currentPenalty || 0,
+        currentRecord: row?.currentRecord || ''
     };
 };
 
