@@ -258,7 +258,7 @@ function UpdateProductModal({
                     {/* Thông báo lỗi đỏ ngay dưới input khi giá chưa thay đổi */}
                     {priceError && (
                       <div className="text-danger mt-1 small fw-medium">
-                        ⚠️ {priceError}
+                        {priceError}
                       </div>
                     )}
                   </div>
