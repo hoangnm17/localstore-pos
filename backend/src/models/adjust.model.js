@@ -260,7 +260,6 @@ const getAdjustmentDetail = async (adjustmentId) => {
                 WHERE iai.adjustmentId = @adjustmentId`
             );
 
-    // ====================== ENRICH CONVERTED ======================
     const items = await Promise.all(itemsResult.recordset.map(async (item) => {
         const largestInfo = await getLargestUnitInfo(pool, item.productId);
 
