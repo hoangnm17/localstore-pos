@@ -15,7 +15,6 @@ const DashboardPage = () => {
     // States cho dữ liệu thật 
     const [summary, setSummary] = useState(null);
     const [categoryStock, setCategoryStock] = useState([]); // State cho tồn kho theo danh mục
-    const [totalSelling, setTotalSelling] = useState(0); // State cho sản phẩm đang kinh doanh
     const [currentShiftCash, setCurrentShiftCash] = useState(null); // State cho tiền mặt ca hiện tại
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
@@ -48,7 +47,7 @@ const DashboardPage = () => {
 
     const fetchInventoryData = async () => {
         try {
-            const res = await api.get('/inventory/categories?limit=5'); 
+            const res = await api.get('/inventory/categories?limit=5');
             if (res.data.success) {
                 setCategoryStock(res.data.data.categories || []);
             }
@@ -57,16 +56,6 @@ const DashboardPage = () => {
         }
     };
 
-    const fetchSellingProducts = async () => {
-        try {
-            const res = await api.get('/products/pos'); 
-            if (res.data.success) {
-                setTotalSelling(res.data.data.length || 0);
-            }
-        } catch (error) {
-            console.error("Lỗi lấy sản phẩm kinh doanh:", error);
-        }
-    };
 
     // Hàm lấy tiền mặt ca làm việc hiện tại
     const fetchCurrentShiftCash = async () => {
@@ -93,7 +82,6 @@ const DashboardPage = () => {
     useEffect(() => {
         fetchDashboardData();
         fetchInventoryData();
-        fetchSellingProducts();
         fetchCurrentShiftCash();
     }, []);
 
@@ -113,33 +101,18 @@ const DashboardPage = () => {
     return (
         <div className="dashboard-layout">
             <div className="dashboard-main">
-                {/* Top Header */}
-                <header className="dashboard-header">
-                    <div className="search-bar-container">
-                        <Search size={18} className="search-icon" />
-                        <input type="text" placeholder="Tìm kiếm" className="dashboard-search" />
-                    </div>
-                    <div className="header-actions">
-                        <div className="notification-btn">
-                            <Bell size={20} />
-                            <span className="notify-dot"></span>
-                        </div>
-                        <div className="user-profile" onClick={() => navigate('/staff')}>
-                            <User size={24} />
-                        </div>
-                    </div>
-                </header>
+
 
                 <div className="dashboard-content">
                     <div className="filter-section">
-                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); fetchSellingProducts(); fetchCurrentShiftCash(); }}>
+                        <button className="filter-chip active" onClick={() => { fetchDashboardData(); fetchInventoryData(); fetchCurrentShiftCash(); }}>
                             Làm mới dữ liệu <ChevronRight size={14} />
                         </button>
                     </div>
 
                     {errorMsg && (
                         <div className="error-banner" style={{ background: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid #fecaca' }}>
-                            ⚠️ <strong>Thông báo:</strong> {errorMsg} (Vui lòng thử đăng xuất và đăng nhập lại)
+                            <strong>Thông báo:</strong> {errorMsg} (Vui lòng thử đăng xuất và đăng nhập lại)
                         </div>
                     )}
 
@@ -159,7 +132,7 @@ const DashboardPage = () => {
                                 <div className="stat-card green-card">
                                     <div className="stat-info">
                                         <span className="stat-label">Danh mục: {data.summary.totalCategories}</span>
-                                        <span className="stat-value">{totalSelling}</span>
+                                        <span className="stat-value">{data.summary.totalProducts}</span>
                                         <span className="stat-sub">Sản phẩm đang kinh doanh (POS)</span>
                                     </div>
                                     <List className="stat-icon" size={32} />
@@ -215,7 +188,7 @@ const DashboardPage = () => {
                                     <span>Tiền mặt (Toàn ngày):</span>
                                     <span className="fw-bold text-warning">{formatMoney(data.payments.cash)}</span>
                                 </div>
-                                
+
                                 {currentShiftCash && (
                                     <div className="info-item" style={{ marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.4)', borderRadius: 8 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#be185d' }}>

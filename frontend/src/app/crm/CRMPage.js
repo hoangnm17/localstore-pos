@@ -111,12 +111,12 @@ function Pagination({ page, totalPages, onPageChange }) {
 
 function SubTabBar({ tabs, active, onChange }) {
     return (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid rgba(0,0,0,0.1)', paddingBottom: 8 }}>
             {tabs.map(t => (
                 <button key={t.key} onClick={() => onChange(t.key)} style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
                     background: active === t.key ? '#6366f1' : '#f1f5f9',
-                    color: active === t.key ? '#fff' : '#64748b',
+                    color: active === t.key ? '#fff' : '#1e293b',
                     transition: 'all .2s'
                 }}>{t.label}</button>
             ))}
@@ -210,14 +210,14 @@ function CustomerDetailModal({ customer, onClose }) {
             )}
             {subTab === 'points' && (
                 <div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                        <h4 style={{ margin: '0 0 12px', color: '#6366f1' }}><i className="bi bi-lightning-fill me-2"></i> Điều chỉnh điểm thủ công</h4>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                        <h4 style={{ margin: '0 0 12px', color: '#a78bfa' }}><i className="bi bi-lightning-fill me-2"></i> Điều chỉnh điểm thủ công</h4>
                         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                             <div className="form-group" style={{ flex: '1 1 120px' }}><label>Điểm +/-</label><input className="form-input" type="number" value={adjForm.pointChange} onChange={e => setAdjForm({ ...adjForm, pointChange: e.target.value })} /></div>
                             <div className="form-group" style={{ flex: '2 1 200px' }}><label>Lý do</label><input className="form-input" value={adjForm.reason} onChange={e => setAdjForm({ ...adjForm, reason: e.target.value })} /></div>
                             <button className="btn-primary" onClick={handleAdjust} disabled={adjSaving} style={{ height: 42 }}>{adjSaving ? <div className="spinner-border spinner-border-sm" /> : <i className="bi bi-check-lg"></i>}</button>
                         </div>
-                        {adjMsg && <p style={{ margin: '8px 0 0', fontSize: 12, color: (adjMsg.props?.children?.some?.(c => c.props?.className?.includes('bi-check-lg')) || String(adjMsg).includes('Thành công')) ? '#059669' : '#dc2626' }}>{adjMsg}</p>}
+                        {adjMsg && <p style={{ margin: '8px 0 0', fontSize: 12, color: (adjMsg.props?.children?.some?.(c => c.props?.className?.includes('bi-check-lg')) || String(adjMsg).includes('Thành công')) ? '#34d399' : '#f87171' }}>{adjMsg}</p>}
                     </div>
                     {logsLoading ? <div className="loading-cell"><div className="spinner" /></div> : (
                         <div className="crm-table-container">

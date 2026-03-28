@@ -15,7 +15,7 @@ class DashboardService {
         const productStats = await pool.request().query(`
             SELECT 
                 (SELECT COUNT(*) FROM Categories) as totalCategories,
-                (SELECT COUNT(*) FROM Products WHERE status = 'Active') as totalProducts
+                (SELECT COUNT(*) FROM Products WHERE status = 'Selling') as totalProducts
         `);
 
         // 3. Inventory Stats (Low Stock) - Sửa: InventoryStocks và quantityOnHand
