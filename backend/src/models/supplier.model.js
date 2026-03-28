@@ -1,5 +1,30 @@
 const { sql, connectDB } = require("../config/database.js");
 
+const checkDuplicateSupplier = async (name, contactInfo, address, excludeId = null) => {
+    const pool = await connectDB();
+    const request = pool.request();
+
+    request.input("name", sql.NVarChar, name);
+    request.input("contactInfo", sql.NVarChar, contactInfo || null);
+    request.input("address", sql.NVarChar, address || null);
+
+    let query = `
+        SELECT id FROM Suppliers
+        WHERE LOWER(name) = LOWER(@name)
+        OR ISNULL(contactInfo, '') = ISNULL(@contactInfo, '')
+        OR ISNULL(address, '') = ISNULL(@address, '')
+    `;
+
+    if (excludeId) {
+        query += " AND id != @excludeId";
+        request.input("excludeId", sql.Int, excludeId);
+    }
+
+    const result = await request.query(query);
+
+    return result.recordset.length > 0;
+};
+
 const getList = async ({
     search
 }) => {
@@ -342,5 +367,6 @@ module.exports = {
     getUnitsByProductId,
     updateProductOfSupplierPrice,
     updateProductSupplierStatus,
-    getPriceHistoryDetail
+    getPriceHistoryDetail,
+    checkDuplicateSupplier
 };

@@ -82,11 +82,20 @@ const addProductToSupplier = async (supplierId, body, userId) => {
 };
 
 const createSupplier = async (body) => {
-
     const { name, contactInfo, address } = body;
 
     if (!name || name.trim() === "") {
         throw new Error("SUPPLIER_NAME_REQUIRED");
+    }
+
+    const isDuplicate = await supplierModel.checkDuplicateSupplier(
+        name.trim(),
+        contactInfo,
+        address
+    );
+
+    if (isDuplicate) {
+        throw new Error("SUPPLIER_ALREADY_EXISTS");
     }
 
     return await supplierModel.createSupplier({
@@ -142,6 +151,17 @@ const updateSupplier = async (id, body) => {
 
     if (!supplier) {
         throw new Error("SUPPLIER_NOT_FOUND");
+    }
+
+    const isDuplicate = await supplierModel.checkDuplicateSupplier(
+        name.trim(),
+        contactInfo,
+        address,
+        id 
+    );
+
+    if (isDuplicate) {
+        throw new Error("SUPPLIER_ALREADY_EXISTS");
     }
 
     return await supplierModel.updateSupplier(
