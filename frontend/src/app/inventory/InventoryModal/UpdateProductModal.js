@@ -22,7 +22,10 @@ function UpdateProductModal({
   const [productUnits, setProductUnits] = useState([]);
 
   const [alert, setAlert] = useState({ type: "", message: "" });
-  const [priceError, setPriceError] = useState("");   // ← Thêm state này
+  const [priceError, setPriceError] = useState("");
+  const [salePriceError, setSalePriceError] = useState(""); 
+
+  const [initialSalePrices, setInitialSalePrices] = useState({});
 
   useEffect(() => {
     if (!product || !show) return;
@@ -34,6 +37,7 @@ function UpdateProductModal({
     setStep(1);
     setAlert({ type: "", message: "" });
     setPriceError("");
+    setSalePriceError("");
     fetchUnits();
   }, [product, show]);
 
@@ -55,12 +59,19 @@ function UpdateProductModal({
     try {
       const res = await supplierService.getProductUnits(product.id);
       if (res?.data?.success) {
-        setProductUnits(
-          res.data.data.map(u => ({
-            ...u,
-            salePrice: u.salePrice || 0
-          }))
-        );
+        const unitsData = res.data.data.map(u => ({
+          ...u,
+          salePrice: u.salePrice || 0
+        }));
+
+        setProductUnits(unitsData);
+
+        // Lưu giá bán ban đầu để so sánh sau này
+        const initialPrices = {};
+        unitsData.forEach(u => {
+          initialPrices[u.id] = Number(u.salePrice) || 0;
+        });
+        setInitialSalePrices(initialPrices);
       }
     } catch (err) {
       console.error(err);
@@ -73,7 +84,7 @@ function UpdateProductModal({
     const value = e.target.value;
     if (value === "" || /^\d*$/.test(value)) {
       setter(value);
-      setPriceError(""); // Xóa lỗi khi người dùng đang gõ
+      if (setter === setPrice) setPriceError("");
     }
   };
 
@@ -82,7 +93,20 @@ function UpdateProductModal({
     setTimeout(() => setAlert({ type: "", message: "" }), 4000);
   };
 
-  // ==================== CẬP NHẬT GIÁ NHẬP ====================
+  const hasPriceChanged = () => {
+    return Number(price) !== Number(oldPrice) || status !== product.status;
+  };
+
+  const hasAnySalePriceChanged = () => {
+    if (!productUnits.length) return false;
+
+    return productUnits.some(u => {
+      const current = Number(u.salePrice) || 0;
+      const initial = initialSalePrices[u.id] || 0;
+      return current !== initial;
+    });
+  };
+
   const handleUpdate = async () => {
     setPriceError("");
 
@@ -97,8 +121,7 @@ function UpdateProductModal({
       return;
     }
 
-    // Kiểm tra giá có thay đổi không
-    if (numericPrice === Number(oldPrice) && status === product.status) {
+    if (!hasPriceChanged()) {
       setPriceError("Giá nhập chưa có thay đổi nào.");
       return;
     }
@@ -107,8 +130,6 @@ function UpdateProductModal({
       setLoading(true);
 
       const data = { status };
-
-      // Chỉ gửi price khi thực sự thay đổi
       if (numericPrice !== Number(product.supplyPrice)) {
         data.price = numericPrice;
         data.productUnitId = Number(productUnitId);
@@ -116,23 +137,16 @@ function UpdateProductModal({
 
       await supplierService.updateProductOfSupplier(supplierId, product.id, data);
 
-      // Cập nhật lại oldPrice để đồng bộ với dữ liệu mới
       setOldPrice(price);
 
       showAlert("success", "Cập nhật thông tin sản phẩm thành công!");
-
-      // Gọi onSuccess để trang cha reload dữ liệu mới (FIX BUG HIỂN THỊ)
       onSuccess();
 
-      // Nếu giá nhập thay đổi → chuyển sang bước hỏi cập nhật giá bán
-      if (numericPrice !== Number(oldPrice)) {   // oldPrice đã được cập nhật ở trên
+      if (numericPrice !== Number(oldPrice)) {
         await loadProductUnits();
         setStep(2);
       } else {
-        // Không thay đổi giá nhập → chỉ thay đổi trạng thái → đóng modal
-        setTimeout(() => {
-          onClose();
-        }, 1200);
+        setTimeout(() => onClose(), 1200);
       }
     } catch (err) {
       console.error("Update error:", err);
@@ -142,8 +156,14 @@ function UpdateProductModal({
     }
   };
 
-  // ==================== CẬP NHẬT GIÁ BÁN ====================
   const handleUpdateSalePrice = async () => {
+    setSalePriceError("");
+
+    if (!hasAnySalePriceChanged()) {
+      setSalePriceError("Giá bán chưa có thay đổi nào.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -154,6 +174,7 @@ function UpdateProductModal({
           setLoading(false);
           return;
         }
+
         await updateProductUnit(u.id, { salePrice });
       }
 
@@ -173,7 +194,6 @@ function UpdateProductModal({
 
   const handleNextToSale = () => setStep(3);
   const handleBack = () => setStep(1);
-
   const handleClose = () => onClose();
 
   return (
@@ -190,17 +210,14 @@ function UpdateProductModal({
                 </h5>
                 <small className="text-muted">Bước {step} / 3</small>
 
-                {/* Stepper */}
                 <div className="d-flex mt-3">
                   {[1, 2, 3].map((s, index) => (
                     <div key={s} className="flex-fill text-center position-relative">
                       <div 
                         className={`mx-auto mb-1 d-flex align-items-center justify-content-center rounded-circle border fw-medium
-                          ${step === s 
-                            ? 'bg-primary text-white border-primary' 
-                            : step > s 
-                              ? 'bg-success text-white border-success' 
-                              : 'bg-light text-muted border-secondary'}`}
+                          ${step === s ? 'bg-primary text-white border-primary' 
+                            : step > s ? 'bg-success text-white border-success' 
+                            : 'bg-light text-muted border-secondary'}`}
                         style={{ width: '32px', height: '32px', fontSize: '1rem' }}
                       >
                         {step > s ? '✓' : s}
@@ -227,7 +244,6 @@ function UpdateProductModal({
                 </div>
               )}
 
-              {/* ==================== STEP 1 ==================== */}
               {step === 1 && (
                 <>
                   <div className="mb-4">
@@ -255,9 +271,8 @@ function UpdateProductModal({
                       placeholder="Nhập giá nhập"
                       inputMode="numeric"
                     />
-                    {/* Thông báo lỗi đỏ ngay dưới input khi giá chưa thay đổi */}
                     {priceError && (
-                      <div className="text-danger mt-1 small fw-medium">
+                      <div className="text-danger mt-2 small fw-medium">
                         {priceError}
                       </div>
                     )}
@@ -277,7 +292,6 @@ function UpdateProductModal({
                 </>
               )}
 
-              {/* ==================== STEP 2 - XÁC NHẬN ==================== */}
               {step === 2 && (
                 <div className="text-center py-5 my-4">
                   <div className="mb-4">
@@ -285,15 +299,21 @@ function UpdateProductModal({
                   </div>
                   <h4 className="mb-3 text-success">Giá nhập đã được cập nhật thành công!</h4>
                   <p className="text-muted fs-5 px-4">
-                    Bạn có muốn cập nhật <strong>giá bán</strong> cho các đơn vị tính của sản phẩm này không?
+                    Bạn có muốn cập nhật <strong>giá bán</strong> cho các đơn vị tính không?
                   </p>
                 </div>
               )}
 
-              {/* ==================== STEP 3 - CHỈNH GIÁ BÁN ==================== */}
               {step === 3 && (
                 <>
                   <p className="text-muted mb-3">Chỉnh sửa giá bán cho từng đơn vị:</p>
+                  
+                  {salePriceError && (
+                    <div className="alert alert-warning py-2 small mb-3">
+                      {salePriceError}
+                    </div>
+                  )}
+
                   <div className="table-responsive">
                     <table className="table table-hover align-middle">
                       <thead className="table-light">
@@ -318,6 +338,7 @@ function UpdateProductModal({
                                   if (e.target.value === "" || /^\d*$/.test(e.target.value)) {
                                     list[i].salePrice = e.target.value;
                                     setProductUnits(list);
+                                    setSalePriceError(""); // Xóa lỗi khi người dùng chỉnh
                                   }
                                 }}
                                 placeholder="0"
