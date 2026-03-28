@@ -246,7 +246,8 @@ const HandoverReport = () => {
                                             { label: 'Nhân Viên', width: '160px' },
                                             { label: 'Ca Làm', width: '130px' },
                                             { label: 'Tiền Đầu Ca', width: '110px', align: 'right' },
-                                            { label: 'HT Thu', width: '120px', align: 'right' },
+                                            { label: 'Doanh Thu', width: '120px', align: 'right' },
+                                            { label: 'Tiền Hoàn', width: '110px', align: 'right' },
                                             { label: 'Thực Đếm', width: '110px', align: 'right' },
                                             { label: 'Chênh Lệch', width: '110px', align: 'right' },
                                             { label: 'Ghi Chú', width: '120px' },
@@ -306,9 +307,13 @@ const HandoverReport = () => {
                                                 <td className="px-3 text-end" style={{ width: '110px', color: '#475569', fontWeight: 600 }}>
                                                     {formatVND(row.openingCash)}
                                                 </td>
-                                                {/* HT Thu */}
+                                                {/* Doanh Thu */}
                                                 <td className="px-3 text-end" style={{ width: '120px', color: '#2563eb', fontWeight: 700 }}>
-                                                    {formatVND(row.systemCash)}
+                                                    {formatVND(Number(row.systemCash) + Number(row.returnCash))}
+                                                </td>
+                                                {/* Tiền Hoàn */}
+                                                <td className="px-3 text-end" style={{ width: '110px', color: '#ef4444', fontWeight: 700 }}>
+                                                    -{formatVND(row.returnCash)}
                                                 </td>
                                                 {/* Thực đếm */}
                                                 <td className="px-3 text-end" style={{ width: '110px', color: '#16a34a', fontWeight: 700 }}>

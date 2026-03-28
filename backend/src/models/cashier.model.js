@@ -57,38 +57,47 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
         .input('scheduleId', sql.Int, scheduleId)
         .input('staffId', sql.BigInt, staffId)
         .query(`
-            DECLARE @workDate  DATE;
-            DECLARE @startStr  VARCHAR(5);
-            DECLARE @endStr    VARCHAR(5);
-
-            -- 1. Lấy thông tin ca
+            -- 1. Xác định khung giờ làm việc thực tế (từ lúc Check-in đến lúc kết ca)
+            DECLARE @startTime DATETIME, @endTime DATETIME;
             SELECT
-                @workDate  = ws.workDate,
-                @startStr  = CONVERT(VARCHAR(5), sh.startTime, 108),
-                @endStr    = CONVERT(VARCHAR(5), sh.endTime,   108)
-            FROM WorkSchedules ws
-            JOIN Shifts sh ON ws.shiftId = sh.id
-            WHERE ws.id = @scheduleId AND ws.staffId = @staffId;
+                @startTime = ISNULL(checkInTime, CAST(workDate AS DATETIME)), 
+                @endTime   = ISNULL(checkOutTime, DATEADD(hour, 7, GETUTCDATE()))
+            FROM WorkSchedules WHERE id = @scheduleId;
 
-            -- 2. Xây dựng khoảng thời gian
-            DECLARE @startDT DATETIME = CAST(CONCAT(CAST(@workDate AS VARCHAR(10)), ' ', @startStr) AS DATETIME);
-            DECLARE @endDT   DATETIME = CAST(CONCAT(CAST(@workDate AS VARCHAR(10)), ' ', @endStr)   AS DATETIME);
+            -- 2. Tính tổng hợp các loại tiền mặt
+            DECLARE @opening DECIMAL(15,2) = ISNULL((SELECT openingCash FROM CashHandovers WHERE scheduleId = @scheduleId), 0);
+            
+            DECLARE @sales   DECIMAL(15,2) = ISNULL((
+                SELECT SUM(p.amount) FROM Invoices i JOIN Payments p ON i.id = p.invoiceId
+                WHERE i.staffId = @staffId AND p.paymentMethod = 'CASH' AND p.status = 'SUCCESS'
+                  AND i.createdAt >= @startTime AND i.createdAt <= @endTime
+            ), 0);
 
-            IF @endDT < @startDT
-                SET @endDT = DATEADD(day, 1, @endDT);
+            DECLARE @refund  DECIMAL(15,2) = ISNULL((
+                SELECT SUM(r.totalRefundAmount) 
+                FROM Returns r
+                LEFT JOIN Invoices i ON r.invoiceId = i.id
+                WHERE (r.staffId = @staffId OR i.staffId = @staffId)
+                  AND r.refundMethod = 'CASH' 
+                  AND r.status IN ('Approve', 'APPROVED')
+                  AND r.createdAt >= @startTime AND r.createdAt <= @endTime
+            ), 0);
 
-            -- 3. Tính tổng tiền mặt trong khung giờ ca
-            SELECT ISNULL(SUM(p.amount), 0) AS systemCash
-            FROM Invoices i
-            JOIN Payments p ON i.id = p.invoiceId
-            WHERE i.staffId        = @staffId
-              AND i.createdAt     >= @startDT
-              AND i.createdAt     <= @endDT
-              AND p.paymentMethod  = 'CASH'
-              AND p.status         = 'SUCCESS';
+            -- 3. Trả về kết quả tổng hợp
+            SELECT 
+                @opening AS openingCash, 
+                @sales   AS salesCash, 
+                @refund  AS returnCash, 
+                (@opening + @sales - @refund) AS netSystemCash;
         `);
 
-    return result.recordset[0]?.systemCash || 0;
+    const row = result.recordset[0];
+    return {
+        openingCash: row?.openingCash || 0,
+        salesCash: row?.salesCash || 0,
+        returnCash: row?.returnCash || 0,
+        netSystemCash: row?.netSystemCash || 0
+    };
 };
 
 module.exports.createHandoverSimple = async (data) => {
@@ -186,6 +195,15 @@ module.exports.getHandoverReport = async ({ fromDate, toDate, staffId, page, pag
             ch.actualCash,
             ch.difference,
             ch.note,
+            (SELECT ISNULL(SUM(ret.totalRefundAmount), 0)
+             FROM Returns ret
+             INNER JOIN Invoices inv ON ret.invoiceId = inv.id
+             WHERE (ret.staffId = s.id OR inv.staffId = s.id)
+               AND ret.refundMethod = 'CASH' 
+               AND ret.status IN ('Approve', 'APPROVED')
+               AND ret.createdAt >= ws.checkInTime 
+               AND ret.createdAt <= ISNULL(ws.checkOutTime, ch.handoverTime)
+            ) AS returnCash,
             s.id AS staffId,
             s.fullName AS cashierName,
             r.name AS roleName,

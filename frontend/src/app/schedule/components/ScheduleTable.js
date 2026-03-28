@@ -10,7 +10,11 @@ const shiftColors = [
     { bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe' },
     { bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' },
 ];
-const getShiftStyle = (id) => shiftColors[(id - 1) % shiftColors.length];
+const getShiftStyle = (id, status) => {
+    if (status === 'absent') return { bg: '#fef2f2', text: '#ef4444', border: '#fecaca' };
+    if (status === 'completed') return { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' };
+    return shiftColors[(id - 1) % shiftColors.length];
+};
 
 const formatDate = (d) => {
     const yyyy = d.getFullYear();
@@ -124,11 +128,14 @@ const DateRows = ({ weekDates, todayStr, filteredStaff, shifts, onRemove, canAss
                 <td className="py-2 px-3">
                     <div className="d-flex flex-wrap gap-3">
                         {shiftsOnThisDate.map(({ shift, staffList }) => {
-                            const sStyle = getShiftStyle(shift.id);
+                            const firstSc = staffList[0]?.schedules[dStr].find(x => x.shiftId === shift.id);
+                            const sStyle = getShiftStyle(shift.id, firstSc?.status || firstSc?.scheduleStatus);
                             return (
                                 <div key={shift.id} className="p-2 border rounded-3 bg-white shadow-sm" style={{ minWidth: '220px', borderLeft: `4px solid ${sStyle.border} !important` }}>
                                     <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
-                                        <div className="fw-bold small" style={{ color: sStyle.text }}>{shift.name}</div>
+                                        <div className="fw-bold small" style={{ color: sStyle.text }}>
+                                            {shift.name} {(firstSc?.status || firstSc?.scheduleStatus) === 'absent' && <small className="text-danger">[Vắng]</small>}
+                                        </div>
                                         <div className="text-muted" style={{ fontSize: '0.65rem' }}>{shift.startTime} - {shift.endTime}</div>
                                     </div>
                                     <div className="d-flex flex-column gap-1">
@@ -211,22 +218,27 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
                         <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent', minWidth: '110px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
                                 {dayShifts.map(sc => {
-                                    const sStyle = getShiftStyle(sc.shiftId);
+                                    const isAbs = (sc.status || sc.scheduleStatus) === 'absent';
+                                    const sStyle = getShiftStyle(sc.shiftId, sc.status || sc.scheduleStatus);
                                     const counterDisplay = sc.counterName || sc.counterCode;
                                     return (
                                         <div key={sc.scheduleId} style={{
                                             borderRadius: '8px', padding: '5px 8px', backgroundColor: sStyle.bg, border: `1px solid ${sStyle.border}`,
                                             color: sStyle.text, position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                         }}>
-                                            <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', paddingRight: '22px' }}>{sc.shiftName}</span>
+                                            <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', paddingRight: '22px' }}>
+                                                {sc.shiftName} {isAbs && <small className="text-danger ms-1">[Vắng]</small>}
+                                            </span>
                                             <span style={{ fontSize: '0.68rem', opacity: 0.8, display: 'block' }}>{sc.startTime} – {sc.endTime}</span>
                                             {counterDisplay && <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '2px', opacity: 0.85 }}><i className="bi bi-shop me-1" />{counterDisplay}</span>}
                                             {canAssign && (
                                                 <button className="ws-remove-btn" title="Xóa ca này" onClick={() => onRemove(sc.scheduleId)}
-                                                    style={{ position: 'absolute', top: '50%', right: '5px', 
+                                                    style={{
+                                                        position: 'absolute', top: '50%', right: '5px',
                                                         transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%',
-                                                         width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                                         cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
+                                                        width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0
+                                                    }}>✕</button>
                                             )}
                                         </div>
                                     );
@@ -234,9 +246,11 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
                                 {/* ÁP DỤNG BUTTON CHO CẢ 3 ROLE */}
                                 {canAssign && !isPast && (
                                     <button className="ws-add-btn" onClick={() => onOpenAssign(staff, dateStr)}
-                                        style={{ width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0',
-                                         background: 'transparent', color: '#94a3b8', fontWeight: 600,
-                                          fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px' }}>
+                                        style={{
+                                            width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0',
+                                            background: 'transparent', color: '#94a3b8', fontWeight: 600,
+                                            fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px'
+                                        }}>
                                         + Thêm ca
                                     </button>
                                 )}

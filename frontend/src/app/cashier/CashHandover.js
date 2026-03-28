@@ -16,7 +16,9 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
     const [selectedScheduleId, setSelectedScheduleId] = useState('');
 
     const [openingCash, setOpeningCash] = useState(0);
-    const [systemCash, setSystemCash] = useState(0);
+    const [systemCash, setSystemCash] = useState(0); // Net = sales - return
+    const [salesCash, setSalesCash] = useState(0);
+    const [returnCash, setReturnCash] = useState(0);
     const [actualCash, setActualCash] = useState('');
     const [note, setNote] = useState('');
 
@@ -49,7 +51,11 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
             try {
                 const res = await getSystemCash(selectedScheduleId);
                 if (res?.success) {
-                    setSystemCash(res.data?.systemCash || 0);
+                    const data = res.data?.systemCash || {};
+                    setSalesCash(data.salesCash || 0);
+                    setReturnCash(data.returnCash || 0);
+                    setSystemCash(data.netSystemCash || 0);
+                    if (data.openingCash !== undefined) setOpeningCash(data.openingCash);
                 }
             } catch { setErrorMsg('Lỗi tính toán doanh thu hệ thống!'); }
             finally { setLoading(false); }
@@ -179,10 +185,19 @@ const CashHandover = ({ staffInfo, todayStr, onClose, onSuccess }) => {
                                     </div>
 
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <span className="fw-bold text-secondary small">2. Hệ thống thu</span>
+                                        <span className="fw-bold text-secondary small">2. Doanh thu bán hàng</span>
                                         <div className="input-group input-group-sm" style={{ width: '180px' }}>
                                             <input type="text" className="form-control text-end fw-bold bg-white text-primary"
-                                                value={formatVND(systemCash)} disabled />
+                                                value={formatVND(salesCash)} disabled />
+                                            <span className="input-group-text bg-white text-muted">VNĐ</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <span className="fw-bold text-secondary small">3. Tiền hoàn trả khách</span>
+                                        <div className="input-group input-group-sm" style={{ width: '180px' }}>
+                                            <input type="text" className="form-control text-end fw-bold bg-white text-danger"
+                                                value={`-${formatVND(returnCash)}`} disabled />
                                             <span className="input-group-text bg-white text-muted">VNĐ</span>
                                         </div>
                                     </div>
