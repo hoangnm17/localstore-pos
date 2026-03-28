@@ -4,6 +4,7 @@ import { formatCurrency } from "utils/formatters";
 import ReturnDetail from "./ReturnDetail";
 import useTitle from "hooks/common/useTitle";
 import { getReturn } from "services/Return/return.service";
+import 'style/Return/Return.css'
 
 const STATUS_OPTIONS = [
   { label: "Đang chờ", value: "Pending", color: "#f59e0b", bg: "#fffbeb", icon: "bi-hourglass-split" },
@@ -153,43 +154,6 @@ export default function ReturnList() {
           </div>
         </div>
       )}
-
-      <style>{`
-        .modern-return-container { background: #f8fafc; min-height: 100vh; font-family: 'Inter', sans-serif; }
-        
-        /* Filter Pills */
-        .filter-pill-box { display: flex; background: #e2e8f0; padding: 5px; border-radius: 50px; gap: 5px; }
-        .filter-pill { border: none; background: transparent; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 500; color: #64748b; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .filter-pill.active { background: white; color: var(--active-color); shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); font-weight: 700; }
-        
-        /* Table Style */
-        .custom-table thead { background: #f1f5f9; }
-        .custom-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border: none; }
-        .custom-table tbody tr { transition: all 0.2s; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
-        .custom-table tbody tr:hover { background-color: #f1f5f9; transform: scale(1.002); }
-        
-        .id-badge { background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 13px; font-weight: 700; }
-        .avatar-circle { width: 32px; height: 32px; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 12px; font-weight: bold; }
-        
-        .status-badge { padding: 6px 14px; border-radius: 50px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; }
-        
-        .btn-action-view { border: 1px solid #e2e8f0; background: white; padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600; color: #475569; transition: all 0.2s; }
-        .btn-action-view:hover { background: #2563eb; color: white; border-color: #2563eb; }
-
-        /* Skeleton */
-        .skeleton-row { height: 60px; }
-        .skeleton-bar { height: 20px; background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 10px; width: 90%; margin: auto; }
-        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-        /* Custom Modal */
-        .modal-custom-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-        .modal-custom-content { background: white; width: 100%; max-width: 850px; border-radius: 20px; shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); animation: zoomIn 0.3s; overflow: hidden; }
-        .modal-custom-header { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-        .btn-close-custom { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; color: #64748b; font-size: 12px; transition: 0.2s; }
-        .btn-close-custom:hover { background: #ef4444; color: white; }
-        .modal-custom-body { padding: 24px; max-height: 85vh; overflow-y: auto; }
-        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      `}</style>
     </div>
   );
 }

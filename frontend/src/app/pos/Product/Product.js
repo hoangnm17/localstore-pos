@@ -195,27 +195,6 @@ export default function Product({ addItem, isModalOpen, searchText, onSearchChan
       </div>
 
       {showScan && <ScanBarcode open={showScan} onClose={() => setShowScan(false)} onDetected={handleBarcode} />}
-
-      <style jsx>{`
-        :global(body) {
-          overflow: hidden;
-        }
-
-        /* Tùy chỉnh thanh cuộn nội bộ cho đẹp */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #ccc;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #bbb;
-        }
-      `}</style>
     </div>
   );
 }

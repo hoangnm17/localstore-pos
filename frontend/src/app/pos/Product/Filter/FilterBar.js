@@ -150,18 +150,6 @@ export default function FilterBar({
           <i className="bi bi-chevron-right"></i>
         </button>
       </div>
-
-      <style jsx>{`
-        .btn-xs {
-          padding: 2px 8px;
-          font-size: 0.75rem;
-        }
-        .filter-bar-container {
-          background: #fff;
-          padding: 10px;
-          border-radius: 12px;
-        }
-      `}</style>
     </div>
   );
 }
