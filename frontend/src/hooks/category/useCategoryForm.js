@@ -1,25 +1,36 @@
 import { useEffect, useState } from 'react';
 import categoryService from '../../services/Category/category.service';
 
+const EMPTY_FORM = {
+    name: '',
+    parentId: null,
+    imageUrl: ''
+};
+
 export default function useCategoryForm(editId, { showNotification } = {}) {
-    const [form, setForm] = useState({
-        name: '',
-        parentId: null,
-        imageUrl: ''
-    });
+    const [form, setForm] = useState(EMPTY_FORM);
 
     useEffect(() => {
         if (!editId) {
-            setForm({ name: '', parentId: null, imageUrl: '' });
+            setForm(EMPTY_FORM);
             return;
         }
+
         categoryService.getCategoryById(editId).then(res => {
-            setForm(res.data.data);
+            setForm({
+                name: res.data.data?.name || '',
+                parentId: res.data.data?.parentId ?? null,
+                imageUrl: res.data.data?.imageUrl || ''
+            });
         });
     }, [editId]);
 
     function change(field, value) {
         setForm(prev => ({ ...prev, [field]: value }));
+    }
+
+    function resetForm() {
+        setForm(EMPTY_FORM);
     }
 
     async function submit() {
@@ -49,6 +60,7 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
     return {
         form,
         change,
-        submit
+        submit,
+        resetForm
     };
 }
