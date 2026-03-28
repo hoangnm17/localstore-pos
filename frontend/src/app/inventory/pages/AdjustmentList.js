@@ -5,8 +5,9 @@ import useTitle from "../../../hooks/common/useTitle";
 
 function AdjustmentList() {
     useTitle("Danh sách phiếu điều chỉnh kho");
+    const [searchParams] = useSearchParams();
     const [data, setData] = useState([]);
-    const [status, setStatus] = useState("");
+    const [selectedStatus, setSelectedStatus] = useState(searchParams.get("status") || "");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [loading, setLoading] = useState(false);
@@ -15,30 +16,24 @@ function AdjustmentList() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    const [searchParams] = useSearchParams();
+
     const navigate = useNavigate();
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        const statusParam = searchParams.get("status");
-        if (statusParam) setStatus(statusParam);
-    }, [searchParams]);
-
-    useEffect(() => {
-        window.scrollTo(0, 0);
         setCurrentPage(1); // reset page khi filter đổi
-        fetchData();
-    }, [status, fromDate, toDate]);
+        const statusParam = searchParams.get("status") || "";
+        fetchData(statusParam, fromDate, toDate);
+    }, [searchParams, fromDate, toDate]);
 
-    const fetchData = async () => {
+    const fetchData = async (statusParam, fromDateParam, toDateParam) => {
         setLoading(true);
         try {
             const res = await adjustmentService.getAdjustments({
-                status,
-                fromDate,
-                toDate,
+                status: statusParam,
+                fromDate: fromDateParam,
+                toDate: toDateParam,
             });
-
             if (res?.data?.success) {
                 setData(res.data.data || []);
             } else {
@@ -52,14 +47,14 @@ function AdjustmentList() {
     };
 
     const handleStatusChange = (newStatus) => {
-        setStatus(newStatus);
+        setSelectedStatus(newStatus); // highlight button
         navigate(`?status=${newStatus}`);
     };
 
     const handleReset = () => {
         setFromDate("");
         setToDate("");
-        const currentStatus = status ? `?status=${status}` : "";
+        const currentStatus = selectedStatus ? `?status=${selectedStatus}` : "";
         navigate(`/inventory/requests/adjust${currentStatus}`);
     };
 
@@ -115,7 +110,7 @@ function AdjustmentList() {
                 ].map((item) => (
                     <div key={item.status} className="col-md-4">
                         <div
-                            className={`card shadow-sm border-0 rounded-3 text-center transition-all cursor-pointer ${status === item.status
+                            className={`card shadow-sm border-0 rounded-3 text-center transition-all cursor-pointer ${selectedStatus === item.status
                                 ? `active-glow bg-${item.color}-subtle border-${item.color} border-3 shadow-lg`
                                 : "hover-glow border border-light"
                                 }`}
