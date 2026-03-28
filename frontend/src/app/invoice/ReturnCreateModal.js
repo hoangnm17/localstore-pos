@@ -2,31 +2,31 @@ import { useMemo, useState } from "react";
 import BaseModal from "components/common/BaseModal";
 import { formatCurrency } from "utils/formatters";
 import api from "services/axiosInstance";
+import { createReturn } from "services/Return/return.service";
+import { useNotification } from "components/global/Notification/NotificationContext"; // Import context
 
 export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [errMsg, setErrMsg] = useState("");
+  
+  // Sử dụng hook notification
+  const { showNotification } = useNotification();
 
-  // Khởi tạo map số lượng dựa trên id của item trong hóa đơn
   const [qtyMap, setQtyMap] = useState(() => {
     const m = {};
     (invoice?.items || []).forEach((it) => (m[it.id] = 0));
     return m;
   });
 
-  // Số lượng tối đa có thể trả dựa trên remainingQuantity từ API
   const maxMap = useMemo(() => {
     const m = {};
     (invoice?.items || []).forEach((it) => (m[it.id] = it.remainingQuantity || 0));
     return m;
   }, [invoice]);
 
-  // TÍNH TOÁN: Lấy discountedUnitPrice để hoàn tiền đúng số khách đã trả
   const totalRefund = useMemo(() => {
     return (invoice?.items || []).reduce((sum, it) => {
       const q = Number(qtyMap[it.id] || 0);
-      // Sử dụng discountedUnitPrice nếu có, nếu không thì dùng unitPrice
       const priceToRefund = it.discountedUnitPrice ?? it.unitPrice ?? 0;
       return sum + q * priceToRefund;
     }, 0);
@@ -40,34 +40,39 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
   };
 
   const handleSubmit = async () => {
-    setErrMsg("");
     const items = (invoice?.items || [])
       .map((it) => ({
         invoiceItemId: it.id,
         productId: it.productId,
         quantity: Number(qtyMap[it.id] || 0),
-        // Gửi đơn giá thực tế đã giảm lên server
         refundAmountPerItem: it.discountedUnitPrice ?? it.unitPrice, 
       }))
       .filter((it) => it.quantity > 0);
 
-    if (!items.length) return setErrMsg("Vui lòng chọn ít nhất một sản phẩm để hoàn");
-    if (!reason.trim()) return setErrMsg("Vui lòng nhập lý do hoàn trả");
+    // Thay thế setErrMsg bằng showNotification
+    if (!items.length) {
+      return showNotification("Vui lòng chọn ít nhất một sản phẩm để hoàn", "warning");
+    }
+    if (!reason.trim()) {
+      return showNotification("Vui lòng nhập lý do hoàn trả", "warning");
+    }
 
     const payload = { 
       invoiceId: invoice.id, 
       reason: reason.trim(), 
       items,
-      totalRefundAmount: totalRefund // Tổng tiền gửi lên để đối soát
+      totalRefundAmount: totalRefund 
     };
 
     setSubmitting(true);
     try {
-      await api.post("/returns", payload);
+      await createReturn(payload);
+      showNotification("Tạo đơn hoàn trả thành công, vui lòng chờ duyệt", "success");
       onCreated?.();
       onClose?.();
     } catch (err) {
-      setErrMsg(err?.response?.data?.message || "Lỗi hệ thống khi tạo đơn hoàn");
+      const errorMsg = err?.response?.data?.message || "Lỗi hệ thống khi tạo đơn hoàn";
+      showNotification(errorMsg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -87,21 +92,22 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
               <small className="text-muted">Hóa đơn: <strong>{invoice?.invoiceCode}</strong></small>
             </div>
           </div>
+          <button className="btn-close shadow-none" onClick={onClose}></button>
         </div>
 
         {/* Body */}
         <div className="p-4 bg-light">
-          {errMsg && <div className="alert alert-danger mb-4">{errMsg}</div>}
+          {/* Đã bỏ phần hiển thị alert errMsg tại đây */}
 
           <div className="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="ps-4 py-3">Sản phẩm</th>
-                    <th className="text-center">Giá mua (đã giảm)</th>
-                    <th className="text-center" style={{ width: '160px' }}>Số lượng trả</th>
-                    <th className="text-end pe-4">Hoàn trả</th>
+                    <th className="ps-4 py-3 border-0">Sản phẩm</th>
+                    <th className="text-center border-0">Giá mua (đã giảm)</th>
+                    <th className="text-center border-0" style={{ width: '160px' }}>Số lượng trả</th>
+                    <th className="text-end pe-4 border-0">Hoàn trả</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -118,15 +124,16 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
                           {formatCurrency(price)}
                         </td>
                         <td>
-                          <div className="input-group input-group-sm">
-                            <button className="btn btn-outline-secondary" onClick={() => setQty(it.id, qty - 1)}>−</button>
+                          <div className="input-group input-group-sm justify-content-center">
+                            <button className="btn btn-outline-secondary px-2" onClick={() => setQty(it.id, qty - 1)}>−</button>
                             <input 
                               type="text" 
-                              className="form-control text-center bg-white" 
+                              className="form-control text-center bg-white border-secondary-subtle" 
+                              style={{ maxWidth: '50px' }}
                               value={qty} 
                               readOnly 
                             />
-                            <button className="btn btn-outline-secondary" onClick={() => setQty(it.id, qty + 1)}>+</button>
+                            <button className="btn btn-outline-secondary px-2" onClick={() => setQty(it.id, qty + 1)}>+</button>
                           </div>
                         </td>
                         <td className="text-end pe-4 fw-bold text-danger">
@@ -143,7 +150,7 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
           <div className="row g-4">
             <div className="col-lg-7">
               <div className="bg-white p-4 rounded-4 shadow-sm h-100">
-                <label className="form-label fw-bold small text-uppercase">Lý do hoàn trả</label>
+                <label className="form-label fw-bold small text-uppercase text-muted">Lý do hoàn trả <span className="text-danger">*</span></label>
                 <textarea
                   className="form-control border-light-subtle bg-light"
                   rows={3}
@@ -154,11 +161,11 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
               </div>
             </div>
             <div className="col-lg-5">
-              <div className="card border-0 bg-success text-white p-4 rounded-4 shadow-sm h-100">
+              <div className="card border-0 bg-success text-white p-4 rounded-4 shadow-sm h-100 d-flex flex-column justify-content-center">
                 <div className="small opacity-75 mb-1 text-uppercase fw-bold">Tổng tiền hoàn trả</div>
                 <div className="h2 fw-bold mb-0">{formatCurrency(totalRefund)}</div>
-                <hr className="opacity-25" />
-                <div className="small opacity-75">Dựa trên đơn giá sau chiết khấu của hóa đơn.</div>
+                <hr className="opacity-25 my-3" />
+                <div className="small opacity-75 italic">Giá trị này được tính dựa trên đơn giá thực tế khách đã thanh toán.</div>
               </div>
             </div>
           </div>
@@ -166,13 +173,15 @@ export default function ReturnCreateModal({ invoice, onClose, onCreated }) {
 
         {/* Footer */}
         <div className="p-4 bg-white border-top d-flex justify-content-end gap-2">
-          <button className="btn btn-light px-4" onClick={onClose}>Đóng</button>
+          <button className="btn btn-light rounded-pill px-4" onClick={onClose} disabled={submitting}>Hủy bỏ</button>
           <button 
-            className="btn btn-primary px-5 fw-bold"
+            className="btn btn-primary rounded-pill px-5 fw-bold"
             onClick={handleSubmit}
             disabled={submitting || totalRefund === 0}
           >
-            {submitting ? "Đang xử lý..." : "Xác nhận hoàn tiền"}
+            {submitting ? (
+              <><span className="spinner-border spinner-border-sm me-2"></span> Đang xử lý...</>
+            ) : "Xác nhận tạo yêu cầu"}
           </button>
         </div>
       </div>

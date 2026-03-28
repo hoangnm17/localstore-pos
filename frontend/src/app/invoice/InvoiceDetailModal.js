@@ -4,7 +4,7 @@ import BaseModal from "components/common/BaseModal";
 import { invoiceGetDetail } from "services/Invoices/invoice.service";
 import { formatCurrency } from "utils/formatters";
 import ReturnCreateModal from "./ReturnCreateModal";
-// Import hook Notification
+import 'style/Return/Return.css'
 import { useNotification } from "components/global/Notification/NotificationContext";
 
 const STATUS_THEME = {
@@ -109,13 +109,6 @@ export default function InvoiceDetailModal({ invoiceId, onClose, onRefresh }) {
                     <label>Nhân viên & Quầy</label>
                     <p className="m-0">{inv.staffName || "Hệ thống"}</p>
                     <small className="text-muted">{inv.counterName || "Quầy thu ngân"}</small>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="info-item-card">
-                    <label>Thanh toán</label>
-                    <p className="m-0">{inv.paymentMethod || "Tiền mặt"}</p>
-                    <small className="text-success fw-bold">Thanh toán đủ</small>
                   </div>
                 </div>
               </div>
@@ -264,18 +257,6 @@ export default function InvoiceDetailModal({ invoiceId, onClose, onRefresh }) {
             }}
           />
         )}
-
-        <style>{`
-          .modern-invoice-modal { font-family: 'Inter', sans-serif; background: #fff; border-radius: 16px; overflow: hidden; }
-          .modal-header-custom { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-          .icon-box { width: 40px; height: 40px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #6366f1; }
-          .soft-badge { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid; }
-          .modal-body-custom { padding: 24px; max-height: 75vh; overflow-y: auto; }
-          .info-item-card { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #f1f5f9; }
-          .info-item-card label { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 4px; display: block; }
-          .qty-circle { background: #f1f5f9; color: #475569; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: 700; }
-          .return-icon-sm { width: 28px; height: 28px; background: #fef2f2; color: #dc2626; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-        `}</style>
       </div>
     </BaseModal>
   );

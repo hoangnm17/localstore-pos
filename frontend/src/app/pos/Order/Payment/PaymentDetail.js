@@ -10,98 +10,72 @@ const PaymentDetail = ({
 
   return (
     <div
-      className="p-2 bg-white border-top shadow-lg position-relative"
+      className="p-3 bg-white border-top shadow-lg position-relative"
       style={{ 
         borderRadius: "24px 24px 0 0",
         zIndex: 10
       }}
     >
+      {/* Handle bar trang trí */}
       <div className="d-flex justify-content-center mb-3">
-        <div style={{ width: '40px', height: '4px', backgroundColor: '#e9ecef', borderRadius: '2px' }}></div>
+        <div className="bg-light border" style={{ width: '40px', height: '5px', borderRadius: '10px' }}></div>
       </div>
 
       {/* Chi tiết tạm tính */}
-      <div className="d-flex justify-content-between align-items-center mb-1 px-1">
-        <span className="text-muted fw-medium">
+      <div className="d-flex justify-content-between align-items-center mb-2 px-2">
+        <span className="text-muted fw-medium small">
           Tạm tính ({totalQuantity} mặt hàng)
         </span>
-        <span className="text-dark fw-semibold">
+        <span className="text-dark fw-bold">
           {formatCurrency(total)}
         </span>
       </div>
 
-      <hr className="my-3 opacity-50" />
+      <hr className="my-3 opacity-25" />
 
-      <div className="d-flex justify-content-between align-items-end mb-4 px-1">
-        <div>
-          <h6 className="fw-bold mb-1 text-dark text-uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.5px' }}>
+      {/* Tổng cộng */}
+      <div className="d-flex justify-content-between align-items-center mb-4 px-2">
+        <div className="lh-sm">
+          <h6 className="fw-bold mb-0 text-dark text-uppercase" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>
             Tổng cộng
           </h6>
         </div>
         <div className="text-end">
           <h3
-            className="fw-black mb-0 text-primary transition-all"
-            style={{ fontSize: "1.7rem", lineHeight: '1' }}
+            className="fw-bold mb-0 text-primary"
+            style={{ fontSize: "1.8rem", letterSpacing: '-1px' }}
           >
             {formatCurrency(total)}
           </h3>
         </div>
       </div>
 
+      {/* Nút bấm */}
       <button
         disabled={isEmpty}
         onClick={onOpenPayment}
-        className={`btn w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 border-0 transition-all ${
+        className={`btn w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 border-0 ${
           isEmpty 
-            ? "btn-light text-muted opacity-75" 
-            : "btn-pay-gradient text-white"
+            ? "btn-secondary opacity-25" 
+            : "btn-primary"
         }`}
         style={{
           fontSize: "1rem",
-          height: "55px",
+          height: "56px",
         }}
       >
         {isEmpty ? (
           <>
-            <i className="bi bi-cart-x fs-4"></i>
+            <i className="bi bi-cart-x fs-5"></i>
             CHƯA CÓ SẢN PHẨM
           </>
         ) : (
           <>
-            <i className="bi bi-shield-check fs-4"></i>
+            <i className="bi bi-shield-check fs-5"></i>
             THANH TOÁN (F12)
           </>
         )}
       </button>
-
-      <style jsx>{`
-        .fw-black { font-weight: 900; }
-        
-        /* Gradient chuyên nghiệp cho nút thanh toán */
-        .btn-pay-gradient {
-          background: linear-gradient(135deg, #0d6efd 0%, #004dc7 100%);
-          box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
-        }
-
-        .btn-pay-gradient:hover:not(:disabled) {
-          background: linear-gradient(135deg, #0b5ed7 0%, #003da1 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(13, 110, 253, 0.4);
-        }
-
-        .btn-pay-gradient:active {
-          transform: translateY(0);
-        }
-
-        .transition-all {
-          transition: all 0.2s ease-in-out;
-        }
-
-        /* Hiệu ứng focus cho nút */
-        .btn:focus {
-          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-      `}</style>
     </div>
   );
 };
