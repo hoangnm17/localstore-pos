@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './CRMPage.css';
 import {
-    getCustomers, createCustomer, updateCustomer, deleteCustomer,
+    getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer,
     getPurchaseHistory, getPointLogs, adjustPoints,
     getPromotions, getPromotionById, createPromotion, updatePromotion, deletePromotion,
     addPromotionItem, removePromotionItem,
