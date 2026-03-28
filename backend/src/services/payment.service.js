@@ -9,7 +9,7 @@ const promotionModel = require("../models/promotion.model");
 const customerModel = require("../models/customer.model");
 const sseService = require("./sse.service");
 const socketService = require("./socket.service");
-
+const SePayTransactionModel = require("../models/sepay.model")
 
 const POINT_EXCHANGE = 100;
 const EARN_POINT_EXCHANGE = 10000;
@@ -486,6 +486,10 @@ const confirmPayment = async (payload) => {
       payload.transaction_id ??
       null;
 
+
+    const existed = await SePayTransactionModel.isExisted(transaction, transactionId);
+    if (existed) return { paid: true, invoiceId };
+    
     if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
       console.warn("Invalid amount:", payload.transferAmount);
       return;
@@ -542,6 +546,16 @@ const confirmPayment = async (payload) => {
         transactionId
       );
     }
+
+    await SePayTransactionModel.insert(transaction, {
+      invoiceId,
+      sepayId: transactionId,
+      transactionContent: payload.content,
+      amountIn: transferAmount,
+      bankAccountNumber: payload.accountNumber,
+      transactionDate: payload.transactionDate,
+      status: "SUCCESS"
+    });
 
     // ===== 6. BUSINESS =====
     const invoiceItems = await invoiceModel.getInvoiceItems(
