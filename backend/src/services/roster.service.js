@@ -74,13 +74,13 @@ class RosterService {
 
         const daySchedules = await rosterModel.getStaffSchedulesInDay(staffId, workDate);
 
-        const newStart = this._toComparableTime(shift.startTime);
-        let newEnd = this._toComparableTime(shift.endTime);
+        const newStart = this.toComparableTime(shift.startTime);
+        let newEnd = this.toComparableTime(shift.endTime);
         if (newEnd < newStart) newEnd = new Date(newEnd.getTime() + 24 * 60 * 60 * 1000);
 
         for (const assigned of daySchedules) {
-            let aStart = this._toComparableTime(assigned.startTime);
-            let aEnd = this._toComparableTime(assigned.endTime);
+            let aStart = this.toComparableTime(assigned.startTime);
+            let aEnd = this.toComparableTime(assigned.endTime);
             if (aEnd < aStart) aEnd = new Date(aEnd.getTime() + 24 * 60 * 60 * 1000);
 
             if (newStart < aEnd && newEnd > aStart) {
@@ -101,8 +101,8 @@ class RosterService {
         const todayStr = nowVN.toISOString().split('T')[0];
         const currentTime = nowVN.toISOString().split('T')[1].substring(0, 5);
 
-        const workDateStr = this._formatDate(schedule.workDate);
-        const shiftStartStr = this._formatTime(schedule.startTime);
+        const workDateStr = this.formatDate(schedule.workDate);
+        const shiftStartStr = this.formatTime(schedule.startTime);
 
         if (workDateStr < todayStr) throw new Error("Không được xóa ca trong quá khứ!");
         if (workDateStr === todayStr && currentTime >= shiftStartStr) {
@@ -151,7 +151,7 @@ class RosterService {
     }
 
     toComparableTime(t) {
-        const timeStr = this._formatTime(t);
+        const timeStr = this.formatTime(t);
         const [h, m] = timeStr.split(':').map(Number);
         return new Date(1970, 0, 1, h, m, 0);
     }
