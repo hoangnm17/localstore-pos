@@ -29,6 +29,15 @@ module.exports.submitHandover = async (userId, data) => {
 
     const systemCashInfo = await cashierModel.getSystemCash(staff.id, scheduleId);
 
+    // Chặn kết ca sớm
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0');
+
+    if (systemCashInfo.endTimeStr && nowStr < systemCashInfo.endTimeStr) {
+        throw new Error(`Bạn chưa hết giờ làm (Kết thúc lúc ${systemCashInfo.endTimeStr}). Chưa thể bàn giao!`);
+    }
+
     return await cashierModel.createHandoverSimple({
         scheduleId,
         openingCash: systemCashInfo.openingCash,
