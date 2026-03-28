@@ -187,16 +187,31 @@ function ProductFormModal({
     const handleChange = (field, value) => {
         setForm((prev) => {
             const next = { ...prev, [field]: value };
+
             if (field === 'productType' && value === 'combo') {
                 next.saleMode = 'piece';
-                next.baseUnit = prev.baseUnit || 'Combo';
+                next.baseUnit = 'Combo';
                 next.minThreshold = 0;
                 next.pricingMode = 'auto';
             }
+
             if (field === 'productType' && value === 'regular') {
                 next.pricingMode = 'manual';
+
+                // Nếu trước đó đang là combo thì xóa chữ "Combo"
+                if (prev.productType === 'combo' && prev.baseUnit === 'Combo') {
+                    next.baseUnit = '';
+                }
+
                 setComboRows([]);
+                setSelectedChildProduct(null);
+                setChildUnits([]);
+                setSelectedChildUnitId('');
+                setChildQuantity(1);
+                setSearchKeyword('');
+                setSearchResults([]);
             }
+
             return next;
         });
     };
@@ -510,4 +525,4 @@ function ProductFormModal({
             </form>
         </ModalShell>
     );
-}export default ProductFormModal;
+} export default ProductFormModal;
