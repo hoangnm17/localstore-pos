@@ -342,6 +342,51 @@ const searchProductUnits = async (req, res) => {
 
 };
 
+const updateProductUnitPrice = async (req, res) => {
+    try {
+        const { productUnitId } = req.params;
+        const { salePrice } = req.body;
+
+        if (!productUnitId) {
+            return res.status(400).json({
+                success: false,
+                message: "productUnitId is required"
+            });
+        }
+
+        if (salePrice == null || typeof salePrice !== "number") {
+            return res.status(400).json({
+                success: false,
+                message: "Sale price must be a valid number"
+            });
+        }
+
+        if (salePrice < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Sale price must be >= 0"
+            });
+        }
+
+        const updated = await inventoryService.updateProductUnitPrice(
+            Number(productUnitId),
+            salePrice
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Update price successfully",
+            data: updated
+        });
+
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getCategoryStock,
     getProductStockByCategory,
@@ -353,5 +398,6 @@ module.exports = {
     updateMinThreshold,
     searchProducts,
     getLowStockProducts,
-    searchProductUnits
+    searchProductUnits,
+    updateProductUnitPrice
 }
