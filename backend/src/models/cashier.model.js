@@ -58,11 +58,14 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
         .input('staffId', sql.BigInt, staffId)
         .query(`
             -- 1. Xác định khung giờ làm việc thực tế (từ lúc Check-in đến lúc kết ca)
-            DECLARE @startTime DATETIME, @endTime DATETIME;
-            SELECT
-                @startTime = ISNULL(checkInTime, CAST(workDate AS DATETIME)), 
-                @endTime   = ISNULL(checkOutTime, DATEADD(hour, 7, GETUTCDATE()))
-            FROM WorkSchedules WHERE id = @scheduleId;
+            DECLARE @startTime DATETIME, @endTime DATETIME, @endTimeStr VARCHAR(5);
+            SELECT 
+                @startTime = ISNULL(ws.checkInTime, CAST(ws.workDate AS DATETIME)), 
+                @endTime   = ISNULL(ws.checkOutTime, DATEADD(hour, 7, GETUTCDATE())),
+                @endTimeStr = CONVERT(VARCHAR(5), sh.endTime, 108)
+            FROM WorkSchedules ws
+            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.id = @scheduleId;
 
             -- 2. Tính tổng hợp các loại tiền mặt
             DECLARE @opening DECIMAL(15,2) = ISNULL((SELECT openingCash FROM CashHandovers WHERE scheduleId = @scheduleId), 0);
@@ -88,7 +91,8 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
                 @opening AS openingCash, 
                 @sales   AS salesCash, 
                 @refund  AS returnCash, 
-                (@opening + @sales - @refund) AS netSystemCash;
+                (@sales - @refund) AS netSystemCash, -- Sửa: Không cộng opening vào Net nữa
+                @endTimeStr AS endTimeStr;
         `);
 
     const row = result.recordset[0];
@@ -96,7 +100,8 @@ module.exports.getSystemCash = async (staffId, scheduleId) => {
         openingCash: row?.openingCash || 0,
         salesCash: row?.salesCash || 0,
         returnCash: row?.returnCash || 0,
-        netSystemCash: row?.netSystemCash || 0
+        netSystemCash: row?.netSystemCash || 0,
+        endTimeStr: row?.endTimeStr
     };
 };
 
