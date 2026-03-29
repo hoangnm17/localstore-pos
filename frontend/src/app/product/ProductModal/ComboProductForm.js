@@ -272,7 +272,7 @@ export default function ComboProductForm({
                                         <tr key={row.key}>
                                             <td>{row.productCode}</td>
                                             <td className="fw-semibold">{row.productName}</td>
-                                            <td>{Number(row.quantityDisplay).toLocaleString('vi-VN')}</td><td style={{ minWidth: 160 }}>
+                                            <td>
                                                 {row.units && row.units.length > 1 ? (
                                                     <select
                                                         className="form-select form-select-sm"
