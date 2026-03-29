@@ -8,7 +8,6 @@ const PurchaseOrderList = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Khởi tạo từ URL query params
   const initialFrom = searchParams.get("from") || "";
   const initialTo = searchParams.get("to") || "";
   const initialStatus = searchParams.get("status") || "";
@@ -23,8 +22,8 @@ const PurchaseOrderList = () => {
   const [page, setPage] = useState(initialPage > 0 ? initialPage : 1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalByStatus, setTotalByStatus] = useState({});
+  const [inputPage, setInputPage] = useState(page);
 
-  // Dòng này bị thiếu → gây lỗi ESLint
   const [orders, setOrders] = useState([]);
 
   const [loading, setLoading] = useState(false);
@@ -78,13 +77,15 @@ const PurchaseOrderList = () => {
     [filters, page]
   );
 
-  // Fetch khi filters hoặc page thay đổi
+  useEffect(() => {
+    setInputPage(page);
+  }, [page]);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchData(page);
   }, [filters, page, fetchData]);
 
-  // Đồng bộ filters + page → URL
   useEffect(() => {
     window.scrollTo(0, 0);
 
@@ -120,6 +121,25 @@ const PurchaseOrderList = () => {
     navigate("/inventory/purchase-orders/create");
   };
 
+  const handlePageInputChange = (e) => {
+    setInputPage(e.target.value);
+  };
+
+  const jumpToPage = () => {
+    let p = parseInt(inputPage, 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    setPage(p);
+    setInputPage(p);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      jumpToPage();
+    }
+  };
+
   return (
     <div className="container-fluid py-4 bg-light min-vh-100">
       <div className="card shadow-lg border-0 rounded-4 overflow-hidden">
@@ -146,15 +166,13 @@ const PurchaseOrderList = () => {
         </div>
 
         <div className="card-body p-4">
-          {/* Tabs trạng thái */}
           <div className="mb-4">
             <ul className="nav nav-tabs nav-fill flex-nowrap overflow-auto">
               {Object.entries(statusConfig).map(([key, { label, color, icon }]) => (
                 <li className="nav-item" key={key}>
                   <button
-                    className={`nav-link fw-semibold px-4 py-3 d-flex align-items-center justify-content-center gap-2 border-0 ${
-                      activeTab === key ? `active bg-${color} text-white` : `text-${color}`
-                    }`}
+                    className={`nav-link fw-semibold px-4 py-3 d-flex align-items-center justify-content-center gap-2 border-0 ${activeTab === key ? `active bg-${color} text-white` : `text-${color}`
+                      }`}
                     onClick={() => handleTabClick(key)}
                     style={{ minWidth: "140px" }}
                   >
@@ -171,7 +189,6 @@ const PurchaseOrderList = () => {
             </ul>
           </div>
 
-          {/* Bộ lọc ngày */}
           <div className="row g-3 mb-4">
             <div className="col-md-4 col-lg-3">
               <label className="form-label fw-semibold text-muted">Từ ngày</label>
@@ -252,10 +269,10 @@ const PurchaseOrderList = () => {
                             <td className="fs-5">
                               {po.createdAt
                                 ? new Date(po.createdAt).toLocaleDateString("vi-VN", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  })
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                })
                                 : "—"}
                             </td>
                             <td className="fs-5 fw-bold text-success">
@@ -279,25 +296,48 @@ const PurchaseOrderList = () => {
               </div>
 
               {orders.length > 0 && totalPages > 1 && (
-                <nav className="mt-5">
-                  <ul className="pagination pagination-lg justify-content-center">
-                    <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={handlePrev}>
-                        Trước
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4">
+                  <div className="text-muted small">
+                    Trang {page} / {totalPages} • Hiển thị {orders.length} đơn
+                  </div>
+
+                  <nav aria-label="Pagination">
+                    <div className="d-flex align-items-center gap-2">
+                      <button
+                        className="btn btn-outline-secondary btn-sm px-3"
+                        disabled={page === 1}
+                        onClick={() => setPage(page - 1)}
+                      >
+                        <i className="bi bi-chevron-left"></i>
                       </button>
-                    </li>
-                    <li className="page-item disabled">
-                      <span className="page-link">
-                        Trang {page} / {totalPages}
-                      </span>
-                    </li>
-                    <li className={`page-item ${page >= totalPages ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={handleNext}>
-                        Sau
+
+                      <div className="d-flex align-items-center gap-2">
+                        <input
+                          type="number"
+                          className="form-control form-control-sm text-center"
+                          style={{ width: "70px" }}
+                          value={inputPage}
+                          onChange={handlePageInputChange}
+                          onKeyDown={handleKeyDown}
+                          onBlur={jumpToPage}
+                          min="1"
+                          max={totalPages}
+                        />
+                        <span className="text-muted small fw-medium">
+                          / {totalPages}
+                        </span>
+                      </div>
+
+                      <button
+                        className="btn btn-outline-secondary btn-sm px-3"
+                        disabled={page === totalPages}
+                        onClick={() => setPage(page + 1)}
+                      >
+                        <i className="bi bi-chevron-right"></i>
                       </button>
-                    </li>
-                  </ul>
-                </nav>
+                    </div>
+                  </nav>
+                </div>
               )}
             </>
           )}
