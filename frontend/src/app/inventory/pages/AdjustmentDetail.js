@@ -256,22 +256,20 @@ function AdjustmentDetail() {
     className="position-sticky bottom-0 start-0 end-0 border-top mt-5"
     style={{
       zIndex: 1000,
-      background: "rgba(255, 255, 255, 0.8)", // Hiệu ứng nền trong suốt nhẹ
-      backdropFilter: "blur(10px)",           // Làm mờ nội dung phía sau (Glassmorphism)
-      boxShadow: "0 -10px 25px rgba(0, 0, 0, 0.05)", // Shadow hướng lên trên nhẹ nhàng
+      background: "rgba(255, 255, 255, 0.8)",
+      backdropFilter: "blur(10px)",          
+      boxShadow: "0 -10px 25px rgba(0, 0, 0, 0.05)",
     }}
   >
     <div className="container-fluid py-3 px-4 px-md-5">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        
-        {/* Phần bên trái: Có thể thêm text hiển thị trạng thái hiện tại để UI đầy đặn hơn */}
+
         <div className="d-none d-md-block">
           <span className="text-muted small uppercase fw-bold tracking-wider">
             Tác vụ yêu cầu: <span className="text-dark">{data.status}</span>
           </span>
         </div>
 
-        {/* Phần bên phải: Các nút bấm */}
         <div className="d-flex flex-wrap gap-2 ms-auto">
           {data.status === "Pending" && (
             <>

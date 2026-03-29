@@ -276,45 +276,41 @@ const getLowStockProductUnits = async () => {
 };
 
 const searchProductUnits = async (keyword) => {
-
     const pool = await connectDB();
 
     const result = await pool.request()
         .input("keyword", sql.NVarChar, `%${keyword}%`)
         .query(`
+            WITH LatestPrice AS (
+                SELECT 
+                    spp.productId,
+                    spp.unitId,
+                    spp.price,
+                    spp.createdAt,
+                    ROW_NUMBER() OVER(PARTITION BY spp.productId, spp.unitId ORDER BY spp.createdAt DESC) AS rn
+                FROM SupplierProductPrices spp
+            ),
+            MaxConventionUnit AS (
+                SELECT pu.productId, pu.id AS productUnitId, pu.unitName, pu.conversionFactor,
+                       ROW_NUMBER() OVER(PARTITION BY pu.productId ORDER BY pu.conversionFactor DESC) AS rn
+                FROM ProductUnits pu
+            )
             SELECT
-                pu.id AS productUnitId,
-                pu.unitName,
-
+                u.productUnitId,
+                u.unitName,
                 p.id AS productId,
                 p.name AS productName,
-
-                spp.price,
-                spp.createdAt
-
-            FROM ProductUnits pu
-
+                lp.price,
+                lp.createdAt
+            FROM MaxConventionUnit u
             JOIN Products p
-                ON p.id = pu.productId
-
-            JOIN SupplierProductPrices spp
-                ON spp.productId = p.id
-                AND spp.unitId = pu.id
-
-            JOIN (
-                SELECT 
-                    productId,
-                    unitId,
-                    MAX(createdAt) AS latestCreatedAt
-                FROM SupplierProductPrices
-                GROUP BY productId, unitId
-            ) latest
-                ON latest.productId = spp.productId
-                AND latest.unitId = spp.unitId
-                AND latest.latestCreatedAt = spp.createdAt
-
-            WHERE p.name LIKE @keyword
-
+                ON p.id = u.productId
+            JOIN LatestPrice lp
+                ON lp.productId = u.productId
+                AND lp.unitId = u.productUnitId
+                AND lp.rn = 1
+            WHERE u.rn = 1
+              AND p.name LIKE @keyword
             ORDER BY p.name
         `);
 
