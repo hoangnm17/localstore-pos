@@ -5,9 +5,12 @@ import CategoryModal from '../ui/CategoryModal';
 import Pagination from '../../../components/Pagination/Pagination';
 import '../../product/pm-theme.css';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function CategoryPage() {
     const { showNotification } = useNotification();
+    const { roleName } = useAuth();
+    const isManager = roleName === 'Manager';
 
     const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
     const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
@@ -78,10 +81,12 @@ export default function CategoryPage() {
                     />
                 </div>
 
-                <button className="btn btn-primary" onClick={openCreate}>
-                    <i className="bi bi-plus-circle me-2" />
-                    Tạo danh mục mới
-                </button>
+                {isManager && (
+                    <button className="btn btn-primary" onClick={openCreate}>
+                        <i className="bi bi-plus-circle me-2" />
+                        Tạo danh mục mới
+                    </button>
+                )}
             </div>
 
             <div className="table-responsive">
@@ -92,13 +97,13 @@ export default function CategoryPage() {
                             <th className="text-start">Tên danh mục</th>
                             <th style={{ width: 130 }}>SL sản phẩm</th>
                             <th style={{ width: 130 }}>Trạng thái</th>
-                            <th style={{ width: 110 }}>Thao tác</th>
+                            {isManager && <th style={{ width: 110 }}>Thao tác</th>}
                         </tr>
                     </thead>
                     <tbody>
                         {categories.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="text-center text-muted py-4">
+                                <td colSpan={isManager ? 5 : 4} className="text-center text-muted py-4">
                                     Không có danh mục nào
                                 </td>
                             </tr>
@@ -109,6 +114,7 @@ export default function CategoryPage() {
                                     item={item}
                                     index={(currentPage - 1) * PAGE_SIZE + index + 1}
                                     level={0}
+                                    isManager={isManager}
                                     onEdit={openEdit}
                                     onDelete={deleteCategory}
                                 />
@@ -171,7 +177,7 @@ export default function CategoryPage() {
     );
 }
 
-function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
+function CategoryTableRow({ item, index, level, isManager, onEdit, onDelete }) {
     const [expanded, setExpanded] = useState(false);
     const hasChildren = item.children && item.children.length > 0;
     const canDelete = item.totalProductCount === 0;
@@ -210,24 +216,26 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                         : <span className="badge bg-success">Đang bán</span>}
                 </td>
 
-                <td className="text-center">
-                    <button
-                        className="btn btn-link btn-sm p-0 me-2 text-warning"
-                        onClick={() => onEdit(item.id)}
-                        title="Sửa"
-                    >
-                        <i className="bi bi-pencil-square fs-5"></i>
-                    </button>
+                {isManager && (
+                    <td className="text-center">
+                        <button
+                            className="btn btn-link btn-sm p-0 me-2 text-warning"
+                            onClick={() => onEdit(item.id)}
+                            title="Sửa"
+                        >
+                            <i className="bi bi-pencil-square fs-5"></i>
+                        </button>
 
-                    <button
-                        className="btn btn-link btn-sm p-0 text-danger"
-                        onClick={() => canDelete && onDelete(item.id)}
-                        disabled={!canDelete}
-                        title={canDelete ? 'Xóa' : 'Không thể xóa vì có sản phẩm'}
-                    >
-                        <i className="bi bi-trash fs-5"></i>
-                    </button>
-                </td>
+                        <button
+                            className="btn btn-link btn-sm p-0 text-danger"
+                            onClick={() => canDelete && onDelete(item.id)}
+                            disabled={!canDelete}
+                            title={canDelete ? 'Xóa' : 'Không thể xóa vì có sản phẩm'}
+                        >
+                            <i className="bi bi-trash fs-5"></i>
+                        </button>
+                    </td>
+                )}
             </tr>
 
             {hasChildren && expanded && item.children.map(child => (
@@ -236,6 +244,7 @@ function CategoryTableRow({ item, index, level, onEdit, onDelete }) {
                     item={child}
                     index={null}
                     level={level + 1}
+                    isManager={isManager}
                     onEdit={onEdit}
                     onDelete={onDelete}
                 />
