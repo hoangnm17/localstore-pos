@@ -79,7 +79,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                 setFormData({ ...formData, baseSalary: formatted });
             }
         } else {
-            setFormData({ ...formData, [name]: value });
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
         setErrorMsg('');
     };
@@ -175,7 +175,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                 {formData.fullName?.charAt(0)?.toUpperCase()}
                             </div>
                             <div>
-                                <h5 className="fw-bold m-0"><i className="bi bi-pencil-square me-2" />Chỉnh Sửa Nhân Viên</h5>
+                                <h5 className="fw-bold m-0">Chỉnh Sửa Nhân Viên</h5>
                                 <small className="opacity-75">{formData.fullName}</small>
                             </div>
                         </div>
@@ -192,7 +192,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                         <div className="row g-4">
                             <div className="col-md-6">
                                 <div style={leftStyle}>
-                                    <h6 className="fw-bold text-primary mb-3"><i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân</h6>
+                                    <h6 className="fw-bold text-primary mb-3">Hồ Sơ Cá Nhân</h6>
                                     <div className="mb-3">
                                         <label className="small fw-bold">Họ và tên <span className="text-danger">*</span></label>
                                         <input type="text" name="fullName" className="form-control" value={formData.fullName} onChange={handleChange} />
@@ -214,7 +214,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                             
                             <div className="col-md-6">
                                 <div style={rightStyle}>
-                                    <h6 className="fw-bold text-success mb-3"><i className="bi bi-briefcase-fill me-2" />Tài Khoản & Lương</h6>
+                                    <h6 className="fw-bold text-success mb-3">Tài Khoản Và Lương</h6>
                                     <div className="row">
                                         <div className="col-6 mb-3">
                                             <label className="small fw-bold">Vai trò <span className="text-danger">*</span></label>
@@ -245,7 +245,6 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                                         </div>
                                     </div>
 
-                                    {/* PHẦN ĐĂNG NHẬP VÀ NÚT RESET DƯỚI NHAU */}
                                     <div className="mb-4">
                                         <label className="small fw-bold">
                                             Tên đăng nhập <span className="text-danger">*</span>
@@ -269,7 +268,7 @@ const StaffUpdateModal = ({ staffId, onClose, onSuccess }) => {
                     <div style={{ padding: '20px 32px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                         <button type="button" className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }} onClick={onClose} disabled={saving}>Hủy</button>    
                         <button type="submit" className="btn text-white px-4 fw-bold" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none', borderRadius: '12px' }} disabled={saving}>
-                            {saving ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</> : <><i className="bi bi-floppy-fill me-2" />Cập Nhật</>}
+                            {saving ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</> : <>Cập Nhật</>}
                         </button>
                     </div>
                 </form>

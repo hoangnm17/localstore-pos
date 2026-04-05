@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
-
+import { toggleShiftStatus } from '../../../services/Shift/shift.service';
 const ShiftToggleModal = ({ shift, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
@@ -13,7 +12,7 @@ const ShiftToggleModal = ({ shift, onClose, onSuccess }) => {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await api.patch(`/shifts/${shift.id}/toggle`);
+      const res = await toggleShiftStatus(shift.id);
       const isSuccess = res.data?.success ?? res.success;
 
       if (isSuccess) {
@@ -77,7 +76,7 @@ const ShiftToggleModal = ({ shift, onClose, onSuccess }) => {
           </div>
           <p className="text-muted small mb-3">{shift.startTime} – {shift.endTime}</p>
 
-          <div className="alert py-2 text-start"
+          {/* <div className="alert py-2 text-start"
             style={{
               fontSize: '.82rem',
               background: isActive ? '#fef2f2' : '#f0fdf4',
@@ -90,7 +89,7 @@ const ShiftToggleModal = ({ shift, onClose, onSuccess }) => {
               ? 'Ca sẽ bị ẩn khỏi lịch phân công. Dữ liệu lịch sử vẫn được giữ nguyên.'
               : 'Ca sẽ được hiển thị trở lại và có thể phân công cho nhân viên.'
             }
-          </div>
+          </div> */}
         </div>
 
         {/* Footer */}

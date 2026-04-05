@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
-
+import { createShift } from '../../../services/Shift/shift.service';
 const toMins = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
 const fromMins = (mins) => {
@@ -64,7 +63,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
     const hasCheckIn = form.checkInStart || form.checkInEnd;
     if (hasCheckIn) {
       if (!form.checkInStart) e.checkInStart = 'Nhập giờ bắt đầu nhận chấm công!';
-      if (!form.checkInEnd) e.checkInEnd = 'Nhập deadline chấm công!';
+      if (!form.checkInEnd) e.checkInEnd = 'Nhập hạn chót chấm công!';
 
       if (form.checkInStart && form.checkInEnd && form.startTime) {
         const startM = toMins(form.startTime);
@@ -75,15 +74,15 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
         if (checkInRange < 0) checkInRange += 1440;
 
         if (checkInRange <= 0)
-          e.checkInEnd = 'Deadline phải sau giờ bắt đầu nhận chấm công!';
+          e.checkInEnd = 'Hạn chót phải sau giờ bắt đầu nhận chấm công!';
 
         const earlyMins = getDiff(startM, checkInSM);
-        if (earlyMins > 5)
-          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 5 phút!';
+        if (earlyMins > 30)
+          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
 
         const lateMins = getDiff(checkInEM, startM);
-        if (lateMins > 5)
-          e.checkInEnd = 'Deadline không được trễ hơn giờ bắt đầu ca quá 5 phút!';
+        if (lateMins > 30)
+          e.checkInEnd = 'Hạn chót không được trễ hơn giờ bắt đầu ca quá 30 phút!';
       }
     }
 
@@ -94,9 +93,9 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
       const lateMins = getDiff(checkOutM, endM);
 
       if (lateMins < 0)
-        e.checkOutDeadline = 'Giờ phải logout phải sau hoặc bằng giờ kết thúc ca!';
-      else if (lateMins > 5)
-        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 5 phút!';
+        e.checkOutDeadline = 'Giờ kết ca phải sau giờ kết thúc ca!';
+      else if (lateMins > 30)
+        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 30 phút!';
     }
 
     setErrors(e);
@@ -112,7 +111,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
       if (name === 'startTime' && value) {
         const startMins = toMins(value);
         updated.checkInStart = fromMins(startMins - 2);
-        updated.checkInEnd = fromMins(startMins - 2 + 4);
+        updated.checkInEnd = fromMins(startMins + 2);
       }
 
       if (name === 'checkInStart' && value) {
@@ -138,7 +137,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
         checkInEnd: form.checkInEnd || null,
         checkOutDeadline: form.checkOutDeadline || null,
       };
-      const res = await api.post('/shifts', payload);
+      const res = await createShift(payload);
 
       const isSuccess = res.data?.success ?? res.success;
       if (isSuccess) {
@@ -178,7 +177,6 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
               <h5 className="fw-bold m-0" style={{ fontSize: '1rem' }}>
                 <i className="bi bi-plus-circle-fill me-2" />Tạo Ca Làm Mới
               </h5>
-              <small className="opacity-75">Điền đầy đủ thông tin bên dưới</small>
             </div>
             <button onClick={onClose} disabled={loading}
               style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>
@@ -204,7 +202,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
               <input type="text" name="name"
                 className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
                 value={form.name} onChange={handleChange}
-                placeholder="VD: Ca sáng, Ca chiều..." />
+                placeholder="VD: Ca sáng,..." />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
 
@@ -236,10 +234,6 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
               <div className="fw-bold text-success mb-1" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-clock-history me-2" />Giới Hạn Chấm Công
               </div>
-              <small className="text-muted d-block mb-2" style={{ fontSize: '0.76rem' }}>
-                <i className="bi bi-info-circle me-1" />
-                Tự động điền khi chọn giờ bắt đầu ca. Vẫn có thể sửa thủ công.
-              </small>
               <div className="row g-2">
                 <div className="col-6">
                   <label className="small fw-bold">Bắt đầu nhận chấm công</label>
@@ -249,7 +243,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
                   {errors.checkInStart && <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>{errors.checkInStart}</div>}
                 </div>
                 <div className="col-6">
-                  <label className="small fw-bold">Deadline chấm công</label>
+                  <label className="small fw-bold">Hạn chót chấm công</label>
                   <input type="time" name="checkInEnd"
                     className={`form-control form-control-sm ${errors.checkInEnd ? 'is-invalid' : ''}`}
                     value={form.checkInEnd} onChange={handleChange} />
@@ -263,13 +257,9 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
               <div className="fw-bold mb-1" style={{ color: '#ea580c', fontSize: '0.85rem' }}>
                 <i className="bi bi-box-arrow-right me-2" />Thời Gian Kết Ca
               </div>
-              <small className="text-muted d-block mb-2" style={{ fontSize: '0.76rem' }}>
-                <i className="bi bi-info-circle me-1" />
-                Thời điểm cashier phải bàn giao tiền mặt và logout khỏi hệ thống.
-              </small>
               <div className="row g-2">
                 <div className="col-6">
-                  <label className="small fw-bold">Giờ phải logout</label>
+                  <label className="small fw-bold">Giờ kết ca</label>
                   <input type="time" name="checkOutDeadline"
                     className={`form-control form-control-sm ${errors.checkOutDeadline ? 'is-invalid' : ''}`}
                     value={form.checkOutDeadline} onChange={handleChange} />
@@ -298,7 +288,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
               disabled={loading}>
               {loading
                 ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</>
-                : <><i className="bi bi-floppy-fill me-2" />Tạo Ca</>}
+                : <>Tạo Ca</>}
             </button>
           </div>
         </form>
