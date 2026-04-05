@@ -20,9 +20,8 @@ const ShiftDetailModal = ({ shift, onClose }) => {
                     <div className="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 className="fw-bold m-0" style={{ fontSize: '1rem' }}>
-                                <i className="bi bi-eye-fill me-2" />Chi Tiết Ca Làm Việc
+                            Chi Tiết Ca Làm Việc
                             </h5>
-                            <small className="opacity-75">Xem thông tin giới hạn giờ của ca</small>
                         </div>
                         <button onClick={onClose}
                             style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>
@@ -35,14 +34,12 @@ const ShiftDetailModal = ({ shift, onClose }) => {
                     {/* Body */}
                     <div style={{ padding: '20px 28px', overflowY: 'auto', flex: 1 }}>
 
-                        {/* Tên ca */}
                         <div className="mb-3">
                             <label className="small fw-bold text-secondary">Tên ca</label>
                             <input type="text" className="form-control form-control-sm border-0 bg-light fw-bold"
                                 value={shift.name || ''} readOnly disabled />
                         </div>
 
-                        {/* Thời gian ca */}
                         <div style={{ background: '#f8faff', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e0eaff', marginBottom: '12px' }}>
                             <div className="fw-bold text-primary mb-2" style={{ fontSize: '0.85rem' }}>
                                 <i className="bi bi-clock-fill me-2" />Thời Gian Ca
@@ -61,14 +58,10 @@ const ShiftDetailModal = ({ shift, onClose }) => {
                             </div>
                         </div>
 
-                        {/* Giới hạn chấm công */}
                         <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '14px 16px', border: '1px solid #bbf7d0', marginBottom: '12px' }}>
                             <div className="fw-bold text-success mb-1" style={{ fontSize: '0.85rem' }}>
-                                <i className="bi bi-clock-history me-2" />Giới Hạn Chấm Công (Vào Làm)
+                                <i className="bi bi-clock-history me-2" />Giới Hạn Chấm Công 
                             </div>
-                            <small className="text-muted d-block mb-3" style={{ fontSize: '0.76rem' }}>
-                                Dùng để tính phạt vào muộn (LateIn) cho thu ngân.
-                            </small>
                             <div className="row g-2">
                                 <div className="col-6">
                                     <label className="small fw-bold text-secondary">Bắt đầu nhận chấm công</label>
@@ -76,24 +69,20 @@ const ShiftDetailModal = ({ shift, onClose }) => {
                                         value={shift.checkInStart || ''} readOnly disabled />
                                 </div>
                                 <div className="col-6">
-                                    <label className="small fw-bold text-secondary">Deadline chấm công</label>
+                                    <label className="small fw-bold text-secondary">Hạn chót chấm công</label>
                                     <input type="time" className="form-control form-control-sm border-0 bg-white shadow-sm"
                                         value={shift.checkInEnd || ''} readOnly disabled />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Thời gian kết ca (logout) */}
                         <div style={{ background: '#fff7ed', borderRadius: '10px', padding: '14px 16px', border: '1px solid #fed7aa' }}>
                             <div className="fw-bold mb-1" style={{ color: '#ea580c', fontSize: '0.85rem' }}>
-                                <i className="bi bi-box-arrow-right me-2" />Thời Gian Kết Ca (Ra Về)
+                                <i className="bi bi-box-arrow-right me-2" />Thời Gian Kết Ca 
                             </div>
-                            <small className="text-muted d-block mb-3" style={{ fontSize: '0.76rem' }}>
-                                Dùng để bắt buộc thu ngân/kho phải ra ca trước deadline này.
-                            </small>
                             <div className="row g-2">
                                 <div className="col-6">
-                                    <label className="small fw-bold text-secondary">Giờ bắt buộc logout</label>
+                                    <label className="small fw-bold text-secondary">Giờ kết ca</label>
                                     <input type="time" className="form-control form-control-sm border-0 bg-white shadow-sm"
                                         value={shift.checkOutDeadline || ''} readOnly disabled />
                                 </div>

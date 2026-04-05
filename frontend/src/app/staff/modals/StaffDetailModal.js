@@ -23,16 +23,19 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                     const s = res.data;
                     setData({ ...s, createdAt: s.createdAt ? s.createdAt.split('T')[0] : '' });
                 }
-            } catch (err) { console.error('Lỗi tải chi tiết:', err); }
-            finally { setLoading(false); }
+            } catch (err) { 
+                console.error('Lỗi tải chi tiết:', err);
+            }finally { 
+                setLoading(false);
+            }
         };
         if (staffId) fetchStaffData();
     }, [staffId]);
 
     const roleBadgeColor = data?.roleName === 'Manager' ? '#6366f1' : data?.roleName === 'Cashier' ? '#22c55e' : '#f59e0b';
     const employBadge = data?.employmentStatus === 'working'
-        ? { label: 'Đang làm việc', color: 'bg-success-subtle text-success border border-success', icon: 'bi-briefcase-fill' }
-        : { label: 'Đã nghỉ việc', color: 'bg-warning-subtle text-warning border border-warning', icon: 'bi-person-dash-fill' };
+        ? { label: 'Đang làm việc', color: 'text-success border' }
+        : { label: 'Đã nghỉ việc', color: ' text-warning border ' };
 
     const leftStyle  = { background: '#f8faff', borderRadius: '12px', padding: '20px', border: '1px solid #e0eaff' };
     const rightStyle = { background: '#f0fdf4', borderRadius: '12px', padding: '20px', border: '1px solid #bbf7d0' };
@@ -72,11 +75,8 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                             <div>
                                 <h5 className="fw-bold m-0">{data?.fullName}</h5>
                                 <div className="d-flex align-items-center gap-2 mt-1">
-                                    <span className="badge rounded-pill" style={{ background: roleBadgeColor, fontSize: '0.75rem' }}>
-                                        {data?.roleName}
-                                    </span>
-                                    <small className="opacity-75">
-                                        <i className="bi bi-at me-1" />{data?.username}
+                                    <small>
+                                    {data?.username}
                                     </small>
                                 </div>
                             </div>
@@ -93,7 +93,7 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                         <div className="col-md-6">
                             <div style={leftStyle}>
                                 <h6 className="fw-bold text-primary mb-3">
-                                    <i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân
+                                    Hồ Sơ Cá Nhân
                                 </h6>
                                 <InfoRow label="Họ và tên" icon="bi-person-fill" value={data?.fullName} />
                                 <InfoRow label="Email liên lạc" icon="bi-envelope-fill" value={data?.email} />
@@ -102,7 +102,6 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                                 <InfoRow label="Tình trạng nhân sự" icon="bi-person-badge-fill">
                                     <div className="mt-1">
                                         <span className={`badge px-3 py-2 rounded-pill ${employBadge.color}`}>
-                                            <i className={`bi ${employBadge.icon} me-1`} />
                                             {employBadge.label}
                                         </span>
                                     </div>
@@ -112,7 +111,7 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                         <div className="col-md-6">
                             <div style={rightStyle}>
                                 <h6 className="fw-bold text-success mb-3">
-                                    <i className="bi bi-briefcase-fill me-2" />Tài Khoản & Lương
+                                    Tài Khoản & Lương
                                 </h6>
                                 <InfoRow label="Vai trò" icon="bi-shield-check">
                                     <div className="mt-1">
@@ -144,12 +143,12 @@ const StaffDetailModal = ({ staffId, onClose, onEdit }) => {
                 {/* FOOTER */}
                 <div style={{ padding: '20px 32px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                     <button className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }} onClick={onClose}>
-                        <i className="bi bi-x-lg me-2" />Đóng
+                        Đóng
                     </button>
                     <button className="btn text-white px-4 fw-bold"
                         style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', borderRadius: '12px' }}
                         onClick={() => onEdit(staffId)}>
-                        <i className="bi bi-pencil-square me-2" />Chỉnh Sửa
+                        Chỉnh Sửa
                     </button>
                 </div>
             </div>

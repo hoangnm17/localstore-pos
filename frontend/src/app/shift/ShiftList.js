@@ -3,7 +3,6 @@ import Pagination from '../../components/Pagination/Pagination';
 import { getShifts } from '../../services/Shift/shift.service.js';
 import { useNotification } from '../../components/global/Notification/NotificationContext';
 import useDebounce from '../../hooks/common/useDebounce';
-
 import ShiftCreateModal from './modals/ShiftCreateModal';
 import ShiftDetailModal from './modals/ShiftDetailModal';
 import ShiftUpdateModal from './modals/ShiftUpdateModal';
@@ -61,12 +60,6 @@ const ShiftList = () => {
   const totalPages = Math.ceil(filteredShifts.length / PAGE_SIZE);
   const paginated = filteredShifts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const stats = useMemo(() => ({
-    total: shifts.length,
-    active: shifts.filter(s => s.isActive === 1 || s.isActive === true).length,
-    inactive: shifts.filter(s => !(s.isActive === 1 || s.isActive === true)).length,
-  }), [shifts]);
-
   const shiftColors = [
     { bg: '#dbeafe', text: '#1d4ed8' },
     { bg: '#dcfce7', text: '#15803d' },
@@ -98,35 +91,11 @@ const ShiftList = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h3 className="fw-bold m-0 text-dark">Quản Lý Ca Làm Việc</h3>
-            <p className="m-0 mt-2 text-secondary">Quản lý và kích hoạt / ngừng sử dụng ca làm việc.</p>
-          </div>
+         </div>
           <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
             style={{ borderRadius: '8px', background: '#6366f1' }} onClick={openCreate}>
             <i className="bi bi-plus-circle-fill" /> Tạo Ca Mới
           </button>
-        </div>
-
-        {/* STATS */}
-        <div className="row g-3 mb-4">
-          {[
-            { label: 'Tổng số ca', value: stats.total, icon: 'bi-clock-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
-            { label: 'Đang sử dụng', value: stats.active, icon: 'bi-check-circle-fill', textClass: 'text-success', bgClass: 'bg-success-subtle' },
-            { label: 'Ngừng sử dụng', value: stats.inactive, icon: 'bi-x-circle-fill', textClass: 'text-danger', bgClass: 'bg-danger-subtle' },
-          ].map(({ label, value, icon, textClass, bgClass }) => (
-            <div key={label} className="col-12 col-md-4">
-              <div className="card border-0 shadow-sm rounded-4 h-100 p-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className={`d-flex align-items-center justify-content-center rounded-3 ${bgClass} ${textClass}`} style={{ width: '48px', height: '48px' }}>
-                    <i className={`bi ${icon} fs-4`} />
-                  </div>
-                  <div>
-                    <div className="fw-bold fs-4 lh-1 text-dark mb-1">{value}</div>
-                    <small className="text-secondary fw-medium" style={{ fontSize: '0.8rem' }}>{label}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* SEARCH & FILTER */}
@@ -137,7 +106,7 @@ const ShiftList = () => {
               <div className="position-relative">
                 <i className="bi bi-search position-absolute"
                   style={{ left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                <input type="text" className="form-control ps-5 border-0 bg-light fw-bold"
+                <input type="text" className="form-control ps-5 border-0 bg-light "
                   style={{ borderRadius: '12px' }}
                   placeholder="Tìm tên ca làm việc..."
                   value={searchInput}
@@ -146,7 +115,7 @@ const ShiftList = () => {
             </div>
             <div className="col-md-3">
               <label className="small fw-bold text-secondary mb-1">Trạng thái</label>
-              <select className="form-select border-0 bg-light fw-bold" style={{ borderRadius: '12px' }}
+              <select className="form-select border-0 bg-light " style={{ borderRadius: '12px' }}
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="all">Tất cả trạng thái</option>
@@ -158,13 +127,13 @@ const ShiftList = () => {
               <button className="btn btn-outline-secondary fw-bold d-flex align-items-center gap-2"
                 style={{ borderRadius: '10px', height: '38px', fontSize: '0.85rem' }}
                 onClick={() => { setSearchInput(''); setFilterStatus('all'); setPage(1); fetchShifts(); }}>
-                <i className="bi bi-arrow-counterclockwise" /> Làm mới
+                   Làm mới
               </button>
-              <div className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold px-3"
+              {/* <div className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold px-3"
                 style={{ borderRadius: '10px', height: '38px', minWidth: '45px', fontSize: '1rem' }}
                 title="Tổng số ca tìm thấy">
                 {filteredShifts.length}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -231,8 +200,6 @@ const ShiftList = () => {
                           <span className={`badge px-3 py-1 rounded-pill ${isActive
                             ? 'bg-success-subtle text-success border border-success'
                             : 'bg-danger-subtle text-danger border border-danger'}`}>
-                            <i className={`bi ${isActive ? 'bi-circle-fill' : 'bi-dash-circle-fill'} me-1`}
-                              style={{ fontSize: '0.5rem', verticalAlign: 'middle' }} />
                             {isActive ? 'Đang sử dụng' : 'Ngừng sử dụng'}
                           </span>
                         </td>

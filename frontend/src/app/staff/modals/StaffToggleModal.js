@@ -50,8 +50,7 @@ const StaffToggleModal = ({ staff, onClose, onSuccess }) => {
                     color: '#fff',
                     textAlign: 'center'
                 }}>
-                    <i className={`bi ${isActive ? 'bi-person-x-fill' : 'bi-person-check-fill'}`}
-                        style={{ fontSize: '2.5rem' }} />
+                    
                     <h5 className="fw-bold mt-2 mb-0">Xác Nhận Thao Tác</h5>
                 </div>
                 <div className="p-4 text-center">

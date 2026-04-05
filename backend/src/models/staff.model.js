@@ -106,7 +106,6 @@ module.exports.getStaffById = async (id) => {
             SELECT 
                 s.*, 
                 u.isActive, u.roleId, u.username,
-                u.passwordHash as oldPassword,
                 r.name as roleName
             FROM Staff s 
             JOIN Users u ON s.userId = u.id
