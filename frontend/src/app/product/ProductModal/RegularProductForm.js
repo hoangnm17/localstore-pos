@@ -50,7 +50,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                         className={`form-control ${errors.salePrice ? 'is-invalid' : ''}`}
                         type="number"
                         min="0"
-                        step="any"
+                        step="1"
                         value={form.salePrice}
                         onChange={(e) => handleChange('salePrice', e.target.value)}
                     />
@@ -63,7 +63,7 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                         className={`form-control ${errors.minThreshold ? 'is-invalid' : ''}`}
                         type="number"
                         min="0"
-                        step="any"
+                        step={form.saleMode === 'weight' ? 'any' : '1'}
                         value={form.minThreshold}
                         onChange={(e) => handleChange('minThreshold', e.target.value)}
                     />

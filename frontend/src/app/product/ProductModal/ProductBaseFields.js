@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getImageUrl } from 'utils/image';
 import { uploadImage } from '../../../services/imageUpload.service';
 import CategorySelector from './CategorySelector';
 export default function ProductBaseFields({ form, handleChange, categories, isCombo, isEdit, errors = {} }) {
     const [preview, setPreview] = useState(form.imageUrl ? getImageUrl(form.imageUrl) : null);
-
+    useEffect(() => {
+        setPreview(form.imageUrl ? getImageUrl(form.imageUrl) : null);
+    }, [form.imageUrl]);
     async function handleFileChange(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -26,7 +28,7 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
     function handleUrlChange(e) {
         const url = e.target.value;
         handleChange('imageUrl', url);
-        setPreview(url || null);
+        setPreview(url ? getImageUrl(url) : null);
     }
 
     function handleRemoveImage() {

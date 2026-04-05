@@ -370,10 +370,23 @@ function ProductFormModal({
         if (!String(form.code).trim()) errors.code = 'Vui lòng nhập mã sản phẩm.';
         if (!String(form.name).trim()) errors.name = 'Vui lòng nhập tên sản phẩm.';
         if (!String(form.baseUnit).trim()) errors.baseUnit = 'Vui lòng nhập đơn vị cơ bản.';
+
+        // Giá bán không được là số thập phân
         const sp = Number(form.salePrice);
-        if (Number.isNaN(sp) || sp < 0) errors.salePrice = 'Giá bán không hợp lệ.';
+        if (Number.isNaN(sp) || sp < 0) {
+            errors.salePrice = 'Giá bán không hợp lệ.';
+        } else if (!Number.isInteger(sp)) {
+            errors.salePrice = 'Giá bán không được là số thập phân.';
+        }
+
         const mt = Number(form.minThreshold || 0);
-        if (Number.isNaN(mt) || mt < 0) errors.minThreshold = 'Ngưỡng tồn kho tối thiểu không hợp lệ.';
+        if (Number.isNaN(mt) || mt < 0) {
+            errors.minThreshold = 'Ngưỡng tồn kho tối thiểu không hợp lệ.';
+        } else if (!isCombo && form.saleMode !== 'weight' && !Number.isInteger(mt)) {
+            // Sản phẩm bán theo piece: ngưỡng tồn không được thập phân
+            errors.minThreshold = 'Ngưỡng tồn kho tối thiểu không được là số thập phân đối với sản phẩm bán theo số lượng.';
+        }
+
         if (isCombo) {
             if (comboRows.length === 0) {
                 errors.combo = 'Sản phẩm combo phải có ít nhất 1 sản phẩm con.';
@@ -381,6 +394,23 @@ function ProductFormModal({
             // Kiểm tra nếu đã chọn sản phẩm con nhưng chưa thêm vào combo
             if (selectedChildProduct) {
                 errors.combo = 'Bạn đã chọn sản phẩm con nhưng chưa nhấn "Thêm vào combo". Vui lòng thêm hoặc bỏ chọn sản phẩm.';
+            }
+            // Tồn kho combo không được là số thập phân
+            if (!isEdit) {
+                const initStock = Number(form.initialStock || 0);
+                if (!Number.isInteger(initStock)) {
+                    errors.initialStock = 'Số lượng combo không được là số thập phân.';
+                }
+            } else {
+                const corrStock = String(form.correctedStock).trim();
+                if (corrStock !== '') {
+                    const cs = Number(corrStock);
+                    if (Number.isNaN(cs) || cs < 0) {
+                        errors.correctedStock = 'Tồn kho không hợp lệ.';
+                    } else if (!Number.isInteger(cs)) {
+                        errors.correctedStock = 'Tồn kho combo không được là số thập phân.';
+                    }
+                }
             }
         }
         return errors;
