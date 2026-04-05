@@ -116,7 +116,7 @@ const ShiftCreateModal = ({ onClose, onSuccess }) => {
       }
 
       if (name === 'checkInStart' && value) {
-        updated.checkInEnd = fromMins(toMins(value) + 10);
+        updated.checkInEnd = fromMins(toMins(value) + 2);
       }
 
       return updated;
