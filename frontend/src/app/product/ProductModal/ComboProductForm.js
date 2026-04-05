@@ -357,6 +357,7 @@ export default function ComboProductForm({
                                 className={`form-control ${errors.salePrice ? 'is-invalid' : ''}`}
                                 type="number"
                                 min="0"
+                                step="1"
                                 value={form.salePrice}
                                 onChange={(e) => {
                                     if (form.pricingMode === 'auto') {
@@ -388,7 +389,7 @@ export default function ComboProductForm({
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">Cập nhật tồn kho</label>
                                     <input
-                                        className="form-control"
+                                        className={`form-control ${errors.correctedStock ? 'is-invalid' : ''}`}
                                         type="number"
                                         min={0}
                                         step={1}
@@ -396,6 +397,9 @@ export default function ComboProductForm({
                                         onChange={(e) => handleChange('correctedStock', e.target.value)}
                                         placeholder="Nhập số lượng thực tế"
                                     />
+                                    {errors.correctedStock && (
+                                        <div className="invalid-feedback">{errors.correctedStock}</div>
+                                    )}
                                     <div className="form-text text-muted">
                                         Tồn kho thực tế. Tồn kho SP con sẽ tự điều chỉnh theo chênh lệch.
                                     </div>
@@ -458,7 +462,7 @@ export default function ComboProductForm({
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">Số lượng combo</label>
                                     <input
-                                        className="form-control"
+                                        className={`form-control ${errors.initialStock ? 'is-invalid' : ''}`}
                                         type="number"
                                         min={0}
                                         step={1}
@@ -466,6 +470,9 @@ export default function ComboProductForm({
                                         onChange={(e) => handleChange('initialStock', e.target.value)}
                                         style={{ maxWidth: 160 }}
                                     />
+                                    {errors.initialStock && (
+                                        <div className="invalid-feedback">{errors.initialStock}</div>
+                                    )}
                                 </div>
                                 {Number(form.initialStock) > 0 && comboRows.length > 0 && (
                                     <div className="col-12 mt-3">
