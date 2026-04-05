@@ -51,7 +51,7 @@ export default function InvoicesPage() {
         setSelectedInvoice(res.data);
         if (actionType === 'VIEW') {
           setAutoPrint(false);
-          setShowDetailModal(true); // Mở modal chi tiết khi click VIEW
+          setShowDetailModal(true);
         }
         if (actionType === 'PRINT') {
           setAutoPrint(true);

@@ -9,7 +9,7 @@ const promotionModel = require("../models/promotion.model");
 const customerModel = require("../models/customer.model");
 const sseService = require("./sse.service");
 const socketService = require("./socket.service");
-
+const SePayTransactionModel = require("../models/sepay.model")
 
 const POINT_EXCHANGE = 100;
 const EARN_POINT_EXCHANGE = 10000;
@@ -277,8 +277,6 @@ const payCash = async (id, { payment }) => {
     }
 
     /* ================= UPDATE INVOICE ================= */
-    console.log(payment.discount);
-
     await invoiceModel.updateInvoiceDiscount(
       transaction,
       id,
@@ -373,8 +371,13 @@ const createQR = async (invoiceId, discount = {}) => {
       voucherId,
       voucherDiscount,
       pointUsed,
-      pointDiscount
+      pointDiscount,
     );
+
+    await invoiceModel.updateAmounts(transaction, invoice.id, {
+      totalAmount,
+      finalAmount
+    });
 
     /* ================= CREATE / UPDATE PAYMENT ================= */
 
@@ -456,75 +459,78 @@ const createQR = async (invoiceId, discount = {}) => {
 const confirmPayment = async (payload) => {
   const result = await runInTransaction(async (transaction) => {
 
+    // ===== 1. PARSE DATA =====
+    const rawContent = `${payload.content || ""} ${payload.description || ""}`;
+
+    const match = rawContent.match(/POS[- ]?(\d+)/i);
+    if (!match) {
+      console.warn("Invalid content:", rawContent);
+      return;
+    }
+
+    const invoiceId = Number(match[1]);
+
     const transferAmount = Number(
-      payload.transferAmount ??
-      payload.amount ??
-      payload.transfer_amount
+      String(
+        payload.transferAmount ??
+        payload.amount ??
+        payload.transfer_amount ??
+        0
+      ).replace(/,/g, "")
     );
 
-    const content = String(
-      payload.content ??
-      payload.description ??
-      payload.transferContent ??
-      ""
-    ).trim();
-
     const transactionId =
+      payload.referenceCode ??
       payload.transactionId ??
       payload.id ??
       payload.transaction_id ??
       null;
 
-    if (!content) {
-      throw new Error("Missing transfer content");
+
+    const existed = await SePayTransactionModel.isExisted(transaction, transactionId);
+    if (existed) return { paid: true, invoiceId };
+    
+    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
+      console.warn("Invalid amount:", payload.transferAmount);
+      return;
     }
 
-    const match = content.match(/POS-(\d+)/i);
-
-    if (!match) {
-      throw new Error("Invalid transfer content");
-    }
-
-    const invoiceId = Number(match[1]);
-
+    // ===== 2. GET INVOICE =====
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
       forUpdate: true,
     });
 
     if (!invoice) {
-      throw new Error("Invoice not found");
+      console.warn("Invoice not found:", invoiceId);
+      return;
     }
 
-    if (invoice.status === "PAID") {
-      return { paid: true, duplicated: true, invoiceId };
-    }
+    if (invoice.status === "PAID") return;
+    if (invoice.status === "CANCELLED") return;
 
-    if (invoice.status === "CANCELLED") {
-      throw new Error("Invoice is cancelled");
-    }
-
+    // ===== 3. CHECK PAYMENT =====
     const payment = await invoiceModel.getPaymentByInvoiceId(
       transaction,
       invoiceId
     );
 
-    if (payment && payment.status === "SUCCESS") {
-      return { paid: true, duplicated: true, invoiceId };
-    }
+    if (payment && payment.status === "SUCCESS") return;
 
-    const expectedAmount = Math.round(Number(invoice.finalAmount || invoice.totalAmount) * 1000) / 1000;
-    const roundedTransferAmount = Math.round(transferAmount * 1000) / 1000;
+    // ===== 4. AMOUNT CHECK =====
+    const expectedAmount = Math.round(
+      Number(invoice.finalAmount || invoice.totalAmount) * 1000
+    ) / 1000;
 
-    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
-      throw new Error("Invalid transfer amount");
-    }
+    const roundedTransferAmount =
+      Math.round(transferAmount * 1000) / 1000;
 
     if (roundedTransferAmount < expectedAmount) {
-      throw new Error("Transfer amount is not enough");
+      console.warn("Amount not enough:", transferAmount);
+      return;
     }
 
+    // ===== 5. SAVE PAYMENT =====
     if (!payment) {
-
       await invoiceModel.insertPayment(transaction, {
         invoiceId,
         paymentMethod: "BANK_QR",
@@ -532,34 +538,40 @@ const confirmPayment = async (payload) => {
         status: "SUCCESS",
         transactionId,
       });
-
     } else {
-
       await paymentModel.updatePaymentStatus(
         transaction,
         invoiceId,
         "SUCCESS",
         transactionId
       );
-
     }
 
+    await SePayTransactionModel.insert(transaction, {
+      invoiceId,
+      sepayId: transactionId,
+      transactionContent: payload.content,
+      amountIn: transferAmount,
+      bankAccountNumber: payload.accountNumber,
+      transactionDate: payload.transactionDate,
+      status: "SUCCESS"
+    });
+
+    // ===== 6. BUSINESS =====
     const invoiceItems = await invoiceModel.getInvoiceItems(
       transaction,
       invoiceId
     );
 
-    if (!invoiceItems.length) {
-      throw new Error("Invoice has no items");
-    }
+    if (!invoiceItems.length) return;
 
     const pointUsed = Number(invoice.usedPoints || 0);
     const voucherId = invoice.voucherId || null;
 
     const finalAmount = expectedAmount;
 
+    // ===== 6.1 TRỪ POINT =====
     if (pointUsed > 0 && invoice.customerId) {
-
       await customerPointLogService.adjustPoints(
         transaction,
         invoice.customerId,
@@ -567,23 +579,18 @@ const confirmPayment = async (payload) => {
         -pointUsed,
         "REDEEM"
       );
-
     }
 
+    // ===== 6.2 TĂNG USAGE VOUCHER =====
     if (voucherId) {
-
-      await voucherModel.increaseUsage(
-        transaction,
-        voucherId
-      );
-
+      await voucherModel.increaseUsage(transaction, voucherId);
     }
 
+    // ===== 6.3 CỘNG POINT =====
     const earnedPoints =
       Math.floor(finalAmount / EARN_POINT_EXCHANGE);
 
     if (earnedPoints > 0 && invoice.customerId) {
-
       await customerPointLogService.adjustPoints(
         transaction,
         invoice.customerId,
@@ -591,15 +598,12 @@ const confirmPayment = async (payload) => {
         earnedPoints,
         "EARN"
       );
-
     }
 
-    /* ================= STOCK ================= */
-    const updatedStocks = await processInventory(
-      transaction,
-      invoiceItems
-    );
+    // ===== 7. STOCK =====
+    await processInventory(transaction, invoiceItems);
 
+    // ===== 8. UPDATE INVOICE =====
     await invoiceModel.updateStatus(
       transaction,
       invoiceId,
@@ -611,9 +615,9 @@ const confirmPayment = async (payload) => {
       invoiceId,
       amount: finalAmount,
     };
-
   });
 
+  // ===== 9. REALTIME =====
   if (result && result.paid) {
     sseService.send({
       type: "PAYMENT_SUCCESS",

@@ -1,40 +1,6 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
 
-module.exports.getPendingSchedule = async (staffId) => {
-    const pool = await connectDB();
-    const result = await pool.request()
-        .input('staffId', sql.BigInt, staffId)
-        .query(`
-            SELECT TOP 1
-                ws.id as scheduleId,
-                sh.name as shiftName,
-                CONVERT(VARCHAR(5), sh.startTime, 108) as startTime,
-                CONVERT(VARCHAR(5), sh.endTime,   108) as endTime,
-                CONVERT(VARCHAR(5), sh.checkInEnd, 108) as checkInEnd,
-                r.name as roleName
-            FROM WorkSchedules ws
-            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            JOIN Staff s ON ws.staffId = s.id
-            JOIN Users u ON s.userId   = u.id
-            JOIN Roles r ON u.roleId   = r.id
-            WHERE ws.staffId = @staffId
-              AND ws.workDate = CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE)
-              AND ws.status = 'assigned'
-              AND (
-                  r.name = 'Manager'
-                  OR (
-                      CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
-                          >= ISNULL(sh.checkInStart, sh.startTime)
-                      AND CAST(DATEADD(hour, 7, GETUTCDATE()) AS TIME)
-                          < sh.endTime
-                  )
-              )
-            ORDER BY sh.startTime ASC
-        `);
-    return result.recordset[0];
-};
-
 module.exports.processCheckIn = async (scheduleId, openingCash, isCashierOrManager, record, penalty) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
@@ -225,4 +191,47 @@ module.exports.checkWorking = async (staffId) => {
               AND ws.status = 'working'
         `);
     return result.recordset.length > 0 ? result.recordset[0] : null;
+};
+module.exports.getPendingSchedule = async (staffId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('staffId', sql.BigInt, staffId)
+        .query(`
+            DECLARE @now DATETIME = DATEADD(hour, 7, GETUTCDATE());
+            DECLARE @today DATE = CAST(@now AS DATE);
+            DECLARE @yesterday DATE = DATEADD(day, -1, @today);
+            DECLARE @currentTime TIME = CAST(@now AS TIME);
+
+            SELECT TOP 1
+                ws.id as scheduleId,
+                sh.name as shiftName,
+                CONVERT(VARCHAR(5), sh.startTime, 108) as startTime,
+                CONVERT(VARCHAR(5), sh.endTime,   108) as endTime,
+                CONVERT(VARCHAR(5), sh.checkInEnd, 108) as checkInEnd,
+                CONVERT(VARCHAR(10), ws.workDate, 120) as workDateStr,
+                r.name as roleName
+            FROM WorkSchedules ws
+            LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+            JOIN Staff s ON ws.staffId = s.id
+            JOIN Users u ON s.userId   = u.id
+            JOIN Roles r ON u.roleId   = r.id
+            WHERE ws.staffId = @staffId
+              AND ws.status = 'assigned'
+              AND (
+                  -- TH1: Ca làm trong ngày hôm nay
+                  (ws.workDate = @today AND (
+                      r.name = 'Manager' 
+                      OR (
+                          @currentTime >= ISNULL(sh.checkInStart, sh.startTime)
+                          AND (sh.endTime > sh.startTime OR @currentTime < '23:59:59') -- Vẫn còn trong ngày
+                          AND (sh.endTime > sh.startTime AND @currentTime < sh.endTime OR sh.endTime < sh.startTime)
+                      )
+                  ))
+                  OR
+                  -- TH2: Ca xuyên đêm bắt đầu từ hôm qua
+                  (ws.workDate = @yesterday AND sh.endTime < sh.startTime AND @currentTime < sh.endTime)
+              )
+            ORDER BY sh.startTime ASC
+        `);
+    return result.recordset[0];
 };

@@ -36,7 +36,6 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
     if (returnId) fetchDetail();
   }, [fetchDetail]);
 
-  // --- TÁCH HÀM XỬ LÝ ---
 
   const handleApprove = async () => {
     try {
@@ -71,8 +70,6 @@ export default function ReturnDetail({ returnId, roleName, onActionSuccess }) {
       setRejectReason("");
     }
   };
-
-  // ----------------------
 
   if (loading) return <div className="text-center py-5"><div className="spinner-border spinner-border-sm me-2"></div> Đang tải...</div>;
   if (!data) return <div className="text-center py-5">Không tìm thấy dữ liệu.</div>;

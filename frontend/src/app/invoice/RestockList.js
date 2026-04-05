@@ -15,9 +15,7 @@ const RestockList = () => {
   const pageSize = 8;
   const { showNotification } = useNotification();
 
-  /**
-   * Lấy danh sách hàng hoàn trả từ API
-   */
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -38,9 +36,7 @@ const RestockList = () => {
     fetchItems();
   }, [fetchItems]);
 
-  /**
-   * Hàm xử lý khi DUYỆT nhập kho
-   */
+
   const handleApprove = async (item) => {
     try {
       const response = await approveRestock(item.id);
@@ -54,9 +50,7 @@ const RestockList = () => {
     }
   };
 
-  /**
-   * Hàm xử lý khi TỪ CHỐI/BỎ QUA nhập kho
-   */
+
   const handleReject = async (item) => {
     try {
       const response = await rejectRestock(item.id);
@@ -70,7 +64,6 @@ const RestockList = () => {
     }
   };
 
-  // --- Render logic giữ nguyên phần giao diện ---
   return (
     <div className="restock-modern-container">
       <div className="restock-header">

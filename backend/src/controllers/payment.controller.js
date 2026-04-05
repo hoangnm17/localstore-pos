@@ -60,20 +60,31 @@ const createQR = async (req, res) => {
 };
 
 const webhook = async (req, res) => {
+  const clientToken = req.headers['authorization'] || req.headers['x-api-key'];
+  console.log(clientToken)
+  if (clientToken !== process.env.SEPAY_SECRET_KEY && req.query.token !== process.env.SEPAY_SECRET_KEY) {
+    console.warn("Token không hợp lệ");
+    return res.status(401).json({ 
+      success: false, 
+      message: "Unauthorized" 
+    });
+  }
+
   try {
     await paymentService.confirmPayment(req.body);
-
-
-    return res.json({
+    
+    return res.status(200).json({
       success: true,
-      message: "Webhook processed",
+      message: "Webhook processed"
     });
+
   } catch (err) {
-    console.error("SePay webhook error:", err);
-    return res.status(400).json({
-      success: false,
-      message: err.message || "Webhook failed",
-    });
+    console.error("SePay webhook error:", err.message);
+
+    if (err.message.includes("Connection") || err.message.includes("deadlock")) {
+      return res.status(500).json({ success: false });
+    }
+    return res.status(200).json({ success: false, message: err.message });
   }
 };
 

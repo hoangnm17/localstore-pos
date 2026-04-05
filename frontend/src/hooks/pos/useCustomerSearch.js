@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react"
 import { customersSearch } from "../../services/Customer/customer.service"
 
 export function useCustomerSearch(phone) {
-  // always keep an array so consumers can safely read `.length` etc.
   const [result, setResult] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -29,7 +28,6 @@ export function useCustomerSearch(phone) {
         }
       } catch (error) {
         console.error("Search customer error:", error)
-        // ensure we reset to an empty list so consumers don't crash
         if (requestId === activeRequest.current) {
           setResult([])
         }

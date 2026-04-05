@@ -71,7 +71,6 @@ const updateStock = async (transaction, productId, difference) => {
     return result.rowsAffected[0];
 };
 
-// Thêm hàm mới để lấy thông tin cơ bản sản phẩm (dùng trong controller)
 const getProductBasicInfo = async (productId) => {
     const pool = await connectDB();
 

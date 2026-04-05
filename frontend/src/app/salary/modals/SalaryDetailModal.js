@@ -28,21 +28,33 @@ const SalaryDetailModal = ({ row, month, year, onClose, autoPrint = false }) => 
             <style>
                 {`
                 @media print {
-                    @page { size: A5; margin: 10mm; }
+                    @page { 
+                        size: A4; 
+                        margin: 20mm; 
+                    }
+                    body { 
+                        background: none !important; 
+                        padding: 0 !important; 
+                        margin: 0 !important; 
+                    }
                     body * { visibility: hidden; }
                     #salary-slip-print, #salary-slip-print * { visibility: visible; }
                     #salary-slip-print { 
                         position: absolute; 
-                        left: 50%; top: 0;
-                        transform: translateX(-50%);
-                        width: 15cm !important; 
-                        padding: 10px !important;
+                        left: 0; 
+                        top: 0;
+                        width: 100% !important; 
+                        padding: 0 !important;
                         box-shadow: none !important;
                         background: #fff !important;
-                        border: 1px solid #eee !important;
+                        border: none !important;
                     }
                     .no-print { display: none !important; }
-                    .bg-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+                    .bg-light { 
+                        background-color: #f8f9fa !important; 
+                        -webkit-print-color-adjust: exact; 
+                        print-color-adjust: exact;
+                    }
                 }
                 `}
             </style>

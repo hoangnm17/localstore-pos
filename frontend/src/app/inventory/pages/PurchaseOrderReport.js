@@ -124,13 +124,18 @@ function PurchaseOrderReport() {
   // Biểu đồ phân bổ giá trị theo NCC
   const supplierAmountData = useMemo(() => {
     if (!report?.supplierStats?.length) return null;
+
+    const colors = report.supplierStats.map(
+      (_, i) => `hsl(${i * (360 / report.supplierStats.length)}, 70%, 50%)`
+    );
+
     return {
       labels: report.supplierStats.map((s) => s.name),
       datasets: [
         {
           label: "Tổng giá trị",
           data: report.supplierStats.map((s) => s.totalAmount),
-          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
+          backgroundColor: colors, 
           hoverOffset: 30,
         },
       ],
