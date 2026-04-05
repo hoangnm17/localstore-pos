@@ -6,6 +6,7 @@ import Pagination from '../../../components/Pagination/Pagination';
 import '../../product/pm-theme.css';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
 import { useAuth } from '../../../hooks/useAuth';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 export default function CategoryPage() {
     const { showNotification } = useNotification();
@@ -19,6 +20,7 @@ export default function CategoryPage() {
         setConfirmState({ open: false, message: '', onOk: null });
     };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
+
 
     const [editId, setEditId] = useState(null);
     const [open, setOpen] = useState(false);
@@ -140,38 +142,12 @@ export default function CategoryPage() {
             />
 
             {confirmState.open && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(0,21,41,0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2000
-                    }}
-                >
-                    <div
-                        style={{
-                            background: '#fff',
-                            borderRadius: 12,
-                            padding: '28px 32px',
-                            minWidth: 340,
-                            maxWidth: 480,
-                            boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                            <i className="bi bi-exclamation-triangle-fill" style={{ color: '#faad14', fontSize: '1.5rem' }} />
-                            <strong style={{ fontSize: '1rem' }}>Xác nhận</strong>
-                        </div>
-                        <p style={{ margin: '0 0 24px', color: '#334155' }}>{confirmState.message}</p>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                            <button className="btn btn-light" onClick={handleConfirmCancel}>Hủy</button>
-                            <button className="btn btn-danger" onClick={handleConfirmOk}>Xác nhận xóa</button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmModal
+                    message={confirmState.message}
+                    confirmText="Xác nhận xóa"
+                    onConfirm={handleConfirmOk}
+                    onCancel={handleConfirmCancel}
+                />
             )}
         </div>
     );

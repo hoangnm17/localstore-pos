@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import categoryService from '../../../services/Category/category.service';
 import { uploadImage } from '../../../services/imageUpload.service';
 import { getImageUrl } from 'utils/image';
+import { flattenTree } from '../../../utils/categoryTree';
 
 export default function CategoryForm({ form, change, submit, onDone, editId }) {
     const [categories, setCategories] = useState([]);
@@ -9,19 +10,11 @@ export default function CategoryForm({ form, change, submit, onDone, editId }) {
 
     useEffect(() => {
         categoryService.fetchCategoryTree('', 1, 100).then(res => {
-            const flat = [];
-
-            function flatten(items, level = 0) {
-                items.forEach(item => {
-                    flat.push({ ...item, level, productCount: item.productCount ?? 0 });
-                    if (item.children?.length) flatten(item.children, level + 1);
-                });
-            }
-
-            flatten(res.data?.data || res.data || []);
-            setCategories(flat);
+            setCategories(flattenTree(res.data || []));
         });
     }, []);
+
+
 
     useEffect(() => {
         setPreview(form.imageUrl ? getImageUrl(form.imageUrl) : null);

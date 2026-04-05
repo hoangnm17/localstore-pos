@@ -16,11 +16,11 @@ export default function useCategoryForm(editId, { showNotification } = {}) {
             return;
         }
 
-        categoryService.getCategoryById(editId).then(res => {
+        categoryService.getCategoryById(editId).then(cat => {
             setForm({
-                name: res.data.data?.name || '',
-                parentId: res.data.data?.parentId ?? null,
-                imageUrl: res.data.data?.imageUrl || ''
+                name: cat?.name || '',
+                parentId: cat?.parentId ?? null,
+                imageUrl: cat?.imageUrl || ''
             });
         });
     }, [editId]);
