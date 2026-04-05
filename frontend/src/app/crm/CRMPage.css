@@ -292,35 +292,35 @@
 }
 
 .status-active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669; /* Đậm hơn: Emerald 600 */
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .status-inactive {
-  background: rgba(100, 116, 139, 0.15);
-  color: #94a3b8;
-  border: 1px solid rgba(100, 116, 139, 0.25);
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569; /* Đậm hơn: Slate 600 */
+  border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .status-blocked {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626; /* Đậm hơn: Red 600 */
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .status-expired {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706; /* Đậm hơn: Amber 600 */
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .type-badge {
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  padding: 0.2rem 0.6rem;
-  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5; /* Đậm hơn: Indigo 600 */
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 0.25rem 0.8rem;
+  border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -331,7 +331,7 @@
 }
 
 .promo-value-cell {
-  color: var(--crm-primary);
+  color: #4338ca; /* Đậm hơn: Indigo 700 */
   font-weight: 700;
 }
 

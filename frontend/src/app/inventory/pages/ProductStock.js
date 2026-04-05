@@ -2,8 +2,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import productStockService from "../../../services/Inventory/productStockService";
 import UpdateMinThresholdModal from "../InventoryModal/UpdateMinThreshold";
+import useTitle from "../../../hooks/common/useTitle";
+import { useNotification } from "components/global/Notification/NotificationContext";
+
 
 function ProductStock() {
+  useTitle("Tồn kho sản phẩm");
   const user = JSON.parse(localStorage.getItem("user"));
   const canUpdateLowStock = user?.features?.includes("EDIT_LOWSTOCK");
 
@@ -15,6 +19,7 @@ function ProductStock() {
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const { showNotification } = useNotification();
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -86,7 +91,7 @@ function ProductStock() {
 
   const handleUpdateStock = (product) => {
     if (!canUpdateLowStock) {
-      alert("Bạn không có quyền cập nhật ngưỡng tồn kho tối thiểu.");
+      showNotification("Bạn không có quyền cập nhật ngưỡng tồn kho", "error");
       return;
     }
     setSelectedProduct(product);
@@ -107,36 +112,48 @@ function ProductStock() {
     setError("");
 
     if (!trimmedValue) {
-      setError("Vui lòng nhập ngưỡng tồn kho tối thiểu");
+      const msg = "Vui lòng nhập ngưỡng tồn kho tối thiểu";
+      setError(msg);
+      showNotification(msg, "warning");
       return;
     }
 
     if (!/^\d*\.?\d*$/.test(trimmedValue)) {
-      setError("Chỉ được nhập số");
+      const msg = "Chỉ được nhập số";
+      setError(msg);
+      showNotification(msg, "warning");
       return;
     }
 
     const min = parseFloat(trimmedValue);
 
     if (isNaN(min)) {
-      setError("Giá trị không hợp lệ");
+      const msg = "Giá trị không hợp lệ";
+      setError(msg);
+      showNotification(msg, "warning");
       return;
     }
 
     if (min < 0) {
-      setError("Ngưỡng không được âm");
+      const msg = "Ngưỡng không được âm";
+      setError(msg);
+      showNotification(msg, "warning");
       return;
     }
 
     const allowDecimal = selectedProduct?.allowDecimalQuantity === true;
 
     if (!allowDecimal && !Number.isInteger(min)) {
-      setError("Sản phẩm này chỉ chấp nhận số nguyên");
+      const msg = "Sản phẩm này chỉ chấp nhận số nguyên";
+      setError(msg);
+      showNotification(msg, "warning");
       return;
     }
 
     if (!selectedProduct) {
-      setError("Không tìm thấy sản phẩm");
+      const msg = "Không tìm thấy sản phẩm";
+      setError(msg);
+      showNotification(msg, "error");
       return;
     }
 
@@ -151,14 +168,20 @@ function ProductStock() {
       const response = res?.data;
 
       if (!response?.success) {
-        setError(response?.message || "Cập nhật thất bại");
+        const msg = response?.message || "Cập nhật thất bại";
+        setError(msg);
+        showNotification(msg, "error");
         return;
       }
+
+      showNotification("Cập nhật ngưỡng tồn kho thành công", "success");
 
       handleCloseModal();
       loadProducts();
     } catch (err) {
-      setError("Cập nhật thất bại. Vui lòng thử lại.");
+      const msg = "Cập nhật thất bại. Vui lòng thử lại.";
+      setError(msg);
+      showNotification(msg, "error");
     } finally {
       setUpdating(false);
     }
@@ -397,11 +420,16 @@ function ProductStock() {
               );
 
               if (!res?.data?.success) {
+                showNotification("Cập nhật thất bại", "error");
                 return;
               }
 
+              showNotification("Cập nhật thành công", "success");
+
               handleCloseModal();
               loadProducts();
+            } catch (err) {
+              showNotification("Lỗi hệ thống", "error");
             } finally {
               setUpdating(false);
             }

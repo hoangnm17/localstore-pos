@@ -31,7 +31,6 @@ const verifyToken = async (req, res, next) => {
 
         const permissions = await roleModel.getPermissionsByRoleId(user.roleId);
 
-        // Lấy Staff.id tương ứng với Users.id để dùng cho changedBy trong lịch sử giá
         const staff = await staffModel.getStaffByUserId(user.id);
 
         req.user = {

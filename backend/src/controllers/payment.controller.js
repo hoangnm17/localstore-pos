@@ -10,7 +10,6 @@ const handleError = (res, err) => {
     });
   }
 
-  // Chuẩn hóa not found
   if (err.message?.toLowerCase().includes("not found")) {
     return res.status(404).json({
       success: false,
@@ -18,7 +17,6 @@ const handleError = (res, err) => {
     });
   }
 
-  // Business error mặc định
   return res.status(400).json({
     success: false,
     message: err.message || "Internal server error",
@@ -62,21 +60,49 @@ const createQR = async (req, res) => {
 };
 
 const webhook = async (req, res) => {
-  console.log("DA NHAN HOOK TU API SEPAY")
-  console.log(req.body);
+  const clientToken = req.headers['authorization'] || req.headers['x-api-key'];
+  console.log(clientToken)
+  if (clientToken !== process.env.SEPAY_SECRET_KEY && req.query.token !== process.env.SEPAY_SECRET_KEY) {
+    console.warn("Token không hợp lệ");
+    return res.status(401).json({ 
+      success: false, 
+      message: "Unauthorized" 
+    });
+  }
+
   try {
     await paymentService.confirmPayment(req.body);
-
-
-    return res.json({
+    
+    return res.status(200).json({
       success: true,
-      message: "Webhook processed",
+      message: "Webhook processed"
     });
+
   } catch (err) {
-    console.error("SePay webhook error:", err);
-    return res.status(400).json({
+    console.error("SePay webhook error:", err.message);
+
+    if (err.message.includes("Connection") || err.message.includes("deadlock")) {
+      return res.status(500).json({ success: false });
+    }
+    return res.status(200).json({ success: false, message: err.message });
+  }
+};
+
+const cancelPendingPayment = async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+
+    await paymentService.cancelPendingPayment(invoiceId);
+
+    res.json({
+      success: true,
+      message: "Cancelled pending payment"
+    });
+
+  } catch (err) {
+    res.status(400).json({
       success: false,
-      message: err.message || "Webhook failed",
+      message: err.message
     });
   }
 };
@@ -85,4 +111,5 @@ module.exports = {
   createQR,
   webhook,
   payCash,
+  cancelPendingPayment,
 };

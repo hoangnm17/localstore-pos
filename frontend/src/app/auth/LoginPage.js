@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { loginAPI } from "../../services/Auth/auth.service";
 
 function LoginPage() {
@@ -126,9 +126,6 @@ function LoginPage() {
               </button>
             </div>
             <div className="d-flex justify-content-end mb-4">
-              <Link to="/forgot-password" className="text-decoration-none fw-bold text-dark" style={{ fontSize: "0.9rem" }}>
-                Quên mật khẩu?
-              </Link>
             </div>
             <button
               type="submit"

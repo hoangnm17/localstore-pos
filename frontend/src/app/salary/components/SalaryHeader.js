@@ -14,7 +14,7 @@ const SalaryHeader = ({ summary }) => {
                 <div className="row g-3">
                     {[
                         { label: 'Tổng nhân viên', value: summary.totalStaff, icon: 'bi-people-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
-                        { label: 'Tổng lương gộp', value: formatVND(summary.totalGross), icon: 'bi-cash-stack', textClass: 'text-info', bgClass: 'bg-info-subtle' },
+                        { label: 'Tổng lương ', value: formatVND(summary.totalGross), icon: 'bi-cash-stack', textClass: 'text-info', bgClass: 'bg-info-subtle' },
                         { label: 'Tổng phạt/trừ', value: formatVND(summary.totalDeductions), icon: 'bi-graph-down-arrow', textClass: 'text-danger', bgClass: 'bg-danger-subtle' },
                         { label: 'Thực lĩnh', value: formatVND(summary.totalNet), icon: 'bi-wallet-fill', textClass: 'text-success', bgClass: 'bg-success-subtle' },
                     ].map(({ label, value, icon, textClass, bgClass }) => (

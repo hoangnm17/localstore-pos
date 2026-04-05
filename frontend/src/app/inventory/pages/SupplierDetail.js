@@ -4,8 +4,10 @@ import supplierService from "../../../services/Inventory/supplierService";
 import AddProductModal from "../InventoryModal/AddProductModal";
 import UpdateProductModal from "../InventoryModal/UpdateProductModal";
 import PriceHistoryModal from "../InventoryModal/PriceHistoryModal";
+import useTitle from "../../../hooks/common/useTitle";
 
 function SupplierDetail() {
+  useTitle("Chi tiết nhà cung cấp");
   const user = JSON.parse(localStorage.getItem("user"));
   const canUpdateProduct = user?.features?.includes("UPDATE_SUPPLIER_PRODUCT");
 
@@ -30,6 +32,7 @@ function SupplierDetail() {
 
   //Load supplier detail
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadSupplier = async () => {
       try {
         const res = await supplierService.getSupplierById(id);

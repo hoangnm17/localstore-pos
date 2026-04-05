@@ -1,13 +1,15 @@
 import Order from "./Order/Order";
 import Product from "./Product/Product";
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 import { useInvoiceTabs } from "hooks/pos/useInvoice";
 import { useOrderItems } from "hooks/pos/useOrderItems";
 import useHotkeys from "hooks/pos/useHotKeys";
 import useTitle from "hooks/common/useTitle";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { logout } from "services/Auth/auth.service";
 import { POS_HOTKEYS } from "config/HotKey";
+import { useNotification } from "components/global/Notification/NotificationContext";
+import 'style/POS/SalePage.css'
 
 export default function SalesHome() {
   const {
@@ -23,7 +25,9 @@ export default function SalesHome() {
     handlePaymentSuccess,
     goToNextInvoice,
     goToPrevInvoice,
-    accessError
+    accessError,
+    updateSearchText,
+    handleFinishOrder
   } = useInvoiceTabs();
 
   const {
@@ -35,49 +39,77 @@ export default function SalesHome() {
     calculateTotalQuantity,
   } = useOrderItems();
 
+  const { showNotification } = useNotification();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const currentInvIndex = invoices.findIndex(inv => inv.id === activeInvoiceId) + 1;
+  const currentInvIndex = invoices.findIndex((inv) => inv.id === activeInvoiceId) + 1;
   const customerName = activeInvoice?.customer?.name || "Khách lẻ";
 
-  useTitle(
-    activeInvoice
-      ? `HĐ ${currentInvIndex} - ${customerName}`
-      : "Đang tải hóa đơn..."
-  );
+  useTitle(activeInvoice ? `HĐ ${currentInvIndex} - ${customerName}` : "Đang tải...");
 
   const [openPaymentSignal, setOpenPaymentSignal] = useState(0);
   const [activeItemId, setActiveItemId] = useState(null);
   const [focusSignal, setFocusSignal] = useState(0);
 
   const isModalOpen = openPaymentSignal > 0;
-  useHotkeys(
-    {
-      [POS_HOTKEYS.NEXT_INVOICE_TAB]: goToNextInvoice,
-      [POS_HOTKEYS.PREV_INVOICE_TAB]: goToPrevInvoice,
-      [POS_HOTKEYS.NEW_INVOICE_TAB]: createInvoiceTab,
-      [POS_HOTKEYS.CLOSE_INVOICE_TAB]: () => {
-        if (activeInvoiceId) closeTab(activeInvoiceId);
-      },
-      [POS_HOTKEYS.CLEAR_ACTIVE_ITEM]: () => setActiveItemId(null),
-      [POS_HOTKEYS.OPEN_PAYMENT]: () => {
-        if (!activeInvoice?.items?.length) return;
-        setOpenPaymentSignal((s) => s + 1);
-      },
-    },
-    {
-      enabled: !isModalOpen
-    }
-  );
+
+  useEffect(() => {
+    const es = new EventSource(`${process.env.REACT_APP_API_BASE_URL}/sse`);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload?.type === "PAYMENT_SUCCESS") {
+          handlePaymentSuccess(payload);
+        }
+      } catch (err) {
+        console.error("SSE Parse Error:", err);
+      }
+    };
+
+    es.onerror = () => {
+      console.warn("SSE Lost connection. Reconnecting...");
+    };
+
+    return () => es.close();
+  }, [handlePaymentSuccess]);
+
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (e.key === "ArrowRight") goToNextInvoice();
+        else goToPrevInvoice();
+        return;
+      }
+
+      if (e.key === "F2") {
+        e.preventDefault();
+        createInvoiceTab();
+      }
+
+      if (e.ctrlKey && e.key === "Delete") {
+        e.preventDefault();
+        if (invoices.length > 1) {
+          closeTab(activeInvoiceId);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [invoices.length, activeInvoiceId, goToNextInvoice, goToPrevInvoice]);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setShowMenu(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -86,67 +118,92 @@ export default function SalesHome() {
   const handleAddItem = (product) => {
     if (!activeInvoice) return;
 
-    const result = addItem(activeInvoice.items, product);
+    const oldItems = activeInvoice.items;
+    const result = addItem(oldItems, product);
+
+    const sameProductItems = result.items.filter(
+      (it) => Number(it.productId) === Number(product.productId || product.id)
+    );
+
+    const totalRequestedQuantity = sameProductItems.reduce((total, item) => {
+      const itemFactor = item.factor || 1;
+      return total + (Number(item.quantity) * itemFactor);
+    }, 0);
+
+    const stockLimit = product.productStock || 0;
+
+    if (totalRequestedQuantity > stockLimit) {
+      const currentQtyInCart = totalRequestedQuantity - (product.factor || 1); // Số lượng trước khi cộng thêm phát này
+      showNotification(
+        `Không đủ tồn kho! Tổng nhập quy đổi: ${totalRequestedQuantity}, Kho chỉ còn: ${stockLimit}`,
+        "warning"
+      );
+      return;
+    }
 
     updateInvoiceItems(activeInvoice.id, result.items);
     setActiveItemId(result.activeId);
-    setFocusSignal(prev => prev + 1);
+
+    showNotification(`Đã thêm ${product.productName}`, "success");
+    window.dispatchEvent(new Event("RE_FOCUS_SEARCH"));
   };
 
   const handleIncrease = (id) => {
     if (!activeInvoice) return;
 
-    const newItems = increase(activeInvoice.items, id);
-    updateInvoiceItems(activeInvoice.id, newItems);
+    const targetItem = activeInvoice.items.find(it => it.id === id);
+    if (!targetItem) return;
+
+    const sameProductItems = activeInvoice.items.filter(it => it.productId === targetItem.productId);
+    const totalConvertedQty = sameProductItems.reduce((sum, it) => sum + (it.quantity * (it.factor || 1)), 0);
+
+    if (totalConvertedQty + (targetItem.factor || 1) > targetItem.productStock) {
+      showNotification(`Không thể tăng! Đã đạt giới hạn tồn kho tổng (${targetItem.productStock})`, "warning");
+      return;
+    }
+    updateInvoiceItems(activeInvoice.id, increase(activeInvoice.items, id));
   };
-
-  const handleDecrease = (id) => {
-    if (!activeInvoice) return;
-
-    const newItems = decrease(activeInvoice.items, id);
-    updateInvoiceItems(activeInvoice.id, newItems);
-  };
-
-  const handleRemove = (id) => {
-    if (!activeInvoice) return;
-
-    const newItems = remove(activeInvoice.items, id);
-    updateInvoiceItems(activeInvoice.id, newItems);
-  };
-
+  const handleDecrease = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, decrease(activeInvoice.items, id)); };
+  const handleRemove = (id) => { if (activeInvoice) updateInvoiceItems(activeInvoice.id, remove(activeInvoice.items, id)); };
   const handleSelectCustomer = async (customer) => {
-    if (!activeInvoice) return;
-
-    if (activeInvoice.customer?.id === customer?.id) return;
-
-    try {
-      await updateInvoiceCustomer(activeInvoice.id, customer);
-    } catch (error) {
-      console.error("Lỗi cập nhật khách hàng:", error);
+    if (activeInvoice && activeInvoice.customer?.id !== customer?.id) {
+      try { await updateInvoiceCustomer(activeInvoice.id, customer); } catch (e) { console.error(e); }
     }
   };
-
-  const total = calculateTotal(activeInvoice?.items || []);
-  const totalQuantity = calculateTotalQuantity(
-    activeInvoice?.items || []
-  );
-
   const handleChangeQty = (id, quantity) => {
     if (!activeInvoice) return;
 
     const newItems = activeInvoice.items.map(it => {
       if (it.id !== id) return it;
 
-      const safeQty = Math.max(
-        1,
-        Math.min(quantity, it.quantityOnHand)
-      );
+      if (quantity === "" || quantity === "." || (typeof quantity === 'string' && quantity.endsWith('.'))) {
+        return { ...it, quantity };
+      }
 
-      return { ...it, quantity: safeQty };
+      let num = parseFloat(quantity);
+      if (isNaN(num)) return it;
+
+      const otherItemsQty = activeInvoice.items
+        .filter(item => item.productId === it.productId && item.id !== id)
+        .reduce((sum, item) => sum + (Number(item.quantity) * (item.factor || 1)), 0);
+
+      const remainingStock = it.productStock - otherItemsQty;
+      const maxQtyForThisUnit = remainingStock / (it.factor || 1);
+
+      if (num > maxQtyForThisUnit) {
+        num = maxQtyForThisUnit;
+        return { ...it, quantity: num };
+      }
+
+      if (num < 0) num = 0;
+      return { ...it, quantity: quantity };
     });
 
     updateInvoiceItems(activeInvoice.id, newItems);
   };
+
+  const total = calculateTotal(activeInvoice?.items || []);
+  const totalQuantity = calculateTotalQuantity(activeInvoice?.items || []);
 
   if (accessError) {
     return (
@@ -167,108 +224,77 @@ export default function SalesHome() {
       </div>
     );
   }
-  if (!activeInvoice) {
+
+  if (!activeInvoice && invoices.length === 0) {
     return (
-      <div className="vh-100 d-flex flex-column justify-content-center align-items-center">
-        <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }} role="status"></div>
-        <span className="text-muted fw-medium fs-5">Đang khởi tạo máy thu ngân...</span>
+      <div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-white">
+        <div className="spinner-grow text-primary mb-3" style={{ width: "3rem", height: "3rem" }} role="status"></div>
+        <span className="text-primary fw-bold letter-spacing-1">ĐANG KHỞI TẠO HỆ THỐNG POS...</span>
       </div>
     );
   }
 
-  return (
-    <div className="vh-100 d-flex bg-light flex-column overflow-hidden">
+  if (!activeInvoice) return null;
 
-      <div className="d-flex align-items-center border-bottom bg-white px-2 flex-shrink-0" style={{ height: '50px' }}>
-        <div className="d-flex align-items-center flex-grow-1 overflow-auto no-scrollbar h-100">
+  return (
+    <div className="vh-100 d-flex flex-column overflow-hidden bg-light text-dark">
+      {/* HEADER / TAB BAR */}
+      <header className="d-flex align-items-center bg-white border-bottom flex-shrink-0 pe-2" style={{ height: "55px" }}>
+        <div className="d-flex align-items-end flex-grow-1 overflow-auto no-scrollbar h-100 pt-2 px-2">
           {invoices.map((inv, index) => {
             const isActive = inv.id === activeInvoiceId;
+            const isPaid = inv.status === "PAID"; // Kiểm tra trạng thái mới
             const tabTotal = calculateTotal(inv.items);
 
             return (
               <div
                 key={inv.id}
                 onClick={() => setActiveInvoiceId(inv.id)}
-                className={`px-3 py-2 me-2 rounded-top d-flex align-items-center gap-2 ${isActive
-                  ? "bg-primary text-white"
-                  : "bg-light"
-                  }`}
-                style={{ cursor: "pointer", whiteSpace: 'nowrap' }}
+                className={`chrome-tab d-flex align-items-center gap-2 px-4 
+        ${isActive ? "active" : ""} 
+        ${isPaid ? "bg-success text-white border-success" : ""}`} // Thêm màu xanh nếu đã thanh toán
               >
-                <span>
-                  Hoá đơn {index + 1}
-                  {tabTotal > 0 &&
-                    ` (${tabTotal.toLocaleString()})`}
-                  {inv.isSaving}
+                <i className={`bi ${isPaid ? "bi-check-circle-fill" : (isActive ? "bi-file-earmark-text-fill" : "bi-file-earmark-text")}`}></i>
+                <span className="small fw-bold">
+                  HĐ {index + 1} {isPaid ? "(Đã xong)" : ""}
                 </span>
-
-                {invoices.length > 1 && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(inv.id);
-                    }}
-                    style={{ cursor: "pointer" }}
-                    className="ms-2"
-                  >
-                    X
-                  </span>
-                )}
+                {/* Nút đóng Tab luôn hiển thị để thu ngân tự dọn dẹp sau khi in xong */}
+                <i className="bi bi-x-circle-fill close-icon ms-2" onClick={(e) => { e.stopPropagation(); closeTab(inv.id, !isPaid); }}></i>
               </div>
             );
           })}
 
-          <button
-            className="btn btn-sm btn-outline-primary flex-shrink-0"
-            onClick={createInvoiceTab}
-          >
-            + Thêm tab
+          <button className="btn-add-tab mb-2 ms-2" onClick={createInvoiceTab} title="Thêm hóa đơn mới (F2)">
+            <i className="bi bi-plus-lg"></i>
           </button>
         </div>
 
-        {/* MENU DROPDOWN GÓC PHẢI */}
-        <div className="position-relative ms-auto h-100 border-start" ref={menuRef}>
-          <button
-            className={`btn h-100 rounded-0 px-3 border-0 shadow-none ${showMenu ? 'bg-light text-primary' : 'text-secondary'}`}
-            onClick={() => setShowMenu(!showMenu)}
-          >
-            <i className="bi bi-list fs-4"></i>
+        <div className="ms-auto position-relative" ref={menuRef}>
+          <button className={`btn border-0 d-flex align-items-center gap-2 px-3 py-2 rounded-3 ${showMenu ? "bg-primary-subtle" : ""}`} onClick={() => setShowMenu(!showMenu)}>
+            <div className="text-end d-none d-sm-block">
+              <div className="fw-bold small leading-1 text-primary">{currentUser?.fullName}</div>
+            </div>
+            <i className="bi bi-person-circle fs-4 text-primary"></i>
           </button>
 
           {showMenu && (
-            <div className="position-absolute bg-white shadow-lg border rounded-3 py-2"
-              style={{ top: '100%', right: '5px', width: '250px', zIndex: 3000 }}>
-              <div className="px-3 py-2 border-bottom mb-2">
-                <div className="fw-bold text-dark text-truncate small">Admin: {currentUser?.fullName || 'Nhân viên'}</div>
-                <div className="text-muted" style={{ fontSize: '0.7rem' }}>Chi nhánh trung tâm</div>
-              </div>
-
-              <button className="dropdown-item py-2 px-3 d-flex align-items-center border-0 bg-transparent w-100 text-start" onClick={() => navigate('/invoices')}>
-                <i className="bi bi-receipt me-3"></i> Lịch sử đơn hàng
+            <div className="dropdown-custom shadow-lg border rounded-3 overflow-hidden">
+              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/invoices")}>
+                <i className="bi bi-receipt me-3 text-primary"></i> Lịch sử đơn hàng
               </button>
-              <button className="dropdown-item py-2 px-3 d-flex align-items-center border-0 bg-transparent w-100 text-start" onClick={() => navigate('/shift-report')}>
-                <i className="bi bi-box-arrow-in-right me-3"></i> Phiếu bàn giao ca
+              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-profile")}>
+                <i className="bi bi-arrow-counterclockwise me-3 text-success"></i> Hồ sơ của tôi
               </button>
-              <button className="dropdown-item py-2 px-3 d-flex align-items-center border-0 bg-transparent w-100 text-start" onClick={() => navigate('/my-schedule')}>
-                <i className="bi bi-arrow-counterclockwise me-3"></i> Lịch làm việc
-              </button>
-              <div className="border-top my-2"></div>
-              <button className="dropdown-item py-2 px-3 d-flex align-items-center border-0 bg-transparent w-100 text-start text-danger" onClick={logout}>
-                <i className="bi bi-power me-3"></i> Đăng xuất
+              <button className="dropdown-item py-2 px-3 border-0" onClick={() => navigate("/my-schedule")}>
+                <i className="bi bi-box-arrow-in-right me-3 text-success"></i> Lịch làm việc
               </button>
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* MAIN */}
-      <div className="d-flex flex-grow-1 overflow-hidden">
-
-        {/* ORDER */}
-        <div
-          className="bg-white border-end d-flex flex-column"
-          style={{ flex: 4 }}
-        >
+      <main className="d-flex flex-grow-1 overflow-hidden">
+        <aside className="d-flex flex-column border-end bg-white glass-effect shadow-sm" style={{ flex: "0 0 45%", zIndex: 5 }}>
           <Order
             key={activeInvoice.id}
             orderId={activeInvoice.id}
@@ -282,26 +308,25 @@ export default function SalesHome() {
             onSelectCustomer={handleSelectCustomer}
             isSaving={activeInvoice.isSaving}
             onPay={pay}
-            onBankPaid={handlePaymentSuccess}
+            onBankPaid={handleFinishOrder}
             activeItemId={activeItemId}
             onChangeQty={handleChangeQty}
             focusSignal={focusSignal}
             openPaymentSignal={openPaymentSignal}
+            status={activeInvoice.status}
           />
-        </div>
-        <div style={{ flex: 6 }} className="d-flex flex-column bg-white">
+        </aside>
+
+        <section className="d-flex flex-column bg-light" style={{ flex: "0 0 55%" }}>
           <Product
             addItem={handleAddItem}
-            focusSignal={focusSignal}
+            invoiceId={activeInvoiceId}
+            isModalOpen={isModalOpen}
+            searchText={activeInvoice?.searchText || ""}
+            onSearchChange={(txt) => updateSearchText(activeInvoiceId, txt)}
           />
-        </div>
-
-      </div>
-
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .dropdown-item:hover { background-color: #f8f9fa; color: #0d6efd; }
-      `}</style>
+        </section>
+      </main>
     </div>
   );
 }

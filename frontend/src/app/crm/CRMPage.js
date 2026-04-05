@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './CRMPage.css';
 import {
-    getCustomers, createCustomer, updateCustomer, deleteCustomer,
+    getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer,
     getPurchaseHistory, getPointLogs, adjustPoints,
     getPromotions, getPromotionById, createPromotion, updatePromotion, deletePromotion,
     addPromotionItem, removePromotionItem,
     getVouchers, createVoucher, updateVoucher, deleteVoucher,
-    getPromotionReport, getVoucherReport,
-    getEvents, createEvent, updateEvent, deleteEvent
+    getPromotionReport, getVoucherReport
+
 } from '../../services/crm.service';
+
+import {
+    User, Target, Ticket, BarChart3,
+    Plus, Edit, Trash2, ClipboardList,
+    Search, Save, X, Eye, Star, Cart,
+    ShoppingBag, History, FileText, LayoutList
+} from 'lucide-react';
 
 // ─── Hằng số ───────────────────────────────────────────────────────────────
 const TABS = [
-    { key: 'customers', label: <><i className="bi bi-people-fill me-2"></i> Khách hàng</> },
-    { key: 'promotions', label: <><i className="bi bi-percent me-2"></i> Khuyến mãi</> },
-    { key: 'vouchers', label: <><i className="bi bi-ticket-perforated-fill me-2"></i> Voucher</> },
-    { key: 'events', label: <><i className="bi bi-calendar-event-fill me-2"></i> Sự kiện</> },
-    { key: 'report', label: <><i className="bi bi-bar-chart-fill me-2"></i> Báo cáo</> },
+    { key: 'customers', label: <><User size={16} className="me-2" />Khách hàng</> },
+    { key: 'promotions', label: <><Target size={16} className="me-2" />Khuyến mãi</> },
+    { key: 'vouchers', label: <><Ticket size={16} className="me-2" />Voucher</> },
+    { key: 'report', label: <><BarChart3 size={16} className="me-2" />Báo cáo</> },
 ];
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked'];
 const PROMOTION_TYPES = ['Percent', 'Amount', 'BuyXGetY'];
@@ -25,12 +31,7 @@ const PAGE_SIZE = 10;
 const DEFAULT_CUSTOMER = { name: '', phone: '', status: 'Active' };
 const DEFAULT_PROMOTION = { name: '', type: 'Percent', value: '', startDate: '', endDate: '', status: 'Active' };
 const DEFAULT_VOUCHER = { code: '', value: '', type: 'Fixed', minOrderValue: 0, maxUsage: 100, startDate: '', expiryDate: '', status: 'Active' };
-const DEFAULT_EVENT = { name: '', description: '', startTime: '', endTime: '', privilegeType: 'multiplier_points', privilegeValue: 2, minRank: 'None', status: 'Active' };
-const EVENT_PRIVILEGE_TYPES = [
-    { key: 'multiplier_points', label: 'Nhân hệ số điểm' },
-    { key: 'extra_discount', label: 'Giảm giá thêm (%)' },
-    { key: 'free_gift', label: 'Tặng quà đi kèm' }
-];
+
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
@@ -98,12 +99,12 @@ function Pagination({ page, totalPages, onPageChange }) {
     if (!totalPages || totalPages <= 1) return null;
     const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
     return (
-        <div className="crm-pagination">
-            <button className="page-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}><i className="bi bi-chevron-left"></i></button>
+        <div className="crm-pagination d-flex justify-content-center gap-1 mt-3">
+            <button className="page-btn btn btn-sm btn-light border" onClick={() => onPageChange(page - 1)} disabled={page === 1}><i className="bi bi-chevron-left"></i></button>
             {pages.map(p => (
-                <button key={p} className={`page-btn ${p === page ? 'active' : ''}`} onClick={() => onPageChange(p)}>{p}</button>
+                <button key={p} className={`page-btn btn btn-sm ${p === page ? 'btn-primary' : 'btn-light border'}`} onClick={() => onPageChange(p)}>{p}</button>
             ))}
-            <button className="page-btn" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}><i className="bi bi-chevron-right"></i></button>
+            <button className="page-btn btn btn-sm btn-light border" onClick={() => onPageChange(page + 1)} disabled={page === totalPages}><i className="bi bi-chevron-right"></i></button>
         </div>
     );
 }
@@ -126,7 +127,8 @@ function SubTabBar({ tabs, active, onChange }) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  UC3 + UC4: Customer Detail Modal
 // ═══════════════════════════════════════════════════════════════════════════
-function CustomerDetailModal({ customer, onClose }) {
+function CustomerDetailModal({ customer: initialCustomer, onClose, onRefresh }) {
+    const [customer, setCustomer] = useState(initialCustomer);
     const [subTab, setSubTab] = useState('history');
     const [history, setHistory] = useState([]);
     const [histPage, setHistPage] = useState(1);
@@ -158,6 +160,13 @@ function CustomerDetailModal({ customer, onClose }) {
         } catch { } finally { setLogsLoading(false); }
     }, [customer.id, logsPage]);
 
+    const fetchCustomer = useCallback(async () => {
+        try {
+            const res = await getCustomerById(customer.id);
+            if (res?.success) setCustomer(res.data);
+        } catch { }
+    }, [customer.id]);
+
     useEffect(() => { if (subTab === 'history') fetchHistory(); }, [subTab, fetchHistory]);
     useEffect(() => { if (subTab === 'points') fetchLogs(); }, [subTab, fetchLogs]);
 
@@ -169,6 +178,8 @@ function CustomerDetailModal({ customer, onClose }) {
             setAdjMsg(<><i className="bi bi-check-lg me-1"></i> Cập nhật điểm thành công!</>);
             setAdjForm({ pointChange: '', reason: '' });
             fetchLogs();
+            fetchCustomer();
+            if (onRefresh) onRefresh();
         } catch (e) {
             setAdjMsg(<><i className="bi bi-x-circle-fill me-1"></i> {e.response?.data?.message || e.message}</>);
         } finally { setAdjSaving(false); }
@@ -311,7 +322,7 @@ function CustomersTab() {
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
-                        <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Điểm ⭐</th><th>Tổng chi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                        <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Điểm</th><th>Tổng chi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                         <tbody>
                             {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
                                 customers.map(c => (
@@ -322,10 +333,16 @@ function CustomersTab() {
                                         <td>{fmtMoney(c.totalSpending)}</td>
                                         <td><StatusBadge s={c.status} /></td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setDetailTarget(c)}><i className="bi bi-eye"></i></button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={() => setDeleteTarget(c)}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xem chi tiết" style={{ width: 32, height: 32 }} onClick={() => setDetailTarget(c)}>
+                                                    <Eye size={18} className="text-primary" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ name: c.name, phone: c.phone, status: c.status }); setEditTarget(c); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={() => setDeleteTarget(c)}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -347,7 +364,7 @@ function CustomersTab() {
                     </div>
                 </Modal>
             )}
-            {detailTarget && <CustomerDetailModal customer={detailTarget} onClose={() => setDetailTarget(null)} />}
+            {detailTarget && <CustomerDetailModal customer={detailTarget} onClose={() => setDetailTarget(null)} onRefresh={fetchData} />}
             {deleteTarget && <ConfirmDialog message={`Vô hiệu hóa khách hàng "${deleteTarget.name}"?`} onConfirm={async () => { await deleteCustomer(deleteTarget.id); setDeleteTarget(null); fetchData(); }} onCancel={() => setDeleteTarget(null)} />}
             {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
         </>
@@ -385,10 +402,30 @@ function PromotionsTab() {
             return;
         }
 
+        if (form.startDate && form.endDate) {
+            if (new Date(form.startDate) > new Date(form.endDate)) {
+                setAlertMsg("Ngày bắt đầu không được lớn hơn ngày kết thúc!");
+                return;
+            }
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (form.startDate && new Date(form.startDate) < today) {
+            setAlertMsg("Ngày bắt đầu không được ở trong quá khứ!");
+            return;
+        }
+        if (form.endDate && new Date(form.endDate) < today) {
+            setAlertMsg("Ngày kết thúc không được ở trong quá khứ!");
+            return;
+        }
+
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
-            setShowModal(false); fetchData();
+            setShowModal(false);
+            fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
             setAlertMsg(errorText);
@@ -414,10 +451,16 @@ function PromotionsTab() {
                                         <td className="promo-value-cell">{p.type === 'Percent' ? `${p.value}%` : fmtMoney(p.value)}</td>
                                         <td><StatusBadge s={p.status} /></td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon" onClick={() => setItemsTarget(p)}><i className="bi bi-journal-list"></i></button>
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { await deletePromotion(p.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sản phẩm áp dụng" style={{ width: 32, height: 32 }} onClick={() => setItemsTarget(p)}>
+                                                    <LayoutList size={18} className="text-primary" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center edit" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ ...p, startDate: toInputDate(p.startDate), endDate: toInputDate(p.endDate) }); setEditTarget(p); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center del" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => { if (window.confirm('Xóa khuyến mãi này?')) { await deletePromotion(p.id); fetchData(); } }}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -465,23 +508,57 @@ function PromotionItemsManager({ promotionId }) {
     };
 
     return (
-        <div>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <select className="form-input" style={{ width: 140 }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}><option value="product">Sản phẩm (ID)</option><option value="category">Danh mục (ID)</option></select>
-                <input className="form-input" placeholder="Nhập ID..." value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} />
-                <button className="btn-primary" onClick={add}><i className="bi bi-plus-lg me-1"></i> Thêm</button>
+        <div className="promotion-items-manager">
+            <div className="p-3 mb-3 border rounded bg-light d-flex align-items-end gap-3">
+                <div className="flex-grow-1">
+                    <label className="form-label mb-1 fw-bold small text-muted">Loại đối tượng</label>
+                    <select className="form-select shadow-sm" style={{ fontSize: 13 }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                        <option value="product">Sản phẩm (ID)</option>
+                        <option value="category">Danh mục (ID)</option>
+                    </select>
+                </div>
+                <div className="flex-grow-1">
+                    <label className="form-label mb-1 fw-bold small text-muted">Mã định danh (ID)</label>
+                    <div className="input-group shadow-sm">
+                        <span className="input-group-text bg-white"><Search size={16} className="text-muted" /></span>
+                        <input className="form-control" style={{ fontSize: 13 }} placeholder="Nhập ID số..." type="number" value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} />
+                    </div>
+                </div>
+                <button className="btn btn-primary d-flex align-items-center gap-2 px-3 shadow-sm" style={{ height: 38 }} onClick={add}>
+                    <Plus size={18} /> Thêm
+                </button>
             </div>
-            <table className="crm-table">
-                <thead><tr><th>Sản phẩm/Danh mục</th><th>Thao tác</th></tr></thead>
-                <tbody>
-                    {items.map(item => (
-                        <tr key={item.id}>
-                            <td>{item.productName || item.categoryName || `ID: ${item.productId || item.categoryId}`}</td>
-                            <td><button className="btn-icon del" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}><i className="bi bi-trash3"></i></button></td>
+
+            <div className="table-responsive border rounded bg-white">
+                <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                        <tr style={{ fontSize: 12 }}>
+                            <th className="ps-3 py-3">TÊN SẢN PHẨM / DANH MỤC</th>
+                            <th className="text-end pe-4 py-3">THAO TÁC</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {items.length === 0 ? (
+                            <tr><td colSpan="2" className="text-center py-4 text-muted small">Chưa có sản phẩm nào được áp dụng</td></tr>
+                        ) : items.map(item => (
+                            <tr key={item.id}>
+                                <td className="ps-3 py-2">
+                                    {item.productName || item.categoryName ? (
+                                        <div className="fw-semibold text-dark">{item.productName || item.categoryName}</div>
+                                    ) : (
+                                        <span className="badge bg-secondary-subtle text-secondary px-2">Mã ID: {item.productId || item.categoryId}</span>
+                                    )}
+                                </td>
+                                <td className="text-end pe-4 py-2">
+                                    <button className="btn btn-link text-danger p-0" title="Gỡ bỏ" onClick={async () => { await removePromotionItem(promotionId, item.id); fetch(); }}>
+                                        <Trash2 size={18} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
@@ -511,10 +588,35 @@ function VouchersTab() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSave = async () => {
+        if (!form.code || !form.code.trim()) {
+            setAlertMsg("Mã Voucher không được để trống!");
+            return;
+        }
+
+        if (form.startDate && form.expiryDate) {
+            if (new Date(form.startDate) > new Date(form.expiryDate)) {
+                setAlertMsg("Ngày bắt đầu không được lớn hơn ngày hết hạn!");
+                return;
+            }
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (form.startDate && new Date(form.startDate) < today) {
+            setAlertMsg("Ngày bắt đầu không được ở trong quá khứ!");
+            return;
+        }
+        if (form.expiryDate && new Date(form.expiryDate) < today) {
+            setAlertMsg("Ngày hết hạn không được ở trong quá khứ!");
+            return;
+        }
+
         try {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
-            setShowModal(false); fetchData();
+            setShowModal(false);
+            fetchData();
         } catch (e) {
             const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
             setAlertMsg(errorText);
@@ -530,7 +632,7 @@ function VouchersTab() {
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
-                        <thead><tr><th>Mã</th><th>Giá trị</th><th>Đơn tối thiểu</th><th>Sử dụng</th><th>Hết hạn</th><th>Thao tác</th></tr></thead>
+                        <thead><tr><th>Mã</th><th>Giá trị</th><th>Đơn tối thiểu</th><th>Sử dụng</th><th>Hết hạn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                         <tbody>
                             {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
                                 vouchers.map(v => (
@@ -540,10 +642,24 @@ function VouchersTab() {
                                         <td>{fmtMoney(v.minOrderValue)}</td>
                                         <td>{v.currentUsage}/{v.maxUsage}</td>
                                         <td className="text-muted">{fmtDate(v.expiryDate)}</td>
+                                        <td><StatusBadge s={v.status} /></td>
                                         <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { await deleteVoucher(v.id); fetchData(); }}><i className="bi bi-trash3"></i></button>
+                                            <div className="action-btns d-flex gap-2">
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}>
+                                                    <Edit size={18} className="text-muted" />
+                                                </button>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => {
+                                                    if (window.confirm('Vô hiệu hóa voucher này?')) {
+                                                        try {
+                                                            await deleteVoucher(v.id);
+                                                            fetchData();
+                                                        } catch (e) {
+                                                            setAlertMsg(e.response?.data?.message || e.message);
+                                                        }
+                                                    }
+                                                }}>
+                                                    <Trash2 size={18} className="text-danger" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -560,123 +676,14 @@ function VouchersTab() {
                         <div className="form-group"><label>Mã Voucher</label><input className="form-input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} /></div>
                         <div className="form-group"><label>Giá trị</label><input className="form-input" type="number" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} /></div>
                         <div className="form-group"><label>Đơn tối thiểu</label><input className="form-input" type="number" value={form.minOrderValue} onChange={e => setForm({ ...form, minOrderValue: e.target.value })} /></div>
+                        <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
                         <div className="form-group"><label>Ngày hết hạn</label><input className="form-input" type="date" value={form.expiryDate} onChange={e => setForm({ ...form, expiryDate: e.target.value })} /></div>
-                    </div>
-                </Modal>
-            )}
-            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg('')} />}
-        </>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  Events Tab
-// ═══════════════════════════════════════════════════════════════════════════
-function EventsTab() {
-    const [events, setEvents] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
-    const [showModal, setShowModal] = useState(false);
-    const [editTarget, setEditTarget] = useState(null);
-    const [form, setForm] = useState(DEFAULT_EVENT);
-    const [alertMsg, setAlertMsg] = useState('');
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await getEvents({ page, limit: PAGE_SIZE });
-            setEvents(res?.data || []);
-            setTotal(res?.total || 0);
-        } catch { } finally { setLoading(false); }
-    }, [page]);
-
-    useEffect(() => { fetchData(); }, [fetchData]);
-
-    const handleSave = async () => {
-        if (!form.name || !form.name.trim()) {
-            setAlertMsg("Tên sự kiện không được để trống!");
-            return;
-        }
-        try {
-            if (editTarget) await updateEvent(editTarget.id, form);
-            else await createEvent(form);
-            setShowModal(false); fetchData();
-        } catch (e) {
-            const errorText = e.response?.data?.message || e.message || 'Lỗi không xác định';
-            setAlertMsg(errorText);
-        }
-    };
-
-    return (
-        <>
-            <div className="glass-panel">
-                <div className="toolbar">
-                    <span className="total-badge">{total} sự kiện</span>
-                    <button className="btn-primary" onClick={() => { setForm(DEFAULT_EVENT); setEditTarget(null); setShowModal(true); }}><i className="bi bi-plus-lg me-1"></i> Tạo sự kiện mới</button>
-                </div>
-                <div className="crm-table-container">
-                    <table className="crm-table">
-                        <thead><tr><th>Tên sự kiện</th><th>Đặc quyền</th><th>Giá trị</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-                        <tbody>
-                            {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
-                                events.map(ev => (
-                                    <tr key={ev.id}>
-                                        <td><strong>{ev.name}</strong><br /><small className="text-muted">{ev.description}</small></td>
-                                        <td><TypeBadge t={EVENT_PRIVILEGE_TYPES.find(p => p.key === ev.privilegeType)?.label || ev.privilegeType} /></td>
-                                        <td style={{ fontWeight: 700, color: '#facc15' }}>{ev.privilegeValue}{ev.privilegeType === 'extra_discount' ? '%' : 'x'}</td>
-                                        <td className="text-muted" style={{ fontSize: 12 }}>
-                                            {fmtDate(ev.startTime)} - {fmtDate(ev.endTime)}
-                                        </td>
-                                        <td><StatusBadge s={ev.status} /></td>
-                                        <td>
-                                            <div className="action-btns">
-                                                <button className="btn-icon edit" onClick={() => { setForm({ ...ev, startTime: toInputDate(ev.startTime), endTime: toInputDate(ev.endTime) }); setEditTarget(ev); setShowModal(true); }}><i className="bi bi-pencil-square"></i></button>
-                                                <button className="btn-icon del" onClick={async () => { if (window.confirm('Xóa sự kiện này?')) { await deleteEvent(ev.id); fetchData(); } }}><i className="bi bi-trash3"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
-            </div>
-            {showModal && (
-                <Modal title={editTarget ? <><i className="bi bi-pencil-square me-2"></i> Sửa sự kiện</> : <><i className="bi bi-calendar-plus me-2"></i> Tạo sự kiện</>} onClose={() => setShowModal(false)} onSubmit={handleSave} wide>
-                    <div className="form-grid">
-                        <div className="form-group form-full"><label>Tên sự kiện *</label><input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-                        <div className="form-group form-full"><label>Mô tả ngắn</label><textarea className="form-input" style={{ height: 60, paddingTop: 8 }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-                        <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} /></div>
-                        <div className="form-group"><label>Kết thúc</label><input className="form-input" type="date" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} /></div>
-                        <div className="form-group"><label>Loại đặc quyền</label>
-                            <select className="form-input" value={form.privilegeType} onChange={e => setForm({ ...form, privilegeType: e.target.value })}>
-                                {EVENT_PRIVILEGE_TYPES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-                            </select>
-                        </div>
                         <div className="form-group">
-                            <label>
-                                {form.privilegeType === 'extra_discount' ? 'Tỉ lệ giảm giá thêm (%)' :
-                                    form.privilegeType === 'multiplier_points' ? 'Hệ số nhân điểm (lần)' :
-                                        'Tên quà tặng kèm'}
-                            </label>
-                            <input
-                                className="form-input"
-                                type={form.privilegeType === 'free_gift' ? 'text' : 'number'}
-                                value={form.privilegeValue}
-                                onChange={e => setForm({ ...form, privilegeValue: e.target.value })}
-                                placeholder={
-                                    form.privilegeType === 'extra_discount' ? 'Ví dụ: 10 (%)' :
-                                        form.privilegeType === 'multiplier_points' ? 'Ví dụ: 2 (lần)' :
-                                            'Ví dụ: Tặng 1 mũ bảo hiểm cao cấp'
-                                }
-                            />
-                        </div>
-                        <div className="form-group"><label>Trạng thái</label>
+                            <label>Trạng thái</label>
                             <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                                <option value="Active">Hoạt động</option>
-                                <option value="Inactive">Tạm dừng</option>
+                                <option value="Active">Active</option>
+                                <option value="Expired">Expired</option>
+                                <option value="Disabled">Disabled</option>
                             </select>
                         </div>
                     </div>
@@ -686,6 +693,8 @@ function EventsTab() {
         </>
     );
 }
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Report Tab
@@ -755,7 +764,7 @@ const CRMPage = () => {
                 {activeTab === 'customers' && <CustomersTab />}
                 {activeTab === 'promotions' && <PromotionsTab />}
                 {activeTab === 'vouchers' && <VouchersTab />}
-                {activeTab === 'events' && <EventsTab />}
+
                 {activeTab === 'report' && <ReportTab />}
             </main>
         </div>

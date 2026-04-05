@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import BaseModal from '../../../components/common/BaseModal';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
-import api from '../../../services/axiosInstance';
+import { toggleStaffStatus } from '../../../services/Staff/staff.service';
 const StaffToggleModal = ({ staff, onClose, onSuccess }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const { showNotification } = useNotification();
@@ -12,11 +12,11 @@ const StaffToggleModal = ({ staff, onClose, onSuccess }) => {
         setIsUpdating(true);
         try {
             const newStatus = isActive ? 'locked' : 'active';
-            const res = await api.put(`/staff/toggle-status`, {
+            const res = await toggleStaffStatus({
                 id: staff.id,
                 isActive: newStatus
             });
-            if (res.data.success) {
+            if (res?.success) {
                 showNotification(
                     `Đã ${isActive ? 'vô hiệu hóa' : 'kích hoạt'} tài khoản ${staff.fullName}!`,
                     isActive ? 'warning' : 'success'

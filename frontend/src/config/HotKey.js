@@ -1,5 +1,5 @@
 export const POS_HOTKEYS = {
-    OPEN_PAYMENT: "f1",
+    OPEN_PAYMENT: "f10",
     FOCUS_PRODUCT_SEARCH: "f3",
     NEW_INVOICE_TAB: "f4",
     CLEAR_ACTIVE_ITEM: "escape",

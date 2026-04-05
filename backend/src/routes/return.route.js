@@ -4,11 +4,11 @@ const { protect } = require("../middlewares/helperPermission.middleware");
 const PERMISSIONS = require("../constants/permissions");
 const returnController = require("../controllers/return.controller")
 
-router.get("/", protect(PERMISSIONS.VIEW_PRODUCT), returnController.getReturns)
-router.post("/", protect(PERMISSIONS.VIEW_PRODUCT), returnController.createReturn)
-router.patch("/:id/approve", protect(PERMISSIONS.VIEW_PRODUCT), returnController.approveReturn);
-router.patch("/:id/reject", protect(PERMISSIONS.VIEW_PRODUCT), returnController.rejectReturn);
-router.patch("/:id/restock", returnController.restockReturn);
-router.get("/:id", returnController.getReturnDetail);
+router.get("/", protect(PERMISSIONS.VIEW_RETURN), returnController.getReturns)
+router.post("/", protect(PERMISSIONS.CREATE_RETURN), returnController.createReturn)
+router.patch("/:id/approve", protect(PERMISSIONS.APPROVE_RETURN), returnController.approveReturn);
+router.patch("/:id/reject", protect(PERMISSIONS.APPROVE_RETURN), returnController.rejectReturn);
+router.patch("/:id/restock", protect(PERMISSIONS.ADJUST_STOCK), returnController.restockReturn);
+router.get("/:id", protect(PERMISSIONS.VIEW_RETURN), returnController.getReturnDetail);
 
 module.exports = router;

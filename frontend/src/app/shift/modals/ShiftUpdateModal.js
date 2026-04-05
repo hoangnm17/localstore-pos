@@ -33,7 +33,7 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
       alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [errorMsg]);
-const getDiff = (m1, m2) => {
+  const getDiff = (m1, m2) => {
     let d = m1 - m2;
     if (d < -720) d += 1440;
     if (d > 720) d -= 1440;
@@ -50,12 +50,18 @@ const getDiff = (m1, m2) => {
     if (!form.endTime) e.endTime = 'Chọn giờ kết thúc!';
 
     if (form.startTime && form.endTime) {
-      let duration = toMins(form.endTime) - toMins(form.startTime);
-      if (duration < 0) duration += 1440; 
+      const startM = toMins(form.startTime);
+      const endM = toMins(form.endTime);
+      let duration = endM - startM;
+      if (duration < 0) duration += 1440;
 
-      if (duration === 0) e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
-      else if (duration < 30) e.endTime = 'Ca làm tối thiểu 30 phút!';
-      else if (duration > 600) e.endTime = 'Ca làm tối đa 10 giờ!';
+      if (duration === 0) {
+        e.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu!';
+      } else if (duration < 5) {
+        e.endTime = 'Ca làm việc tối thiểu 5 phút!';
+      } else if (duration > 600) {
+        e.endTime = 'Ca làm việc tối đa 10 giờ! (Hiện tại: ' + (duration / 60).toFixed(1) + 'h)';
+      }
     }
 
     const hasCheckIn = form.checkInStart || form.checkInEnd;
@@ -63,30 +69,37 @@ const getDiff = (m1, m2) => {
       if (!form.checkInStart) e.checkInStart = 'Nhập giờ bắt đầu nhận chấm công!';
       if (!form.checkInEnd) e.checkInEnd = 'Nhập deadline chấm công!';
 
-      if (form.checkInStart && form.checkInEnd && form.startTime && form.endTime) {
+      if (form.checkInStart && form.checkInEnd && form.startTime) {
         const startM = toMins(form.startTime);
-        const endM = toMins(form.endTime);
         const checkInSM = toMins(form.checkInStart);
         const checkInEM = toMins(form.checkInEnd);
 
-        if (getDiff(checkInEM, checkInSM) <= 0)
+        let checkInRange = checkInEM - checkInSM;
+        if (checkInRange < 0) checkInRange += 1440;
+
+        if (checkInRange <= 0)
           e.checkInEnd = 'Deadline phải sau giờ bắt đầu nhận chấm công!';
-        if (getDiff(checkInSM, startM) < -30)
-          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
-        if (getDiff(checkInEM, endM) > 30)
-          e.checkInEnd = 'Không được muộn hơn giờ kết thúc ca quá 30 phút!';
+
+        const earlyMins = getDiff(startM, checkInSM);
+        if (earlyMins > 5)
+          e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 5 phút!';
+
+        const lateMins = getDiff(checkInEM, startM);
+        if (lateMins > 5)
+          e.checkInEnd = 'Deadline không được trễ hơn giờ bắt đầu ca quá 5 phút!';
       }
     }
 
-    if (form.checkOutDeadline && form.startTime && form.endTime) {
-      const checkOutM = toMins(form.checkOutDeadline);
-      const startM = toMins(form.startTime);
+    if (form.checkOutDeadline && form.endTime) {
       const endM = toMins(form.endTime);
-      
-      if (getDiff(checkOutM, startM) <= 0)
-        e.checkOutDeadline = 'Thời gian kết ca phải sau giờ bắt đầu ca!';
-      if (getDiff(checkOutM, endM) > 30)
-        e.checkOutDeadline = 'Thời gian kết ca không được trễ hơn giờ kết thúc quá 30 phút!';
+      const checkOutM = toMins(form.checkOutDeadline);
+
+      const lateMins = getDiff(checkOutM, endM);
+
+      if (lateMins < 0)
+        e.checkOutDeadline = 'Giờ phải logout phải sau hoặc bằng giờ kết thúc ca!';
+      else if (lateMins > 5)
+        e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 5 phút!';
     }
 
     setErrors(e);
@@ -101,12 +114,12 @@ const getDiff = (m1, m2) => {
 
       if (name === 'startTime' && value) {
         const startMins = toMins(value);
-        updated.checkInStart = fromMins(startMins - 5);
-        updated.checkInEnd = fromMins(startMins - 5 + 10);
+        updated.checkInStart = fromMins(startMins - 2);
+        updated.checkInEnd = fromMins(startMins - 2 + 4);
       }
 
       if (name === 'checkInStart' && value) {
-        updated.checkInEnd = fromMins(toMins(value) + 10);
+        updated.checkInEnd = fromMins(toMins(value) + 2);
       }
 
       return updated;
@@ -118,14 +131,28 @@ const getDiff = (m1, m2) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const isChanged =
+      form.name !== (shift.name || '') ||
+      form.startTime !== (shift.startTime || '') ||
+      form.endTime !== (shift.endTime || '') ||
+      form.checkInStart !== (shift.checkInStart || '') ||
+      form.checkInEnd !== (shift.checkInEnd || '') ||
+      form.checkOutDeadline !== (shift.checkOutDeadline || '');
+
+    if (!isChanged) {
+      setErrorMsg('Bạn chưa chỉnh sửa thông tin nào!');
+      return;
+    }
+
     if (!validate()) return;
     setLoading(true);
     setErrorMsg('');
     try {
       const payload = {
         ...form,
-        checkInStart:     form.checkInStart     || null,
-        checkInEnd:       form.checkInEnd       || null,
+        checkInStart: form.checkInStart || null,
+        checkInEnd: form.checkInEnd || null,
         checkOutDeadline: form.checkOutDeadline || null,
       };
       const res = await api.put(`/shifts/${shift.id}`, payload);
@@ -191,8 +218,8 @@ const getDiff = (m1, m2) => {
             <div className="mb-3">
               <label className="small fw-bold">Tên ca <span className="text-danger">*</span></label>
               <input type="text" name="name"
-                className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
-                value={form.name} onChange={handleChange} />
+                className="form-control form-control-sm bg-light text-muted"
+                value={form.name} disabled />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
 
@@ -205,15 +232,15 @@ const getDiff = (m1, m2) => {
                 <div className="col-6">
                   <label className="small fw-bold">Giờ bắt đầu <span className="text-danger">*</span></label>
                   <input type="time" name="startTime"
-                    className={`form-control form-control-sm ${errors.startTime ? 'is-invalid' : ''}`}
-                    value={form.startTime} onChange={handleChange} />
+                    className="form-control form-control-sm bg-light text-muted"
+                    value={form.startTime} disabled />
                   {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
                 </div>
                 <div className="col-6">
                   <label className="small fw-bold">Giờ kết thúc <span className="text-danger">*</span></label>
                   <input type="time" name="endTime"
-                    className={`form-control form-control-sm ${errors.endTime ? 'is-invalid' : ''}`}
-                    value={form.endTime} onChange={handleChange} />
+                    className="form-control form-control-sm bg-light text-muted"
+                    value={form.endTime} disabled />
                   {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
                 </div>
               </div>
@@ -246,7 +273,7 @@ const getDiff = (m1, m2) => {
               </div>
             </div>
 
-            {/* Thời gian kết ca (logout) */}
+            {/* Thời gian kết ca */}
             <div style={{ background: '#fff7ed', borderRadius: '10px', padding: '14px 16px', border: '1px solid #fed7aa' }}>
               <div className="fw-bold mb-1" style={{ color: '#ea580c', fontSize: '0.85rem' }}>
                 <i className="bi bi-box-arrow-right me-2" />Thời Gian Kết Ca

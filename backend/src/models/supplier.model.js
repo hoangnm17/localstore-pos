@@ -1,5 +1,30 @@
 const { sql, connectDB } = require("../config/database.js");
 
+const checkDuplicateSupplier = async (name, contactInfo, address, excludeId = null) => {
+    const pool = await connectDB();
+    const request = pool.request();
+
+    request.input("name", sql.NVarChar, name);
+    request.input("contactInfo", sql.NVarChar, contactInfo || null);
+    request.input("address", sql.NVarChar, address || null);
+
+    let query = `
+        SELECT id FROM Suppliers
+        WHERE LOWER(name) = LOWER(@name)
+        OR ISNULL(contactInfo, '') = ISNULL(@contactInfo, '')
+        OR ISNULL(address, '') = ISNULL(@address, '')
+    `;
+
+    if (excludeId) {
+        query += " AND id != @excludeId";
+        request.input("excludeId", sql.Int, excludeId);
+    }
+
+    const result = await request.query(query);
+
+    return result.recordset.length > 0;
+};
+
 const getList = async ({
     search
 }) => {
@@ -101,7 +126,6 @@ const getProductsNotInSupplier = async (supplierId, search) => {
             AND (
                 p.name LIKE @search
                 OR p.code LIKE @search
-                OR p.barcode LIKE @search
             )
         `;
         request.input("search", sql.NVarChar, `%${search}%`);
@@ -111,8 +135,7 @@ const getProductsNotInSupplier = async (supplierId, search) => {
         SELECT 
             p.id,
             p.name,
-            p.code,
-            p.barcode
+            p.code
         FROM Products p
         ${whereClause}
         ORDER BY p.name ASC
@@ -134,7 +157,7 @@ const getUnitsByProductId = async (productId) => {
                 unitName,
                 unitType,
                 conversionFactor,
-                price,
+                salePrice,
                 barcode
             FROM ProductUnits
             WHERE productId = @productId
@@ -344,5 +367,6 @@ module.exports = {
     getUnitsByProductId,
     updateProductOfSupplierPrice,
     updateProductSupplierStatus,
-    getPriceHistoryDetail
+    getPriceHistoryDetail,
+    checkDuplicateSupplier
 };

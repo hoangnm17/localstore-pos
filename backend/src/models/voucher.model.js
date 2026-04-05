@@ -30,6 +30,7 @@ const validateFields = (data, isUpdate = false) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0); // Chỉ so sánh ngày, không cần giờ phút giây
 
+    /*
     if (startDate) {
         if (isNaN(Date.parse(startDate))) {
             throw new Error('Ngày bắt đầu không đúng định dạng');
@@ -51,6 +52,7 @@ const validateFields = (data, isUpdate = false) => {
             throw new Error('Ngày hết hạn không được ở trong quá khứ');
         }
     }
+    */
 
     // 4. Logic so sánh ngày
     if (startDate && expiryDate && !isNaN(Date.parse(startDate)) && !isNaN(Date.parse(expiryDate))) {

@@ -1,7 +1,6 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
 
-// Lấy lịch cá nhân
 module.exports.getMySchedule = async (staffId, startDate, endDate) => {
     const pool = await connectDB();
     const result = await pool.request()
@@ -9,65 +8,44 @@ module.exports.getMySchedule = async (staffId, startDate, endDate) => {
         .input('startDate', sql.Date, startDate)
         .input('endDate', sql.Date, endDate)
         .query(`
-            SELECT 
-                ws.id as scheduleId, ws.workDate, ws.status as scheduleStatus,
-                sh.id as shiftId, 
-                
-                -- LOGIC: Nếu <= Hôm nay thì giữ giờ cũ (snapshot). Nếu tương lai thì lấy giờ mới 
-                CASE 
-                    WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
-                    THEN ISNULL(ws.snapshotShiftName, sh.name)
-                    ELSE ISNULL(sh.name, ws.snapshotShiftName) 
-                END as shiftName, 
-                
-                CONVERT(VARCHAR(5), 
-                    CASE 
-                        WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
-                        THEN ISNULL(ws.snapshotStartTime, sh.startTime)
-                        ELSE ISNULL(sh.startTime, ws.snapshotStartTime) 
-                    END, 108) as startTime,
-                    
-                CONVERT(VARCHAR(5), 
-                    CASE 
-                        WHEN ws.workDate <= CAST(DATEADD(hour, 7, GETUTCDATE()) AS DATE) 
-                        THEN ISNULL(ws.snapshotEndTime, sh.endTime)
-                        ELSE ISNULL(sh.endTime, ws.snapshotEndTime) 
-                    END, 108) as endTime,
-                    
-                c.counterName, c.counterCode,
+            SELECT
+                ws.id as scheduleId, 
+                CONVERT(VARCHAR(10), ws.workDate, 120) as workDate,
+                ws.status as scheduleStatus,
+                sh.id as shiftId, sh.name as shiftName,
+                CONVERT(VARCHAR(5), sh.startTime, 108) as startTime,
+                CONVERT(VARCHAR(5), sh.endTime, 108) as endTime,
                 ch.id as handoverId
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            LEFT JOIN Counters c ON ws.counterId = c.id
             LEFT JOIN CashHandovers ch ON ws.id = ch.scheduleId
-            WHERE ws.staffId = @staffId 
+            WHERE ws.staffId = @staffId
               AND ws.workDate BETWEEN @startDate AND @endDate
-            ORDER BY ws.workDate ASC, startTime ASC
+            ORDER BY ws.workDate ASC, sh.startTime ASC
         `);
     return result.recordset;
 };
 
-// Lấy danh sách các ca CẦN KẾT CA trong ngày 
+
 module.exports.getPendingHandovers = async (staffId, workDate) => {
     const pool = await connectDB();
     const result = await pool.request()
         .input('staffId', sql.BigInt, staffId)
         .input('workDate', sql.Date, workDate)
         .query(`
-            SELECT 
-                ws.id as scheduleId, ISNULL(sh.name, ws.snapshotShiftName) as shiftName, 
-                CONVERT(VARCHAR(5), ISNULL(sh.startTime, ws.snapshotStartTime), 108) as startTime,
-                CONVERT(VARCHAR(5), ISNULL(sh.endTime, ws.snapshotEndTime), 108) as endTime,
-                c.counterName
+            SELECT
+                ws.id as scheduleId,
+                sh.name as shiftName,
+                CONVERT(VARCHAR(5), sh.startTime, 108) as startTime,
+                CONVERT(VARCHAR(5), sh.endTime, 108) as endTime,
+                ISNULL(ch.openingCash, 0) as openingCash
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            LEFT JOIN Counters c ON ws.counterId = c.id
             LEFT JOIN CashHandovers ch ON ws.id = ch.scheduleId
-            WHERE ws.staffId = @staffId 
-              AND ws.workDate = @workDate 
-              AND ch.id IS NULL -- Điều kiện: Ca này chưa có bản ghi bàn giao
-              AND ws.counterId IS NOT NULL 
-            ORDER BY startTime ASC
+            WHERE ws.staffId = @staffId
+              AND ws.workDate = @workDate
+              AND ws.status = 'working'
+            ORDER BY sh.startTime ASC
         `);
     return result.recordset;
 };
@@ -75,43 +53,71 @@ module.exports.getPendingHandovers = async (staffId, workDate) => {
 module.exports.getSystemCash = async (staffId, scheduleId) => {
     const pool = await connectDB();
 
-    const sched = await pool.request()
-        .input('id', sql.Int, scheduleId)
+    const result = await pool.request()
+        .input('scheduleId', sql.Int, scheduleId)
         .input('staffId', sql.BigInt, staffId)
         .query(`
-            SELECT ws.workDate, ws.counterId, 
-                   ISNULL(sh.startTime, ws.snapshotStartTime) as startTime, 
-                   ISNULL(sh.endTime, ws.snapshotEndTime) as endTime
+            -- 1. Xác định khung giờ làm việc thực tế (từ lúc Check-in đến lúc kết ca)
+            DECLARE @startTime DATETIME, @endTime DATETIME, @endTimeStr VARCHAR(5), @startTimeStr VARCHAR(5), @logoutDeadlineStr VARCHAR(5), @curPenalty DECIMAL(15,2), @curRecord NVARCHAR(255);
+            SELECT 
+                @startTime = ISNULL(ws.checkInTime, CAST(ws.workDate AS DATETIME)), 
+                @endTime   = ISNULL(ws.checkOutTime, DATEADD(hour, 7, GETUTCDATE())),
+                @endTimeStr = CONVERT(VARCHAR(5), sh.endTime, 108),
+                @startTimeStr = CONVERT(VARCHAR(5), sh.startTime, 108),
+                @logoutDeadlineStr = CONVERT(VARCHAR(5), sh.checkOutDeadline, 108),
+                @curPenalty = ISNULL(ws.penaltyAmount, 0),
+                @curRecord = ISNULL(ws.attendanceRecord, '')
             FROM WorkSchedules ws
             LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-            WHERE ws.id = @id AND ws.staffId = @staffId
+            WHERE ws.id = @scheduleId;
+
+            -- 2. Tính tổng hợp các loại tiền mặt
+            DECLARE @opening DECIMAL(15,2) = ISNULL((SELECT openingCash FROM CashHandovers WHERE scheduleId = @scheduleId), 0);
+            
+            DECLARE @sales   DECIMAL(15,2) = ISNULL((
+                SELECT SUM(p.amount) FROM Invoices i JOIN Payments p ON i.id = p.invoiceId
+                WHERE i.staffId = @staffId AND p.paymentMethod = 'CASH' AND p.status = 'SUCCESS'
+                  AND i.createdAt >= @startTime AND i.createdAt <= @endTime
+            ), 0);
+
+            DECLARE @refund  DECIMAL(15,2) = ISNULL((
+                SELECT SUM(r.totalRefundAmount) 
+                FROM Returns r
+                LEFT JOIN Invoices i ON r.invoiceId = i.id
+                WHERE (r.staffId = @staffId OR i.staffId = @staffId)
+                  AND r.refundMethod = 'CASH' 
+                  AND r.status IN ('Approve', 'APPROVED')
+                  AND r.createdAt >= @startTime AND r.createdAt <= @endTime
+            ), 0);
+
+            -- 3. Trả về kết quả tổng hợp
+            SELECT 
+                @opening AS openingCash, 
+                @sales   AS salesCash, 
+                @refund  AS returnCash, 
+                (@sales - @refund) AS netSystemCash, -- Sửa: Không cộng opening vào Net nữa
+                @endTimeStr AS endTimeStr,
+                @startTimeStr AS startTimeStr,
+                @logoutDeadlineStr AS logoutDeadlineStr,
+                @curPenalty AS currentPenalty,
+                @curRecord AS currentRecord;
         `);
 
-    if (sched.recordset.length === 0) throw new Error("Không tìm thấy ca làm việc!");
-    const { workDate, counterId, startTime, endTime } = sched.recordset[0];
-
-    const startDT = `${workDate.toISOString().split('T')[0]}T${startTime.toISOString().split('T')[1]}`;
-    const endDT = `${workDate.toISOString().split('T')[0]}T${endTime.toISOString().split('T')[1]}`;
-
-    const result = await pool.request()
-        .input('staffId', sql.BigInt, staffId)
-        .input('counterId', sql.BigInt, counterId)
-        .input('startDT', sql.DateTime2, startDT)
-        .input('endDT', sql.DateTime2, endDT)
-        .query(`
-            SELECT ISNULL(SUM(p.amount), 0) as systemCash
-            FROM Invoices i
-            JOIN Payments p ON i.id = p.invoiceId
-            WHERE i.staffId = @staffId 
-              AND i.counterId = @counterId
-              AND i.createdAt BETWEEN @startDT AND @endDT
-              AND p.paymentMethod = 'CASH' 
-              AND p.status = 'SUCCESS'
-        `);
-    return result.recordset[0].systemCash;
+    const row = result.recordset[0];
+    return {
+        openingCash: row?.openingCash || 0,
+        salesCash: row?.salesCash || 0,
+        returnCash: row?.returnCash || 0,
+        netSystemCash: row?.netSystemCash || 0,
+        endTimeStr: row?.endTimeStr,
+        startTimeStr: row?.startTimeStr,
+        logoutDeadlineStr: row?.logoutDeadlineStr,
+        currentPenalty: row?.currentPenalty || 0,
+        currentRecord: row?.currentRecord || ''
+    };
 };
 
-module.exports.createHandover = async (data) => {
+module.exports.createHandoverSimple = async (data) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
     try {
@@ -125,17 +131,25 @@ module.exports.createHandover = async (data) => {
             .input('actualCash', sql.Decimal(15, 2), data.actualCash)
             .input('note', sql.NVarChar(sql.MAX), data.note || '')
             .query(`
-                INSERT INTO CashHandovers (scheduleId, openingCash, systemCash, actualCash, note)
-                VALUES (@scheduleId, @openingCash, @systemCash, @actualCash, @note)
+                UPDATE CashHandovers
+                SET openingCash = @openingCash,
+                    systemCash = @systemCash,
+                    actualCash = @actualCash,
+                    note = @note,
+                    handoverTime = DATEADD(hour, 7, GETUTCDATE())
+                WHERE scheduleId = @scheduleId
             `);
 
         await request
-            .input('schedId', sql.Int, data.scheduleId)
-            .input('now', sql.DateTime2, new Date())
+            .input('updatedRecord', sql.NVarChar(255), data.updatedRecord)
+            .input('updatedPenalty', sql.Decimal(15, 2), data.updatedPenalty)
             .query(`
                 UPDATE WorkSchedules 
-                SET status = 'completed', checkOutTime = @now 
-                WHERE id = @schedId
+                SET status = 'completed', 
+                    checkOutTime = DATEADD(hour, 7, GETUTCDATE()),
+                    attendanceRecord = @updatedRecord,
+                    penaltyAmount = @updatedPenalty 
+                WHERE id = @scheduleId;
             `);
 
         await transaction.commit();
@@ -145,46 +159,51 @@ module.exports.createHandover = async (data) => {
         throw err;
     }
 };
-module.exports.getHandoverReport = async (
-    { fromDate, toDate, counterId, staffId, page, pageSize, role, staffName, shiftName }) => {
-    const pool = await connectDB();
-    const offset = (page - 1) * pageSize;
 
-    let whereClause = 'WHERE 1=1';
+function buildHandoverFilter(pool, filters) {
+    const { fromDate, toDate, staffId, role, staffName, shiftName } = filters;
     const request = pool.request();
 
+    let where = "WHERE ws.status = 'completed'";
+
     if (fromDate) {
-        whereClause += ' AND CAST(ch.handoverTime AS DATE) >= @fromDate';
+        where += ' AND CAST(ch.handoverTime AS DATE) >= @fromDate';
         request.input('fromDate', sql.Date, fromDate);
     }
     if (toDate) {
-        whereClause += ' AND CAST(ch.handoverTime AS DATE) <= @toDate';
+        where += ' AND CAST(ch.handoverTime AS DATE) <= @toDate';
         request.input('toDate', sql.Date, toDate);
     }
-    if (counterId) {
-        whereClause += ' AND ws.counterId = @counterId';
-        request.input('counterId', sql.BigInt, counterId);
-    }
     if (staffId) {
-        whereClause += ' AND ws.staffId = @staffId';
+        where += ' AND ws.staffId = @staffId';
         request.input('staffId', sql.BigInt, staffId);
     }
     if (role) {
-        whereClause += ' AND r.name = @roleName';
+        where += ' AND r.name = @roleName';
         request.input('roleName', sql.NVarChar(50), role);
     }
     if (staffName) {
-        whereClause += ' AND s.fullName LIKE @staffName';
+        where += ' AND s.fullName LIKE @staffName';
         request.input('staffName', sql.NVarChar(100), `%${staffName}%`);
     }
     if (shiftName) {
-        whereClause += ' AND (ISNULL(ws.snapshotShiftName, sh.name) LIKE @shiftName)';
+        where += ' AND sh.name LIKE @shiftName';
         request.input('shiftName', sql.NVarChar(100), `%${shiftName}%`);
     }
-    request.input('offset', sql.Int, offset);
-    request.input('pageSize', sql.Int, pageSize);
 
-    const batchQuery = `
+    return { request, where };
+}
+
+module.exports.getHandoverReport = async ({ fromDate, toDate, staffId, page, pageSize, role, staffName, shiftName }) => {
+    const pool = await connectDB();
+    const offset = (page - 1) * pageSize;
+    const filters = { fromDate, toDate, staffId, role, staffName, shiftName };
+    // Lấy danh sách bàn giao
+    const q1 = buildHandoverFilter(pool, filters);
+    q1.request.input('offset', sql.Int, offset);
+    q1.request.input('pageSize', sql.Int, pageSize);
+
+    const listResult = await q1.request.query(`
         SELECT
             ch.id AS handoverId,
             ch.handoverTime,
@@ -193,38 +212,50 @@ module.exports.getHandoverReport = async (
             ch.actualCash,
             ch.difference,
             ch.note,
+            (SELECT ISNULL(SUM(ret.totalRefundAmount), 0)
+             FROM Returns ret
+             INNER JOIN Invoices inv ON ret.invoiceId = inv.id
+             WHERE (ret.staffId = s.id OR inv.staffId = s.id)
+               AND ret.refundMethod = 'CASH' 
+               AND ret.status IN ('Approve', 'APPROVED')
+               AND ret.createdAt >= ws.checkInTime 
+               AND ret.createdAt <= ISNULL(ws.checkOutTime, ch.handoverTime)
+            ) AS returnCash,
             s.id AS staffId,
             s.fullName AS cashierName,
             r.name AS roleName,
-            co.id AS counterId,
-            co.counterName,
-            co.counterCode,
             ws.workDate,
             ws.id AS scheduleId,
-            CONVERT(VARCHAR(5), ISNULL(ws.snapshotStartTime, sh.startTime), 108) AS shiftStart,
-            CONVERT(VARCHAR(5), ISNULL(ws.snapshotEndTime, sh.endTime), 108) AS shiftEnd,
-            ISNULL(ws.snapshotShiftName, sh.name) AS shiftName
+            CONVERT(VARCHAR(5), sh.startTime, 108) AS shiftStart,
+            CONVERT(VARCHAR(5), sh.endTime, 108) AS shiftEnd,
+            sh.name AS shiftName
+        FROM CashHandovers ch
+        JOIN WorkSchedules ws ON ch.scheduleId = ws.id
+        JOIN Staff s ON ws.staffId  = s.id
+        JOIN Users u ON s.userId = u.id
+        JOIN Roles r ON u.roleId = r.id
+        LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+        ${q1.where}
+        ORDER BY ch.handoverTime DESC
+        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+    `);
+
+    //  Đếm tổng số dòng (dùng để tính số trang)
+    const q2 = buildHandoverFilter(pool, filters);
+    const countResult = await q2.request.query(`
+        SELECT COUNT(*) AS total
         FROM CashHandovers ch
         JOIN WorkSchedules ws ON ch.scheduleId = ws.id
         JOIN Staff s ON ws.staffId = s.id
         JOIN Users u ON s.userId = u.id
         JOIN Roles r ON u.roleId = r.id
-        LEFT JOIN Counters co ON ws.counterId = co.id
         LEFT JOIN Shifts sh ON ws.shiftId = sh.id
-        ${whereClause}
-        ORDER BY ch.handoverTime DESC
-        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
+        ${q2.where}
+    `);
 
-        SELECT COUNT(*) AS total
-        FROM CashHandovers ch
-        JOIN WorkSchedules ws ON ch.scheduleId = ws.id
-        JOIN Staff s ON ws.staffId = s.id
-        JOIN Users u ON s.userId = u.id     
-        JOIN Roles r ON u.roleId = r.id      
-        LEFT JOIN Counters co ON ws.counterId = co.id
-        LEFT JOIN Shifts sh ON ws.shiftId = sh.id  
-        ${whereClause};
-
+    //  Tính tổng hợp (số ca, tổng tiền, chênh lệch) 
+    const q3 = buildHandoverFilter(pool, filters);
+    const summaryResult = await q3.request.query(`
         SELECT
             COUNT(*) AS totalSessions,
             ISNULL(SUM(ch.systemCash), 0) AS totalSystemCash,
@@ -233,18 +264,54 @@ module.exports.getHandoverReport = async (
         FROM CashHandovers ch
         JOIN WorkSchedules ws ON ch.scheduleId = ws.id
         JOIN Staff s ON ws.staffId = s.id
-        JOIN Users u ON s.userId = u.id      
-        JOIN Roles r ON u.roleId = r.id      
-        LEFT JOIN Counters co ON ws.counterId = co.id
-        LEFT JOIN Shifts sh ON ws.shiftId = sh.id  
-        ${whereClause};
-    `;
-
-    const result = await request.query(batchQuery);
+        JOIN Users u ON s.userId = u.id
+        JOIN Roles r ON u.roleId  = r.id
+        LEFT JOIN Shifts sh ON ws.shiftId = sh.id
+        ${q3.where}
+    `);
 
     return {
-        data: result.recordsets[0],
-        total: result.recordsets[1][0].total,
-        summary: result.recordsets[2][0],
+        data: listResult.recordset,
+        total: countResult.recordset[0].total,
+        summary: summaryResult.recordset[0],
     };
+};
+
+module.exports.getDailyAuditStatus = async (workDate) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('workDate', sql.Date, workDate)
+        .query(`
+            SELECT 
+                COUNT(*) as totalShifts,
+                ISNULL(SUM(CASE WHEN ws.status = 'completed' THEN 1 ELSE 0 END), 0) as completedShifts,
+                ISNULL(SUM(CASE WHEN ws.status IN ('assigned', 'working') THEN 1 ELSE 0 END), 0) as pendingShifts
+            FROM WorkSchedules ws
+            JOIN Staff s ON ws.staffId = s.id
+            JOIN Users u ON s.userId = u.id
+            JOIN Roles r ON u.roleId = r.id
+            WHERE ws.workDate = @workDate
+              AND r.name = 'Cashier'
+        `);
+    return result.recordset[0];
+};
+
+module.exports.getScheduleTimes = async (scheduleId) => {
+    const pool = await connectDB();
+    const result = await pool.request()
+        .input('scheduleId', sql.Int, scheduleId)
+        .query(`
+            SELECT 
+                CONVERT(VARCHAR(10), ws.workDate, 120) as dateStr,
+                CONVERT(VARCHAR(5), sh.startTime, 108) as startStr,
+                CONVERT(VARCHAR(5), sh.endTime, 108) as endStr,
+                CONVERT(VARCHAR(5), ISNULL(sh.checkOutDeadline, sh.endTime), 108) as deadlineStr,
+                ws.attendanceRecord,
+                ISNULL(ws.penaltyAmount, 0) as penaltyAmount
+            FROM WorkSchedules ws
+            JOIN Shifts sh ON ws.shiftId = sh.id
+            WHERE ws.id = @scheduleId
+        `);
+
+    return result.recordset[0] || null;
 };

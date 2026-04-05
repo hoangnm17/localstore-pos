@@ -2,14 +2,18 @@ import { useEffect, useState, useCallback } from "react";
 import api from "services/axiosInstance";
 import { formatCurrency } from "utils/formatters";
 import ReturnDetail from "./ReturnDetail";
+import useTitle from "hooks/common/useTitle";
+import { getReturn } from "services/Return/return.service";
+import 'style/Return/Return.css'
 
 const STATUS_OPTIONS = [
-  { label: "Đang chờ", value: "Pending", color: "warning" },
-  { label: "Đã duyệt", value: "Approve", color: "success" },
-  { label: "Đã từ chối", value: "Reject", color: "danger" },
+  { label: "Đang chờ", value: "Pending", color: "#f59e0b", bg: "#fffbeb", icon: "bi-hourglass-split" },
+  { label: "Đã duyệt", value: "Approve", color: "#10b981", bg: "#ecfdf5", icon: "bi-check-all" },
+  { label: "Đã từ chối", value: "Reject", color: "#ef4444", bg: "#fef2f2", icon: "bi-x-circle" },
 ];
 
 export default function ReturnList() {
+  useTitle("Danh sách hoàn hàng");
   const [returns, setReturns] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,8 +25,8 @@ export default function ReturnList() {
   const fetchReturns = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/returns", { params: { status: filterStatus } });
-      setReturns(res.data.data || []);
+      const res = await getReturn({ status: filterStatus });
+      setReturns(res.data || []);
     } catch (err) {
       console.error("Lỗi fetch:", err);
     } finally {
@@ -33,76 +37,121 @@ export default function ReturnList() {
   useEffect(() => { fetchReturns(); }, [fetchReturns]);
 
   return (
-    <div className="card shadow-sm border-0 rounded-4 p-3">
-      <div className="d-flex justify-content-between align-items-center mb-4 px-2">
-        <h4 className="fw-bold mb-0 text-primary">Quản lý hàng hoàn</h4>
-        <div className="btn-group p-1 bg-light rounded-pill">
+    <div className="modern-return-container p-4">
+      {/* HEADER SECTION */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h3 className="fw-bold text-dark m-0">Quản lý hàng hoàn</h3>
+          <p className="text-muted small m-0">Theo dõi và xử lý các yêu cầu hoàn tiền từ khách hàng</p>
+        </div>
+
+        <div className="filter-pill-box">
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              className={`btn btn-sm px-4 rounded-pill border-0 transition-all ${filterStatus === opt.value ? `bg-white shadow-sm fw-bold text-${opt.color}` : "text-muted"
-                }`}
+              className={`filter-pill ${filterStatus === opt.value ? "active" : ""}`}
+              style={filterStatus === opt.value ? { '--active-color': opt.color } : {}}
               onClick={() => setFilterStatus(opt.value)}
-            >{opt.label}</button>
+            >
+              <i className={`bi ${opt.icon} me-2`}></i>
+              {opt.label}
+            </button>
           ))}
         </div>
       </div>
 
-      <div className="table-responsive">
-        <table className="table table-hover align-middle">
-          <thead className="table-light">
-            <tr>
-              <th className="ps-3 border-0">Mã hoàn</th>
-              <th className="border-0">Hóa đơn gốc</th>
-              <th className="border-0">Khách hàng</th>
-              <th className="text-end border-0">Tiền hoàn</th>
-              <th className="text-center border-0">Trạng thái</th>
-              <th className="text-end pe-3 border-0">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="6" className="text-center py-5">Đang tải dữ liệu...</td></tr>
-            ) : returns.map((r) => (
-              <tr key={r.id}>
-                <td className="ps-3 fw-bold">#{r.id}</td>
-                <td><span className="text-muted small">{r.invoiceCode}</span></td>
-                <td><div className="fw-semibold">{r.customerName || "Khách lẻ"}</div></td>
-                <td className="text-end fw-bold text-danger">{formatCurrency(r.totalRefundAmount)}</td>
-                <td className="text-center">
-                  <span className={`badge bg-${STATUS_OPTIONS.find(o => o.value === r.status)?.color} bg-opacity-10 text-${STATUS_OPTIONS.find(o => o.value === r.status)?.color} px-3 py-2`}>
-                    ● {STATUS_OPTIONS.find(o => o.value === r.status)?.label}
-                  </span>
-                </td>
-                <td className="text-end pe-3">
-                  <button className="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" onClick={() => setSelectedId(r.id)}>
-                    Xem chi tiết
-                  </button>
-                </td>
+      {/* TABLE SECTION */}
+      <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0 custom-table">
+            <thead>
+              <tr>
+                <th className="ps-4 py-3">Mã đơn hoàn</th>
+                <th>Thông tin hóa đơn</th>
+                <th>Khách hàng</th>
+                <th className="text-end">Tiền hoàn</th>
+                <th className="text-center">Trạng thái</th>
+                <th className="text-end pe-4">Thao tác</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="skeleton-row">
+                    <td colSpan="6"><div className="skeleton-bar"></div></td>
+                  </tr>
+                ))
+              ) : returns.length > 0 ? (
+                returns.map((r) => {
+                  const statusInfo = STATUS_OPTIONS.find(o => o.value === r.status);
+                  return (
+                    <tr key={r.id}>
+                      <td className="ps-4">
+                        <span className="id-badge">#{r.id}</span>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <i className="bi bi-receipt text-primary"></i>
+                          <span className="fw-medium text-dark">{r.invoiceCode || "N/A"}</span>
+                        </div>
+                        <small className="text-muted" style={{ fontSize: '11px' }}>Hóa đơn gốc</small>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="avatar-circle">{r.customerName?.[0] || "K"}</div>
+                          <span className="fw-semibold">{r.customerName || "Khách lẻ"}</span>
+                        </div>
+                      </td>
+                      <td className="text-end">
+                        <span className="fw-bold text-danger">{formatCurrency(r.totalRefundAmount)}</span>
+                      </td>
+                      <td className="text-center">
+                        <span className="status-badge" style={{ backgroundColor: statusInfo?.bg, color: statusInfo?.color }}>
+                          <i className={`bi ${statusInfo?.icon} me-1`}></i>
+                          {statusInfo?.label}
+                        </span>
+                      </td>
+                      <td className="text-end pe-4">
+                        <button className="btn-action-view" onClick={() => setSelectedId(r.id)}>
+                          <span>Chi tiết</span>
+                          <i className="bi bi-arrow-right-short ms-1"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center py-5">
+                    <div className="text-muted">
+                      <i className="bi bi-inbox fs-1 opacity-25 mb-3 d-block"></i>
+                      <p className="mb-0">Không có dữ liệu đơn hoàn nào</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* MODAL DETAIL */}
       {selectedId && (
-        <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg rounded-4 p-2">
-              <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold">Chi tiết đơn hoàn #{selectedId}</h5>
-                <button type="button" className="btn-close" onClick={() => setSelectedId(null)}></button>
-              </div>
-              <div className="modal-body">
-                <ReturnDetail
-                  returnId={selectedId}
-                  roleName={roleName}
-                  onActionSuccess={() => {
-                    setSelectedId(null);
-                    fetchReturns();
-                  }}
-                />
-              </div>
+        <div className="modal-custom-overlay">
+          <div className="modal-custom-content">
+            <div className="modal-custom-header">
+              <h5 className="m-0 fw-bold"><i className="bi bi-info-circle me-2"></i>Chi tiết đơn hoàn #{selectedId}</h5>
+              <button className="btn-close-custom" onClick={() => setSelectedId(null)}><i className="bi bi-x-lg"></i></button>
+            </div>
+            <div className="modal-custom-body">
+              <ReturnDetail
+                returnId={selectedId}
+                roleName={roleName}
+                onActionSuccess={() => {
+                  setSelectedId(null);
+                  fetchReturns();
+                }}
+              />
             </div>
           </div>
         </div>

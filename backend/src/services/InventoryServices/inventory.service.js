@@ -69,7 +69,6 @@ const updateProductStock = async (productId, quantity) => {
     return await productModel.updateStock(productId, quantity);
 };
 
-// Thêm hàm mới để controller dùng
 const getProductBasicInfo = async (productId) => {
     return await productModel.getProductBasicInfo(productId);
 };

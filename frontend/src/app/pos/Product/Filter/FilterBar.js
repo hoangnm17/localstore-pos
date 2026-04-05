@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import useDebounce from "hooks/common/useDebounce";
-
-const ITEMS_PER_PAGE = 4;
 
 export default function FilterBar({
   keyword,
@@ -10,125 +8,148 @@ export default function FilterBar({
   selectedCategory,
   onSelectCategory,
   addItem,
-  focusSignal,
+  preventFocus,
+  allProducts = [],
+  onFilteredResults,
 }) {
   const [displayKeyword, setDisplayKeyword] = useState(keyword);
   const inputRef = useRef(null);
-  const scrollRef = useRef(null);
-  const debouncedKeyword = useDebounce(displayKeyword, 500);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [focusSignal]);
+  const [catPage, setCatPage] = useState(0);
+  const catsPerPage = 4;
 
   useEffect(() => {
     setDisplayKeyword(keyword);
   }, [keyword]);
 
-  useEffect(() => {
-    onKeywordChange(debouncedKeyword);
-  }, [debouncedKeyword, onKeywordChange]);
-
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === "left" ? scrollLeft - 200 : scrollLeft + 200;
-      scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
-    }
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setDisplayKeyword(val);
+    onKeywordChange(val);
   };
 
+  const visibleCategories = useMemo(() => {
+    const start = catPage * catsPerPage;
+    return categories.slice(start, start + catsPerPage);
+  }, [categories, catPage]);
+
+  const totalCatPages = Math.ceil(categories.length / catsPerPage);
+
+  const [prodPage, setProdPage] = useState(1);
+  const prodsPerPage = 12;
+
+  const debouncedKeyword = useDebounce(displayKeyword, 500);
+
+  const { currentItems, totalProdPages } = useMemo(() => {
+    const filtered = allProducts.filter((item) => {
+      const matchCat = !selectedCategory || item.categoryId === selectedCategory.id;
+      const matchKey = item.name.toLowerCase().includes(debouncedKeyword.toLowerCase());
+      return matchCat && matchKey;
+    });
+
+    const lastIndex = prodPage * prodsPerPage;
+    const firstIndex = lastIndex - prodsPerPage;
+    
+    const slicedItems = filtered.slice(firstIndex, lastIndex);
+    
+    if (onFilteredResults) onFilteredResults(slicedItems);
+
+    return {
+      currentItems: slicedItems,
+      totalProdPages: Math.ceil(filtered.length / prodsPerPage) || 1
+    };
+  }, [allProducts, selectedCategory, debouncedKeyword, prodPage, onFilteredResults]);
+
+  useEffect(() => {
+    setProdPage(1);
+  }, [selectedCategory, debouncedKeyword]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (window.isModalOpen > 0) return;
+      setTimeout(() => {
+        if (!window.isModalOpen || window.isModalOpen === 0) {
+          inputRef.current?.focus();
+        }
+      }, 150);
+    };
+    window.addEventListener("RE_FOCUS_SEARCH", handleFocus);
+    const handleGlobalClick = (e) => {
+      if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) handleFocus();
+    };
+    window.addEventListener("click", handleGlobalClick);
+    handleFocus();
+    return () => {
+      window.removeEventListener("RE_FOCUS_SEARCH", handleFocus);
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, []);
+
   return (
-    <div className="filter-bar-container w-100 mb-4">
-      <div className="search-wrapper position-relative mb-4">
-        <div className="input-group shadow-sm rounded-pill overflow-hidden border-0">
-          <span className="input-group-text bg-light border-0 ps-3">
+    <div className="filter-bar-container w-100">
+      <div className="search-wrapper mb-3">
+        <div className="input-group shadow-sm rounded-pill overflow-hidden border bg-white">
+          <span className="input-group-text bg-white border-0 ps-3">
             <i className="bi bi-search text-primary"></i>
           </span>
           <input
             ref={inputRef}
             type="text"
-            className="form-control border-0 bg-light py-2"
-            placeholder="Tìm tên sản phẩm hoặc mã vạch..."
+            className="form-control border-0 py-2"
+            placeholder="Tìm tên hoặc mã vạch..."
             value={displayKeyword}
-            onChange={(e) => setDisplayKeyword(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-
                 addItem(displayKeyword);
+                setDisplayKeyword("");
+                onKeywordChange("");
               }
             }}
-            style={{ fontSize: "1rem", boxShadow: "none" }}
           />
-          {displayKeyword && (
-            <button
-              className="btn bg-light border-0 text-secondary"
-              onClick={() => setDisplayKeyword("")}
-            >
-              <i className="bi bi-x-lg"></i>
-            </button>
-          )}
         </div>
       </div>
 
-      <div className="category-scroll-container position-relative d-flex align-items-center">
+      <div className="d-flex align-items-center gap-2 mb-3">
         <button
-          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute start-0"
-          onClick={() => scroll("left")}
-          style={{ zIndex: 2, left: "-15px" }}
+          className="btn btn-sm btn-outline-primary rounded-circle"
+          disabled={catPage === 0}
+          onClick={() => setCatPage(p => p - 1)}
+          style={{ width: '32px', height: '32px' }}
         >
           <i className="bi bi-chevron-left"></i>
         </button>
 
-        <div
-          ref={scrollRef}
-          className="category-list d-flex gap-2 overflow-auto no-scrollbar pb-2"
-          style={{
-            scrollBehavior: "smooth",
-            msOverflowStyle: "none",
-            scrollbarWidth: "none",
-            WebkitOverflowScrolling: "touch"
-          }}
-        >
-          <button
-            className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${!selectedCategory ? "btn-primary shadow" : "btn-outline-secondary border-light-subtle"
-              }`}
-            onClick={() => onSelectCategory(null)}
-          >
-            TẤT CẢ
-          </button>
-
-          {categories.map((cat) => (
+        <div className="d-flex gap-2 flex-grow-1 justify-content-center">
+          {catPage === 0 && (
+            <button
+              className={`btn btn-sm rounded-pill px-3 fw-bold ${!selectedCategory ? "btn-primary" : "btn-outline-secondary"}`}
+              onClick={() => onSelectCategory(null)}
+            >
+              TẤT CẢ
+            </button>
+          )}
+          
+          {visibleCategories.map((cat) => (
             <button
               key={cat.id}
-              className={`btn rounded-pill px-4 flex-shrink-0 fw-bold transition-all ${selectedCategory?.id === cat.id
-                ? "btn-primary shadow"
-                : "btn-outline-secondary border-light-subtle"
-                }`}
+              className={`btn btn-sm rounded-pill px-3 text-uppercase fw-bold ${selectedCategory?.id === cat.id ? "btn-primary" : "btn-outline-secondary"}`}
               onClick={() => onSelectCategory(cat)}
             >
-              {cat.name.toUpperCase()}
+              {cat.name}
             </button>
           ))}
         </div>
 
         <button
-          className="btn btn-sm btn-white shadow-sm rounded-circle d-none d-md-block position-absolute end-0"
-          onClick={() => scroll("right")}
-          style={{ zIndex: 2, right: "-15px" }}
+          className="btn btn-sm btn-outline-primary rounded-circle"
+          disabled={catPage >= totalCatPages - 1}
+          onClick={() => setCatPage(p => p + 1)}
+          style={{ width: '32px', height: '32px' }}
         >
           <i className="bi bi-chevron-right"></i>
         </button>
       </div>
-
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .transition-all { transition: all 0.25s ease-in-out; }
-        .btn-outline-secondary:hover { background-color: #f8f9fa; color: #0d6efd; }
-        .category-list { padding: 5px; }
-      `}</style>
     </div>
   );
 }

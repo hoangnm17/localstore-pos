@@ -83,7 +83,13 @@ export default function ProductBaseFields({ form, handleChange, categories, isCo
                     className={`form-control ${errors.baseUnit ? 'is-invalid' : ''}`}
                     value={form.baseUnit}
                     onChange={(e) => handleChange('baseUnit', e.target.value)}
-                    placeholder={isCombo ? 'Combo' : form.saleMode === 'weight' ? 'Kg' : 'Cái'}
+                    placeholder={
+                        isCombo
+                            ? 'Combo'
+                            : form.saleMode === 'weight'
+                                ? 'Ví dụ: Kg'
+                                : 'Ví dụ: Chai, Lon, Gói, Hộp'
+                    }
                 />
                 {errors.baseUnit && <div className="text-danger small mt-1">{errors.baseUnit}</div>}
             </div>

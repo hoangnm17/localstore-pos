@@ -153,7 +153,6 @@ const receiveOrder = async (poId, items, status, userId) => {
 
         for (const item of items) {
 
-            //Lấy productUnit + productId
             const unitResult = await new sql.Request(transaction)
                 .input("poiId", sql.Int, item.poiId)
                 .query(`

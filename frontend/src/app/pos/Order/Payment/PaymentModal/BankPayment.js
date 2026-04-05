@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 export default function BankPayment({
   qr,
   total,
@@ -15,7 +17,6 @@ export default function BankPayment({
     <div className="mt-3">
 
       <div className="text-center mb-4">
-
         <div className="fw-bold mb-2">
           Quét QR để thanh toán
         </div>
@@ -24,7 +25,6 @@ export default function BankPayment({
           className="d-flex align-items-center justify-content-center border rounded-3 bg-white mx-auto"
           style={{ width: 220, height: 220 }}
         >
-
           <img
             src={qr.url}
             alt="VietQR"
@@ -34,20 +34,16 @@ export default function BankPayment({
               objectFit: "contain",
             }}
           />
-
         </div>
-
       </div>
 
       <div className="border rounded-3 p-3 bg-light">
 
         <div className="d-flex justify-content-between mb-2">
           <span className="text-muted">Số tiền</span>
-
           <span className="fw-semibold">
             {Number(qr?.amount ?? total ?? 0).toLocaleString("vi-VN")} đ
           </span>
-
         </div>
 
         {qr.content && (

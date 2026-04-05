@@ -5,11 +5,8 @@ import PaymentMethodSelector from "./PaymentModal/PaymentMethodSelector";
 import CashPayment from "./PaymentModal/CashPayment";
 import BankPayment from "./PaymentModal/BankPayment";
 import OrderDiscount from "../Discount/OrderDiscount";
-import useHotkeys from "hooks/pos/useHotKeys";
 import useTitle from "hooks/common/useTitle";
 import { POS_HOTKEYS } from "config/HotKey";
-
-const SSE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function PaymentModal({
   orderId,
@@ -19,8 +16,10 @@ export default function PaymentModal({
   onClose = () => { },
   onConfirm = () => { },
   onBankPaid = () => { },
+  onCancelBank = () => { },
 }) {
   useTitle("Thanh toán");
+
 
   const [method, setMethod] = useState("CASH");
   const [discount, setDiscount] = useState(null);
@@ -34,16 +33,24 @@ export default function PaymentModal({
 
   const finalAmount = safeDiscount.finalAmount ?? safeTotal;
 
-  useHotkeys({
-    [POS_HOTKEYS.CASH_PAY]: () => setMethod("CASH"),
-    [POS_HOTKEYS.BANK_PAY]: () => setMethod("BANK"),
-  });
+  useEffect(() => {
+    setInternalQr(null);
+  }, [finalAmount]);
+
+  const [prevMethod, setPrevMethod] = useState("CASH");
 
   useEffect(() => {
-    if (method === "BANK") {
+    if (
+      prevMethod === "BANK" &&
+      method === "CASH" &&
+      internalQr
+    ) {
+      onCancelBank?.(orderId);
       setInternalQr(null);
     }
-  }, [finalAmount, method]);
+
+    setPrevMethod(method);
+  }, [method, prevMethod, internalQr, orderId]);
 
   useEffect(() => {
     if (method !== "BANK" || internalQr || finalAmount <= 0) return;
@@ -54,7 +61,7 @@ export default function PaymentModal({
         const res = await onConfirm({
           orderId,
           method: "BANK",
-          amount: finalAmount,
+          amount: Math.round(finalAmount),
           discount: safeDiscount
         });
         if (res?.pending) setInternalQr(res.qr);
@@ -64,31 +71,9 @@ export default function PaymentModal({
         setLoadingQr(false);
       }
     };
-
     const timer = setTimeout(initQR, 100);
     return () => clearTimeout(timer);
   }, [method, internalQr, finalAmount, orderId, safeDiscount, onConfirm]);
-
-  useEffect(() => {
-    if (!internalQr || method !== "BANK") return;
-
-    const es = new EventSource(`${SSE_URL}/api/sse`);
-
-    es.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-
-        if (payload?.type === "PAYMENT_SUCCESS") {
-          onBankPaid(payload);
-        }
-
-      } catch (err) {
-        console.error("SSE Parse Error:", err);
-      }
-    };
-
-    return () => es.close();
-  }, [internalQr, method, onBankPaid]);
 
   const handleConfirmCash = useCallback((payload = {}) => {
     console.log(payload, safeDiscount);
@@ -97,14 +82,41 @@ export default function PaymentModal({
       orderId,
       ...payload,
       method: "CASH",
-      amount: finalAmount,
+      amount: Math.round(finalAmount),
       discount: safeDiscount,
     });
   }, [onConfirm, orderId, finalAmount, safeDiscount]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName;
+      if (tag === "TEXTAREA") return;
+
+      if (safeTotal <= 0) return;
+
+      if (e.key === "F4") {
+        e.preventDefault();
+        setMethod((prev) => (prev === "CASH" ? "BANK" : "CASH"));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [safeTotal, onClose]);
+
   return (
     <BaseModal onClose={onClose}>
-      <div className="bg-white rounded-4 shadow overflow-hidden" style={{ width: "980px", maxWidth: "95vw" }}>
+      <div
+        /* Thêm class mx-auto để căn giữa trục ngang */
+        className="bg-white rounded-4 shadow overflow-hidden mx-auto"
+        style={{
+          width: "980px",
+          maxWidth: "95vw",
+          /* Đảm bảo không có margin lạ từ Bootstrap đè lên */
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}
+      >
         <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
           <h6 className="fw-bold mb-0">Thanh toán đơn hàng #{orderId}</h6>
           <button className="btn-close" onClick={onClose} />
@@ -120,7 +132,9 @@ export default function PaymentModal({
                 <div className="small text-muted mb-1">Tổng cần thanh toán</div>
                 <div className="h2 fw-bold text-primary mb-0">{formatCurrency(finalAmount)}</div>
                 {safeDiscount.totalDiscount > 0 && (
-                  <div className="small text-danger mt-1">Đã giảm: -{formatCurrency(safeDiscount.totalDiscount)}</div>
+                  <div className="small text-danger mt-1">
+                    Đã giảm: -{formatCurrency(safeDiscount.totalDiscount)}
+                  </div>
                 )}
               </div>
 
@@ -132,7 +146,11 @@ export default function PaymentModal({
                 ) : method === "CASH" ? (
                   <CashPayment total={finalAmount} onConfirm={handleConfirmCash} />
                 ) : (
-                  <BankPayment qr={internalQr} total={finalAmount} loading={loadingQr} />
+                  <BankPayment
+                    qr={internalQr}
+                    total={finalAmount}
+                    loading={loadingQr}
+                  />
                 )}
               </div>
             </div>

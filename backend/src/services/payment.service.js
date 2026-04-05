@@ -9,7 +9,7 @@ const promotionModel = require("../models/promotion.model");
 const customerModel = require("../models/customer.model");
 const sseService = require("./sse.service");
 const socketService = require("./socket.service");
-
+const SePayTransactionModel = require("../models/sepay.model")
 
 const POINT_EXCHANGE = 100;
 const EARN_POINT_EXCHANGE = 10000;
@@ -63,7 +63,6 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
 
   let pointDiscount = 0;
   let voucherDiscount = 0;
-  let promotionDiscount = 0;
 
   let actualPointUsed = 0;
 
@@ -86,45 +85,13 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
       throw new Error("Voucher condition not satisfied");
 
     if (voucher.type === "Percent") {
-      voucherDiscount = Math.floor(totalAmount * voucher.value / 100);
+      voucherDiscount = Math.round((totalAmount * voucher.value / 100) * 1000) / 1000;
     } else {
       voucherDiscount = voucher.value;
     }
 
     voucherDiscount = Math.min(voucherDiscount, totalAmount);
-
-    totalDiscount += voucherDiscount;
-  }
-
-  /* ===== PROMOTION ===== */
-
-  if (discount?.promotionId) {
-
-    const promotion = await promotionModel.getPromotionById(discount.promotionId);
-
-    if (!promotion)
-      throw new Error("Promotion not found");
-
-    if (promotion.status !== "Active")
-      throw new Error("Promotion is not active");
-
-    if (promotion.startDate && new Date() < promotion.startDate)
-      throw new Error("Promotion not started")
-
-    if (promotion.endDate && new Date() > promotion.endDate)
-      throw new Error("Promotion expired")
-
-    if (promotion.type === "Percent") {
-      promotionDiscount = Math.floor(totalAmount * promotion.value / 100);
-    } else {
-      promotionDiscount = promotion.value;
-    }
-
-    const remaining = totalAmount - totalDiscount;
-
-    promotionDiscount = Math.min(promotionDiscount, remaining);
-
-    totalDiscount += promotionDiscount;
+    totalDiscount = Math.round((totalDiscount + voucherDiscount) * 1000) / 1000;
   }
 
   /* ===== POINT ===== */
@@ -142,11 +109,8 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
     if (discount.pointUsed > customer.loyaltyPoints)
       throw new Error("Cannot use loyalty point over current point!");
 
-    const rawPointDiscount =
-      discount.pointUsed * POINT_EXCHANGE;
-
-    const remaining =
-      totalAmount - totalDiscount;
+    const rawPointDiscount = Math.round((discount.pointUsed * POINT_EXCHANGE) * 1000) / 1000;
+    const remaining = Math.round((totalAmount - totalDiscount) * 1000) / 1000;
 
     pointDiscount =
       Math.min(rawPointDiscount, remaining);
@@ -154,32 +118,61 @@ const validateDiscount = async (customerId, discount, totalAmount) => {
     actualPointUsed =
       Math.floor(pointDiscount / POINT_EXCHANGE);
 
-    pointDiscount =
-      actualPointUsed * POINT_EXCHANGE;
-
-    totalDiscount += pointDiscount;
+    pointDiscount = Math.round((actualPointUsed * POINT_EXCHANGE) * 1000) / 1000;
+    totalDiscount = Math.round((totalDiscount + pointDiscount) * 1000) / 1000;
   }
 
   /* ===== FINAL ===== */
 
-  const finalAmount =
-    Math.max(totalAmount - totalDiscount, 0);
-
+  const finalAmount = Math.max(Math.round((totalAmount - totalDiscount) * 1000) / 1000, 0);
   return {
     finalAmount,
     totalDiscount,
     pointDiscount,
     voucherDiscount,
-    promotionDiscount,
     actualPointUsed
   };
 };
+
+const processInventory = async (transaction, invoiceItems) => {
+  const groupedItems = {};
+
+  for (const item of invoiceItems) {
+    const productId = Number(item.productId);
+    const baseQty = Number(item.baseQuantity || 0);
+
+    if (!groupedItems[productId]) {
+      groupedItems[productId] = 0;
+    }
+
+    groupedItems[productId] += baseQty;
+  }
+
+  const finalItems = Object.keys(groupedItems).map((productId) => ({
+    productId: Number(productId),
+    baseQuantity: groupedItems[productId],
+  }));
+
+  const updatedStocks = await inventoryService.deductStock(
+    transaction,
+    finalItems
+  );
+
+  socketService.emitInventoryUpdate(updatedStocks);
+
+  return updatedStocks;
+};
+
 
 const payCash = async (id, { payment }) => {
 
   return runInTransaction(async (transaction) => {
 
     const invoice = await getEditableInvoice(transaction, id);
+
+    if (invoice.status === "PAID") {
+      throw new Error("Invoice already paid");
+    }
 
     if (payment?.method !== "CASH")
       throw new Error("Invalid payment method");
@@ -190,11 +183,9 @@ const payCash = async (id, { payment }) => {
       throw new Error("Cannot pay empty invoice");
 
     let totalAmount = invoice.totalAmount;
-    let finalAmount = totalAmount;
-
+    let finalAmount = invoice.finalAmount;
     let totalDiscount = 0;
     let pointDiscount = 0;
-    let promotionDiscount = 0;
     let voucherDiscount = 0;
     let actualPointUsed = 0;
 
@@ -212,19 +203,16 @@ const payCash = async (id, { payment }) => {
       totalDiscount = discountResult.totalDiscount;
       finalAmount = discountResult.finalAmount;
       pointDiscount = discountResult.pointDiscount;
-      promotionDiscount = discountResult.promotionDiscount;
       voucherDiscount = discountResult.voucherDiscount;
       actualPointUsed = discountResult.actualPointUsed;
     }
-
-    /* ================= VALIDATE PAYMENT AMOUNT ================= */
 
     const payAmount = Number(payment.amount ?? finalAmount);
 
     if (!Number.isFinite(payAmount) || payAmount < 0)
       throw new Error("Invalid payment amount");
 
-    if (payAmount < finalAmount)
+    if (payAmount < (finalAmount * 1000) / 1000)
       throw new Error("Payment amount is not enough");
 
     /* ================= CREATE / UPDATE PAYMENT ================= */
@@ -289,12 +277,9 @@ const payCash = async (id, { payment }) => {
     }
 
     /* ================= UPDATE INVOICE ================= */
-
     await invoiceModel.updateInvoiceDiscount(
       transaction,
       id,
-      payment.discount?.promotionId,
-      promotionDiscount,
       payment.discount?.voucherId,
       voucherDiscount,
       actualPointUsed,
@@ -306,14 +291,10 @@ const payCash = async (id, { payment }) => {
       finalAmount
     });
 
-    /* ================= STOCK ================= */
-
-    const updatedStocks = await inventoryService.deductStock(
+    const updatedStocks = await processInventory(
       transaction,
       invoiceItems
     );
-
-    socketService.emitInventoryUpdate(updatedStocks);
 
     await invoiceModel.updateStatus(transaction, id, "PAID");
 
@@ -355,11 +336,9 @@ const createQR = async (invoiceId, discount = {}) => {
 
     let finalAmount = totalAmount;
 
-    let promotionDiscount = 0;
     let voucherDiscount = 0;
     let pointDiscount = 0;
     let pointUsed = 0;
-
     let promotionId = null;
     let voucherId = null;
 
@@ -373,7 +352,6 @@ const createQR = async (invoiceId, discount = {}) => {
 
       finalAmount = discountResult.finalAmount;
 
-      promotionDiscount = discountResult.promotionDiscount;
       voucherDiscount = discountResult.voucherDiscount;
       pointDiscount = discountResult.pointDiscount;
       pointUsed = discountResult.actualPointUsed;
@@ -387,17 +365,19 @@ const createQR = async (invoiceId, discount = {}) => {
     }
 
     /* ================= SAVE DISCOUNT ================= */
-
     await invoiceModel.updateInvoiceDiscount(
       transaction,
       invoiceId,
-      promotionId,
-      promotionDiscount,
       voucherId,
       voucherDiscount,
       pointUsed,
-      pointDiscount
+      pointDiscount,
     );
+
+    await invoiceModel.updateAmounts(transaction, invoice.id, {
+      totalAmount,
+      finalAmount
+    });
 
     /* ================= CREATE / UPDATE PAYMENT ================= */
 
@@ -421,10 +401,14 @@ const createQR = async (invoiceId, discount = {}) => {
         throw new Error("Invoice already paid");
       }
 
-      await paymentModel.updatePaymentStatus(
+      await paymentModel.updatePayment(
         transaction,
-        invoiceId,
-        "PENDING"
+        {
+          invoiceId,
+          amount: finalAmount,
+          paymentMethod: "BANK_TRANSFER",
+          status: "PENDING"
+        }
       );
     }
 
@@ -460,12 +444,10 @@ const createQR = async (invoiceId, discount = {}) => {
       discount: {
         promotionId,
         voucherId,
-        promotionDiscount,
         voucherDiscount,
         pointUsed,
         pointDiscount,
         totalDiscount:
-          promotionDiscount +
           voucherDiscount +
           pointDiscount,
       },
@@ -475,77 +457,80 @@ const createQR = async (invoiceId, discount = {}) => {
 };
 
 const confirmPayment = async (payload) => {
-  return runInTransaction(async (transaction) => {
+  const result = await runInTransaction(async (transaction) => {
+
+    // ===== 1. PARSE DATA =====
+    const rawContent = `${payload.content || ""} ${payload.description || ""}`;
+
+    const match = rawContent.match(/POS[- ]?(\d+)/i);
+    if (!match) {
+      console.warn("Invalid content:", rawContent);
+      return;
+    }
+
+    const invoiceId = Number(match[1]);
 
     const transferAmount = Number(
-      payload.transferAmount ??
-      payload.amount ??
-      payload.transfer_amount
+      String(
+        payload.transferAmount ??
+        payload.amount ??
+        payload.transfer_amount ??
+        0
+      ).replace(/,/g, "")
     );
 
-    const content = String(
-      payload.content ??
-      payload.description ??
-      payload.transferContent ??
-      ""
-    ).trim();
-
     const transactionId =
+      payload.referenceCode ??
       payload.transactionId ??
       payload.id ??
       payload.transaction_id ??
       null;
 
-    if (!content) {
-      throw new Error("Missing transfer content");
+
+    const existed = await SePayTransactionModel.isExisted(transaction, transactionId);
+    if (existed) return { paid: true, invoiceId };
+    
+    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
+      console.warn("Invalid amount:", payload.transferAmount);
+      return;
     }
 
-
-    const match = content.match(/POS-(\d+)/i);
-
-    if (!match) {
-      throw new Error("Invalid transfer content");
-    }
-
-    const invoiceId = Number(match[1]);
-
+    // ===== 2. GET INVOICE =====
     const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
       forUpdate: true,
     });
 
     if (!invoice) {
-      throw new Error("Invoice not found");
+      console.warn("Invoice not found:", invoiceId);
+      return;
     }
 
-    if (invoice.status === "PAID") {
-      return { paid: true, duplicated: true, invoiceId };
-    }
+    if (invoice.status === "PAID") return;
+    if (invoice.status === "CANCELLED") return;
 
-    if (invoice.status === "CANCELLED") {
-      throw new Error("Invoice is cancelled");
-    }
-
+    // ===== 3. CHECK PAYMENT =====
     const payment = await invoiceModel.getPaymentByInvoiceId(
       transaction,
       invoiceId
     );
 
-    if (payment && payment.status === "SUCCESS") {
-      return { paid: true, duplicated: true, invoiceId };
+    if (payment && payment.status === "SUCCESS") return;
+
+    // ===== 4. AMOUNT CHECK =====
+    const expectedAmount = Math.round(
+      Number(invoice.finalAmount || invoice.totalAmount) * 1000
+    ) / 1000;
+
+    const roundedTransferAmount =
+      Math.round(transferAmount * 1000) / 1000;
+
+    if (roundedTransferAmount < expectedAmount) {
+      console.warn("Amount not enough:", transferAmount);
+      return;
     }
 
-    const expectedAmount = Number(invoice.finalAmount || invoice.totalAmount);
-
-    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
-      throw new Error("Invalid transfer amount");
-    }
-
-    if (transferAmount < expectedAmount) {
-      throw new Error("Transfer amount is not enough");
-    }
-
+    // ===== 5. SAVE PAYMENT =====
     if (!payment) {
-
       await invoiceModel.insertPayment(transaction, {
         invoiceId,
         paymentMethod: "BANK_QR",
@@ -553,34 +538,40 @@ const confirmPayment = async (payload) => {
         status: "SUCCESS",
         transactionId,
       });
-
     } else {
-
       await paymentModel.updatePaymentStatus(
         transaction,
         invoiceId,
         "SUCCESS",
         transactionId
       );
-
     }
 
+    await SePayTransactionModel.insert(transaction, {
+      invoiceId,
+      sepayId: transactionId,
+      transactionContent: payload.content,
+      amountIn: transferAmount,
+      bankAccountNumber: payload.accountNumber,
+      transactionDate: payload.transactionDate,
+      status: "SUCCESS"
+    });
+
+    // ===== 6. BUSINESS =====
     const invoiceItems = await invoiceModel.getInvoiceItems(
       transaction,
       invoiceId
     );
 
-    if (!invoiceItems.length) {
-      throw new Error("Invoice has no items");
-    }
+    if (!invoiceItems.length) return;
 
     const pointUsed = Number(invoice.usedPoints || 0);
     const voucherId = invoice.voucherId || null;
 
     const finalAmount = expectedAmount;
 
+    // ===== 6.1 TRỪ POINT =====
     if (pointUsed > 0 && invoice.customerId) {
-
       await customerPointLogService.adjustPoints(
         transaction,
         invoice.customerId,
@@ -588,23 +579,18 @@ const confirmPayment = async (payload) => {
         -pointUsed,
         "REDEEM"
       );
-
     }
 
+    // ===== 6.2 TĂNG USAGE VOUCHER =====
     if (voucherId) {
-
-      await voucherModel.increaseUsage(
-        transaction,
-        voucherId
-      );
-
+      await voucherModel.increaseUsage(transaction, voucherId);
     }
 
+    // ===== 6.3 CỘNG POINT =====
     const earnedPoints =
       Math.floor(finalAmount / EARN_POINT_EXCHANGE);
 
     if (earnedPoints > 0 && invoice.customerId) {
-
       await customerPointLogService.adjustPoints(
         transaction,
         invoice.customerId,
@@ -612,41 +598,84 @@ const confirmPayment = async (payload) => {
         earnedPoints,
         "EARN"
       );
-
     }
 
-    const updatedStocks = await inventoryService.deductStock(
-      transaction,
-      invoiceItems
-    );
+    // ===== 7. STOCK =====
+    await processInventory(transaction, invoiceItems);
 
-    socketService.emitInventoryUpdate(updatedStocks);
-
+    // ===== 8. UPDATE INVOICE =====
     await invoiceModel.updateStatus(
       transaction,
       invoiceId,
       "PAID"
     );
 
-
-    sseService.send({
-      type: "PAYMENT_SUCCESS",
-      invoiceId,
-      method: "BANK_TRANSFER",
-      amount: finalAmount,
-    });
-
     return {
       paid: true,
       invoiceId,
       amount: finalAmount,
     };
+  });
 
+  // ===== 9. REALTIME =====
+  if (result && result.paid) {
+    sseService.send({
+      type: "PAYMENT_SUCCESS",
+      orderId: result.invoiceId,
+      invoiceId: result.invoiceId,
+      method: "BANK_TRANSFER",
+      amount: result.amount,
+    });
+  }
+
+  return result;
+};
+
+const cancelPendingPayment = async (invoiceId) => {
+  return runInTransaction(async (transaction) => {
+    const invoice = await invoiceModel.getInvoiceById(transaction, invoiceId, {
+      forUpdate: true,
+    });
+
+    if (!invoice) throw new Error("Invoice not found");
+
+    if (invoice.status === "PAID")
+      throw new Error("Cannot cancel paid invoice");
+
+    const existingPayment = await invoiceModel.getPaymentByInvoiceId(
+      transaction,
+      invoiceId
+    );
+
+    if (existingPayment) {
+
+      if (existingPayment.status === "SUCCESS") {
+        throw new Error("Invoice already paid");
+      }
+
+      if (existingPayment.status === "PENDING") {
+        await paymentModel.updatePayment(
+          transaction,
+          {
+            invoiceId,
+            amount: existingPayment.amount,
+            paymentMethod: "CASH",
+            status: "PENDING"
+          }
+        );
+      }
+
+    }
+
+    await invoiceModel.updateStatus(transaction, invoiceId, "UNPAID");
+
+    return { success: true };
   });
 };
 
 module.exports = {
   createQR,
   confirmPayment,
-  payCash
+  payCash,
+  cancelPendingPayment
 };

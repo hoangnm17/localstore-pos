@@ -19,8 +19,9 @@ const cashierRoutes = require("./cashier.route");
 const returnRoutes = require("./return.route")
 const returnItemRoutes = require("./returnItem.route")
 const uploadRoutes = require("./upload.route");
-const marketingEventRoutes = require("./marketingEvent.route");
+
 const dashboardRoutes = require("./dashboard.route");
+const attendanceRoutes = require("./attendance.route")
 
 module.exports = (app) => {
     const version = "/api";
@@ -35,7 +36,7 @@ module.exports = (app) => {
     app.use(version + "/customers", customerRoutes);
     app.use(version + "/promotions", promotionRoutes);
     app.use(version + "/vouchers", voucherRoutes);
-    app.use(version + "/marketing-events", marketingEventRoutes);
+
     app.use(version + "/categories", categoryRoutes);
     app.use(version + "/products", productRoutes);
     app.use(version + "/product-units", productUnitRoutes);
@@ -48,5 +49,6 @@ module.exports = (app) => {
     app.use(version + "/returns", returnRoutes)
     app.use(version + "/return-items", returnItemRoutes)
     app.use(version + "/upload", uploadRoutes);
+    app.use(version + "/attendance", attendanceRoutes);
 };
 

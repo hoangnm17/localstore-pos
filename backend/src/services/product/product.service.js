@@ -126,7 +126,79 @@ exports.getProductWithBarcode = async (barcode) => {
 }
 
 exports.getAllProducts = async (filters) => {
-    const rawData = await productModel.getAllProducts(filters);
+    const resultFromModel = await productModel.getAllProducts(filters);
+
+    const rawData = resultFromModel.data || [];
+    const totalCount = resultFromModel.total || 0;
+
+    const productsMap = new Map();
+
+    for (const row of rawData) {
+        const lowStock = row.minThreshold != null && row.stock <= row.minThreshold;
+
+        const discount = await promotionService.getDiscountByProduct({
+            productId: row.id,
+            productUnitId: row.unitId
+        });
+
+        if (!productsMap.has(row.id)) {
+            productsMap.set(row.id, {
+                id: row.id,
+                name: row.name,
+                code: row.code,
+                imageUrl: row.imageUrl,
+                stock: Math.round((Number(row.stock) || 0) * 1000) / 1000,
+                categoryId: row.categoryId,
+                units: []
+            });
+        }
+
+        if (row.unitId) {
+            const rawStockValue = Number(row.stock) || 0;
+            const factor = Number(row.factor) || 1;
+            let stock = rawStockValue / factor;
+            if (row.unitType !== 'WEIGHT') {
+                stock = Math.floor(stock);
+            } else {
+                stock = Math.round(stock * 1000) / 1000;
+            }
+            const price = Number(row.price) || 0;
+
+            const discountPercent = Number(discount?.discountPercent) || 0;
+            const discountAmount = Number(discount?.discountAmount) || 0;
+
+            const totalDiscount = Math.round(((price * (discountPercent / 100)) + discountAmount) * 1000) / 1000;
+
+            productsMap.get(row.id).units.push({
+                unitId: row.unitId,
+                unitName: row.unitName,
+                factor: row.factor,
+                barcode: row.barcode,
+                price: row.price,
+                stock: stock,
+                unitType: row.unitType,
+                lowStock: lowStock,
+                totalDiscount: totalDiscount,
+                discountedPrice: Math.round((price - totalDiscount) * 1000) / 1000,
+                finalPrice: Math.round((price - totalDiscount) * 1000) / 1000,
+            });
+        }
+    }
+
+    return {
+        data: Array.from(productsMap.values()),
+        pagination: {
+            totalItems: totalCount,
+            totalPages: Math.ceil(totalCount / filters.pageSize),
+            currentPage: Number(filters.page),
+            pageSize: Number(filters.pageSize)
+        }
+    };
+};
+
+
+exports.getBarcodeProducts = async (filters) => {
+    const rawData = await productModel.getBarcodeProducts(filters);
 
     const productsMap = new Map();
 
