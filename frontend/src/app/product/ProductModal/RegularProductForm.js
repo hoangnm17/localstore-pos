@@ -63,9 +63,8 @@ export default function RegularProductForm({ form, handleChange, categories, isE
                     <input
                         className={`form-control ${errors.minThreshold ? 'is-invalid' : ''}`}
                         type="number"
-                        min="0
+                        min="0"
                         step={form.saleMode === 'weight' ? 'any' : '1'}
-
                         value={form.minThreshold}
                         onChange={(e) => handleChange('minThreshold', e.target.value)}
                     />
