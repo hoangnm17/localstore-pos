@@ -131,8 +131,8 @@ function ProductFormModal({
                         initialData.comboItems.map(async (item, index) => {
                             let productDetail = null;
                             let units = [];
-                            try { productDetail = (await getProduct(item.childProductId)).data?.data; } catch (_) { }
-                            try { units = (await getProductUnits(item.childProductId)).data?.data || []; } catch (_) { }
+                            try { productDetail = await getProduct(item.childProductId); } catch (_) { }
+                            try { units = await getProductUnits(item.childProductId) || []; } catch (_) { }
 
                             const baseUnit = units.find((u) => Number(u.conversionFactor) === 1) || {
                                 id: `base-${item.childProductId}`,
@@ -219,8 +219,8 @@ function ProductFormModal({
     const searchChildProducts = async (keyword = '') => {
         try {
             setSearchingProducts(true);
-            const response = await getProducts({ page: 1, limit: 20, search: keyword, status: 'Selling' });
-            const rows = (response.data?.data || []).filter(
+            const res = await getProducts({ page: 1, limit: 20, search: keyword, status: 'Selling' });
+            const rows = (res.data || []).filter(
                 (item) => String(item.id) !== String(initialData?.id) && !item.isCombo
             );
             setSearchResults(rows);
@@ -238,7 +238,7 @@ function ProductFormModal({
             setChildUnits([]);
             setSelectedChildUnitId('');
             setChildQuantity(1);
-            const units = (await getProductUnits(product.id)).data?.data || [];
+            const units = await getProductUnits(product.id) || [];
             setChildUnits(units);
             const defaultUnit = units.find((u) => Number(u.conversionFactor) === 1) || units[0];
             if (defaultUnit) setSelectedChildUnitId(String(defaultUnit.id));

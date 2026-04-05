@@ -1,9 +1,6 @@
 import React from 'react';
 import ProductBaseFields from './ProductBaseFields';
-
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
+import { formatMoney } from '../../../utils/formatters';
 
 export default function ComboProductForm({
     form,

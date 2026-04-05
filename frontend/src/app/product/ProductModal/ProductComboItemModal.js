@@ -5,10 +5,7 @@ import {
     getProductUnits
 } from '../../../services/Product/product.service';
 import ModalShell from './ModalShell';
-
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
+import { formatMoney } from '../../../utils/formatters';
 
 function roundNumber(value, digits = 3) {
     const factor = 10 ** digits;
@@ -43,14 +40,14 @@ function ProductComboItemModal({
         try {
             setLoading(true);
 
-            const response = await getProducts({
+            const res = await getProducts({
                 page: 1,
                 limit: 20,
                 search: searchText || '',
                 status: 'Selling'
             });
 
-            const list = response.data?.data || [];
+            const list = res.data || [];
             const filtered = list.filter(
                 (item) => String(item.id) !== String(parentProduct?.id)
             );
@@ -74,8 +71,7 @@ function ProductComboItemModal({
 
             const details = await Promise.all(
                 existingComboItems.map(async (item) => {
-                    const response = await getProduct(item.childProductId);
-                    const childProduct = response.data?.data || null;
+                    const childProduct = await getProduct(item.childProductId);
                     const baseSalePrice = Number(childProduct?.salePrice || 0);
                     const baseQuantity = Number(item.quantity || 0);
 
@@ -98,8 +94,7 @@ function ProductComboItemModal({
             setUnitOptions([]);
             setSelectedUnitId('');
 
-            const response = await getProductUnits(productId);
-            const units = response.data?.data || [];
+            const units = await getProductUnits(productId) || [];
 
             setUnitOptions(units);
 

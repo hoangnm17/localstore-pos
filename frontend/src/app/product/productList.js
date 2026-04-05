@@ -8,6 +8,9 @@ import ProductStatusModal from './ProductModal/ProductStatusModal';
 import ProductPriceHistoryModal from './ProductModal/ProductPriceHistoryModal';
 import ProductComboItemModal from './ProductModal/ProductComboItemModal';
 import BarcodePrintModal from './ProductModal/BarcodePrintModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { useAuth } from '../../hooks/useAuth';
+import { formatMoney, formatQuantity } from '../../utils/formatters';
 
 import useProductCategories from '../../hooks/product/useProductCategories';
 import useProductList from '../../hooks/product/useProductList';
@@ -16,21 +19,6 @@ import useProductDetail from '../../hooks/product/useProductDetail';
 import useProductPriceHistory from '../../hooks/product/useProductPriceHistory';
 import useProductActions from '../../hooks/product/useProductActions';
 
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
-
-function formatQuantity(value, allowDecimalQuantity) {
-    const num = Number(value || 0);
-    if (allowDecimalQuantity) {
-        return num.toLocaleString('vi-VN', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
-    }
-    return Math.round(num).toLocaleString('vi-VN');
-}
-
 function getPrintableUnit(product) {
     if (!product?.units?.length) return null;
     return product.units.find(u => u.isBaseUnit) || product.units[0];
@@ -38,16 +26,15 @@ function getPrintableUnit(product) {
 
 function ProductList() {
     const { showNotification } = useNotification();
+    const { hasFeature } = useAuth();
     const [confirmState, setConfirmState] = useState({ open: false, message: '', onOk: null });
     const onConfirm = ({ message, onOk }) => setConfirmState({ open: true, message, onOk });
     const handleConfirmOk = () => { confirmState.onOk?.(); setConfirmState({ open: false, message: '', onOk: null }); };
     const handleConfirmCancel = () => setConfirmState({ open: false, message: '', onOk: null });
 
-    const user = JSON.parse(localStorage.getItem('user'));
-    const features = user?.features || [];
-    const canCreateProduct = features.includes('CREATE_PRODUCT');
-    const canEditProduct = features.includes('UPDATE_PRODUCT');
-    const canDeleteProduct = features.includes('DELETE_PRODUCT');
+    const canCreateProduct = hasFeature('CREATE_PRODUCT');
+    const canEditProduct = hasFeature('UPDATE_PRODUCT');
+    const canDeleteProduct = hasFeature('DELETE_PRODUCT');
 
     const { categories } = useProductCategories();
 
@@ -566,25 +553,11 @@ function ProductList() {
 
             {/* ── Confirm Dialog ── */}
             {confirmState.open && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,21,41,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
-                }}>
-                    <div style={{
-                        background: '#fff', borderRadius: 12, padding: '28px 32px',
-                        minWidth: 340, maxWidth: 480, boxShadow: '0 8px 40px rgba(0,21,41,0.25)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                            <i className="bi bi-exclamation-triangle-fill" style={{ color: '#faad14', fontSize: '1.5rem' }} />
-                            <strong style={{ fontSize: '1rem' }}>Xác nhận</strong>
-                        </div>
-                        <p style={{ margin: '0 0 24px', color: '#334155' }}>{confirmState.message}</p>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                            <button className="btn btn-light" onClick={handleConfirmCancel}>Hủy</button>
-                            <button className="btn btn-primary" onClick={handleConfirmOk}>Xác nhận</button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmModal
+                    message={confirmState.message}
+                    onConfirm={handleConfirmOk}
+                    onCancel={handleConfirmCancel}
+                />
             )}
         </div>
     );

@@ -1,14 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import ModalShell from './ModalShell';
-
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
-
-function formatDate(value) {
-    if (!value) return '—';
-    return new Date(value).toLocaleString('vi-VN');
-}
+import { formatMoney, formatDate } from '../../../utils/formatters';
 
 function ProductPriceHistoryModal({ open, loading, product, histories, onClose }) {
     const [tab, setTab] = useState('sale');

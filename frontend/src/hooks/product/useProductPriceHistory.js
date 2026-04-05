@@ -24,16 +24,13 @@ function useProductPriceHistory({ showNotification }) {
                 }
             });
 
-            const response = await getAllPriceHistory(product.id);
+            const histories = await getAllPriceHistory(product.id);
 
             setPriceHistoryState({
                 open: true,
                 product,
                 loading: false,
-                histories: response.data?.data || {
-                    salePriceHistories: [],
-                    costPriceHistories: []
-                }
+                histories
             });
         } catch (error) {
             showNotification(error.response?.data?.message || 'Không tải được lịch sử giá.', 'error');
@@ -48,6 +45,7 @@ function useProductPriceHistory({ showNotification }) {
             });
         }
     };
+
 
     const closePriceHistoryModal = () => {
         setPriceHistoryState({

@@ -1,21 +1,8 @@
 import React from 'react';
 import ModalShell from './ModalShell';
 import { getImageUrl } from 'utils/image';
-
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
-
-function formatQuantity(value, allowDecimalQuantity) {
-    const num = Number(value || 0);
-    if (allowDecimalQuantity) {
-        return num.toLocaleString('vi-VN', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
-    }
-    return Math.round(num).toLocaleString('vi-VN');
-}
+import { useAuth } from '../../../hooks/useAuth';
+import { formatMoney, formatQuantity } from '../../../utils/formatters';
 
 function ProductDetailModal({
     open,
@@ -36,11 +23,10 @@ function ProductDetailModal({
     onRemoveComboItem,
     onRefresh
 }) {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const features = user?.features || [];
-    const canCreateUnit = features.includes('CREATE_PRODUCT_UNIT');
-    const canEditUnit = features.includes('UPDATE_PRODUCT_UNIT');
-    const canDeleteUnit = features.includes('DELETE_PRODUCT_UNIT');
+    const { hasFeature } = useAuth();
+    const canCreateUnit = hasFeature('CREATE_PRODUCT_UNIT');
+    const canEditUnit = hasFeature('UPDATE_PRODUCT_UNIT');
+    const canDeleteUnit = hasFeature('DELETE_PRODUCT_UNIT');
     return (
         <ModalShell
             open={open}

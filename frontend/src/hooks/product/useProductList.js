@@ -30,7 +30,7 @@ function useProductList({ showNotification, onConfirm }) {
         try {
             setLoading(true);
 
-            const response = await getProducts({
+            const res = await getProducts({
                 page: filters.page,
                 limit: filters.limit,
                 search: filters.search,
@@ -38,10 +38,10 @@ function useProductList({ showNotification, onConfirm }) {
                 categoryId: filters.categoryId || null
             });
 
-            setProducts(response.data?.data || []);
+            setProducts(res.data || []);
             setPagination({
-                total: Number(response.data?.total || 0),
-                totalPages: Number(response.data?.totalPages || 1)
+                total: Number(res.total || 0),
+                totalPages: Number(res.totalPages || 1)
             });
             setSelectedIds([]);
         } catch (error) {
@@ -55,6 +55,7 @@ function useProductList({ showNotification, onConfirm }) {
             setLoading(false);
         }
     }, [filters]); // showNotification qua ref — không cần trong deps
+
 
     useEffect(() => {
         loadProducts();
