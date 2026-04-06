@@ -14,14 +14,16 @@ const getDiff = (m1, m2) => {
   return d;
 };
 
-module.exports.getAllShifts = async () => { 
-  return await shiftModel.getAllShifts(); };
+module.exports.getAllShifts = async () => {
+  return await shiftModel.getAllShifts();
+};
 module.exports.getShiftById = async (id) => {
-   return await shiftModel.getShiftById(id); };
+  return await shiftModel.getShiftById(id);
+};
 
 module.exports.updateShift = async (id, data) => {
   const existing = await shiftModel.getShiftById(id);
-  if (!existing) 
+  if (!existing)
     throw new Error("Không tìm thấy ca làm việc!");
 
   const startMins = toMinutes(existing.startTime);
@@ -39,6 +41,9 @@ module.exports.updateShift = async (id, data) => {
     }
     if (getDiff(checkInStartM, startMins) < -30) {
       throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
+    }
+    if (getDiff(checkInEndM, startMins) < 0) {
+      throw new Error("Hạn chót chấm công không được sớm hơn giờ bắt đầu ca!");
     }
     if (getDiff(checkInEndM, startMins) > 30) {
       throw new Error("Hạn chót chấm công không được muộn hơn giờ bắt đầu ca quá 30 phút!");
@@ -87,6 +92,9 @@ module.exports.createShift = async (data) => {
     }
     if (getDiff(checkInStartM, startMins) < -30) {
       throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
+    }
+    if (getDiff(checkInEndM, startMins) < 0) {
+      throw new Error("Hạn chót chấm công không được sớm hơn giờ bắt đầu ca!");
     }
     if (getDiff(checkInEndM, startMins) > 30) {
       throw new Error("Hạn chót chấm công không được muộn hơn giờ bắt đầu ca quá 30 phút!");

@@ -8,7 +8,7 @@ import ConfirmPayrollModal from './modals/ConfirmPayrollModal';
 import { getSalaryReport, getRoleList, getPayrollStatus, confirmPayroll } from '../../services/Salary/salary.service';
 import useTitle from "hooks/common/useTitle";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 const formatVNDRaw = (num) => Math.round(num || 0).toString();
 

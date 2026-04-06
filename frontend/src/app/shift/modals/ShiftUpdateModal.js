@@ -58,6 +58,9 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
         }
 
         const lateMinutes = getDiff(form.checkInEnd, form.startTime);
+        if (lateMinutes < 0) {
+          e.checkInEnd = 'Hạn chót chấm công không được sớm hơn giờ bắt đầu ca!';
+        }
         if (lateMinutes > 30) {
           e.checkInEnd = 'Hạn chót không được trễ hơn giờ bắt đầu ca quá 30 phút!';
         }

@@ -9,7 +9,7 @@ import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
 import useTitle from "hooks/common/useTitle";
 import { getDuration } from './utils/time';
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 const ShiftList = () => {
   const [shifts, setShifts] = useState([]);
@@ -60,16 +60,16 @@ const ShiftList = () => {
   const totalPages = Math.ceil(filteredShifts.length / PAGE_SIZE);
   const paginated = filteredShifts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-const formatDuration = (startTime, endTime) => {
-  const totalMinutes = getDuration(startTime, endTime);
+  const formatDuration = (startTime, endTime) => {
+    const totalMinutes = getDuration(startTime, endTime);
 
-  if (!totalMinutes) return '—';
+    if (!totalMinutes) return '—';
 
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
 
-  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
-};
+    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+  };
 
   return (
     <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
