@@ -121,10 +121,28 @@ module.exports.toggleShift = async (id) => {
 
 module.exports.checkDuplicateName = async (name, excludeId = null) => {
   const pool = await connectDB();
-  let query = `SELECT id FROM Shifts WHERE name = @name AND isActive = 1`;
-  if (excludeId) query += ` AND id != @excludeId`;
   const request = pool.request().input('name', sql.NVarChar, name);
-  if (excludeId) request.input('excludeId', sql.Int, excludeId);
-  const result = await request.query(query);
-  return result.recordset[0];
+
+  if (excludeId) {
+    request.input('excludeId', sql.Int, excludeId);
+
+    const result = await request.query(`
+      SELECT id
+      FROM Shifts
+      WHERE name = @name
+        AND isActive = 1
+        AND id != @excludeId
+    `);
+
+    return result.recordset[0] || null;
+  }
+
+  const result = await request.query(`
+    SELECT id
+    FROM Shifts
+    WHERE name = @name
+      AND isActive = 1
+  `);
+
+  return result.recordset[0] || null;
 };

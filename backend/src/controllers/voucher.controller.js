@@ -44,6 +44,7 @@ exports.createVoucher = async (req, res) => {
         const voucher = await voucherService.createVoucher(req.body);
         res.status(201).json({ success: true, data: voucher });
     } catch (err) {
+        // Mọi lỗi từ validateFields hoặc lỗi trùng mã đều nên trả về 400
         console.error("Voucher Creation Error:", err.message);
         res.status(400).json({ success: false, message: err.message });
     }

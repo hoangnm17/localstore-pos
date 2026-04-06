@@ -3,14 +3,7 @@ import BaseModal from '../../../components/common/BaseModal';
 import AlertMessage from '../../../components/common/AlertMessage';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
 import { updateShift } from '../../../services/Shift/shift.service';
-const toMins = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-
-const fromMins = (mins) => {
-  const safe = ((mins % 1440) + 1440) % 1440;
-  const h = Math.floor(safe / 60);
-  const m = safe % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
+import { getDuration, getDiff, toMin, toTime } from '../utils/time';
 
 const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
   const [form, setForm] = useState({
@@ -21,62 +14,64 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
     checkInEnd: shift.checkInEnd || '',
     checkOutDeadline: shift.checkOutDeadline || '',
   });
+
   const [errors, setErrors] = useState({});
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
   const { showNotification } = useNotification();
   const alertRef = useRef(null);
 
   useEffect(() => {
     if (errorMsg && alertRef.current) {
-      alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      alertRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
     }
   }, [errorMsg]);
-  const getDiff = (m1, m2) => {
-    let d = m1 - m2;
-    if (d < -720) d += 1440;
-    if (d > 720) d -= 1440;
-    return d;
-  };
 
   const validate = () => {
     const e = {};
+
     const hasCheckIn = form.checkInStart || form.checkInEnd;
+
     if (hasCheckIn) {
-      if (!form.checkInStart) e.checkInStart = 'Nhập giờ bắt đầu nhận chấm công!';
-      if (!form.checkInEnd) e.checkInEnd = 'Nhập hạn chót chấm công!';
+      if (!form.checkInStart) {
+        e.checkInStart = 'Nhập giờ bắt đầu nhận chấm công!';
+      }
+
+      if (!form.checkInEnd) {
+        e.checkInEnd = 'Nhập hạn chót chấm công!';
+      }
 
       if (form.checkInStart && form.checkInEnd && form.startTime) {
-        const startM = toMins(form.startTime);
-        const checkInSM = toMins(form.checkInStart);
-        const checkInEM = toMins(form.checkInEnd);
+        const checkInRange = getDuration(form.checkInStart, form.checkInEnd);
 
-        let checkInRange = checkInEM - checkInSM;
-        if (checkInRange < 0) checkInRange += 1440;
-
-        if (checkInRange <= 0)
+        if (checkInRange === 0) {
           e.checkInEnd = 'Hạn chót phải sau giờ bắt đầu nhận chấm công!';
+        }
 
-        const earlyMins = getDiff(startM, checkInSM);
-        if (earlyMins > 30)
+        const earlyMinutes = getDiff(form.startTime, form.checkInStart);
+        if (earlyMinutes > 30) {
           e.checkInStart = 'Không được sớm hơn giờ bắt đầu ca quá 30 phút!';
+        }
 
-        const lateMins = getDiff(checkInEM, startM);
-        if (lateMins > 30)
+        const lateMinutes = getDiff(form.checkInEnd, form.startTime);
+        if (lateMinutes > 30) {
           e.checkInEnd = 'Hạn chót không được trễ hơn giờ bắt đầu ca quá 30 phút!';
+        }
       }
     }
 
     if (form.checkOutDeadline && form.endTime) {
-      const endM = toMins(form.endTime);
-      const checkOutM = toMins(form.checkOutDeadline);
+      const outDiff = getDiff(form.checkOutDeadline, form.endTime);
 
-      const lateMins = getDiff(checkOutM, endM);
-
-      if (lateMins < 0)
+      if (outDiff <= 0) {
         e.checkOutDeadline = 'Giờ kết ca phải sau giờ kết thúc ca!';
-      else if (lateMins > 30)
+      } else if (outDiff > 30) {
         e.checkOutDeadline = 'Không được trễ hơn giờ kết thúc ca quá 30 phút!';
+      }
     }
 
     setErrors(e);
@@ -86,23 +81,18 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    setForm(prev => {
+    setForm((prev) => {
       const updated = { ...prev, [name]: value };
 
-      if (name === 'startTime' && value) {
-        const startMins = toMins(value);
-        updated.checkInStart = fromMins(startMins - 2);
-        updated.checkInEnd = fromMins(startMins + 2);
-      }
-
       if (name === 'checkInStart' && value) {
-        updated.checkInEnd = fromMins(toMins(value) + 2);
+        const checkInStartMin = toMin(value);
+        updated.checkInEnd = toTime(checkInStartMin + 2);
       }
 
       return updated;
     });
 
-    setErrors(p => ({ ...p, [name]: '' }));
+    setErrors((prev) => ({ ...prev, [name]: '' }));
     setErrorMsg('');
   };
 
@@ -120,30 +110,41 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
     }
 
     if (!validate()) return;
+
     setLoading(true);
     setErrorMsg('');
+
     try {
       const payload = {
         checkInStart: form.checkInStart || null,
         checkInEnd: form.checkInEnd || null,
         checkOutDeadline: form.checkOutDeadline || null,
       };
-      const res = await updateShift(shift.id, payload);
 
+      const res = await updateShift(shift.id, payload);
       const isSuccess = res.data?.success ?? res.success;
+
       if (isSuccess) {
         showNotification('Cập nhật thành công!', 'success');
         onSuccess();
         return;
       }
-      const msg = res.data?.message || res.message || 'Có lỗi xảy ra!';
-      if (msg.includes('tồn tại')) setErrors(p => ({ ...p, name: msg }));
-      else setErrorMsg(msg);
 
+      const msg = res.data?.message || res.message || 'Có lỗi xảy ra!';
+
+      if (msg.includes('tồn tại')) {
+        setErrors((prev) => ({ ...prev, name: msg }));
+      } else {
+        setErrorMsg(msg);
+      }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Có lỗi xảy ra!';
-      if (msg.includes('tồn tại')) setErrors(p => ({ ...p, name: msg }));
-      else setErrorMsg(msg);
+
+      if (msg.includes('tồn tại')) {
+        setErrors((prev) => ({ ...prev, name: msg }));
+      } else {
+        setErrorMsg(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -151,34 +152,54 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
 
   return (
     <BaseModal onClose={onClose} maxWidth="580px" disableClose={loading}>
-      <div style={{
-        background: '#fff',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
-        display: 'flex',
-        flexDirection: 'column',
-        maxHeight: '95vh',
-      }}>
-        {/* Header*/}
-        <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '18px 28px', color: '#fff', flexShrink: 0 }}>
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '95vh',
+        }}
+      >
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            padding: '18px 28px',
+            color: '#fff',
+            flexShrink: 0
+          }}
+        >
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <h5 className="fw-bold m-0" style={{ fontSize: '1rem' }}>
                 Chỉnh Sửa Ca Làm
               </h5>
             </div>
-            <button onClick={onClose} disabled={loading}
-              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>
+
+            <button
+              onClick={onClose}
+              disabled={loading}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                fontSize: '1.4rem',
+                cursor: 'pointer',
+                lineHeight: 1
+              }}
+            >
               <i className="bi bi-x-lg" />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          {/* Body */}
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}
+        >
           <div style={{ padding: '20px 28px', overflowY: 'auto', flex: 1 }}>
-
             {errorMsg && (
               <div ref={alertRef} style={{ marginBottom: '14px' }}>
                 <AlertMessage type="danger" message={errorMsg} />
@@ -186,93 +207,183 @@ const ShiftUpdateModal = ({ shift, onClose, onSuccess }) => {
             )}
 
             <div className="mb-3">
-              <label className="small fw-bold">Tên ca <span className="text-danger">*</span></label>
-              <input type="text" name="name"
+              <label className="small fw-bold">
+                Tên ca <span className="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
                 className="form-control form-control-sm bg-light text-muted"
-                value={form.name} disabled />
+                value={form.name}
+                disabled
+              />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
 
-            <div style={{ background: '#f8faff', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e0eaff', marginBottom: '12px' }}>
+            <div
+              style={{
+                background: '#f8faff',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                border: '1px solid #e0eaff',
+                marginBottom: '12px'
+              }}
+            >
               <div className="fw-bold text-primary mb-2" style={{ fontSize: '0.85rem' }}>
-                <i className="bi bi-clock-fill me-2" />Thời Gian Ca
+                <i className="bi bi-clock-fill me-2" />
+                Thời Gian Ca
               </div>
+
               <div className="row g-2">
                 <div className="col-6">
-                  <label className="small fw-bold">Giờ bắt đầu <span className="text-danger">*</span></label>
-                  <input type="time" name="startTime"
+                  <label className="small fw-bold">
+                    Giờ bắt đầu <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
                     className="form-control form-control-sm bg-light text-muted"
-                    value={form.startTime} disabled />
-                  {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
+                    value={form.startTime}
+                    disabled
+                  />
                 </div>
+
                 <div className="col-6">
-                  <label className="small fw-bold">Giờ kết thúc <span className="text-danger">*</span></label>
-                  <input type="time" name="endTime"
+                  <label className="small fw-bold">
+                    Giờ kết thúc <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
                     className="form-control form-control-sm bg-light text-muted"
-                    value={form.endTime} disabled />
-                  {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
+                    value={form.endTime}
+                    disabled
+                  />
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '14px 16px', border: '1px solid #bbf7d0', marginBottom: '12px' }}>
+            <div
+              style={{
+                background: '#f0fdf4',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                border: '1px solid #bbf7d0',
+                marginBottom: '12px'
+              }}
+            >
               <div className="fw-bold text-success mb-1" style={{ fontSize: '0.85rem' }}>
-                <i className="bi bi-clock-history me-2" />Giới Hạn Chấm Công
+                <i className="bi bi-clock-history me-2" />
+                Giới Hạn Chấm Công
               </div>
+
               <div className="row g-2">
                 <div className="col-6">
                   <label className="small fw-bold">Bắt đầu nhận chấm công</label>
-                  <input type="time" name="checkInStart"
+                  <input
+                    type="time"
+                    name="checkInStart"
                     className={`form-control form-control-sm ${errors.checkInStart ? 'is-invalid' : ''}`}
-                    value={form.checkInStart} onChange={handleChange} />
-                  {errors.checkInStart && <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>{errors.checkInStart}</div>}
+                    value={form.checkInStart}
+                    onChange={handleChange}
+                  />
+                  {errors.checkInStart && (
+                    <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>
+                      {errors.checkInStart}
+                    </div>
+                  )}
                 </div>
+
                 <div className="col-6">
                   <label className="small fw-bold">Hạn chót chấm công</label>
-                  <input type="time" name="checkInEnd"
+                  <input
+                    type="time"
+                    name="checkInEnd"
                     className={`form-control form-control-sm ${errors.checkInEnd ? 'is-invalid' : ''}`}
-                    value={form.checkInEnd} onChange={handleChange} />
-                  {errors.checkInEnd && <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>{errors.checkInEnd}</div>}
+                    value={form.checkInEnd}
+                    onChange={handleChange}
+                  />
+                  {errors.checkInEnd && (
+                    <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>
+                      {errors.checkInEnd}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#fff7ed', borderRadius: '10px', padding: '14px 16px', border: '1px solid #fed7aa' }}>
+            <div
+              style={{
+                background: '#fff7ed',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                border: '1px solid #fed7aa'
+              }}
+            >
               <div className="fw-bold mb-1" style={{ color: '#ea580c', fontSize: '0.85rem' }}>
                 Thời Gian Kết Ca
               </div>
+
               <div className="row g-2">
                 <div className="col-6">
                   <label className="small fw-bold">Giờ kết ca</label>
-                  <input type="time" name="checkOutDeadline"
+                  <input
+                    type="time"
+                    name="checkOutDeadline"
                     className={`form-control form-control-sm ${errors.checkOutDeadline ? 'is-invalid' : ''}`}
-                    value={form.checkOutDeadline} onChange={handleChange} />
-                  {errors.checkOutDeadline && <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>{errors.checkOutDeadline}</div>}
+                    value={form.checkOutDeadline}
+                    onChange={handleChange}
+                  />
+                  {errors.checkOutDeadline && (
+                    <div className="invalid-feedback" style={{ fontSize: '.76rem' }}>
+                      {errors.checkOutDeadline}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* Footer  */}
-          <div style={{
-            padding: '14px 28px',
-            borderTop: '1px solid #f0f0f0',
-            background: '#fafafa',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '10px',
-            flexShrink: 0,
-          }}>
-            <button type="button" className="btn btn-light border px-4 fw-bold"
+          <div
+            style={{
+              padding: '14px 28px',
+              borderTop: '1px solid #f0f0f0',
+              background: '#fafafa',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-light border px-4 fw-bold"
               style={{ borderRadius: '10px', fontSize: '0.9rem' }}
-              onClick={onClose} disabled={loading}>Hủy</button>
-            <button type="submit" className="btn text-white px-4 fw-bold"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '10px', fontSize: '0.9rem' }}
-              disabled={loading}>
-              {loading
-                ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</>
-                : <>Cập Nhật</>}
+              onClick={onClose}
+              disabled={loading}
+            >
+              Hủy
+            </button>
+
+            <button
+              type="submit"
+              className="btn text-white px-4 fw-bold"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '0.9rem'
+              }}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" />
+                  Đang lưu...
+                </>
+              ) : (
+                <>Cập Nhật</>
+              )}
             </button>
           </div>
         </form>

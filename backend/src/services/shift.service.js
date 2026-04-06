@@ -47,7 +47,7 @@ module.exports.updateShift = async (id, data) => {
 
   if (data.checkOutDeadline) {
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (getDiff(checkOutDeadlineM, endMins) <= 0) {
+    if (getDiff(checkOutDeadlineM, endMins) < 0) {
       throw new Error("Giờ kết ca phải sau giờ kết thúc ca!");
     }
     if (getDiff(checkOutDeadlineM, endMins) > 30) {
@@ -95,7 +95,7 @@ module.exports.createShift = async (data) => {
 
   if (data.checkOutDeadline) {
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (getDiff(checkOutDeadlineM, endMins) <= 0) {
+    if (getDiff(checkOutDeadlineM, endMins) < 0) {
       throw new Error("Giờ kết ca phải sau giờ kết thúc ca!");
     }
     if (getDiff(checkOutDeadlineM, endMins) > 30) {

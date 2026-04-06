@@ -15,7 +15,6 @@ const ConfirmRemoveModal = ({ onConfirm, onClose, loading }) => {
                 }}>
                     <div className="d-flex justify-content-between align-items-center">
                         <h5 className="fw-bold m-0" style={{ fontSize: '1rem' }}>
-                            <i className="bi bi-exclamation-triangle-fill me-2" />
                             Xác Nhận Xóa Ca
                         </h5>
                         <button onClick={onClose} disabled={loading}
@@ -37,9 +36,9 @@ const ConfirmRemoveModal = ({ onConfirm, onClose, loading }) => {
                     <p className="fw-bold mb-1" style={{ fontSize: '1rem', color: '#0f172a' }}>
                         Bỏ phân công ca này?
                     </p>
-                    <p className="text-secondary" style={{ fontSize: '0.88rem' }}>
+                    {/* <p className="text-secondary" style={{ fontSize: '0.88rem' }}>
                         Hành động này không thể hoàn tác.
-                    </p>
+                    </p> */}
                 </div>
 
                 {/* Footer */}
@@ -58,7 +57,7 @@ const ConfirmRemoveModal = ({ onConfirm, onClose, loading }) => {
                         onClick={onConfirm} disabled={loading}>
                         {loading
                             ? <><span className="spinner-border spinner-border-sm me-2" />Đang xóa...</>
-                            : <><i className="bi bi-trash3-fill me-2" />Xác Nhận Xóa</>}
+                            : <>Xác Nhận Xóa</>}
                     </button>
                 </div>
             </div>

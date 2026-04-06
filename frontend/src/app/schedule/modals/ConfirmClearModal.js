@@ -15,8 +15,7 @@ const ConfirmClearModal = ({ onConfirm, onClose, loading, staffName, startDate, 
                 }}>
                     <div className="d-flex justify-content-between align-items-center">
                         <h5 className="fw-bold m-0" style={{ fontSize: '1.1rem' }}>
-                            <i className="bi bi-trash3-fill me-2" />
-                            Xác Nhận Xóa Hàng Loạt
+                            Xác Nhận Xóa Ca
                         </h5>
                         <button onClick={onClose} disabled={loading}
                             style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer' }}>
@@ -47,10 +46,9 @@ const ConfirmClearModal = ({ onConfirm, onClose, loading, staffName, startDate, 
                             {startDate} <i className="bi bi-arrow-right mx-1 text-secondary" /> {endDate}
                         </div>
                     </div>
-                    <p className="text-secondary small mb-0 px-2" style={{ lineHeight: '1.6' }}>
-                        Hệ thống sẽ xóa các ca chưa diễn ra trong khoảng thời gian lựa chọn.
-                        Các ca đã làm hoặc đang làm sẽ được giữ nguyên.
-                    </p>
+                    {/* <p className="text-secondary small mb-0 px-2" style={{ lineHeight: '1.6' }}>
+                        Hệ thống sẽ xóa các ca chưa diễn ra trong khoảng thời gian được chọn.
+                    </p> */}
                 </div>
 
                 {/* Footer */}
@@ -69,7 +67,7 @@ const ConfirmClearModal = ({ onConfirm, onClose, loading, staffName, startDate, 
                         onClick={onConfirm} disabled={loading}>
                         {loading
                             ? <><span className="spinner-border spinner-border-sm me-2" />Đang xử lý...</>
-                            : <><i className="bi bi-trash3-fill me-2" />Đồng Ý</>}
+                            : <>Đồng Ý</>}
                     </button>
                 </div>
             </div>

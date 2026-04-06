@@ -8,7 +8,7 @@ import ShiftDetailModal from './modals/ShiftDetailModal';
 import ShiftUpdateModal from './modals/ShiftUpdateModal';
 import ShiftToggleModal from './modals/ShiftToggleModal';
 import useTitle from "hooks/common/useTitle";
-
+import { getDuration } from './utils/time';
 const PAGE_SIZE = 10;
 
 const ShiftList = () => {
@@ -18,7 +18,7 @@ const ShiftList = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDebounce(searchInput, 400);
-  const [filterStatus, setFilterStatus] = useState('all'); // all | active | inactive
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const [modalType, setModalType] = useState(null);
   const [selectedShift, setSelectedShift] = useState(null);
@@ -60,28 +60,16 @@ const ShiftList = () => {
   const totalPages = Math.ceil(filteredShifts.length / PAGE_SIZE);
   const paginated = filteredShifts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const shiftColors = [
-    { bg: '#dbeafe', text: '#1d4ed8' },
-    { bg: '#dcfce7', text: '#15803d' },
-    { bg: '#fef3c7', text: '#b45309' },
-    { bg: '#fee2e2', text: '#b91c1c' },
-    { bg: '#f3e8ff', text: '#6b21a8' },
-  ];
-  const getColor = (idx) => shiftColors[idx % shiftColors.length];
+const formatDuration = (startTime, endTime) => {
+  const totalMinutes = getDuration(startTime, endTime);
 
-  const getDuration = (start, end) => {
-    if (!start || !end) return '—';
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins < 0) {
-      mins += 1440;
-    }
-    if (mins === 0) return '—';
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  };
+  if (!totalMinutes) return '—';
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+};
 
   return (
     <div className="d-flex" style={{ background: '#f0f2f5', minHeight: '100vh' }}>
@@ -91,7 +79,7 @@ const ShiftList = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h3 className="fw-bold m-0 text-dark">Quản Lý Ca Làm Việc</h3>
-         </div>
+          </div>
           <button className="btn text-white fw-bold px-4 py-2 shadow-sm d-flex align-items-center gap-2"
             style={{ borderRadius: '8px', background: '#6366f1' }} onClick={openCreate}>
             <i className="bi bi-plus-circle-fill" /> Tạo Ca Mới
@@ -127,7 +115,7 @@ const ShiftList = () => {
               <button className="btn btn-outline-secondary fw-bold d-flex align-items-center gap-2"
                 style={{ borderRadius: '10px', height: '38px', fontSize: '0.85rem' }}
                 onClick={() => { setSearchInput(''); setFilterStatus('all'); setPage(1); fetchShifts(); }}>
-                   Làm mới
+                Làm mới
               </button>
               {/* <div className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold px-3"
                 style={{ borderRadius: '10px', height: '38px', minWidth: '45px', fontSize: '1rem' }}
@@ -170,7 +158,6 @@ const ShiftList = () => {
                     </tr>
                   ) : paginated.map((shift, idx) => {
                     const realIdx = (page - 1) * PAGE_SIZE + idx;
-                    const color = getColor(realIdx);
                     const isActive = shift.isActive === 1 || shift.isActive === true;
 
                     return (
@@ -181,7 +168,7 @@ const ShiftList = () => {
                         </td>
                         <td>
                           <span className="badge px-3 py-2 rounded-pill fw-bold"
-                            style={{ background: color.bg, color: color.text, fontSize: '.85rem' }}>
+                            style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '.85rem' }}>
                             {shift.name}
                           </span>
                         </td>
@@ -193,7 +180,7 @@ const ShiftList = () => {
                         </td>
                         <td className="text-center">
                           <span className="badge bg-light text-secondary border">
-                            {getDuration(shift.startTime, shift.endTime)}
+                            {formatDuration(shift.startTime, shift.endTime)}
                           </span>
                         </td>
                         <td className="text-center">
