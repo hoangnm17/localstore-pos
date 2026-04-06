@@ -127,6 +127,7 @@ module.exports.update = async (id, data) => {
             .input('pn', sql.VarChar, data.phoneNumber)
             .input('em', sql.VarChar, data.email || '')
             .input('st', sql.VarChar, data.salaryType)
+            .input('ca', sql.DateTime2, new Date(data.createdAt))
             .input('bs', sql.Decimal(15, 2), parseFloat(data.baseSalary) || 0)
             .query(`
                 UPDATE Staff SET 
@@ -134,7 +135,8 @@ module.exports.update = async (id, data) => {
                     phoneNumber= @pn,
                     email= @em,
                     salaryType= @st,
-                    baseSalary= @bs 
+                    baseSalary= @bs,
+                    createdAt= @ca 
                 WHERE id = @id
             `);
 
