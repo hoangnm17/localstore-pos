@@ -41,7 +41,13 @@ function LoginPage() {
       setError("");
       localStorage.clear();
 
-      const response = await loginAPI(form);
+      // Trim username để tránh lỗi gõ nhầm khoảng trắng
+      const loginForm = { 
+        ...form, 
+        username: form.username.trim() 
+      };
+
+      const response = await loginAPI(loginForm);
       const serverData = response.data ?? response;
 
       if (serverData.success) {
@@ -53,7 +59,12 @@ function LoginPage() {
         setError(serverData.message || "Đăng nhập thất bại");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Sai tên đăng nhập hoặc mật khẩu");
+      console.error("Login Error:", err);
+      // Nếu có response từ server thì dùng message của server, 
+      // nếu không có response (lỗi kết nối) thì dùng err.message, 
+      // cuối cùng mới fallback về thông báo chung.
+      const errorMsg = err.response?.data?.message || err.message || "Sai tên đăng nhập hoặc mật khẩu";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
