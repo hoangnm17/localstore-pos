@@ -183,6 +183,24 @@ function ProductFormModal({
         setForm((prev) => ({ ...prev, salePrice: comboRetailTotal }));
     }, [comboRetailTotal, form.pricingMode, isCombo, open]);
 
+    useEffect(() => {
+        if (!open || !isCombo) return;
+
+        const keyword = String(searchKeyword || '').trim();
+
+        if (!keyword) {
+            setSearchResults([]);
+            setSearchingProducts(false);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            searchChildProducts(keyword);
+        }, 300); 
+
+        return () => clearTimeout(timer);
+    }, [open, isCombo, searchKeyword]);
+
     // ── Handlers ────────────────────────────────────────────────────
     const handleChange = (field, value) => {
         setForm((prev) => {
@@ -217,12 +235,31 @@ function ProductFormModal({
     };
 
     const searchChildProducts = async (keyword = '') => {
+        const normalizedKeyword = String(keyword || '').trim();
+
+        if (!normalizedKeyword) {
+            setSearchResults([]);
+            setSearchingProducts(false);
+            return;
+        }
+
         try {
             setSearchingProducts(true);
-            const res = await getProducts({ page: 1, limit: 20, search: keyword, status: 'Selling' });
+
+            const res = await getProducts({
+                page: 1,
+                limit: 20,
+                search: normalizedKeyword,
+                status: 'Selling'
+            });
+
             const rows = (res.data || []).filter(
-                (item) => String(item.id) !== String(initialData?.id) && !item.isCombo
+                (item) =>
+                    String(item.id) !== String(initialData?.id) &&
+                    !item.isCombo &&
+                    !item.allowDecimalQuantity
             );
+
             setSearchResults(rows);
         } catch (e) {
             console.error(e);
@@ -256,10 +293,7 @@ function ProductFormModal({
         [childUnits, selectedChildUnitId]
     );
 
-    const childQuantityStep = useMemo(
-        () => (!selectedChildUnit ? 1 : selectedChildUnit.unitType === 'WEIGHT' ? 0.001 : 1),
-        [selectedChildUnit]
-    );
+    const childQuantityStep = useMemo(() => 1, []);
 
     const childLineTotal = useMemo(
         () => roundNumber(Number(childQuantity || 0) * Number(selectedChildUnit?.salePrice || 0), 2),
@@ -272,6 +306,12 @@ function ProductFormModal({
     );
 
     const handleSelectChildProduct = async (product) => {
+        if (product?.allowDecimalQuantity) {
+            setError('Không được thêm sản phẩm bán theo cân vào combo.');
+            return;
+        }
+
+        setError('');
         setSelectedChildProduct(product);
         await loadChildUnits(product);
     };
@@ -289,13 +329,28 @@ function ProductFormModal({
 
     const handleAddComboRow = () => {
         if (!selectedChildProduct) { setError('Vui lòng chọn sản phẩm con cho combo.'); return; }
+        if (selectedChildProduct.allowDecimalQuantity) {
+            setError('Không được thêm sản phẩm bán theo cân vào combo.');
+            return;
+        }
         if (!selectedChildUnit) { setError('Vui lòng chọn đơn vị tính của sản phẩm con.'); return; }
+
         const qty = Number(childQuantity || 0);
-        if (Number.isNaN(qty) || qty <= 0) { setError('Số lượng sản phẩm con phải lớn hơn 0.'); return; }
+        if (Number.isNaN(qty) || qty <= 0) {
+            setError('Số lượng sản phẩm con phải lớn hơn 0.');
+            return;
+        }
+
+        if (!Number.isInteger(qty)) {
+            setError('Số lượng sản phẩm con trong combo phải là số nguyên.');
+            return;
+        }
+
         if (comboRows.some((r) => String(r.childProductId) === String(selectedChildProduct.id))) {
             setError('Mỗi sản phẩm con chỉ nên xuất hiện 1 lần trong combo.');
             return;
         }
+
         const stock = Number(selectedChildProduct.stockQuantity || 0);
         if (childBaseQuantity > stock) {
             setError(
@@ -313,6 +368,7 @@ function ProductFormModal({
             productName: selectedChildProduct.name,
             productCode: selectedChildProduct.code,
             baseUnit: selectedChildProduct.baseUnit,
+            allowDecimalQuantity: !!selectedChildProduct.allowDecimalQuantity,
             units: childUnits,
             selectedUnitId: String(selectedChildUnit.id),
             unitName: selectedChildUnit.unitName,
@@ -323,6 +379,7 @@ function ProductFormModal({
             quantityBase: childBaseQuantity,
             lineTotal: childLineTotal
         }]);
+
         setError('');
         setSelectedChildProduct(null);
         setChildUnits([]);
@@ -390,6 +447,10 @@ function ProductFormModal({
         if (isCombo) {
             if (comboRows.length === 0) {
                 errors.combo = 'Sản phẩm combo phải có ít nhất 1 sản phẩm con.';
+            }
+
+            if (comboRows.some((row) => row.allowDecimalQuantity || row.unitType === 'WEIGHT')) {
+                errors.combo = 'Combo không được chứa sản phẩm bán theo cân.';
             }
             // Kiểm tra nếu đã chọn sản phẩm con nhưng chưa thêm vào combo
             if (selectedChildProduct) {
