@@ -70,6 +70,25 @@ function validateProductPayload(data) {
     }
 }
 
+async function validateCategoryIsActive(categoryId) {
+    if (categoryId === null || categoryId === undefined || categoryId === '') {
+        return null;
+    }
+
+    const normalizedCategoryId = Number(categoryId);
+
+    if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
+        throw new Error('Danh mục không hợp lệ.');
+    }
+
+    const isActive = await productModel.isCategoryActive(normalizedCategoryId);
+    if (!isActive) {
+        throw new Error('Danh mục không tồn tại hoặc đã bị xóa mềm.');
+    }
+
+    return normalizedCategoryId;
+}
+
 exports.getProductList = async (filters) => {
     const safeLimit = Number(filters.limit) > 0 ? Number(filters.limit) : 10;
     const data = await productModel.getProducts(filters);
@@ -88,12 +107,14 @@ exports.getProductDetail = async (id) => {
 
 exports.createProduct = async (productData) => {
     validateProductPayload(productData);
+    productData.categoryId = await validateCategoryIsActive(productData.categoryId);
     if (productData.barcode && String(productData.barcode).trim()) {
         const barcodeExists = await productModel.checkBarcodeExists(productData.barcode);
         if (barcodeExists) {
             throw new Error('Barcode đã được sử dụng.');
         }
     }
+
     try {
         return await productModel.createProduct(productData);
     } catch (err) {
@@ -103,6 +124,7 @@ exports.createProduct = async (productData) => {
 
 exports.updateProduct = async (id, productData) => {
     validateProductPayload(productData);
+    productData.categoryId = await validateCategoryIsActive(productData.categoryId);
 
     if (productData.barcode && String(productData.barcode).trim()) {
         const barcodeExists = await productModel.checkBarcodeExists(productData.barcode, id);
@@ -128,6 +150,16 @@ exports.stopSellingProduct = async (id) => {
 };
 
 exports.startSellingProduct = async (id) => {
+    const product = await productModel.getProductCategoryInfo(id);
+
+    if (!product) {
+        throw new Error('Không tìm thấy sản phẩm.');
+    }
+
+    if (product.categoryId && Number(product.categoryStatus) !== 1) {
+        throw new Error('Không thể bán lại sản phẩm vì danh mục đang bị xóa mềm. Vui lòng chuyển sản phẩm sang danh mục khác hoặc khôi phục danh mục.');
+    }
+
     const updated = await productModel.startSellingProduct(id);
     if (!updated) throw new Error('Không tìm thấy sản phẩm.');
     return true;

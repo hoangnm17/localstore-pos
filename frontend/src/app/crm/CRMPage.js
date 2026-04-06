@@ -503,8 +503,13 @@ function PromotionItemsManager({ promotionId }) {
 
     const add = async () => {
         const payload = form.type === 'product' ? { productId: parseInt(form.id) } : { categoryId: parseInt(form.id) };
-        await addPromotionItem(promotionId, payload);
-        setForm({ ...form, id: '' }); fetch();
+        try {
+            await addPromotionItem(promotionId, payload);
+            setForm({ ...form, id: '' });
+            fetch();
+        } catch (e) {
+            alert(e.response?.data?.message || e.message);
+        }
     };
 
     return (

@@ -136,12 +136,20 @@ export default function CustomerSearch({
                             <div className="customer-phone">{cust.phone}</div>
                           </div>
                         </div>
-                        <span className="points-badge">
-                          {cust.loyaltyPoints ?? 0} <i className="bi bi-star-fill ms-1"></i>
-                        </span>
+                        <div className="d-flex flex-column align-items-end gap-1">
+                          <span className="points-badge">
+                            {cust.loyaltyPoints ?? 0} <i className="bi bi-star-fill ms-1"></i>
+                          </span>
+                          {cust.status !== 'Active' && (
+                            <span className="badge bg-danger" style={{ fontSize: 10 }}>
+                              {cust.status}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
+
                 </div>
               ) : !loading && phone.length >= 6 && (
                 <div className="p-3 text-center no-result">

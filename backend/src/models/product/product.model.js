@@ -670,13 +670,13 @@ exports.getAllProducts = async (filters) => {
 };
 
 exports.getBarcodeProducts = async (filters) => {
-  const { search, page = 1, pageSize = 10, categoryId, status } = filters;
+    const { search, page = 1, pageSize = 10, categoryId, status } = filters;
 
-  if (!search) return null;
+    if (!search) return null;
 
-  const offset = (page - 1) * pageSize;
+    const offset = (page - 1) * pageSize;
 
-  const query = `
+    const query = `
     ${categoryId ? `
     WITH CategoryTree AS (
         SELECT id FROM Categories WHERE id = @categoryId
@@ -714,19 +714,19 @@ exports.getBarcodeProducts = async (filters) => {
     OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
   `;
 
-  const request = new sql.Request();
-  request.input("search", sql.VarChar, search);
-  request.input("status", sql.VarChar, status || "Selling");
-  request.input("categoryId", sql.Int, categoryId || null);
-  request.input("offset", sql.Int, offset);
-  request.input("pageSize", sql.Int, pageSize);
+    const request = new sql.Request();
+    request.input("search", sql.VarChar, search);
+    request.input("status", sql.VarChar, status || "Selling");
+    request.input("categoryId", sql.Int, categoryId || null);
+    request.input("offset", sql.Int, offset);
+    request.input("pageSize", sql.Int, pageSize);
 
-  const result = await request.query(query);
+    const result = await request.query(query);
 
-  // ❌ Không tìm thấy → return null
-  if (result.recordset.length === 0) return null;
+    // ❌ Không tìm thấy → return null
+    if (result.recordset.length === 0) return null;
 
-  return result.recordset;
+    return result.recordset;
 };
 
 exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {
@@ -744,4 +744,40 @@ exports.checkBarcodeExists = async (barcode, excludeProductId = null) => {
         `);
 
     return result.recordset[0].count > 0;
+};
+
+exports.isCategoryActive = async (categoryId) => {
+    if (categoryId === null || categoryId === undefined || categoryId === '') {
+        return true;
+    }
+
+    const pool = await connectDB();
+    const rs = await pool.request()
+        .input('categoryId', sql.Int, categoryId)
+        .query(`
+            SELECT COUNT(*) total
+            FROM Categories
+            WHERE id = @categoryId AND status = 1
+        `);
+
+    return rs.recordset[0].total > 0;
+};
+
+exports.getProductCategoryInfo = async (id) => {
+    const pool = await connectDB();
+
+    const result = await pool.request()
+        .input('id', sql.BigInt, id)
+        .query(`
+            SELECT
+                p.id,
+                p.name,
+                p.categoryId,
+                c.status AS categoryStatus
+            FROM Products p
+            LEFT JOIN Categories c ON c.id = p.categoryId
+            WHERE p.id = @id
+        `);
+
+    return result.recordset[0] || null;
 };
