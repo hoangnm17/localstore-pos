@@ -16,6 +16,13 @@ class RosterService {
 
         if (!shift) throw new Error("Không tìm thấy ca làm việc!");
         if (!staff) throw new Error("Không tìm thấy nhân viên!");
+        const isActive = shift.isActive === true || shift.isActive === 1;
+        if (!isActive) {
+            throw new Error("Ca làm việc đã bị vô hiệu hóa, không thể phân công!");
+        }
+        if (staff.employmentStatus !== 'working') {
+            throw new Error("Nhân viên đã nghỉ việc, không thể phân công!");
+        }
 
         await this.checkAddShift({ staffId, shift, workDate });
 
@@ -27,6 +34,9 @@ class RosterService {
         const schedule = await rosterModel.findById(scheduleId);
         if (!schedule) throw new Error("Không tìm thấy lịch làm việc!");
 
+        if (schedule.status !== 'assigned') {
+            throw new Error("Chỉ có thể xóa ca chưa bắt đầu !");
+        }
         const now = this.getNowVN();
         const workDate = this.toDateStr(schedule.workDate);
         const shiftStart = this.toTimeStr(schedule.startTime);

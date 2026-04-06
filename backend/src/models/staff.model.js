@@ -144,12 +144,6 @@ module.exports.update = async (id, data) => {
             .input('sid', sql.BigInt, parseInt(id))
             .query("SELECT userId FROM Staff WHERE id = @sid");
         const userId = staffRes.recordset[0].userId;
-        // let passwordUpdateSQL = "";
-        // if (data.hashedPassword) {
-        //     request.input('ph', sql.VarChar, data.hashedPassword);
-        //     passwordUpdateSQL = ", passwordHash = @ph";
-        // }
-
         await request
             .input('uid', sql.Int, userId)
             .input('r', sql.Int, parseInt(data.roleId))
