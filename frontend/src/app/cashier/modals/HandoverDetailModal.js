@@ -36,7 +36,7 @@ const HandoverDetailModal = ({ row, onClose }) => {
                     <div className="d-flex justify-content-between align-items-start">
                         <div>
                             <h5 className="fw-bold m-0">
-                                <i className="bi bi-wallet2 me-2" />Chi Tiết Bàn Giao Tiền Mặt
+                                Chi Tiết Bàn Giao Tiền Mặt
                             </h5>
                         </div>
                         <button onClick={onClose}
