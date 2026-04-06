@@ -215,8 +215,6 @@ function ProductFormModal({
 
             if (field === 'productType' && value === 'regular') {
                 next.pricingMode = 'manual';
-
-                // Nếu trước đó đang là combo thì xóa chữ "Combo"
                 if (prev.productType === 'combo' && prev.baseUnit === 'Combo') {
                     next.baseUnit = '';
                 }
