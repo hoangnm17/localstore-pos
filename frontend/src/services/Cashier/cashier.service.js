@@ -1,7 +1,7 @@
 import api from '../axiosInstance';
 
 export const getMySchedule = async (startDate, endDate) => {
-    const res = await api.get('/cashier/schedule', {
+    const res = await api.get('/cashier/my-schedule', {
         params: { startDate, endDate }
     });
     return res.data;

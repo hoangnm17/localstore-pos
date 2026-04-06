@@ -409,6 +409,18 @@ function PromotionsTab() {
             }
         }
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (form.startDate && new Date(form.startDate) < today) {
+            setAlertMsg("Ngày bắt đầu không được ở trong quá khứ!");
+            return;
+        }
+        if (form.endDate && new Date(form.endDate) < today) {
+            setAlertMsg("Ngày kết thúc không được ở trong quá khứ!");
+            return;
+        }
+
         try {
             if (editTarget) await updatePromotion(editTarget.id, form);
             else await createPromotion(form);
@@ -491,8 +503,13 @@ function PromotionItemsManager({ promotionId }) {
 
     const add = async () => {
         const payload = form.type === 'product' ? { productId: parseInt(form.id) } : { categoryId: parseInt(form.id) };
-        await addPromotionItem(promotionId, payload);
-        setForm({ ...form, id: '' }); fetch();
+        try {
+            await addPromotionItem(promotionId, payload);
+            setForm({ ...form, id: '' });
+            fetch();
+        } catch (e) {
+            alert(e.response?.data?.message || e.message);
+        }
     };
 
     return (
@@ -588,6 +605,18 @@ function VouchersTab() {
             }
         }
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (form.startDate && new Date(form.startDate) < today) {
+            setAlertMsg("Ngày bắt đầu không được ở trong quá khứ!");
+            return;
+        }
+        if (form.expiryDate && new Date(form.expiryDate) < today) {
+            setAlertMsg("Ngày hết hạn không được ở trong quá khứ!");
+            return;
+        }
+
         try {
             if (editTarget) await updateVoucher(editTarget.id, form);
             else await createVoucher(form);
@@ -608,7 +637,7 @@ function VouchersTab() {
                 </div>
                 <div className="crm-table-container">
                     <table className="crm-table">
-                        <thead><tr><th>Mã</th><th>Giá trị</th><th>Đơn tối thiểu</th><th>Sử dụng</th><th>Hết hạn</th><th>Thao tác</th></tr></thead>
+                        <thead><tr><th>Mã</th><th>Giá trị</th><th>Đơn tối thiểu</th><th>Sử dụng</th><th>Hết hạn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                         <tbody>
                             {loading ? <tr><td colSpan="6" className="loading-cell"><div className="spinner" /></td></tr> :
                                 vouchers.map(v => (
@@ -618,12 +647,22 @@ function VouchersTab() {
                                         <td>{fmtMoney(v.minOrderValue)}</td>
                                         <td>{v.currentUsage}/{v.maxUsage}</td>
                                         <td className="text-muted">{fmtDate(v.expiryDate)}</td>
+                                        <td><StatusBadge s={v.status} /></td>
                                         <td>
                                             <div className="action-btns d-flex gap-2">
                                                 <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Sửa" style={{ width: 32, height: 32 }} onClick={() => { setForm({ ...v, startDate: toInputDate(v.startDate), expiryDate: toInputDate(v.expiryDate) }); setEditTarget(v); setShowModal(true); }}>
                                                     <Edit size={18} className="text-muted" />
                                                 </button>
-                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => { if (window.confirm('Xóa voucher này?')) { await deleteVoucher(v.id); fetchData(); } }}>
+                                                <button className="btn btn-sm btn-light border p-1 d-flex align-items-center justify-content-center" title="Xóa" style={{ width: 32, height: 32 }} onClick={async () => {
+                                                    if (window.confirm('Vô hiệu hóa voucher này?')) {
+                                                        try {
+                                                            await deleteVoucher(v.id);
+                                                            fetchData();
+                                                        } catch (e) {
+                                                            setAlertMsg(e.response?.data?.message || e.message);
+                                                        }
+                                                    }
+                                                }}>
                                                     <Trash2 size={18} className="text-danger" />
                                                 </button>
                                             </div>
@@ -644,6 +683,14 @@ function VouchersTab() {
                         <div className="form-group"><label>Đơn tối thiểu</label><input className="form-input" type="number" value={form.minOrderValue} onChange={e => setForm({ ...form, minOrderValue: e.target.value })} /></div>
                         <div className="form-group"><label>Bắt đầu</label><input className="form-input" type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
                         <div className="form-group"><label>Ngày hết hạn</label><input className="form-input" type="date" value={form.expiryDate} onChange={e => setForm({ ...form, expiryDate: e.target.value })} /></div>
+                        <div className="form-group">
+                            <label>Trạng thái</label>
+                            <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                                <option value="Active">Active</option>
+                                <option value="Expired">Expired</option>
+                                <option value="Disabled">Disabled</option>
+                            </select>
+                        </div>
                     </div>
                 </Modal>
             )}

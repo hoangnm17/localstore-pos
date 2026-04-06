@@ -9,7 +9,7 @@ module.exports.getWeeklySchedule = async (req, res) => {
             });
         }
 
-        const data = await rosterService.getWeeklySchedule(startDate, endDate);
+        const data = await rosterService.getWeekSchedule(startDate, endDate);
         return res.json({
             success: true,
             data
@@ -50,7 +50,7 @@ module.exports.assignShift = async (req, res) => {
 module.exports.removeShift = async (req, res) => {
     try {
         const { scheduleId } = req.params;
-        await rosterService.removeShift(scheduleId);
+        await rosterService.deleteShift(scheduleId);
         return res.json({
             success: true,
             message: "Xóa phân công thành công!"
@@ -66,7 +66,7 @@ module.exports.removeShift = async (req, res) => {
 module.exports.clearSchedule = async (req, res) => {
     try {
         const { staffId, startDate, endDate } = req.body;
-        const result = await rosterService.clearSchedule({ staffId, startDate, endDate });
+        const result = await rosterService.clearShifts({ staffId, startDate, endDate });
         return res.json({
             success: true,
             message: `Đã xóa ${result.deletedCount} ca làm việc hợp lệ!`,

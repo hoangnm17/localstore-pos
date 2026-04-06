@@ -29,18 +29,16 @@ const StaffResignModal = ({ staff, onClose, onSuccess }) => {
         <BaseModal onClose={onClose} maxWidth="460px" disableClose={isUpdating}>
             <div style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.15)' }}>
                 <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '24px 32px', color: '#fff', textAlign: 'center' }}>
-                    <i className="bi bi-person-dash-fill" style={{ fontSize: '2.5rem' }} />
-                    <h5 className="fw-bold mt-2 mb-0">Xác Nhận Nghỉ Việc</h5>
+                    <h5 className="fw-bold">Xác Nhận Nghỉ Việc</h5>
                 </div>
                 <div className="p-4 text-center">
-                    <p className="text-secondary mb-1">Bạn chắc chắn muốn ghi nhận</p>
+                    <p className="text-secondary mb-1">Bạn chắc chắn muốn cho nhân viên</p>
                     <p className="fw-bold fs-5 mb-1">
                         <span className="text-warning">{staff?.fullName}</span>
                     </p>
-                    <p className="text-secondary mb-3">là đã <strong>nghỉ việc</strong>?</p>
+                    <p className="text-secondary mb-3"><strong>nghỉ việc</strong>?</p>
                     <div className="alert alert-warning py-2 small text-start">
-                        <i className="bi bi-info-circle-fill me-1" />
-                        Tài khoản đăng nhập sẽ bị <strong>khóa tự động</strong>. Dữ liệu lịch sử vẫn được giữ nguyên và <strong>không thể hoàn tác</strong>.
+                        Tài khoản đăng nhập sẽ bị <strong>khóa</strong>. Hành động này không thể hoàn tác.
                     </div>
                 </div>
                 <div className="d-flex gap-3 justify-content-center px-4 pb-4">
@@ -51,7 +49,7 @@ const StaffResignModal = ({ staff, onClose, onSuccess }) => {
                         onClick={handleConfirm} disabled={isUpdating}>
                         {isUpdating
                             ? <><span className="spinner-border spinner-border-sm me-2" />Đang xử lý...</>
-                            : <><i className="bi bi-check-lg me-1" />Xác nhận</>}
+                            : <>Xác nhận</>}
                     </button>
                 </div>
             </div>

@@ -8,16 +8,7 @@ function useProductCategories() {
     const loadCategories = useCallback(async () => {
         try {
             setLoadingCategories(true);
-
-            const response = await getAllCategories();
-
-            const list =
-                response.data?.data?.data ||
-                response.data?.data ||
-                response.data?.items ||
-                response.data ||
-                [];
-
+            const list = await getAllCategories();
             setCategories(Array.isArray(list) ? list : []);
         } catch (error) {
             console.error('Load categories failed:', error);
@@ -26,6 +17,7 @@ function useProductCategories() {
             setLoadingCategories(false);
         }
     }, []);
+
 
     useEffect(() => {
         loadCategories();

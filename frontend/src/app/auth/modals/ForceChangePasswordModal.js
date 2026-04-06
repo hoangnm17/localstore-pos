@@ -14,7 +14,11 @@ const ForceChangePasswordModal = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        const passwordRegex = /^\d{6,20}$/;
+        if (!passwordRegex.test(newPass)) {
+            showNotification("Mật khẩu chỉ được chứa chữ số, từ 6-20 ký tự!", "danger");
+            return;
+        }
         if (newPass !== confirmPass) {
             showNotification("Mật khẩu xác nhận không khớp!", "danger");
             return;

@@ -268,7 +268,7 @@ const getProductById = async (transaction, productId, productUnitId) => {
         p.name,
         pu.id AS productUnitId,
         pu.unitName,
-        pu.salePrice,
+        pu.salePrice AS salePrice,
         pu.conversionFactor
       FROM Products p
       JOIN ProductUnits pu 

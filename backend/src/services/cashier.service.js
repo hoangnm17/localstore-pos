@@ -53,10 +53,10 @@ module.exports.submitHandover = async (userId, data) => {
     }
 
     let isLateHandover = false;
-    if (systemCashInfo.logoutDeadlineStr) {
+    const deadline = systemCashInfo.logoutDeadlineStr || systemCashInfo.endTimeStr;
+    if (deadline) {
         const start = systemCashInfo.startTimeStr;
         const end = systemCashInfo.endTimeStr;
-        const deadline = systemCashInfo.logoutDeadlineStr;
         const isCrossMidnight = end < start;
 
         if (!isCrossMidnight) {

@@ -75,7 +75,6 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
         let totalAmount = 0;
         let totalDiscount = 0;
 
-
         for (const item of items) {
             const product = await invoiceModel.getProductById(transaction, item.productId, item.productUnitId);
             if (!product) throw new Error(`Product ${item.productId} not found`);
@@ -107,7 +106,7 @@ const createInvoice = async ({ items, staffId, counterId, customerId }) => {
                 productId: item.productId,
                 productName: product.name,
                 quantity: item.quantity,
-                unitPrice,
+                unitPrice, // Lưu giá sau khi giảm
                 lineTotal,
                 productUnitId: item.productUnitId,
                 unitName: product.unitName,
@@ -158,7 +157,6 @@ const updateInvoiceItems = async (id, { items }) => {
                 unitName: product.unitName,
                 baseQuantity,
             });
-
         }
         console.log(totalAmount)
         await invoiceModel.updateAmounts(transaction, id, {

@@ -100,14 +100,13 @@ export default function Product({ addItem, isModalOpen, searchText, onSearchChan
 
   const fetchCategories = async () => {
     try {
-      const res = await getAllCategories();
-      if (res.success) {
-        setCategories(res.data);
-      }
+      const list = await getAllCategories();
+      setCategories(list);
     } catch (err) {
       console.error("Fetch categories error:", err);
     }
   };
+
 
 
   useEffect(() => {

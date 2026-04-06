@@ -3,6 +3,7 @@ import categoryService from '../../../services/Category/category.service';
 import CategoryModal from '../../category/ui/CategoryModal';
 import useCategoryForm from '../../../hooks/category/useCategoryForm';
 import { useNotification } from '../../../components/global/Notification/NotificationContext';
+import { flattenTree } from '../../../utils/categoryTree';
 
 export default function CategorySelector({ value, onChange, categories: initialCategories }) {
     const [showModal, setShowModal] = useState(false);
@@ -27,55 +28,18 @@ export default function CategorySelector({ value, onChange, categories: initialC
 
     const reloadCategories = async () => {
         try {
-            const res = await categoryService.getAllCategories();
-            const list = res.data?.data || res.data || [];
-
-            const buildTree = (items, parentId = null, level = 0) => {
-                return items
-                    .filter(item => item.parentId === parentId)
-                    .flatMap(item => {
-                        const hasChildren = items.some(c => c.parentId === item.id);
-                        return [
-                            {
-                                ...item,
-                                level,
-                                hasChildren,
-                                productCount: item.productCount || 0
-                            },
-                            ...buildTree(items, item.id, level + 1)
-                        ];
-                    });
-            };
-
-            setCategories(buildTree(list));
+            const res = await categoryService.fetchCategoryTree('', 1, 9999);
+            setCategories(flattenTree(res.data || []));
         } catch (err) {
             console.error('Failed to reload categories:', err);
         }
     };
 
     useEffect(() => {
-        if (initialCategories?.length === 0) {
-            reloadCategories();
-        } else if (initialCategories?.length > 0) {
-            const buildTree = (items, parentId = null, level = 0) => {
-                return items
-                    .filter(item => item.parentId === parentId)
-                    .flatMap(item => {
-                        const hasChildren = items.some(c => c.parentId === item.id);
-                        return [
-                            {
-                                ...item,
-                                level,
-                                hasChildren,
-                                productCount: item.productCount || 0
-                            },
-                            ...buildTree(items, item.id, level + 1)
-                        ];
-                    });
-            };
-            setCategories(buildTree(initialCategories));
-        }
-    }, [initialCategories]);
+        reloadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
 
     const handleDone = async () => {
         await reloadCategories();

@@ -1,37 +1,28 @@
 import React from 'react';
+import { formatDate, formatTime } from '../utils/schedule.utils';
 
 const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
 
-const shiftColors = [
-    { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-    { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
-    { bg: '#fef3c7', text: '#b45309', border: '#fcd34d' },
-    { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
-    { bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe' },
-    { bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' },
-];
-const getShiftStyle = (id, status) => {
-    if (status === 'absent') return { bg: '#fef2f2', text: '#ef4444', border: '#fecaca' };
-    if (status === 'completed') return { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' };
-    return shiftColors[(id - 1) % shiftColors.length];
-};
+const formatHours = (hoursValue) => {
+    if (!hoursValue) return '—';
 
-const formatDate = (d) => {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-};
+    const hours = Math.floor(hoursValue);
+    const minutes = Math.round((hoursValue - hours) * 60);
 
-const formatHours = (h) => {
-    if (!h) return '—';
-    const hours = Math.floor(h);
-    const mins = Math.round((h - hours) * 60);
-    return `${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
+    return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
 };
 
 const ScheduleTable = ({
-    loading, filterMode, staffPage, shifts, filteredStaff, weekDates, todayStr, canAssign, onOpenAssign, onRemove,
+    loading,
+    filterMode,
+    staffPage,
+    shifts,
+    filteredStaff,
+    weekDates,
+    todayStr,
+    canAssign,
+    onOpenAssign,
+    onRemove,
 }) => {
     if (loading) {
         return (
@@ -44,55 +35,100 @@ const ScheduleTable = ({
 
     return (
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '60vh' }}>
-            <table className="table table-hover align-middle mb-0" style={{ minWidth: '1100px', fontSize: '0.875rem' }}>
+            <table
+                className="table table-hover align-middle mb-0"
+                style={{ minWidth: '1100px', fontSize: '0.875rem' }}
+            >
                 <thead style={{ background: '#1e293b', position: 'sticky', top: 0, zIndex: 10 }}>
                     <tr>
-                        {filterMode === 'date' ? (
-                            <>
-                                <th className="py-3 ps-4 fw-bold"
-                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '180px', color: '#040c13' }}>
-                                    NGÀY
+                        <th
+                            className="py-3 ps-4 fw-bold"
+                            style={{
+                                fontSize: '0.75rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.7px',
+                                width: '190px',
+                                color: '#040c13'
+                            }}
+                        >
+                            {filterMode === 'staff' ? 'NHÂN VIÊN' : 'CA LÀM VIỆC'}
+                        </th>
+
+                        <th
+                            className="py-3 text-center fw-bold"
+                            style={{
+                                fontSize: '0.75rem',
+                                textTransform: 'uppercase',
+                                width: '80px',
+                                color: '#0e0e0e'
+                            }}
+                        >
+                            {filterMode === 'staff' ? 'GIỜ' : 'Số lượng'}
+                        </th>
+
+                        {weekDates.map((date, index) => {
+                            const dateStr = formatDate(date);
+                            const isToday = dateStr === todayStr;
+
+                            return (
+                                <th
+                                    key={index}
+                                    className="py-2 text-center"
+                                    style={{ width: '120px', minWidth: '110px' }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            color: isToday ? '#fbbf24' : '#020304',
+                                            letterSpacing: '1px',
+                                            textTransform: 'uppercase'
+                                        }}
+                                    >
+                                        {dayLabels[index]}
+                                    </div>
+
+                                    <span
+                                        style={{
+                                            display: 'inline-block',
+                                            background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)',
+                                            color: isToday ? '#1e293b' : '#0e0909',
+                                            borderRadius: '6px',
+                                            padding: '2px 8px',
+                                            fontWeight: 700,
+                                            fontSize: '0.8rem'
+                                        }}
+                                    >
+                                        {date.toLocaleDateString('vi-VN', {
+                                            day: '2-digit',
+                                            month: '2-digit'
+                                        })}
+                                    </span>
                                 </th>
-                                <th className="py-3 fw-bold text-center"
-                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#0e0e0e' }}>
-                                    DANH SÁCH CA & NHÂN VIÊN
-                                </th>
-                            </>
-                        ) : (
-                            <>
-                                <th className="py-3 ps-4 fw-bold"
-                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.7px', width: '190px', color: '#040c13' }}>
-                                    {filterMode === 'staff' ? 'NHÂN VIÊN' : 'CA LÀM VIỆC'}
-                                </th>
-                                <th className="py-3 text-center fw-bold"
-                                    style={{ fontSize: '0.75rem', textTransform: 'uppercase', width: '80px', color: '#0e0e0e' }}>
-                                    {filterMode === 'staff' ? 'GIỜ' : 'SL'}
-                                </th>
-                                {weekDates.map((d, i) => {
-                                    const dStr = formatDate(d);
-                                    const isToday = dStr === todayStr;
-                                    return (
-                                        <th key={i} className="py-2 text-center" style={{ width: '120px', minWidth: '110px' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isToday ? '#fbbf24' : '#020304', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                                                {dayLabels[i]}
-                                            </div>
-                                            <span style={{ display: 'inline-block', background: isToday ? '#f59e0b' : 'rgba(255,255,255,0.1)', color: isToday ? '#1e293b' : '#0e0909', borderRadius: '6px', padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem' }}>
-                                                {d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                                            </span>
-                                        </th>
-                                    );
-                                })}
-                            </>
-                        )}
+                            );
+                        })}
                     </tr>
                 </thead>
+
                 <tbody>
                     {filterMode === 'staff' ? (
-                        <StaffRows staffPage={staffPage} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onOpenAssign={onOpenAssign} onRemove={onRemove} />
-                    ) : filterMode === 'shift' ? (
-                        <ShiftRows shifts={shifts} filteredStaff={filteredStaff} weekDates={weekDates} todayStr={todayStr} canAssign={canAssign} onRemove={onRemove} />
+                        <StaffRows
+                            staffPage={staffPage}
+                            weekDates={weekDates}
+                            todayStr={todayStr}
+                            canAssign={canAssign}
+                            onOpenAssign={onOpenAssign}
+                            onRemove={onRemove}
+                        />
                     ) : (
-                        <DateRows weekDates={weekDates} todayStr={todayStr} filteredStaff={filteredStaff} shifts={shifts} onRemove={onRemove} canAssign={canAssign} />
+                        <ShiftRows
+                            shifts={shifts}
+                            filteredStaff={filteredStaff}
+                            weekDates={weekDates}
+                            todayStr={todayStr}
+                            canAssign={canAssign}
+                            onRemove={onRemove}
+                        />
                     )}
                 </tbody>
             </table>
@@ -100,161 +136,193 @@ const ScheduleTable = ({
     );
 };
 
-/* ── Date Rows ── */
-const DateRows = ({ weekDates, todayStr, filteredStaff, shifts, onRemove, canAssign }) => {
-    return weekDates.map(date => {
-        const dStr = formatDate(date);
-        const isToday = dStr === todayStr;
-
-        // Tìm tất cả ca có nhân viên làm vào ngày này
-        const shiftsOnThisDate = [];
-        shifts.forEach(shift => {
-            const staffList = filteredStaff.filter(s =>
-                s.schedules?.[dStr]?.some(sc => sc.shiftId === shift.id)
-            );
-            if (staffList.length > 0) {
-                shiftsOnThisDate.push({ shift, staffList });
-            }
-        });
-
-        return (
-            <tr key={dStr} className="ws-row border-top" style={{ background: isToday ? '#fffbeb' : '#fff' }}>
-                <td className="ps-4 py-3 align-top" style={{ width: '180px' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: isToday ? '#f59e0b' : '#1e293b' }}>
-                        {date.toLocaleDateString('vi-VN', { weekday: 'long' })}
-                    </div>
-                    <div className="text-secondary small">{date.toLocaleDateString('vi-VN')}</div>
-                </td>
-                <td className="py-2 px-3">
-                    <div className="d-flex flex-wrap gap-3">
-                        {shiftsOnThisDate.map(({ shift, staffList }) => {
-                            const firstSc = staffList[0]?.schedules[dStr].find(x => x.shiftId === shift.id);
-                            const sStyle = getShiftStyle(shift.id, firstSc?.status || firstSc?.scheduleStatus);
-                            return (
-                                <div key={shift.id} className="p-2 border rounded-3 bg-white shadow-sm" style={{ minWidth: '220px', borderLeft: `4px solid ${sStyle.border} !important` }}>
-                                    <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
-                                        <div className="fw-bold small" style={{ color: sStyle.text }}>
-                                            {shift.name} {(firstSc?.status || firstSc?.scheduleStatus) === 'absent' && <small className="text-danger">[Vắng]</small>}
-                                        </div>
-                                        <div className="text-muted" style={{ fontSize: '0.65rem' }}>{shift.startTime} - {shift.endTime}</div>
-                                    </div>
-                                    <div className="d-flex flex-column gap-1">
-                                        {staffList.map(s => {
-                                            const sc = s.schedules[dStr].find(x => x.shiftId === shift.id);
-                                            return (
-                                                <div key={s.staffId} className="d-flex justify-content-between align-items-center bg-light p-1 px-2 rounded-2" style={{ fontSize: '0.75rem' }}>
-                                                    <span className="fw-medium">{s.fullName}</span>
-                                                    {canAssign && (
-                                                        <button className="btn btn-link text-danger p-0 ms-2 text-decoration-none" title="Xóa" onClick={() => onRemove(sc.scheduleId)}>
-                                                            <i className="bi bi-x-circle-fill"></i>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        {shiftsOnThisDate.length === 0 && <span className="text-secondary opacity-50 small my-2 italic">Không có ca làm việc nào được phân trong ngày này</span>}
-                    </div>
-                </td>
-            </tr>
-        );
-    });
-};
-
-/* ── Staff Rows ── */
 const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, onRemove }) => {
     if (staffPage.length === 0) {
         return (
-            <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="bi bi-inbox fs-2 d-block mb-2" />Không tìm thấy nhân viên phù hợp.</td></tr>
+            <tr>
+                <td colSpan={9} className="text-center py-5 text-secondary">
+                    <i className="bi bi-inbox fs-2 d-block mb-2" />
+                    Không tìm thấy nhân viên phù hợp.
+                </td>
+            </tr>
         );
     }
 
-    return staffPage.map(staff => {
-        const isCashier = staff.roleName === 'Cashier';
-        const isWarehouse = staff.roleName === 'Warehouse';
+    return staffPage.map((staff) => {
         const isOver48 = staff.totalHours > 48;
 
         return (
-            <tr key={staff.staffId} className="ws-row border-top" style={{ background: isWarehouse ? '#fafaf9' : '#fff' }}>
-                {/* Cột nhân viên */}
+            <tr key={staff.staffId} className="ws-row border-top" style={{ background: '#fff' }}>
                 <td className="ps-4 py-3">
                     <div className="d-flex align-items-center gap-2">
-                        <div style={{
-                            width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                            background: isCashier ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)' : 'linear-gradient(135deg, #94a3b8, #64748b)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.9rem',
-                        }}>
+                        <div
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                                background: 'linear-gradient(135deg, #0ea5e9, #3b82f6)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#fff',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                            }}
+                        >
                             {staff.fullName.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                            <div className="fw-bold" style={{ fontSize: '0.88rem', color: '#0f172a' }}>{staff.fullName}</div>
 
-                            <span className={`badge rounded-pill mt-1 text-uppercase ${isCashier ? 'bg-primary' : isWarehouse ? 'bg-secondary' : 'bg-danger'}`} style={{ fontSize: '0.65rem' }}>
-                                {isCashier ? 'THU NGÂN' : isWarehouse ? 'KHO' : 'QUẢN LÝ'}
+                        <div>
+                            <div
+                                className="fw-bold"
+                                style={{ fontSize: '0.88rem', color: '#0f172a' }}
+                            >
+                                {staff.fullName}
+                            </div>
+
+                            <span
+                                className="badge rounded-pill mt-1 text-uppercase bg-primary"
+                                style={{ fontSize: '0.65rem' }}
+                            >
+                                THU NGÂN
                             </span>
                         </div>
                     </div>
                 </td>
 
-                {/* Cột Tổng Giờ */}
                 <td className="text-center py-3">
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isOver48 ? '#dc2626' : '#2563eb' }} title={isOver48 ? 'Vượt quá 48h/tuần!' : ''}>
+                    <span
+                        style={{
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            color: isOver48 ? '#dc2626' : '#2563eb'
+                        }}
+                        title={isOver48 ? 'Vượt quá 48h/tuần!' : ''}
+                    >
                         {isOver48 && <i className="bi bi-exclamation-triangle-fill me-1 text-warning" />}
                         {formatHours(staff.totalHours)}
                     </span>
                 </td>
 
-                {/* Cột Chi Tiết Hành Động Khắp 7 Ngày */}
-                {weekDates.map((d, i) => {
-                    const dateStr = formatDate(d);
+                {weekDates.map((date, index) => {
+                    const dateStr = formatDate(date);
                     const isToday = dateStr === todayStr;
                     const isPast = dateStr < todayStr;
                     const dayShifts = staff.schedules?.[dateStr] || [];
 
                     return (
-                        <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent', minWidth: '110px' }}>
+                        <td
+                            key={index}
+                            className="py-2 align-top"
+                            style={{
+                                borderLeft: '1px dashed #e2e8f0',
+                                background: isToday ? '#fffbeb' : 'transparent',
+                                minWidth: '110px'
+                            }}
+                        >
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
-                                {dayShifts.map(sc => {
-                                    const isAbs = (sc.status || sc.scheduleStatus) === 'absent';
-                                    const sStyle = getShiftStyle(sc.shiftId, sc.status || sc.scheduleStatus);
-                                    const counterDisplay = sc.counterName || sc.counterCode;
+                                {dayShifts.map((schedule) => {
+                                    const isAbsent = (schedule.status || schedule.scheduleStatus) === 'absent';
+
                                     return (
-                                        <div key={sc.scheduleId} style={{
-                                            borderRadius: '8px', padding: '5px 8px', backgroundColor: sStyle.bg, border: `1px solid ${sStyle.border}`,
-                                            color: sStyle.text, position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                                        }}>
-                                            <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', paddingRight: '22px' }}>
-                                                {sc.shiftName} {isAbs && <small className="text-danger ms-1">[Vắng]</small>}
+                                        <div
+                                            key={schedule.scheduleId}
+                                            style={{
+                                                borderRadius: '8px',
+                                                padding: '5px 8px',
+                                                backgroundColor: isAbsent ? '#fef2f2' : '#f8fafc',
+                                                border: isAbsent ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                                                color: isAbsent ? '#b91c1c' : '#334155',
+                                                position: 'relative',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    fontWeight: 700,
+                                                    fontSize: '0.78rem',
+                                                    display: 'block',
+                                                    paddingRight: '22px'
+                                                }}
+                                            >
+                                                {schedule.shiftName}
+                                                {isAbsent && <small className="text-danger ms-1">[Vắng]</small>}
                                             </span>
-                                            <span style={{ fontSize: '0.68rem', opacity: 0.8, display: 'block' }}>{sc.startTime} – {sc.endTime}</span>
-                                            {counterDisplay && <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '2px', opacity: 0.85 }}><i className="bi bi-shop me-1" />{counterDisplay}</span>}
+
+                                            <span
+                                                style={{
+                                                    fontSize: '0.68rem',
+                                                    opacity: 0.8,
+                                                    display: 'block'
+                                                }}
+                                            >
+                                                {formatTime(schedule.startTime)} – {formatTime(schedule.endTime)}
+                                            </span>
+
                                             {canAssign && (
-                                                <button className="ws-remove-btn" title="Xóa ca này" onClick={() => onRemove(sc.scheduleId)}
+                                                <button
+                                                    type="button"
+                                                    className="ws-remove-btn"
+                                                    title="Xóa ca này"
+                                                    onClick={() => onRemove(schedule.scheduleId)}
                                                     style={{
-                                                        position: 'absolute', top: '50%', right: '5px',
-                                                        transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%',
-                                                        width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0
-                                                    }}>✕</button>
+                                                        position: 'absolute',
+                                                        top: '50%',
+                                                        right: '5px',
+                                                        transform: 'translateY(-50%)',
+                                                        background: 'rgba(239,68,68,0.15)',
+                                                        border: 'none',
+                                                        borderRadius: '50%',
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        color: '#ef4444',
+                                                        fontWeight: 900,
+                                                        fontSize: '0.7rem',
+                                                        padding: 0
+                                                    }}
+                                                >
+                                                    ✕
+                                                </button>
                                             )}
                                         </div>
                                     );
                                 })}
-                                {/* ÁP DỤNG BUTTON CHO CẢ 3 ROLE */}
+
                                 {canAssign && !isPast && (
-                                    <button className="ws-add-btn" onClick={() => onOpenAssign(staff, dateStr)}
+                                    <button
+                                        type="button"
+                                        className="ws-add-btn"
+                                        onClick={() => onOpenAssign(staff, dateStr)}
                                         style={{
-                                            width: '100%', border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '4px 0',
-                                            background: 'transparent', color: '#94a3b8', fontWeight: 600,
-                                            fontSize: '0.78rem', cursor: 'pointer', marginTop: '2px'
-                                        }}>
+                                            width: '100%',
+                                            border: '1.5px dashed #cbd5e1',
+                                            borderRadius: '8px',
+                                            padding: '4px 0',
+                                            background: 'transparent',
+                                            color: '#94a3b8',
+                                            fontWeight: 600,
+                                            fontSize: '0.78rem',
+                                            cursor: 'pointer',
+                                            marginTop: '2px'
+                                        }}
+                                    >
                                         + Thêm ca
                                     </button>
                                 )}
-                                {isPast && dayShifts.length === 0 && <div className="text-center" style={{ fontSize: '0.7rem', color: '#cbd5e1', padding: '4px' }}>—</div>}
+
+                                {isPast && dayShifts.length === 0 && (
+                                    <div
+                                        className="text-center"
+                                        style={{ fontSize: '0.7rem', color: '#cbd5e1', padding: '4px' }}
+                                    >
+                                        —
+                                    </div>
+                                )}
                             </div>
                         </td>
                     );
@@ -264,44 +332,121 @@ const StaffRows = ({ staffPage, weekDates, todayStr, canAssign, onOpenAssign, on
     });
 };
 
-/* ── Shift Rows ── */
 const ShiftRows = ({ shifts, filteredStaff, weekDates, todayStr, canAssign, onRemove }) => {
-    if (shifts.length === 0) return <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="bi bi-inbox fs-2 d-block mb-2" />Chưa có ca làm việc nào.</td></tr>;
+    if (shifts.length === 0) {
+        return (
+            <tr>
+                <td colSpan={9} className="text-center py-5 text-secondary">
+                    <i className="bi bi-inbox fs-2 d-block mb-2" />
+                    Chưa có ca làm việc nào.
+                </td>
+            </tr>
+        );
+    }
 
-    return shifts.map(shift => {
-        const sStyle = getShiftStyle(shift.id);
+    return shifts.map((shift) => {
+        let count = 0;
+
+        weekDates.forEach((date) => {
+            const dateStr = formatDate(date);
+            filteredStaff.forEach((staff) => {
+                if (staff.schedules?.[dateStr]?.some((schedule) => schedule.shiftId === shift.id)) {
+                    count++;
+                }
+            });
+        });
+
         return (
             <tr key={shift.id} className="ws-row border-top">
                 <td className="ps-4 py-3">
-                    <span className="badge px-3 py-2 rounded-pill fw-bold" style={{ background: sStyle.bg, color: sStyle.text, fontSize: '0.85rem' }}>{shift.name}</span>
-                    <div className="small text-secondary mt-1">{shift.startTime} → {shift.endTime}</div>
+                    <span
+                        className="badge px-3 py-2 rounded-pill fw-bold bg-primary-subtle text-primary"
+                        style={{ fontSize: '0.85rem' }}
+                    >
+                        {shift.name}
+                    </span>
+                    <div className="small text-secondary mt-1">
+                        {formatTime(shift.startTime)} → {formatTime(shift.endTime)}
+                    </div>
                 </td>
+
                 <td className="text-center">
-                    {(() => {
-                        let count = 0;
-                        weekDates.forEach(d => {
-                            const ds = formatDate(d);
-                            filteredStaff.forEach(s => { if (s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id)) count++; });
-                        });
-                        return count > 0 ? <span className="fw-bold text-success">{count}</span> : <span className="text-secondary">—</span>;
-                    })()}
+                    {count > 0 ? (
+                        <span className="fw-bold text-success">{count}</span>
+                    ) : (
+                        <span className="text-secondary">—</span>
+                    )}
                 </td>
-                {weekDates.map((d, i) => {
-                    const ds = formatDate(d);
-                    const isToday = ds === todayStr;
-                    const inShift = filteredStaff.filter(s => s.schedules?.[ds]?.some(sc => sc.shiftId === shift.id));
+
+                {weekDates.map((date, index) => {
+                    const dateStr = formatDate(date);
+                    const isToday = dateStr === todayStr;
+
+                    const assignedStaff = filteredStaff.filter((staff) =>
+                        staff.schedules?.[dateStr]?.some((schedule) => schedule.shiftId === shift.id)
+                    );
+
                     return (
-                        <td key={i} className="py-2 align-top" style={{ borderLeft: '1px dashed #e2e8f0', background: isToday ? '#fffbeb' : 'transparent' }}>
+                        <td
+                            key={index}
+                            className="py-2 align-top"
+                            style={{
+                                borderLeft: '1px dashed #e2e8f0',
+                                background: isToday ? '#fffbeb' : 'transparent'
+                            }}
+                        >
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px 4px' }}>
-                                {inShift.map(s => {
-                                    const entry = s.schedules[ds].find(sc => sc.shiftId === shift.id);
+                                {assignedStaff.map((staff) => {
+                                    const entry = staff.schedules[dateStr].find(
+                                        (schedule) => schedule.shiftId === shift.id
+                                    );
+
                                     return (
-                                        <div key={s.staffId} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '5px 8px', position: 'relative', paddingRight: canAssign ? '28px' : '8px' }}>
-                                            <div className="fw-semibold" style={{ fontSize: '0.78rem', color: '#334155' }}>{s.fullName}</div>
-                                            {(entry?.counterName || entry?.counterCode) && <div style={{ fontSize: '0.68rem', color: '#64748b' }}><i className="bi bi-shop me-1" />{entry.counterName || entry.counterCode}</div>}
+                                        <div
+                                            key={staff.staffId}
+                                            style={{
+                                                background: '#f8fafc',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '8px',
+                                                padding: '5px 8px',
+                                                position: 'relative',
+                                                paddingRight: canAssign ? '28px' : '8px'
+                                            }}
+                                        >
+                                            <div
+                                                className="fw-semibold"
+                                                style={{ fontSize: '0.78rem', color: '#334155' }}
+                                            >
+                                                {staff.fullName}
+                                            </div>
+
                                             {canAssign && (
-                                                <button className="ws-remove-btn" onClick={() => onRemove(entry.scheduleId)}
-                                                    style={{ position: 'absolute', top: '50%', right: '5px', transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem', padding: 0 }}>✕</button>
+                                                <button
+                                                    type="button"
+                                                    className="ws-remove-btn"
+                                                    onClick={() => onRemove(entry.scheduleId)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '50%',
+                                                        right: '5px',
+                                                        transform: 'translateY(-50%)',
+                                                        background: 'rgba(239,68,68,0.15)',
+                                                        border: 'none',
+                                                        borderRadius: '50%',
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        color: '#ef4444',
+                                                        fontWeight: 900,
+                                                        fontSize: '0.7rem',
+                                                        padding: 0
+                                                    }}
+                                                >
+                                                    ✕
+                                                </button>
                                             )}
                                         </div>
                                     );
