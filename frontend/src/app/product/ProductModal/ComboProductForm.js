@@ -67,10 +67,9 @@ export default function ComboProductForm({
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
-                                            onSearchChildProducts(searchKeyword);
                                         }
                                     }}
-                                    placeholder="Tên sản phẩm, mã sản phẩm, barcode..."
+                                    placeholder="Gõ tên sản phẩm, mã sản phẩm hoặc barcode..."
                                 />
                             </div>
                         </div>

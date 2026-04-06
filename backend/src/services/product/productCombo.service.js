@@ -20,6 +20,12 @@ function translateSqlError(err) {
     return err;
 }
 
+function validateChildProductCanBeUsedInCombo(childProduct) {
+    if (childProduct.allowDecimalQuantity) {
+        throw new Error('Không được thêm sản phẩm bán theo cân vào combo.');
+    }
+}
+
 exports.getComboItems = async (productId) => {
     return comboModel.getComboItems(productId);
 };
@@ -56,6 +62,12 @@ exports.addComboItem = async (productId, payload) => {
         throw new Error('Không nên cho combo lồng combo. Sản phẩm con phải là hàng tồn kho thực.');
     }
 
+    validateChildProductCanBeUsedInCombo(childProduct);
+
+    if (!Number.isInteger(quantity)) {
+        throw new Error('Số lượng sản phẩm con trong combo phải là số nguyên.');
+    }
+
     try {
         return await comboModel.addComboItem(productId, {
             childProductId: payload.childProductId,
@@ -80,6 +92,10 @@ exports.assembleCombo = async (productId, quantity) => {
         throw new Error('Số lượng tạo combo phải lớn hơn 0.');
     }
 
+    if (!Number.isInteger(qty)) {
+        throw new Error('Số lượng tạo combo phải là số nguyên.');
+    }
+
     const parent = await productModel.getProductById(productId);
     if (!parent) {
         throw new Error('Không tìm thấy sản phẩm combo.');
@@ -87,6 +103,8 @@ exports.assembleCombo = async (productId, quantity) => {
     if (!parent.isCombo) {
         throw new Error('Sản phẩm này không phải là combo.');
     }
+
+    await validateComboChildrenAreNotWeightProducts(productId);
 
     try {
         return await comboModel.assembleCombo(productId, qty);
@@ -110,9 +128,15 @@ exports.updateComboStock = async (productId, newQuantity) => {
         throw new Error('Số lượng tồn kho không được nhỏ hơn 0.');
     }
 
+    if (!Number.isInteger(qty)) {
+        throw new Error('Tồn kho combo phải là số nguyên.');
+    }
+
     const parent = await productModel.getProductById(productId);
     if (!parent) throw new Error('Không tìm thấy sản phẩm combo.');
     if (!parent.isCombo) throw new Error('Sản phẩm này không phải là combo.');
+
+    await validateComboChildrenAreNotWeightProducts(productId);
 
     try {
         return await comboModel.updateComboStock(productId, qty);
@@ -129,3 +153,17 @@ exports.updateComboStock = async (productId, newQuantity) => {
         throw err;
     }
 };
+
+async function validateComboChildrenAreNotWeightProducts(productId) {
+    const comboItems = await comboModel.getComboItems(productId);
+
+    for (const item of comboItems) {
+        const childProduct = await productModel.getProductById(item.childProductId);
+        if (childProduct?.allowDecimalQuantity) {
+            throw new Error(
+                `Combo đang chứa sản phẩm bán theo cân "${childProduct.name}". ` +
+                'Vui lòng xóa sản phẩm này khỏi combo trước khi thao tác tồn kho.'
+            );
+        }
+    }
+}
