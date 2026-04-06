@@ -27,6 +27,14 @@ exports.createPromotion = async (data) => {
 };
 
 exports.updatePromotion = async (id, data) => {
+    const existing = await promotionModel.getPromotionById(id);
+    if (!existing) return null;
+
+
+    if (data.items !== undefined && existing.status !== 'Active') {
+        throw new Error('Không thể thêm sản phẩm vào promotion đã bị vô hiệu hóa');
+    }
+
     const updated = await promotionModel.updatePromotion(id, data);
     if (!updated) return null;
     if (data.items !== undefined) {
@@ -50,6 +58,7 @@ exports.removePromotionItem = async (itemId) => {
 exports.addPromotionItem = async (promotionId, item) => {
     const promotion = await promotionModel.getPromotionById(promotionId);
     if (!promotion) throw new Error('Không tìm thấy promotion');
+    if (promotion.status !== 'Active') throw new Error('Không thể thêm sản phẩm vào promotion đã bị vô hiệu hóa');
     await promotionModel.addPromotionItem(promotionId, item);
     return await promotionModel.getPromotionById(promotionId);
 };

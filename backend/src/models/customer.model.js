@@ -201,6 +201,7 @@ exports.searchCustomersByPhone = async (phone) => {
                 id, phone, name, loyaltyPoints, totalSpending, status
             FROM Customers
             WHERE phone LIKE @phone
+            AND status = 'Active'
             ORDER BY createdAt DESC
         `);
     return result.recordset;
