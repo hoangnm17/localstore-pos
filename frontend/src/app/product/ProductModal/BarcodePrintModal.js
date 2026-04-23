@@ -1,10 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import ModalShell from './ModalShell';
-
-function formatMoney(value) {
-    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-}
+import { formatMoney } from '../../../utils/formatters';
 
 function escapeHtml(value) {
     return String(value ?? '')

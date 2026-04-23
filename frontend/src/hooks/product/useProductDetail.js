@@ -21,13 +21,11 @@ function useProductDetail({ showNotification }) {
                 loading: true
             });
 
-            const productResponse = await getProduct(productId);
-            const product = productResponse.data?.data;
+            const product = await getProduct(productId);
 
             let comboItems = [];
             if (product?.isCombo) {
-                const comboResponse = await getComboItems(productId);
-                comboItems = comboResponse.data?.data || [];
+                comboItems = await getComboItems(productId);
             }
 
             setDetailState({
@@ -46,6 +44,7 @@ function useProductDetail({ showNotification }) {
             showNotificationRef.current(error.response?.data?.message || 'Không tải được chi tiết sản phẩm.', 'error');
         }
     }, []); // showNotification qua ref — không cần trong deps
+
 
     const refreshDetailModal = useCallback(async (productId) => {
         if (!productId) return;

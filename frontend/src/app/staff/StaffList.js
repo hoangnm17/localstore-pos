@@ -48,7 +48,6 @@ const StaffList = () => {
         setSortOrder('asc');
         setCurrentPage(1);
         fetchData();
-        // showNotification('Đã làm mới danh sách!', 'info');
     }, [fetchData]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
@@ -85,13 +84,6 @@ const StaffList = () => {
     const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-    const stats = useMemo(() => ({
-        total: staffs.length,
-        active: staffs.filter(s => s.isActive === 'active').length,
-        locked: staffs.filter(s => s.isActive === 'locked').length,
-        resigned: staffs.filter(s => s.employmentStatus === 'resigned').length,
-    }), [staffs]);
-
     const ROLE_MAP = {
         'Manager': { label: 'Quản lý', color: 'bg-primary' },
         'Cashier': { label: 'Thu ngân', color: 'bg-success' },
@@ -113,31 +105,6 @@ const StaffList = () => {
                         <i className="bi bi-person-plus-fill" /> Thêm Mới
                     </button>
                 </div>
-
-                {/* STATS */}
-                <div className="row g-3 mb-4">
-                    {[
-                        { label: 'Tổng nhân viên', value: stats.total, icon: 'bi-people-fill', textClass: 'text-primary', bgClass: 'bg-primary-subtle' },
-                        { label: 'Đang hoạt động', value: stats.active, icon: 'bi-check-circle-fill', textClass: 'text-success', bgClass: 'bg-success-subtle' },
-                        { label: 'Tài khoản khóa', value: stats.locked, icon: 'bi-x-circle-fill', textClass: 'text-danger', bgClass: 'bg-danger-subtle' },
-                        { label: 'Đã nghỉ việc', value: stats.resigned, icon: 'bi-person-dash-fill', textClass: 'text-secondary', bgClass: 'bg-secondary-subtle' },
-                    ].map(({ label, value, icon, textClass, bgClass }) => (
-                        <div key={label} className="col-6 col-md-3">
-                            <div className="card border-0 shadow-sm rounded-4 h-100 p-3">
-                                <div className="d-flex align-items-center gap-3">
-                                    <div className={`d-flex align-items-center justify-content-center rounded-3 ${bgClass} ${textClass}`} style={{ width: '48px', height: '48px' }}>
-                                        <i className={`bi ${icon} fs-4`} />
-                                    </div>
-                                    <div>
-                                        <div className="fw-bold fs-4 lh-1 text-dark mb-1">{value}</div>
-                                        <small className="text-secondary fw-medium" style={{ fontSize: '0.8rem' }}>{label}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
                 {/* SEARCH & FILTER */}
                 <div className="card border-0 shadow-sm rounded-4 p-3 mb-4">
                     <div className="row g-3 align-items-end">
@@ -185,14 +152,11 @@ const StaffList = () => {
                         </div>
                         <div className="col-md-2">
                             <div className="d-flex gap-2">
-                                <button className="btn btn-outline-secondary w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                                <button className="btn btn-outline-secondary  fw-bold d-flex align-items-center justify-content-center gap-2"
                                     style={{ borderRadius: '12px', height: '38px' }}
                                     onClick={handleReset}>
                                     <i className="bi bi-arrow-counterclockwise" /> Làm mới
                                 </button>
-                                <div className="badge bg-primary rounded-pill px-3 py-2 fs-6 d-flex align-items-center justify-content-center" style={{ minWidth: '45px' }}>
-                                    {filteredData.length}
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -256,8 +220,6 @@ const StaffList = () => {
                                                 <span className={`badge px-3 py-1 rounded-pill ${s.isActive === 'active'
                                                     ? 'bg-success-subtle text-success border border-success'
                                                     : 'bg-danger-subtle text-danger border border-danger'}`}>
-                                                    <i className={`bi ${s.isActive === 'active' ? 'bi-circle-fill' : 'bi-dash-circle-fill'} me-1`}
-                                                        style={{ fontSize: '0.5rem', verticalAlign: 'middle' }} />
                                                     {s.isActive === 'active' ? 'Hoạt động' : 'Khóa'}
                                                 </span>
                                             </td>
@@ -265,8 +227,6 @@ const StaffList = () => {
                                                 <span className={`badge px-2 py-1 rounded-pill ${s.employmentStatus === 'working'
                                                     ? 'bg-primary-subtle text-primary border border-primary'
                                                     : 'bg-warning-subtle text-warning border border-warning'}`}>
-                                                    <i className={`bi ${s.employmentStatus === 'working' ? 'bi-briefcase-fill' : 'bi-person-dash-fill'} me-1`}
-                                                        style={{ fontSize: '0.6rem', verticalAlign: 'middle' }} />
                                                     {s.employmentStatus === 'working' ? 'Làm việc' : 'Đã nghỉ'}
                                                 </span>
                                             </td>

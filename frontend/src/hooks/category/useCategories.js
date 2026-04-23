@@ -7,13 +7,14 @@ export default function useCategories({ showNotification, onConfirm, search, pag
     async function load(search, page, limit) {
         try {
             const res = await categoryService.fetchCategoryTree(search, page, limit);
-            setCategories(res?.data?.data || []);
-            setPagination(res?.data?.pagination || { page: 1, totalPages: 1, totalRoots: 0 });
+            setCategories(res?.data || []);
+            setPagination(res?.pagination || { page: 1, totalPages: 1, totalRoots: 0 });
         } catch (err) {
             console.error('Lỗi tải danh mục:', err);
             setCategories([]);
         }
     }
+
 
     async function doDelete(id) {
         try {

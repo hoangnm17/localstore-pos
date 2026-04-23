@@ -7,7 +7,6 @@ const MyProfile = () => {
     const [profile, setProfile] = useState(null);
     const [passData, setPassData] = useState({ oldPassword: '', newPassword: '' });
     useTitle("Hồ Sơ Của Tôi")
-    // State để ẩn/hiện mật khẩu
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
 
@@ -59,7 +58,7 @@ const MyProfile = () => {
     return (
         <div style={{ padding: '32px', width: '100%', margin: '0 auto' }}>
             <h3 className="fw-bold mb-4" style={{ color: '#1e293b' }}>
-                <i className="bi bi-person-badge-fill me-2 text-primary" />HỒ SƠ CỦA TÔI
+                HỒ SƠ CỦA TÔI
             </h3>
             <p className="text-secondary mb-4" style={{ fontSize: '0.95rem' }}>
                 Xem thông tin cá nhân của tôi
@@ -70,7 +69,7 @@ const MyProfile = () => {
                 <div className="col-md-5">
                     <div style={leftStyle}>
                         <h6 className="fw-bold text-primary mb-4 border-bottom pb-3">
-                            <i className="bi bi-person-vcard-fill me-2" />Hồ sơ Cá Nhân
+                            Hồ sơ Cá Nhân
                         </h6>
                         <div className="mb-3">
                             <label className="small fw-bold text-secondary mb-1">Họ và tên</label>
@@ -99,12 +98,11 @@ const MyProfile = () => {
                     {/* Lương & Tài khoản */}
                     <div style={rightInfoStyle}>
                         <h6 className="fw-bold text-success mb-4 border-bottom pb-3">
-                            <i className="bi bi-briefcase-fill me-2" />Tài Khoản & Lương
+                            Tài Khoản & Lương
                         </h6>
                         <div className="row mb-3">
                             <div className="col-6">
                                 <label className="small fw-bold text-secondary mb-1">Vai trò</label>
-                                {/* Áp dụng hàm getVietnameseRole vào đây */}
                                 <input type="text" className="form-control bg-white fw-bold text-success" disabled
                                     value={getVietnameseRole(profile.roleName)} />
                             </div>
@@ -131,7 +129,7 @@ const MyProfile = () => {
                     {/*Đổi Mật Khẩu */}
                     <div style={rightPassStyle}>
                         <h6 className="fw-bold text-secondary mb-3 border-bottom pb-3">
-                            <i className="bi bi-shield-check me-2" />Thiết Lập Lại Mật khẩu
+                            Thiết Lập Lại Mật khẩu
                         </h6>
                         <form onSubmit={handleChangePass}>
                             <div className="row">
@@ -139,12 +137,11 @@ const MyProfile = () => {
                                     <label className="small fw-bold text-secondary mb-1">
                                         Mật khẩu Cũ
                                     </label>
-                                    {/* Bọc input để thêm icon con mắt */}
                                     <div className="position-relative">
                                         <input 
                                             type={showOldPassword ? "text" : "password"} 
                                             className="form-control text-center tracking-widest font-mono fw-bold"
-                                            style={{ paddingRight: '40px' }} // Chừa chỗ cho icon
+                                            style={{ paddingRight: '40px' }} 
                                             value={passData.oldPassword} 
                                             onChange={e => setPassData({ ...passData, oldPassword: e.target.value })} 
                                             required 
@@ -164,7 +161,7 @@ const MyProfile = () => {
                                         <input 
                                             type={showNewPassword ? "text" : "password"} 
                                             className="form-control text-center tracking-widest font-mono fw-bold text-success"
-                                            style={{ paddingRight: '40px' }} // Chừa chỗ cho icon
+                                            style={{ paddingRight: '40px' }} 
                                             value={passData.newPassword} 
                                             onChange={e => setPassData({ ...passData, newPassword: e.target.value })} 
                                             required 
@@ -179,7 +176,7 @@ const MyProfile = () => {
                                 </div>
                             </div>
                             <button type="submit" className="btn btn-secondary w-100 fw-bold py-2 mt-2" style={{ borderRadius: '8px' }}>
-                                <i className="bi bi-cloud-arrow-up-fill me-2" />Lưu Mật Khẩu mới
+                                Lưu Mật Khẩu mới
                             </button>
                         </form>
                     </div>

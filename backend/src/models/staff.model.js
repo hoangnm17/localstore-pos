@@ -10,15 +10,17 @@ module.exports.getAllStaff = async () => {
             u.username, u.isActive, u.roleId,
             r.name as roleName
         FROM Staff s
-        LEFT JOIN Users u ON s.userId = u.id
-        LEFT JOIN Roles r ON u.roleId = r.id
+        JOIN Users u ON s.userId = u.id
+        JOIN Roles r ON u.roleId = r.id
         ORDER BY s.id DESC
     `);
     return result.recordset;
 };
 module.exports.getAllRoles = async () => {
     const pool = await connectDB();
-    const result = await pool.request().query(`SELECT id, name, description FROM Roles`);
+    const result = await pool.request().query(`
+        SELECT id, name, description FROM Roles
+    `);
     return result.recordset;
 };
 module.exports.updateStatus = async (userId, status) => {
@@ -48,7 +50,7 @@ module.exports.atomicResign = async (staffId) => {
         UPDATE u
         SET u.isActive = 'locked'
         FROM Users u
-        INNER JOIN Staff s ON u.id = s.userId
+        JOIN Staff s ON u.id = s.userId
         WHERE s.id = @staffId;
     `);
     return true;
@@ -104,7 +106,6 @@ module.exports.getStaffById = async (id) => {
             SELECT 
                 s.*, 
                 u.isActive, u.roleId, u.username,
-                u.passwordHash as oldPassword,
                 r.name as roleName
             FROM Staff s 
             JOIN Users u ON s.userId = u.id
@@ -126,29 +127,34 @@ module.exports.update = async (id, data) => {
             .input('pn', sql.VarChar, data.phoneNumber)
             .input('em', sql.VarChar, data.email || '')
             .input('st', sql.VarChar, data.salaryType)
+            .input('ca', sql.DateTime2, new Date(data.createdAt))
             .input('bs', sql.Decimal(15, 2), parseFloat(data.baseSalary) || 0)
             .query(`
                 UPDATE Staff SET 
-                    fullName= @fn,phoneNumber= @pn,email= @em,salaryType= @st,baseSalary= @bs WHERE id = @id
+                    fullName= @fn,
+                    phoneNumber= @pn,
+                    email= @em,
+                    salaryType= @st,
+                    baseSalary= @bs,
+                    createdAt= @ca 
+                WHERE id = @id
             `);
 
         const staffRes = await request
             .input('sid', sql.BigInt, parseInt(id))
             .query("SELECT userId FROM Staff WHERE id = @sid");
         const userId = staffRes.recordset[0].userId;
-        let passwordUpdateSQL = "";
-        if (data.hashedPassword) {
-            request.input('ph', sql.VarChar, data.hashedPassword);
-            passwordUpdateSQL = ", passwordHash = @ph";
-        }
-
         await request
             .input('uid', sql.Int, userId)
             .input('r', sql.Int, parseInt(data.roleId))
             .input('ia', sql.VarChar, data.isActive || 'active')
             .input('un', sql.VarChar, data.username)
             .query(`
-                UPDATE Users SET roleId = @r,isActive= @ia,username= @un ${passwordUpdateSQL} WHERE id = @uid
+                UPDATE Users SET 
+                    roleId = @r,
+                    isActive= @ia,
+                    username= @un 
+                WHERE id = @uid
             `);
         await transaction.commit();
         return true;

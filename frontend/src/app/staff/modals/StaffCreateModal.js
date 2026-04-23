@@ -32,7 +32,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
     useEffect(() => {
         const fetchRoles = async () => {
             try {
-                const res = await getStaffRoles(); 
+                const res = await getStaffRoles();
                 if (res?.success) {
                     setRoleList(res.data);
                 }
@@ -66,6 +66,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
         const phoneRegex = /^0[35789][0-9]{8}$/;
         const usernameRegex = /^[a-zA-Z0-9_]{4,30}$/;
+        const passwordRegex = /^\d{6,20}$/;
 
         const name = formData.fullName.trim();
         if (!name) e.fullName = 'Họ tên không được để trống!';
@@ -91,7 +92,8 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         if (!un) e.username = 'Tên đăng nhập không được để trống!';
         else if (!usernameRegex.test(un)) e.username = 'Tên đăng nhập 4-30 ký tự, chỉ gồm a-z, 0-9, dấu _!';
 
-        if (!formData.password || formData.password.length < 6) e.password = 'Mật khẩu phải từ 6 ký tự trở lên!';
+        if (!formData.password) e.password = 'Mật khẩu không được để trống!';
+        else if (!passwordRegex.test(formData.password)) e.password = 'Mật khẩu chỉ được chứa chữ số, từ 6-20 ký tự!';
 
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -107,7 +109,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
         const pureSalary = Number(String(formData.baseSalary).replace(/\./g, ""));
         const payloadToSend = { ...formData, baseSalary: pureSalary };
         try {
-            const res = await createStaff(payloadToSend); 
+            const res = await createStaff(payloadToSend);
             if (res?.success) {
                 showNotification('Tạo nhân viên thành công!', 'success');
                 onSuccess();
@@ -115,7 +117,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
             }
             setErrorMsg(res.message ?? res.data?.message ?? 'Đã có lỗi xảy ra!');
         } catch (error) {
-            console.log("CHI TIẾT LỖI TỪ API MÀN TẠO MỚI:", error);
+            // console.log("CHI TIẾT LỖI TỪ API MÀN TẠO MỚI:", error);
             const serverMsg = error?.response?.data?.message
                 || error?.data?.message
                 || error?.message
@@ -136,7 +138,6 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                     <div className="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 className="fw-bold m-0"><i className="bi bi-person-plus-fill me-2" />Thêm Nhân Viên Mới</h5>
-                            <small className="opacity-75">Điền đầy đủ thông tin bên dưới</small>
                         </div>
                         <button onClick={onClose} disabled={loading}
                             style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>
@@ -153,7 +154,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                             <div className="col-md-6">
                                 <div style={leftStyle}>
                                     <h6 className="fw-bold text-primary mb-3">
-                                        <i className="bi bi-person-vcard-fill me-2" />Hồ Sơ Cá Nhân
+                                        Hồ Sơ Cá Nhân
                                     </h6>
 
                                     <div className="mb-3">
@@ -189,7 +190,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                             <div className="col-md-6">
                                 <div style={rightStyle}>
                                     <h6 className="fw-bold text-success mb-3">
-                                        <i className="bi bi-briefcase-fill me-2" />Hệ Thống & Lương
+                                        Hệ Thống & Lương
                                     </h6>
                                     <div className="row">
                                         <div className="col-6 mb-3">
@@ -221,7 +222,7 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                                             </select>
                                         </div>
                                         <div className="col-6 mb-3">
-                                            <label className="small fw-bold">Lương cơ bản (VNĐ)</label>
+                                            <label className="small fw-bold">Lương cơ bản </label>
                                             <input type="text" name="baseSalary"
                                                 className={`form-control ${errors.baseSalary ? 'is-invalid' : ''}`}
                                                 value={formData.baseSalary} onChange={handleChange} />
@@ -262,11 +263,11 @@ const StaffCreateModal = ({ onClose, onSuccess }) => {
                         <button type="button" className="btn btn-light border px-4 fw-bold" style={{ borderRadius: '12px' }}
                             onClick={onClose} disabled={loading}>Hủy</button>
                         <button type="submit" className="btn text-white px-4 fw-bold"
-                            style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', borderRadius: '12px' }}
+                            style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '12px' }}
                             disabled={loading}>
                             {loading
                                 ? <><span className="spinner-border spinner-border-sm me-2" />Đang lưu...</>
-                                : <><i className="bi bi-floppy-fill me-2" />Lưu Nhân Viên</>}
+                                : <>Lưu Nhân Viên</>}
                         </button>
                     </div>
                 </form>

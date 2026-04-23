@@ -38,20 +38,55 @@ function validateProductPayload(data) {
     if (!data.baseUnit || !String(data.baseUnit).trim()) {
         throw new Error('Vui lòng nhập đơn vị cơ bản.');
     }
-
     const salePrice = Number(data.salePrice || 0);
     if (Number.isNaN(salePrice) || salePrice < 0) {
         throw new Error('Giá bán không hợp lệ.');
+    }
+    if (!Number.isInteger(salePrice)) {
+        throw new Error('Giá bán không được là số thập phân.');
     }
 
     const minThreshold = Number(data.minThreshold || 0);
     if (Number.isNaN(minThreshold) || minThreshold < 0) {
         throw new Error('Ngưỡng tồn kho tối thiểu không hợp lệ.');
     }
-
+    if (!data.allowDecimalQuantity && !data.isCombo && !Number.isInteger(minThreshold)) {
+        throw new Error('Ngưỡng tồn kho tối thiểu không được là số thập phân đối với sản phẩm bán theo số lượng.');
+    }
+    if (data.initialStock !== undefined && data.initialStock !== null) {
+        const initStock = Number(data.initialStock);
+        if (!Number.isNaN(initStock) && !Number.isInteger(initStock)) {
+            throw new Error('Số lượng tồn kho ban đầu không được là số thập phân.');
+        }
+    }
+    if (data.correctedStock !== undefined && data.correctedStock !== null) {
+        const corrStock = Number(data.correctedStock);
+        if (!Number.isNaN(corrStock) && !Number.isInteger(corrStock)) {
+            throw new Error('Số lượng tồn kho điều chỉnh không được là số thập phân.');
+        }
+    }
     if (data.status && !['Selling', 'StopSelling'].includes(data.status)) {
         throw new Error('Trạng thái sản phẩm không hợp lệ.');
     }
+}
+
+async function validateCategoryIsActive(categoryId) {
+    if (categoryId === null || categoryId === undefined || categoryId === '') {
+        return null;
+    }
+
+    const normalizedCategoryId = Number(categoryId);
+
+    if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
+        throw new Error('Danh mục không hợp lệ.');
+    }
+
+    const isActive = await productModel.isCategoryActive(normalizedCategoryId);
+    if (!isActive) {
+        throw new Error('Danh mục không tồn tại hoặc đã bị xóa mềm.');
+    }
+
+    return normalizedCategoryId;
 }
 
 exports.getProductList = async (filters) => {
@@ -72,12 +107,14 @@ exports.getProductDetail = async (id) => {
 
 exports.createProduct = async (productData) => {
     validateProductPayload(productData);
+    productData.categoryId = await validateCategoryIsActive(productData.categoryId);
     if (productData.barcode && String(productData.barcode).trim()) {
         const barcodeExists = await productModel.checkBarcodeExists(productData.barcode);
         if (barcodeExists) {
             throw new Error('Barcode đã được sử dụng.');
         }
     }
+
     try {
         return await productModel.createProduct(productData);
     } catch (err) {
@@ -87,6 +124,7 @@ exports.createProduct = async (productData) => {
 
 exports.updateProduct = async (id, productData) => {
     validateProductPayload(productData);
+    productData.categoryId = await validateCategoryIsActive(productData.categoryId);
 
     if (productData.barcode && String(productData.barcode).trim()) {
         const barcodeExists = await productModel.checkBarcodeExists(productData.barcode, id);
@@ -112,6 +150,16 @@ exports.stopSellingProduct = async (id) => {
 };
 
 exports.startSellingProduct = async (id) => {
+    const product = await productModel.getProductCategoryInfo(id);
+
+    if (!product) {
+        throw new Error('Không tìm thấy sản phẩm.');
+    }
+
+    if (product.categoryId && Number(product.categoryStatus) !== 1) {
+        throw new Error('Không thể bán lại sản phẩm vì danh mục đang bị xóa mềm. Vui lòng chuyển sản phẩm sang danh mục khác hoặc khôi phục danh mục.');
+    }
+
     const updated = await productModel.startSellingProduct(id);
     if (!updated) throw new Error('Không tìm thấy sản phẩm.');
     return true;

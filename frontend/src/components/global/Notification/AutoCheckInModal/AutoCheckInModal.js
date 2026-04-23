@@ -70,7 +70,7 @@ const AutoCheckInModal = () => {
 
                     {/* Header */}
                     <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)', padding: '20px', color: '#fff', textAlign: 'center' }}>
-                        <h4 className="fw-bold m-0"><i className="bi bi-clock-history me-2" />XÁC NHẬN VÀO CA</h4>
+                        <h4 className="fw-bold m-0">XÁC NHẬN VÀO CA</h4>
                     </div>
 
                     <div className="modal-body p-4">
@@ -86,8 +86,7 @@ const AutoCheckInModal = () => {
                             {scheduleInfo?.needsCash && (
                                 <div className="p-3 bg-light rounded-3 mb-4 border border-light">
                                     <label className="fw-bold text-dark mb-2">
-                                        <i className="bi bi-cash-stack me-2 text-success"></i>
-                                        Vui lòng đếm két và nhập tiền đầu ca (VNĐ):
+                                        Vui lòng đếm két và nhập tiền đầu ca :
                                     </label>
                                     <input
                                         type="text"
@@ -108,7 +107,7 @@ const AutoCheckInModal = () => {
                                 ) : (
                                     <i className="bi bi-check-circle-fill me-2" />
                                 )}
-                                {scheduleInfo?.needsCash ? "XÁC NHẬN TIỀN & BẮT ĐẦU VÀO CA" : "XÁC NHẬN BẮT ĐẦU VÀO LÀM"}
+                                {scheduleInfo?.needsCash ? "XÁC NHẬN TIỀN VÀ BẮT ĐẦU VÀO CA" : "XÁC NHẬN BẮT ĐẦU VÀO LÀM"}
                             </button>
                         </form>
                     </div>

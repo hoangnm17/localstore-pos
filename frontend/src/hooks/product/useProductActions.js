@@ -82,8 +82,7 @@ function useProductActions({
         try {
             setSubmitLoading(true);
 
-            const response = await getProduct(productId);
-            const product = response.data?.data;
+            const product = await getProduct(productId);
 
             if (!product) {
                 showNotification('Không tìm thấy sản phẩm.', 'error');
@@ -93,8 +92,7 @@ function useProductActions({
             let comboItems = [];
             if (product.isCombo) {
                 try {
-                    const comboResponse = await getComboItems(productId);
-                    comboItems = comboResponse.data?.data || [];
+                    comboItems = await getComboItems(productId);
                 } catch (_) {
                     comboItems = [];
                 }

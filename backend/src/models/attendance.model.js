@@ -1,7 +1,7 @@
 const sql = require("mssql");
 const { connectDB } = require("../config/database");
 
-module.exports.processCheckIn = async (scheduleId, openingCash, isCashierOrManager, record, penalty) => {
+module.exports.processCheckIn = async (scheduleId, openingCash, isCashier, record, penalty) => {
     const pool = await connectDB();
     const transaction = new sql.Transaction(pool);
     try {
@@ -25,7 +25,7 @@ module.exports.processCheckIn = async (scheduleId, openingCash, isCashierOrManag
                 WHERE id = @id
             `);
 
-        if (isCashierOrManager && openingCash !== undefined && openingCash !== null) {
+        if (isCashier && openingCash !== undefined && openingCash !== null) {
             await request
                 .input('schedId', sql.Int, scheduleId)
                 .input('openCash', sql.Decimal, openingCash || 0)

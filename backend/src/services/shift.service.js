@@ -14,41 +14,49 @@ const getDiff = (m1, m2) => {
   return d;
 };
 
-module.exports.getAllShifts = async () => { return await shiftModel.getAllShifts(); };
-module.exports.getShiftById = async (id) => { return await shiftModel.getShiftById(id); };
+module.exports.getAllShifts = async () => {
+  return await shiftModel.getAllShifts();
+};
+module.exports.getShiftById = async (id) => {
+  return await shiftModel.getShiftById(id);
+};
 
 module.exports.updateShift = async (id, data) => {
   const existing = await shiftModel.getShiftById(id);
-  if (!existing) throw new Error("Không tìm thấy ca làm việc!");
+  if (!existing)
+    throw new Error("Không tìm thấy ca làm việc!");
 
   const startMins = toMinutes(existing.startTime);
   const endMins = toMinutes(existing.endTime);
 
   if (data.checkInStart || data.checkInEnd) {
     if (!data.checkInStart || !data.checkInEnd) {
-      throw new Error("Phải nhập cả giờ bắt đầu và deadline giới hạn chấm công!");
+      throw new Error("Phải nhập cả giờ bắt đầu và hạn chót chấm công!");
     }
     const checkInStartM = toMinutes(data.checkInStart);
     const checkInEndM = toMinutes(data.checkInEnd);
 
     if (getDiff(checkInEndM, checkInStartM) <= 0) {
-      throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
+      throw new Error("Hạn chót chấm công phải sau giờ bắt đầu nhận chấm công!");
     }
-    if (getDiff(checkInStartM, startMins) < -5) {
-      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 5 phút!");
+    if (getDiff(checkInStartM, startMins) < -30) {
+      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
     }
-    if (getDiff(checkInEndM, endMins) > 5) {
-      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 5 phút!");
+    if (getDiff(checkInEndM, startMins) < 0) {
+      throw new Error("Hạn chót chấm công không được sớm hơn giờ bắt đầu ca!");
+    }
+    if (getDiff(checkInEndM, startMins) > 30) {
+      throw new Error("Hạn chót chấm công không được muộn hơn giờ bắt đầu ca quá 30 phút!");
     }
   }
 
   if (data.checkOutDeadline) {
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (getDiff(checkOutDeadlineM, startMins) <= 0) {
-      throw new Error("Thời gian lưu chót bàn giao phải sau giờ bắt đầu ca!");
+    if (getDiff(checkOutDeadlineM, endMins) < 0) {
+      throw new Error("Giờ kết ca phải sau giờ kết thúc ca!");
     }
-    if (getDiff(checkOutDeadlineM, endMins) > 5) {
-      throw new Error("Thời gian bàn giao không được trễ hơn giờ kết thúc ca quá 5 phút!");
+    if (getDiff(checkOutDeadlineM, endMins) > 30) {
+      throw new Error("Giờ kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
     }
   }
 
@@ -74,29 +82,32 @@ module.exports.createShift = async (data) => {
 
   if (data.checkInStart || data.checkInEnd) {
     if (!data.checkInStart || !data.checkInEnd) {
-      throw new Error("Phải nhập cả giờ bắt đầu và deadline giới hạn chấm công!");
+      throw new Error("Phải nhập cả giờ bắt đầu và Hạn chót chấm công!");
     }
     const checkInStartM = toMinutes(data.checkInStart);
     const checkInEndM = toMinutes(data.checkInEnd);
 
     if (getDiff(checkInEndM, checkInStartM) <= 0) {
-      throw new Error("Deadline chấm công phải sau giờ bắt đầu nhận chấm công!");
+      throw new Error("Hạn chót chấm công phải sau giờ bắt đầu nhận chấm công!");
     }
-    if (getDiff(checkInStartM, startMins) < -5) {
-      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 5 phút!");
+    if (getDiff(checkInStartM, startMins) < -30) {
+      throw new Error("Giờ bắt đầu nhận chấm công không được sớm hơn giờ bắt đầu ca quá 30 phút!");
     }
-    if (getDiff(checkInEndM, endMins) > 5) {
-      throw new Error("Deadline chấm công không được muộn hơn giờ kết thúc ca quá 5 phút!");
+    if (getDiff(checkInEndM, startMins) < 0) {
+      throw new Error("Hạn chót chấm công không được sớm hơn giờ bắt đầu ca!");
+    }
+    if (getDiff(checkInEndM, startMins) > 30) {
+      throw new Error("Hạn chót chấm công không được muộn hơn giờ bắt đầu ca quá 30 phút!");
     }
   }
 
   if (data.checkOutDeadline) {
     const checkOutDeadlineM = toMinutes(data.checkOutDeadline);
-    if (getDiff(checkOutDeadlineM, startMins) <= 0) {
-      throw new Error("Thời gian kết ca phải sau giờ bắt đầu ca!");
+    if (getDiff(checkOutDeadlineM, endMins) < 0) {
+      throw new Error("Giờ kết ca phải sau giờ kết thúc ca!");
     }
-    if (getDiff(checkOutDeadlineM, endMins) > 5) {
-      throw new Error("Thời gian kết ca không được trễ hơn giờ kết thúc ca quá 5 phút!");
+    if (getDiff(checkOutDeadlineM, endMins) > 30) {
+      throw new Error("Giờ kết ca không được trễ hơn giờ kết thúc ca quá 30 phút!");
     }
   }
 

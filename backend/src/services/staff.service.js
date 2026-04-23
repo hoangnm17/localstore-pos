@@ -81,18 +81,12 @@ module.exports.updateStaff = async (id, data) => {
         if (checkEmail) throw new Error("Email này đã được nhân viên khác sử dụng!");
     }
 
-    let hashedPassword = null;
-    if (data.newPassword && data.newPassword.trim() !== "") {
-        hashedPassword = await bcrypt.hash(data.newPassword, 10);
-    }
-
     await staffModel.update(id, {
         ...data,
         email: data.email || '',
         salaryType: data.salaryType || 'hourly',
         baseSalary: data.baseSalary || 0,
         isActive: data.isActive || 'active',
-        hashedPassword 
     });
 };
 
