@@ -206,7 +206,6 @@ exports.deleteVoucher = async (id) => {
             UPDATE Vouchers
             SET status = 'Disabled'
             WHERE id = @id;
-
             SELECT * FROM Vouchers WHERE id = @id;
         `);
     return result.recordset[0];
